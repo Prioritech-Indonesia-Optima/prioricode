@@ -2017,6 +2017,8 @@ export type Config = {
   compaction?: {
     auto?: boolean
     prune?: boolean
+    threshold?: number
+    default_context?: number
     tail_turns?: number
     preserve_recent_tokens?: number
     reserved?: number

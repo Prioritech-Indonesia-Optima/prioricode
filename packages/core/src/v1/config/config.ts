@@ -154,6 +154,14 @@ export const Info = Schema.Struct({
       prune: Schema.optional(Schema.Boolean).annotate({
         description: "Enable pruning of old tool outputs (default: false)",
       }),
+      threshold: Schema.optional(PositiveInt).annotate({
+        description:
+          "Percentage (1-100) of the model context window at which compaction triggers. When set, takes precedence over 'reserved'. Recommended: 85-90 for long-running sessions.",
+      }),
+      default_context: Schema.optional(NonNegativeInt).annotate({
+        description:
+          "Fallback context window size in tokens for models that do not declare a context limit. Defaults to 128000 when omitted. Set to 0 to disable compaction for such models.",
+      }),
       tail_turns: Schema.optional(NonNegativeInt).annotate({
         description:
           "Maximum number of recent user turns, including their following assistant/tool responses, to keep verbatim during compaction. By default retention is limited only by the preserved token budget.",
@@ -162,7 +170,8 @@ export const Info = Schema.Struct({
         description: "Maximum number of tokens from recent turns to preserve verbatim after compaction",
       }),
       reserved: Schema.optional(NonNegativeInt).annotate({
-        description: "Token buffer for compaction. Leaves enough window to avoid overflow during compaction.",
+        description:
+          "Token buffer for compaction. Leaves enough window to avoid overflow during compaction. Ignored when 'threshold' is set.",
       }),
     }),
   ),
