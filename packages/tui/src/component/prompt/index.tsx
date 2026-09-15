@@ -386,7 +386,22 @@ export function Prompt(props: PromptProps) {
           }
           if (content?.mime === "text/plain") {
             await pasteInputText(content.data)
+            return
           }
+          const hint = clipboard.imageHint?.()
+          if (hint) toast.show({ message: hint, variant: "error" })
+          else toast.show({ message: "No image in clipboard. Copy an image, or drag an image file into the prompt.", variant: "info" })
+        },
+      },
+      {
+        title: "Install clipboard support",
+        name: "prompt.install_clipboard",
+        category: "Prompt",
+        enabled: Boolean(clipboard.installPlan?.()),
+        run: async () => {
+          const result = await clipboard.install?.(renderer)
+          if (!result) return
+          toast.show({ message: result.message, variant: result.ok ? "success" : "error" })
         },
       },
       {

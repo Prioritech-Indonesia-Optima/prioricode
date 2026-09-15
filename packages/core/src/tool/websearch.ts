@@ -1,6 +1,5 @@
 export * as WebSearchTool from "./websearch"
 
-import { ToolFailure } from "@prioricode/llm"
 import { Context, Duration, Effect, Layer, Schema } from "effect"
 import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { makeLocationNode } from "../effect/app-node"
@@ -245,7 +244,7 @@ const layer = Layer.effectDiscard(
                 provider,
                 text: text ?? NO_RESULTS,
               }
-            }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to search the web for ${input.query}` })))
+            }).pipe(Effect.mapError((error) => Tool.failure(`Unable to search the web for ${input.query}`, error)))
           },
         }),
       })

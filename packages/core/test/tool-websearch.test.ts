@@ -308,7 +308,7 @@ describe("WebSearchTool registration", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-large-response", name: "websearch", input: { query: "too much" } },
         }),
-      ).toEqual({ type: "error", value: "Unable to search the web for too much" })
+      ).toEqual({ type: "error", value: expect.stringContaining("Unable to search the web for too much") })
       expect(chunksRead).toBeLessThan(10)
       expect(cancelled).toBe(true)
     }),

@@ -1,6 +1,5 @@
 export * as QuestionTool from "./question"
 
-import { ToolFailure } from "@prioricode/llm"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
 import { PermissionV2 } from "../permission"
@@ -69,7 +68,7 @@ const layer = Layer.effectDiscard(
                 source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
               })
               .pipe(
-                Effect.mapError(() => new ToolFailure({ message: "Permission denied: question" })),
+                Effect.mapError((error) => Tool.failure("Permission denied: question", error)),
                 Effect.andThen(
                   question
                     .ask({

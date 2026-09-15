@@ -1,7 +1,6 @@
 export * as BashTool from "./bash"
 
 import path from "path"
-import { ToolFailure } from "@prioricode/llm"
 import { Duration, Effect, Layer, Schema } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { Config } from "../config"
@@ -193,7 +192,7 @@ const layer = Layer.effectDiscard(
                 truncated: result.outputTruncated === true,
                 ...(warnings.length ? { warnings } : {}),
               }
-            }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to execute command: ${input.command}` }))),
+            }).pipe(Effect.mapError((error) => Tool.failure(`Unable to execute command: ${input.command}`, error))),
         }),
       })
       .pipe(Effect.orDie)

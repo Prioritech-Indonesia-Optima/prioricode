@@ -1,6 +1,5 @@
 export * as GlobTool from "./glob"
 
-import { ToolFailure } from "@prioricode/llm"
 import { Effect, Layer, Schema } from "effect"
 import path from "path"
 import { makeLocationNode } from "../effect/app-node"
@@ -90,7 +89,7 @@ const layer = Layer.effectDiscard(
                   ),
                 )
             }).pipe(
-              Effect.mapError(() => new ToolFailure({ message: `Unable to find files matching ${input.pattern}` })),
+              Effect.mapError((error) => Tool.failure(`Unable to find files matching ${input.pattern}`, error)),
             ),
         }),
       })

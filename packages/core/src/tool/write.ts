@@ -6,7 +6,6 @@
  */
 export * as WriteTool from "./write"
 
-import { ToolFailure } from "@prioricode/llm"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
 import { FileMutation } from "../file-mutation"
@@ -85,7 +84,7 @@ const layer = Layer.effectDiscard(
                   source,
                 })
                 return yield* files.writeTextPreservingBom({ target, content: input.content })
-              }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to write ${input.path}` }))),
+              }).pipe(Effect.mapError((error) => Tool.failure(`Unable to write ${input.path}`, error))),
           }),
           "edit",
         ),

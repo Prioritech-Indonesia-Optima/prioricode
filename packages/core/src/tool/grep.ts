@@ -1,6 +1,5 @@
 export * as GrepTool from "./grep"
 
-import { ToolFailure } from "@prioricode/llm"
 import { Effect, Layer, Schema } from "effect"
 import path from "path"
 import { makeLocationNode } from "../effect/app-node"
@@ -123,7 +122,7 @@ const layer = Layer.effectDiscard(
                     ),
                   ),
                 )
-            }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to grep for ${input.pattern}` }))),
+            }).pipe(Effect.mapError((error) => Tool.failure(`Unable to grep for ${input.pattern}`, error))),
         }),
       })
       .pipe(Effect.orDie)

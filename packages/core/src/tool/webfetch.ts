@@ -1,6 +1,5 @@
 export * as WebFetchTool from "./webfetch"
 
-import { ToolFailure } from "@prioricode/llm"
 import { Duration, Effect, Layer, Schema } from "effect"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { Parser } from "htmlparser2"
@@ -173,7 +172,7 @@ const layer = Layer.effectDiscard(
                 format: input.format,
                 output,
               }
-            }).pipe(Effect.mapError(() => new ToolFailure({ message: `Unable to fetch ${input.url}` }))),
+            }).pipe(Effect.mapError((error) => Tool.failure(`Unable to fetch ${input.url}`, error))),
         }),
       })
       .pipe(Effect.orDie)
