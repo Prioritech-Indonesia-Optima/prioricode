@@ -116,7 +116,7 @@ export function createPlugTask(input: PlugInput, dep: PlugDeps = defaultPlugDeps
         inspect.stop("No plugin targets found", 1)
         dep.log.error(`"${mod}" does not expose plugin entrypoints in package.json`)
         dep.log.info(
-          'Expected one of: exports["./tui"], exports["./server"], package.json main for server, or package.json["oc-themes"] for tui themes.',
+          'Expected one of: exports["./tui"], exports["./server"], package.json main for server, or package.json["prioricode-themes"] for tui themes (legacy "oc-themes" also accepted).',
         )
         return false
       }

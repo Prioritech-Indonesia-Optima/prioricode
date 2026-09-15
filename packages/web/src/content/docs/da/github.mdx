@@ -3,7 +3,7 @@ title: GitHub
 description: Brug PrioriCode i GitHub-problemer og Pull Requests.
 ---
 
-PrioriCode integreres med din GitHub arbejdsgang. Nævn `/prioricode` eller `/oc` i din kommentar, og PrioriCode vil udføre opgaver i din GitHub Actions-løber.
+PrioriCode integreres med din GitHub arbejdsgang. Nævn `/prioricode` eller `/pc` i din kommentar, og PrioriCode vil udføre opgaver i din GitHub Actions-løber.
 
 ---
 
@@ -51,7 +51,7 @@ Eller du kan indstille det manuelt.
    jobs:
      prioricode:
        if: |
-         contains(github.event.comment.body, '/oc') ||
+         contains(github.event.comment.body, '/pc') ||
          contains(github.event.comment.body, '/prioricode')
        runs-on: ubuntu-latest
        permissions:
@@ -107,8 +107,8 @@ PrioriCode kan udløses af følgende GitHub hændelser:
 
 | Begivenhedstype               | Udløst af                               | Detaljer                                                                                                                |
 | ----------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `issue_comment`               | Kommentarer og problemer eller PR       | Nævn `/prioricode` eller `/oc` i din kommentar. PrioriCode læser kontekst og kan oprette brancher, åbne PR'er eller svare.  |
-| `pull_request_review_comment` | Kommenter specifikke kodelinjer i en PR | Nævn `/prioricode` eller `/oc`, mens du gennemgår koden. PrioriCode modtager filsti, linjenumre og diff-kontekst.           |
+| `issue_comment`               | Kommentarer og problemer eller PR       | Nævn `/prioricode` eller `/pc` i din kommentar. PrioriCode læser kontekst og kan oprette brancher, åbne PR'er eller svare.  |
+| `pull_request_review_comment` | Kommenter specifikke kodelinjer i en PR | Nævn `/prioricode` eller `/pc`, mens du gennemgår koden. PrioriCode modtager filsti, linjenumre og diff-kontekst.           |
 | `issues`                      | Udgave åbnet eller redigeret            | Udløs automatisk PrioriCode, når problemer oprettes eller ændres. Kræver `prompt` input.                                  |
 | `pull_request`                | PR åbnet eller opdateret                | Udløs automatisk PrioriCode, når PR'er åbnes, synkroniseres eller genåbnes. Nyttigt til automatiserede kodegennemgange.   |
 | `schedule`                    | Cron-baseret tidsplan                   | Kør PrioriCode efter en tidsplan. Kræver `prompt` input. Output går til logfiler og PR'er (intet problem ved kommentere). |
@@ -298,7 +298,7 @@ Her er nogle eksempler på, hvordan du kan bruge PrioriCode i GitHub.
   Efterlad følgende kommentar på en GitHub PR.
 
   ```
-  Delete the attachment from S3 when the note is removed /oc
+  Delete the attachment from S3 when the note is removed /pc
   ```
 
   PrioriCode vil implementere den ønskede ændring og forpligtelse til den samme PR.
@@ -309,7 +309,7 @@ Her er nogle eksempler på, hvordan du kan bruge PrioriCode i GitHub.
 
   ```
   [Comment on specific lines in Files tab]
-  /oc add error handling here
+  /pc add error handling here
   ```
 
   Når du kommenterer på specifikke linjer, modtager PrioriCode:

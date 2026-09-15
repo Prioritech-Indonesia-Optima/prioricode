@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">Открытый AI-агент для программирования.</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### Установка
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # Менеджеры пакетов
 npm i -g prioricode-ai@latest        # или bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # или github:Prioritech-Indonesia-Optima
 
 ### Десктопное приложение (BETA)
 
-PrioriCode также доступен как десктопное приложение. Скачайте его со [страницы релизов](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) или с [prioricode.ai/download](https://prioricode.ai/download).
+PrioriCode также доступен как десктопное приложение. Скачайте его со [страницы релизов](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) или с [prioritech.co.id/download](https://prioritech.co.id/download).
 
 | Платформа             | Загрузка                           |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ scoop bucket add extras; scoop install extras/prioricode-desktop
 
 ```bash
 # Примеры
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Agents
@@ -110,11 +107,29 @@ XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
 Также включен сабагент **general** для сложных поисков и многошаговых задач.
 Он используется внутренне и может быть вызван в сообщениях через `@general`.
 
-Подробнее об [agents](https://prioricode.ai/docs/agents).
+Подробнее об [agents](https://prioritech.co.id/docs/agents).
+
+### Построено на OpenCode
+
+PrioriCode — это форк [OpenCode](https://github.com/anomalyco/opencode), открытого AI-агента для программирования. Благодарим команду OpenCode и её вкладчиков за фундамент, на котором построен этот проект.
+
+### Сравнение PrioriCode и OpenCode
+
+| Возможность | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| Открытый AI-агент для программирования (TUI + desktop) | ✓ | ✓ |
+| Множество LLM-провайдеров, плагины и MCP | ✓ | ✓ |
+| Интеграция с GitHub Actions | ✓ | ✓ |
+| Настраиваемая компакция контекста | ✓ | ✓ |
+| Межсессионная координация (инструмент `sessions`) | — | ✓ |
+
+**Межсессионная координация.** Одновременные сессии PrioriCode в одном проекте могут координироваться через встроенный инструмент `sessions`: обнаружение сестринских сессий, резервирование файлов для избежания конфликтов редактирования, отправка сообщений и вопросы с ограниченным ожиданием. Заметки долговечны и доставляются автоматически — фоновый наблюдатель будит бездействующую сессию, чтобы она прочитала заметку сверстника без опроса.
+
+**Настраиваемая компакция контекста.** Управляйте обработкой заполненного окна контекста с помощью конфигурации `compaction`: резервируйте буфер токенов, включайте или отключайте автоматическую компакцию и настраивайте, сколько последних ходов или токенов сохраняется дословно.
 
 ### Документация
 
-Больше информации о том, как настроить PrioriCode: [**наши docs**](https://prioricode.ai/docs).
+Больше информации о том, как настроить PrioriCode: [**наши docs**](https://prioritech.co.id/docs).
 
 ### Вклад
 
@@ -126,4 +141,3 @@ XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
 
 ---
 
-**Присоединяйтесь к нашему сообществу** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">وكيل برمجة بالذكاء الاصطناعي مفتوح المصدر.</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### التثبيت
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # مديري الحزم
 npm i -g prioricode-ai@latest        # او bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # او github:Prioritech-Indonesia-Optima/p
 
 ### تطبيق سطح المكتب (BETA)
 
-يتوفر PrioriCode ايضا كتطبيق سطح مكتب. قم بالتنزيل مباشرة من [صفحة الاصدارات](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) او من [prioricode.ai/download](https://prioricode.ai/download).
+يتوفر PrioriCode ايضا كتطبيق سطح مكتب. قم بالتنزيل مباشرة من [صفحة الاصدارات](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) او من [prioritech.co.id/download](https://prioritech.co.id/download).
 
 | المنصة                | التنزيل                            |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ scoop bucket add extras; scoop install extras/prioricode-desktop
 
 ```bash
 # امثلة
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Agents
@@ -110,11 +107,29 @@ XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
 بالاضافة الى ذلك يوجد وكيل فرعي **general** للبحث المعقد والمهام متعددة الخطوات.
 يستخدم داخليا ويمكن استدعاؤه بكتابة `@general` في الرسائل.
 
-تعرف على المزيد حول [agents](https://prioricode.ai/docs/agents).
+تعرف على المزيد حول [agents](https://prioritech.co.id/docs/agents).
+
+### مبني على OpenCode
+
+PrioriCode هو فرع من [OpenCode](https://github.com/anomalyco/opencode)، وكيل البرمجة بالذكاء الاصطناعي مفتوح المصدر. نشكر فريق OpenCode ومساهميه على الأساس الذي يُبنى عليه هذا المشروع.
+
+### كيف يقارن PrioriCode مع OpenCode
+
+| القدرة | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| وكيل برمجة بالذكاء الاصطناعي مفتوح المصدر (TUI + سطح المكتب) | ✓ | ✓ |
+| مزودو LLM متعددون، وإضافات، وMCP | ✓ | ✓ |
+| تكامل GitHub Actions | ✓ | ✓ |
+| ضغط سياق قابل للضبط | ✓ | ✓ |
+| تنسيق بين الجلسات (أداة `sessions`) | — | ✓ |
+
+**التنسيق بين الجلسات.** يمكن لجلسات PrioriCode المتزامنة في نفس المشروع التنسيق عبر أداة `sessions` مدمجة: اكتشاف الجلسات الشقيقة، واحتكار الملفات لتجنب تعارضات التحرير، وإرسال الرسائل، وطرح أسئلة مع انتظار محدود. الملاحظات دائمة وتُسلَّم تلقائيًا — يستيقظ مراقب في الخلفية الجلسة الخاملة لتقرأ ملاحظة نظيرها دون استطلاع.
+
+**ضغط سياق قابل للضبط.** تحكّم في معالجة نافذة السياق الممتلئة عبر إعداد `compaction`: حجز مخزن مؤقت للرموز، وتفعيل أو تعطيل الضغط التلقائي، وضبط عدد الأدوار أو الرموز الأخيرة التي تُحفظ كما هي.
 
 ### التوثيق
 
-لمزيد من المعلومات حول كيفية ضبط PrioriCode، [**راجع التوثيق**](https://prioricode.ai/docs).
+لمزيد من المعلومات حول كيفية ضبط PrioriCode، [**راجع التوثيق**](https://prioritech.co.id/docs).
 
 ### المساهمة
 
@@ -126,4 +141,3 @@ XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
 
 ---
 
-**انضم الى مجتمعنا** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

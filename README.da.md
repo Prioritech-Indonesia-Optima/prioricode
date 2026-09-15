@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">Den open source AI-kodeagent.</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### Installation
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # Pakkehåndteringer
 npm i -g prioricode-ai@latest        # eller bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # eller github:Prioritech-Indonesia-Optima/
 
 ### Desktop-app (BETA)
 
-PrioriCode findes også som desktop-app. Download direkte fra [releases-siden](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) eller [prioricode.ai/download](https://prioricode.ai/download).
+PrioriCode findes også som desktop-app. Download direkte fra [releases-siden](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) eller [prioritech.co.id/download](https://prioritech.co.id/download).
 
 | Platform              | Download                           |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ Installationsscriptet bruger følgende prioriteringsrækkefølge for installatio
 
 ```bash
 # Eksempler
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Agents
@@ -110,11 +107,29 @@ PrioriCode har to indbyggede agents, som du kan skifte mellem med `Tab`-tasten.
 Derudover findes der en **general**-subagent til komplekse søgninger og flertrinsopgaver.
 Den bruges internt og kan kaldes via `@general` i beskeder.
 
-Læs mere om [agents](https://prioricode.ai/docs/agents).
+Læs mere om [agents](https://prioritech.co.id/docs/agents).
+
+### Bygget på OpenCode
+
+PrioriCode er en fork af [OpenCode](https://github.com/anomalyco/opencode), den open source AI-kodingagent. Vi takker OpenCode-holdet og dets bidragydere for fundamentet, dette projekt bygger på.
+
+### PrioriCode sammenlignet med OpenCode
+
+| Funktion | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| Open source AI-kodingagent (TUI + desktop) | ✓ | ✓ |
+| Flere LLM-udbydere, plugins og MCP | ✓ | ✓ |
+| GitHub Actions-integration | ✓ | ✓ |
+| Justerbart kontekstkompakt | ✓ | ✓ |
+| Tværsession-koordination (`sessions`-værktøj) | — | ✓ |
+
+**Tværsession-koordination.** Samtidige PrioriCode-sessioner i samme projekt kan koordineres via et indbygget `sessions`-værktøj: opdag søstersessioner, reserver filer for at undgå redigeringskollisioner, send beskeder og still spørgsmål med begrænset ventetid. Noter er varige og leveres automatisk — en baggrunds-watcher vækker en inaktiv session, så den læser en peers note uden polling.
+
+**Justerbart kontekstkompakt.** Kontrol, hvordan en fyldt kontekstvindue håndteres, med `compaction`-konfigurationen: reserver en token-buffer, aktiver eller deaktiver automatisk kompaktering og juster, hvor mange seneste rundgang eller token der bevares ordret.
 
 ### Dokumentation
 
-For mere info om konfiguration af PrioriCode, [**se vores docs**](https://prioricode.ai/docs).
+For mere info om konfiguration af PrioriCode, [**se vores docs**](https://prioritech.co.id/docs).
 
 ### Bidrag
 
@@ -126,4 +141,3 @@ Hvis du arbejder på et projekt der er relateret til PrioriCode og bruger "prior
 
 ---
 
-**Bliv en del af vores community** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

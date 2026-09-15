@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">開源的 AI Coding Agent。</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### 安裝
 
 ```bash
 # 直接安裝 (YOLO)
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # 套件管理員
 npm i -g prioricode-ai@latest        # 也可使用 bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # 或使用 github:Prioritech-Indonesia-Opt
 
 ### 桌面應用程式 (BETA)
 
-PrioriCode 也提供桌面版應用程式。您可以直接從 [發佈頁面 (releases page)](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) 或 [prioricode.ai/download](https://prioricode.ai/download) 下載。
+PrioriCode 也提供桌面版應用程式。您可以直接從 [發佈頁面 (releases page)](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) 或 [prioritech.co.id/download](https://prioritech.co.id/download) 下載。
 
 | 平台                  | 下載連結                           |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ scoop bucket add extras; scoop install extras/prioricode-desktop
 
 ```bash
 # 範例
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Agents
@@ -109,11 +106,29 @@ PrioriCode 內建了兩種 Agent，您可以使用 `Tab` 鍵快速切換。
 
 此外，PrioriCode 還包含一個 **general** 子 Agent，用於處理複雜搜尋與多步驟任務。此 Agent 供系統內部使用，亦可透過在訊息中輸入 `@general` 來呼叫。
 
-了解更多關於 [Agents](https://prioricode.ai/docs/agents) 的資訊。
+了解更多關於 [Agents](https://prioritech.co.id/docs/agents) 的資訊。
+
+### 基於 OpenCode
+
+PrioriCode 是 [OpenCode](https://github.com/anomalyco/opencode)（開源 AI 程式設計代理）的分支。我們感謝 OpenCode 團隊及其貢獻者為該項目奠定的基礎。
+
+### PrioriCode 與 OpenCode 的對比
+
+| 功能 | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| 開源 AI 程式設計代理（TUI + 桌面端） | ✓ | ✓ |
+| 多 LLM 供應商、外掛與 MCP | ✓ | ✓ |
+| GitHub Actions 整合 | ✓ | ✓ |
+| 可調整的上下文壓縮 | ✓ | ✓ |
+| 跨工作階段協調（`sessions` 工具） | — | ✓ |
+
+**跨工作階段協調.** 在同一專案上並行的多個 PrioriCode 工作階段可透過內建的 `sessions` 工具協調：發現同級工作階段、聲明檔案以避免編輯衝突、傳送訊息，以及帶逾時等待地提問。筆記是持久的並自動投递——背景監視器會喚起閒置工作階段，使其無需輪詢即可讀取來自其他工作階段的筆記。
+
+**可調整的上下文壓縮.** 透過 `compaction` 設定控制上下文窗口寫滿時的處理方式：預留 token 緩衝、啟用或停用自動壓縮，以及調整壓縮後逐字保留的最近輪次或 token 數量。
 
 ### 線上文件
 
-關於如何設定 PrioriCode 的詳細資訊，請參閱我們的 [**官方文件**](https://prioricode.ai/docs)。
+關於如何設定 PrioriCode 的詳細資訊，請參閱我們的 [**官方文件**](https://prioritech.co.id/docs)。
 
 ### 參與貢獻
 
@@ -125,4 +140,3 @@ PrioriCode 內建了兩種 Agent，您可以使用 `Tab` 鍵快速切換。
 
 ---
 
-**加入我們的社群** [飞书](https://applink.feishu.cn/client/chat/chatter/add_by_link?link_token=52ao9352-5623-4fa0-b7dd-3407c392c1af&qr_code=true) | [X.com](https://x.com/prioricode)

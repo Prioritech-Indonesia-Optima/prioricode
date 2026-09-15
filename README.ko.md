@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">오픈 소스 AI 코딩 에이전트.</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### 설치
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # 패키지 매니저
 npm i -g prioricode-ai@latest        # bun/pnpm/yarn 도 가능
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # 또는 github:Prioritech-Indonesia-Optima
 
 ### 데스크톱 앱 (BETA)
 
-PrioriCode 는 데스크톱 앱으로도 제공됩니다. [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) 에서 직접 다운로드하거나 [prioricode.ai/download](https://prioricode.ai/download) 를 이용하세요.
+PrioriCode 는 데스크톱 앱으로도 제공됩니다. [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) 에서 직접 다운로드하거나 [prioritech.co.id/download](https://prioritech.co.id/download) 를 이용하세요.
 
 | 플랫폼                | 다운로드                           |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ scoop bucket add extras; scoop install extras/prioricode-desktop
 
 ```bash
 # 예시
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Agents
@@ -110,11 +107,29 @@ PrioriCode 에는 내장 에이전트 2개가 있으며 `Tab` 키로 전환할 �
 또한 복잡한 검색과 여러 단계 작업을 위한 **general** 서브 에이전트가 포함되어 있습니다.
 내부적으로 사용되며, 메시지에서 `@general` 로 호출할 수 있습니다.
 
-[agents](https://prioricode.ai/docs/agents) 에 대해 더 알아보세요.
+[agents](https://prioritech.co.id/docs/agents) 에 대해 더 알아보세요.
+
+### OpenCode 기반
+
+PrioriCode는 오픈소스 AI 코딩 에이전트인 [OpenCode](https://github.com/anomalyco/opencode)의 포크입니다. 이 프로젝트의 기반을 마련해 준 OpenCode 팀과 기여자들에게 감사드립니다.
+
+### PrioriCode와 OpenCode 비교
+
+| 기능 | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| 오픈소스 AI 코딩 에이전트 (TUI + 데스크톱) | ✓ | ✓ |
+| 다중 LLM 프로바이더, 플러그인, MCP | ✓ | ✓ |
+| GitHub Actions 통합 | ✓ | ✓ |
+| 조정 가능한 컨텍스트 압축 | ✓ | ✓ |
+| 세션 간 조정 (`sessions` 도구) | — | ✓ |
+
+**세션 간 조정.** 같은 프로젝트에서 동시에 실행되는 여러 PrioriCode 세션은 내장 `sessions` 도구를 통해 조정할 수 있습니다: 형제 세션 발견, 파일 점유를 통한 편집 충돌 방지, 메시지 전송, 제한된 대기 시간의 질문. 노트는 영구적이며 자동으로 전달됩니다 — 백그라운드 워처가 유휴 세션을 깨워 폴링 없이 동료 세션의 노트를 읽게 합니다.
+
+**조정 가능한 컨텍스트 압축.** `compaction` 설정으로 컨텍스트 윈도우가 가득 찼을 때의 처리를 제어합니다: 토큰 버퍼 예약, 자동 압축 사용/사용 안 함, 압축 후 그대로 유지할 최근 턴 또는 토큰 수 조정.
 
 ### 문서
 
-PrioriCode 설정에 대한 자세한 내용은 [**문서**](https://prioricode.ai/docs) 를 참고하세요.
+PrioriCode 설정에 대한 자세한 내용은 [**문서**](https://prioritech.co.id/docs) 를 참고하세요.
 
 ### 기여하기
 
@@ -126,4 +141,3 @@ PrioriCode 와 관련된 프로젝트를 진행하면서 이름에 "prioricode"(
 
 ---
 
-**커뮤니티에 참여하기** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

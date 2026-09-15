@@ -1,9 +1,9 @@
 ;(function () {
   var key = "prioricode-theme-id"
-  var themeId = localStorage.getItem(key) || "oc-2"
+  var themeId = localStorage.getItem(key) || "pc-2"
 
-  if (themeId === "oc-1") {
-    themeId = "oc-2"
+  if (themeId === "oc-1" || themeId === "oc-2") {
+    themeId = "pc-2"
     localStorage.setItem(key, themeId)
     localStorage.removeItem("prioricode-theme-css-light")
     localStorage.removeItem("prioricode-theme-css-dark")
@@ -21,12 +21,12 @@
   var metas = document.querySelectorAll("meta[name='theme-color']")
   if (metas.length > 0) metas[0].setAttribute("content", isDark ? "#080808" : "#fafafa")
 
-  if (themeId === "oc-2") return
+  if (themeId === "pc-2") return
 
   var css = localStorage.getItem("prioricode-theme-css-" + mode)
   if (css) {
     var style = document.createElement("style")
-    style.id = "oc-theme-preload"
+    style.id = "pc-theme-preload"
     style.textContent =
       ":root{color-scheme:" +
       mode +

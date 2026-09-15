@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test"
 
-const src = await Bun.file(new URL("../public/oc-theme-preload.js", import.meta.url)).text()
+const src = await Bun.file(new URL("../public/pc-theme-preload.js", import.meta.url)).text()
 
 const run = () => Function(src)()
 
@@ -19,20 +19,22 @@ beforeEach(() => {
 })
 
 describe("theme preload", () => {
-  test("migrates legacy oc-1 to oc-2 before mount", () => {
-    localStorage.setItem("prioricode-theme-id", "oc-1")
-    localStorage.setItem("prioricode-theme-css-light", "--background-base:#fff;")
-    localStorage.setItem("prioricode-theme-css-dark", "--background-base:#000;")
+  for (const legacy of ["oc-1", "oc-2"]) {
+    test(`migrates legacy ${legacy} to pc-2 before mount`, () => {
+      localStorage.setItem("prioricode-theme-id", legacy)
+      localStorage.setItem("prioricode-theme-css-light", "--background-base:#fff;")
+      localStorage.setItem("prioricode-theme-css-dark", "--background-base:#000;")
 
-    run()
+      run()
 
-    expect(document.documentElement.dataset.theme).toBe("oc-2")
-    expect(document.documentElement.dataset.colorScheme).toBe("light")
-    expect(localStorage.getItem("prioricode-theme-id")).toBe("oc-2")
-    expect(localStorage.getItem("prioricode-theme-css-light")).toBeNull()
-    expect(localStorage.getItem("prioricode-theme-css-dark")).toBeNull()
-    expect(document.getElementById("oc-theme-preload")).toBeNull()
-  })
+      expect(document.documentElement.dataset.theme).toBe("pc-2")
+      expect(document.documentElement.dataset.colorScheme).toBe("light")
+      expect(localStorage.getItem("prioricode-theme-id")).toBe("pc-2")
+      expect(localStorage.getItem("prioricode-theme-css-light")).toBeNull()
+      expect(localStorage.getItem("prioricode-theme-css-dark")).toBeNull()
+      expect(document.getElementById("pc-theme-preload")).toBeNull()
+    })
+  }
 
   test("keeps cached css for non-default themes", () => {
     localStorage.setItem("prioricode-theme-id", "nightowl")
@@ -41,6 +43,6 @@ describe("theme preload", () => {
     run()
 
     expect(document.documentElement.dataset.theme).toBe("nightowl")
-    expect(document.getElementById("oc-theme-preload")?.textContent).toContain("--background-base:#fff;")
+    expect(document.getElementById("pc-theme-preload")?.textContent).toContain("--background-base:#fff;")
   })
 })

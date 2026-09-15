@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">ওপেন সোর্স এআই কোডিং এজেন্ট।</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### ইনস্টলেশন (Installation)
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # Package managers
 npm i -g prioricode-ai@latest        # or bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # or github:Prioritech-Indonesia-Optima/pri
 
 ### ডেস্কটপ অ্যাপ (BETA)
 
-PrioriCode ডেস্কটপ অ্যাপ্লিকেশন হিসেবেও উপলব্ধ। সরাসরি [রিলিজ পেজ](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) অথবা [prioricode.ai/download](https://prioricode.ai/download) থেকে ডাউনলোড করুন।
+PrioriCode ডেস্কটপ অ্যাপ্লিকেশন হিসেবেও উপলব্ধ। সরাসরি [রিলিজ পেজ](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) অথবা [prioritech.co.id/download](https://prioritech.co.id/download) থেকে ডাউনলোড করুন।
 
 | প্ল্যাটফর্ম           | ডাউনলোড                            |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ scoop bucket add extras; scoop install extras/prioricode-desktop
 
 ```bash
 # উদাহরণ
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### এজেন্টস (Agents)
@@ -110,11 +107,29 @@ PrioriCode এ দুটি বিল্ট-ইন এজেন্ট রয়�
 এছাড়াও জটিল অনুসন্ধান এবং মাল্টিস্টেপ টাস্কের জন্য একটি **general** সাবএজেন্ট অন্তর্ভুক্ত রয়েছে।
 এটি অভ্যন্তরীণভাবে ব্যবহৃত হয় এবং মেসেজে `@general` লিখে ব্যবহার করা যেতে পারে।
 
-এজেন্টদের সম্পর্কে আরও জানুন: [docs](https://prioricode.ai/docs/agents)।
+এজেন্টদের সম্পর্কে আরও জানুন: [docs](https://prioritech.co.id/docs/agents)।
+
+### OpenCode এর উপর নির্মিত
+
+PrioriCode হলো [OpenCode](https://github.com/anomalyco/opencode)-এর একটি ফর্ক, যা একটি ওপেন সোর্স AI কোডিং এজেন্ট। এই প্রজেক্টের ভিত্তি তৈরি করার জন্য আমরা OpenCode টিম এবং তাদের অবদানকারীদের ধন্যবাদ জানাই।
+
+### OpenCode-এর সাথে PrioriCode-এর তুলনা
+
+| ক্ষমতা | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| ওপেন সোর্স AI কোডিং এজেন্ট (TUI + ডেস্কটপ) | ✓ | ✓ |
+| একাধিক LLM প্রোভাইডার, প্লাগইন এবং MCP | ✓ | ✓ |
+| GitHub Actions ইন্টিগ্রেশন | ✓ | ✓ |
+| সামঞ্জস্যযোগ্য কনটেক্সট কম্প্যাকশন | ✓ | ✓ |
+| ক্রস-সেশন সমন্বয় (`sessions` টুল) | — | ✓ |
+
+**ক্রস-সেশন সমন্বয়.** একই প্রজেক্টে একসাথে চলা একাধিক PrioriCode সেশন একটি বিল্ট-ইন `sessions` টুলের মাধ্যমে সমন্বয় করতে পারে: ভাই-বোন সেশন আবিষ্কার, সম্পাদনা সংঘাত এড়াতে ফাইল দাবি করা, বার্তা পাঠানো এবং সীমিত অপেক্ষার সাথে প্রশ্ন করা। নোটগুলো স্থায়ী এবং স্বয়ংক্রিয়ভাবে ডেলিভার করা হয় — একটি ব্যাকগ্রাউন্ড ওয়াচার একটি অবসরপ্রাপ্ত সেশনকে জাগিয়ে তোলে যাতে তা polling ছাড়াই একজন সহপাঠীর নোট পড়ে।
+
+**সামঞ্জস্যযোগ্য কনটেক্সট কম্প্যাকশন.** `compaction` কনফিগারেশনের মাধ্যমে পূর্ণ কনটেক্সট উইন্ডো কীভাবে পরিচালনা করা হয় তা নিয়ন্ত্রণ করুন: একটি টোকেন বাফার সংরক্ষণ করুন, স্বয়ংক্রিয় কম্প্যাকশন চালু বা বন্ধ করুন, এবং কম্প্যাকশনের পরে কতগুলো সাম্প্রতিক টার্ন বা টোকেন হুবহু সংরক্ষণ করা হবে তা সামঞ্জস্য করুন।
 
 ### ডকুমেন্টেশন (Documentation)
 
-কিভাবে PrioriCode কনফিগার করবেন সে সম্পর্কে আরও তথ্যের জন্য, [**আমাদের ডকস দেখুন**](https://prioricode.ai/docs)।
+কিভাবে PrioriCode কনফিগার করবেন সে সম্পর্কে আরও তথ্যের জন্য, [**আমাদের ডকস দেখুন**](https://prioritech.co.id/docs)।
 
 ### অবদান (Contributing)
 
@@ -126,4 +141,3 @@ PrioriCode এ দুটি বিল্ট-ইন এজেন্ট রয়�
 
 ---
 
-**আমাদের কমিউনিটিতে যুক্ত হোন** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">L’agente di coding AI open source.</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### Installazione
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # Package manager
 npm i -g prioricode-ai@latest        # oppure bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # oppure github:Prioritech-Indonesia-Optima
 
 ### App Desktop (BETA)
 
-PrioriCode è disponibile anche come applicazione desktop. Puoi scaricarla direttamente dalla [pagina delle release](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) oppure da [prioricode.ai/download](https://prioricode.ai/download).
+PrioriCode è disponibile anche come applicazione desktop. Puoi scaricarla direttamente dalla [pagina delle release](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) oppure da [prioritech.co.id/download](https://prioritech.co.id/download).
 
 | Piattaforma           | Download                           |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ Lo script di installazione rispetta il seguente ordine di priorità per il perco
 
 ```bash
 # Esempi
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Agenti
@@ -110,11 +107,29 @@ PrioriCode include due agenti integrati tra cui puoi passare usando il tasto `Ta
 È inoltre incluso un sotto-agente **general** per ricerche complesse e attività multi-step.
 Viene utilizzato internamente e può essere invocato usando `@general` nei messaggi.
 
-Scopri di più sugli [agenti](https://prioricode.ai/docs/agents).
+Scopri di più sugli [agenti](https://prioritech.co.id/docs/agents).
+
+### Basato su OpenCode
+
+PrioriCode è un fork di [OpenCode](https://github.com/anomalyco/opencode), l'agente di coding IA open source. Ringraziamo il team di OpenCode e i suoi contributor per le fondamenta su cui si basa questo progetto.
+
+### Come PrioriCode si confronta con OpenCode
+
+| Funzionalità | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| Agente di coding IA open source (TUI + desktop) | ✓ | ✓ |
+| Multipli provider LLM, plugin e MCP | ✓ | ✓ |
+| Integrazione GitHub Actions | ✓ | ✓ |
+| Compattazione del contesto regolabile | ✓ | ✓ |
+| Coordinazione tra sessioni (tool `sessions`) | — | ✓ |
+
+**Coordinazione tra sessioni.** Le sessioni PrioriCode concorrenti sullo stesso progetto possono coordinarsi tramite un tool `sessions` integrato: scoprire sessioni sorelle, riservare file per evitare collisioni di modifica, inviare messaggi e fare domande con attesa limitata. Le note sono durevoli e consegnate automaticamente — un watcher in background risveglia una sessione inattiva affinché legga la nota di un pari senza polling.
+
+**Compattazione del contesto regolabile.** Controlla come viene gestita una finestra di contesto piena con la configurazione `compaction`: riservare un buffer di token, abilitare o disabilitare la compattazione automatica e regolare quanti turni o token recenti vengono preservati alla lettera.
 
 ### Documentazione
 
-Per maggiori informazioni su come configurare PrioriCode, [**consulta la nostra documentazione**](https://prioricode.ai/docs).
+Per maggiori informazioni su come configurare PrioriCode, [**consulta la nostra documentazione**](https://prioritech.co.id/docs).
 
 ### Contribuire
 
@@ -126,4 +141,3 @@ Se stai lavorando a un progetto correlato a PrioriCode e che utilizza “prioric
 
 ---
 
-**Unisciti alla nostra community** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

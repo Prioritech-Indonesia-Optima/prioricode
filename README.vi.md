@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">Trợ lý lập trình AI mã nguồn mở.</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### Cài đặt
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # Các trình quản lý gói (Package managers)
 npm i -g prioricode-ai@latest        # hoặc bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # hoặc github:Prioritech-Indonesia-Optima
 
 ### Ứng dụng Desktop (BETA)
 
-PrioriCode cũng có sẵn dưới dạng ứng dụng desktop. Tải trực tiếp từ [trang releases](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) hoặc [prioricode.ai/download](https://prioricode.ai/download).
+PrioriCode cũng có sẵn dưới dạng ứng dụng desktop. Tải trực tiếp từ [trang releases](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) hoặc [prioritech.co.id/download](https://prioritech.co.id/download).
 
 | Nền tảng              | Tải xuống                          |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ Tập lệnh cài đặt tuân theo thứ tự ưu tiên sau cho đường dẫn
 
 ```bash
 # Ví dụ
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Agents (Đại diện)
@@ -110,11 +107,29 @@ PrioriCode bao gồm hai agent được tích hợp sẵn mà bạn có thể ch
 Ngoài ra còn có một subagent **general** dùng cho các tìm kiếm phức tạp và tác vụ nhiều bước.
 Agent này được sử dụng nội bộ và có thể gọi bằng cách dùng `@general` trong tin nhắn.
 
-Tìm hiểu thêm về [agents](https://prioricode.ai/docs/agents).
+Tìm hiểu thêm về [agents](https://prioritech.co.id/docs/agents).
+
+### Xây dựng trên OpenCode
+
+PrioriCode là một fork của [OpenCode](https://github.com/anomalyco/opencode), tác nhân lập trình AI mã nguồn mở. Chúng tôi cảm ơn đội ngũ OpenCode và các đóng góp viên vì nền tảng mà dự án này xây dựng trên đó.
+
+### So sánh PrioriCode với OpenCode
+
+| Tính năng | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| Tác nhân lập trình AI mã nguồn mở (TUI + desktop) | ✓ | ✓ |
+| Nhiều nhà cung cấp LLM, plugin và MCP | ✓ | ✓ |
+| Tích hợp GitHub Actions | ✓ | ✓ |
+| Nén ngữ cảnh có thể điều chỉnh | ✓ | ✓ |
+| Phối hợp giữa các phiên (công cụ `sessions`) | — | ✓ |
+
+**Phối hợp giữa các phiên.** Các phiên PrioriCode chạy đồng thời trên cùng một dự án có thể phối hợp thông qua công cụ `sessions` tích hợp: khám phá các phiên anh chị em, yêu cầu các tệp để tránh xung đột chỉnh sửa, gửi tin nhắn và đặt câu hỏi với thời gian chờ có giới hạn. Ghi chú là bền vững và được chuyển tự động — một watcher nền đánh thức một phiên nhàn rỗi để nó đọc ghi chú của một phiên khác mà không cần poll.
+
+**Nén ngữ cảnh có thể điều chỉnh.** Kiểm soát cách xử lý một cửa sổ ngữ cảnh đầy bằng cấu hình `compaction`: dự phòng một buffer token, bật hoặc tắt nén tự động và điều chỉnh số lượt hoặc token gần đây được giữ nguyên văn.
 
 ### Tài liệu
 
-Để biết thêm thông tin về cách cấu hình PrioriCode, [**hãy truy cập tài liệu của chúng tôi**](https://prioricode.ai/docs).
+Để biết thêm thông tin về cách cấu hình PrioriCode, [**hãy truy cập tài liệu của chúng tôi**](https://prioritech.co.id/docs).
 
 ### Đóng góp
 
@@ -126,4 +141,3 @@ Nếu bạn đang làm việc trên một dự án liên quan đến PrioriCode 
 
 ---
 
-**Tham gia cộng đồng của chúng tôi** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

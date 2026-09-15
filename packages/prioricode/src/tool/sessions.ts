@@ -1,11 +1,10 @@
-import { Effect, Schema, Scope } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./sessions.txt"
 import { Coordination } from "@/session/coordination"
 import { Session } from "@/session/session"
 import { SessionStatus } from "@/session/status"
 import { SessionID } from "../session/schema"
-import type { TaskPromptOps } from "./task"
 
 export const Parameters = Schema.Struct({
   action: Schema.Literals(["discover", "claim", "release", "send", "ask", "respond"]).annotate({
@@ -26,10 +25,6 @@ export const Parameters = Schema.Struct({
   timeout: Schema.optional(Schema.Number).annotate({
     description: "For ask: maximum seconds to wait for a response. Defaults to 60, capped at 300.",
   }),
-  wake: Schema.optional(Schema.Boolean).annotate({
-    description:
-      "For send/ask/respond: attempt to wake an idle target so it sees the note immediately. Defaults to true.",
-  }),
 })
 
 type Metadata = {
@@ -48,14 +43,12 @@ export const SessionsTool = Tool.define(
     const coordination = yield* Coordination.Service
     const sessions = yield* Session.Service
     const status = yield* SessionStatus.Service
-    const scope = yield* Scope.Scope
 
     const run = Effect.fn("SessionsTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
       ctx: Tool.Context<Metadata>,
     ) {
       const self = yield* sessions.get(ctx.sessionID).pipe(Effect.orDie)
-      const wakeEnabled = params.wake !== false
 
       yield* ctx.ask({
         permission: "sessions",
@@ -63,18 +56,6 @@ export const SessionsTool = Tool.define(
         always: ["*"],
         metadata: { action: params.action, target: params.target },
       })
-
-      const deliver = (target: SessionID, header: string, body: string) =>
-        Effect.gen(function* () {
-          const current = yield* status.get(target)
-          if (current.type !== "idle") return "queued" as const
-          const ops = ctx.extra?.promptOps as TaskPromptOps | undefined
-          if (!ops) return "queued" as const
-          yield* ops
-            .prompt({ sessionID: target, parts: [{ type: "text", synthetic: true, text: `${header}\n\n${body}` }] })
-            .pipe(Effect.ignore, Effect.forkIn(scope, { startImmediately: true }))
-          return "woken" as const
-        })
 
       const discover = Effect.fn("SessionsTool.discover")(function* (self: Session.Info) {
         const [siblings, statusMap, otherClaims, mine] = yield* Effect.all(
@@ -142,7 +123,6 @@ export const SessionsTool = Tool.define(
       const send = Effect.fn("SessionsTool.send")(function* (
         self: Session.Info,
         params: Schema.Schema.Type<typeof Parameters>,
-        wakeEnabled: boolean,
       ) {
         const target = params.target
         const message = params.message
@@ -155,14 +135,12 @@ export const SessionsTool = Tool.define(
           toSession: target as SessionID,
           body: message,
         })
-        const woke = wakeEnabled ? yield* deliver(target as SessionID, peerHeader(self), message) : "queued"
-        return result("send", `Message queued for ${target} (${woke}).`, { target })
+        return result("send", `Message delivered to ${target}; it will be woken to read it.`, { target })
       })
 
       const ask = Effect.fn("SessionsTool.ask")(function* (
         self: Session.Info,
         params: Schema.Schema.Type<typeof Parameters>,
-        wakeEnabled: boolean,
       ) {
         const target = params.target
         const message = params.message
@@ -175,19 +153,12 @@ export const SessionsTool = Tool.define(
           toSession: target as SessionID,
           body: message,
         })
-        const woke = wakeEnabled
-          ? yield* deliver(
-              target as SessionID,
-              `${peerHeader(self)} This is a REQUEST. Reply with the sessions tool: action "respond", request_id "${request.id}".`,
-              message,
-            )
-          : "queued"
         const seconds = Math.min(params.timeout ?? DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS)
         const response = yield* pollResponse(coordination, request.id, Date.now() + seconds * 1000)
         if (!response)
           return result(
             "ask",
-            `Request ${request.id} sent to ${target} (${woke}) but no response within ${seconds}s. It stays queued; the peer can respond later.`,
+            `Request ${request.id} delivered to ${target} but no response within ${seconds}s. It stays queued; the peer can respond later.`,
             { target, requestID: request.id },
           )
         yield* coordination.markRead([response.id])
@@ -200,7 +171,6 @@ export const SessionsTool = Tool.define(
       const respond = Effect.fn("SessionsTool.respond")(function* (
         self: Session.Info,
         params: Schema.Schema.Type<typeof Parameters>,
-        wakeEnabled: boolean,
       ) {
         const requestID = params.request_id
         if (!requestID) return failure("respond requires request_id")
@@ -218,14 +188,7 @@ export const SessionsTool = Tool.define(
           replyTo: requestID,
         })
         yield* coordination.markRead([requestID])
-        const woke = wakeEnabled
-          ? yield* deliver(
-              requester,
-              `${peerHeader(self)} This is a RESPONSE to your request ${requestID}.`,
-              answer,
-            )
-          : "queued"
-        return result("respond", `Response sent to ${requester} (${woke}).`, { target: requester, requestID })
+        return result("respond", `Response delivered to ${requester}.`, { target: requester, requestID })
       })
 
       switch (params.action) {
@@ -237,11 +200,11 @@ export const SessionsTool = Tool.define(
           yield* coordination.releaseClaims({ sessionID: self.id, paths: params.paths ?? [] })
           return result("release", `Released ${params.paths?.length ?? 0} claim(s).`)
         case "send":
-          return yield* send(self, params, wakeEnabled)
+          return yield* send(self, params)
         case "ask":
-          return yield* ask(self, params, wakeEnabled)
+          return yield* ask(self, params)
         case "respond":
-          return yield* respond(self, params, wakeEnabled)
+          return yield* respond(self, params)
       }
     })
 
@@ -266,10 +229,6 @@ function pollResponse(
       return Effect.sleep("1 seconds").pipe(Effect.andThen(pollResponse(coordination, requestID, deadline)))
     }),
   )
-}
-
-function peerHeader(self: { id: SessionID; title: string }) {
-  return `[PrioriCode peer message from session ${self.id} "${self.title}". Do not auto-reply unless coordination requires it.]`
 }
 
 function result(action: string, output: string, metadata?: Omit<Metadata, "action">) {

@@ -940,7 +940,7 @@ export default {
     ),
   )
 
-  it.live("reads oc-themes from package manifest", () =>
+  it.live("reads prioricode-themes from package manifest", () =>
     withTmp(
       async (dir) => {
         const mod = path.join(dir, "mod")
@@ -951,7 +951,7 @@ export default {
             {
               name: "acme-plugin",
               version: "1.0.0",
-              "oc-themes": ["themes/one.json", "./themes/one.json", "themes/two.json"],
+              "prioricode-themes": ["themes/one.json", "./themes/one.json", "themes/two.json"],
             },
             null,
             2,
@@ -979,6 +979,26 @@ export default {
     ),
   )
 
+  it.live("reads legacy oc-themes manifest key", () =>
+    withTmp(
+      async (dir) => {
+        const mod = path.join(dir, "mod")
+        await fs.mkdir(mod, { recursive: true })
+        return { mod }
+      },
+      (tmp) =>
+        Effect.gen(function* () {
+          const list = readPackageThemes("legacy-plugin", {
+            dir: tmp.extra.mod,
+            pkg: path.join(tmp.extra.mod, "package.json"),
+            json: { "oc-themes": ["themes/legacy.json"] },
+          })
+
+          expect(list).toEqual([FSUtil.resolve(path.join(tmp.extra.mod, "themes", "legacy.json"))])
+        }),
+    ),
+  )
+
   it.live("handles no-entrypoint tui packages via missing callback", () =>
     withTmp(
       async (dir) => {
@@ -990,7 +1010,7 @@ export default {
             {
               name: "acme-plugin",
               version: "1.0.0",
-              "oc-themes": ["themes/night.json"],
+              "prioricode-themes": ["themes/night.json"],
             },
             null,
             2,
@@ -1062,7 +1082,7 @@ export default {
               exports: {
                 "./tui": "./tui.js",
               },
-              "oc-themes": ["themes/night.json"],
+              "prioricode-themes": ["themes/night.json"],
             },
             null,
             2,
@@ -1110,13 +1130,13 @@ export default {
     ),
   )
 
-  it.live("rejects oc-themes path traversal", () =>
+  it.live("rejects prioricode-themes path traversal", () =>
     withTmp(
       async (dir) => {
         const mod = path.join(dir, "mod")
         await fs.mkdir(mod, { recursive: true })
         const file = path.join(mod, "package.json")
-        await Bun.write(file, JSON.stringify({ name: "acme", "oc-themes": ["../escape.json"] }, null, 2))
+        await Bun.write(file, JSON.stringify({ name: "acme", "prioricode-themes": ["../escape.json"] }, null, 2))
         return { mod, file }
       },
       (tmp) =>

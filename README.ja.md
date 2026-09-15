@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">オープンソースのAIコーディングエージェント。</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### インストール
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # パッケージマネージャー
 npm i -g prioricode-ai@latest        # bun/pnpm/yarn でもOK
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # または github:Prioritech-Indonesia-Opt
 
 ### デスクトップアプリ (BETA)
 
-PrioriCode はデスクトップアプリとしても利用できます。[releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) から直接ダウンロードするか、[prioricode.ai/download](https://prioricode.ai/download) を利用してください。
+PrioriCode はデスクトップアプリとしても利用できます。[releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) から直接ダウンロードするか、[prioritech.co.id/download](https://prioritech.co.id/download) を利用してください。
 
 | プラットフォーム      | ダウンロード                       |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ scoop bucket add extras; scoop install extras/prioricode-desktop
 
 ```bash
 # 例
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Agents
@@ -110,11 +107,29 @@ PrioriCode には組み込みの Agent が2つあり、`Tab` キーで切り替�
 また、複雑な検索やマルチステップのタスク向けに **general** サブ Agent も含まれています。
 内部的に使用されており、メッセージで `@general` と入力して呼び出せます。
 
-[agents](https://prioricode.ai/docs/agents) の詳細はこちら。
+[agents](https://prioritech.co.id/docs/agents) の詳細はこちら。
+
+### OpenCode をベースに
+
+PrioriCode は、オープンソースの AI コーディングエージェント [OpenCode](https://github.com/anomalyco/opencode) のフォークです。このプロジェクトの基盤を築いてくれた OpenCode チームと貢献者に感謝します。
+
+### PrioriCode と OpenCode の比較
+
+| 機能 | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| オープンソース AI コーディングエージェント (TUI + デスクトップ) | ✓ | ✓ |
+| 複数の LLM プロバイダー、プラグイン、MCP | ✓ | ✓ |
+| GitHub Actions 統合 | ✓ | ✓ |
+| 調整可能なコンテキスト圧縮 | ✓ | ✓ |
+| セッション間協調 (`sessions` ツール) | — | ✓ |
+
+**セッション間協調.** 同じプロジェクトで並行して動作する複数の PrioriCode セッションは、組み込みの `sessions` ツールで協調できます: 兄弟セッションの発見、ファイルの確保による編集競合の回避、メッセージの送信、制限付き待機での質問。ノートは永続的で自動的に配信されます — バックグラウンドのウォッチャーがアイドルのセッションを起動し、ポーリングせずにピアのノートを读取します。
+
+**調整可能なコンテキスト圧縮.** `compaction` 設定で、コンテキストウィンドウが満杯になったときの処理を制御します: トークンバッファの確保、自動圧縮の有効/無効、圧縮後にそのまま保持する最近のターン数やトークン数の調整。
 
 ### ドキュメント
 
-PrioriCode の設定については [**ドキュメント**](https://prioricode.ai/docs) を参照してください。
+PrioriCode の設定については [**ドキュメント**](https://prioritech.co.id/docs) を参照してください。
 
 ### コントリビュート
 
@@ -126,4 +141,3 @@ PrioriCode に関連するプロジェクトで、名前に "prioricode"（例: 
 
 ---
 
-**コミュニティに参加** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

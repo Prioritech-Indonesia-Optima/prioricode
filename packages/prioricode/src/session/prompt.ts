@@ -15,6 +15,7 @@ import type { JSONSchema7 } from "@ai-sdk/provider"
 import { SessionCompaction } from "./compaction"
 import { SystemPrompt } from "./system"
 import { Instruction } from "./instruction"
+import { Coordination } from "./coordination"
 import { Plugin } from "../plugin"
 import { MAX_STEPS_PROMPT } from "@prioricode/core/session/runner/max-steps"
 import { ToolRegistry } from "@/tool/registry"
@@ -132,6 +133,7 @@ const layer = Layer.effect(
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
     const scope = yield* Scope.Scope
     const instruction = yield* Instruction.Service
+    const coordination = yield* Coordination.Service
     const state = yield* SessionRunState.Service
     const revert = yield* SessionRevert.Service
     const summary = yield* SessionSummary.Service
@@ -1261,10 +1263,15 @@ const layer = Layer.effect(
               sys.mcp(agent, session.permission),
               MessageV2.toModelMessagesEffect(msgs, model),
             ])
+            // Surface coordination notes from peer sessions once, at the turn boundary, and
+            // mark them read so neither a concurrent wake poller nor a later turn re-delivers them.
+            const coordinationNotes = yield* coordination.claimUnread(sessionID)
+            const coordinationBlock = coordinationNotes.length > 0 ? Coordination.formatNotes(coordinationNotes) : undefined
             const system = [
               ...env,
               ...instructions,
               ...(mcpInstructions ? [mcpInstructions] : []),
+              ...(coordinationBlock ? [coordinationBlock] : []),
               ...(skills ? [skills] : []),
             ]
             const format = lastUser.format ?? { type: "text" as const }
@@ -1589,8 +1596,7 @@ export function createStructuredOutputTool(input: {
     },
   })
 }
-const bashRegex = /!`([^`]+)`/g
-// Match [Image N] as single token, quoted strings, or non-space sequences
+const bashRegex = /!`([^`]+)`/g// Match [Image N] as single token, quoted strings, or non-space sequences
 const argsRegex = /(?:\[Image\s+\d+\]|"[^"]*"|'[^']*'|[^\s"']+)/gi
 const placeholderRegex = /\$(\d+)/g
 const quoteTrimRegex = /^["']|["']$/g
@@ -1617,6 +1623,7 @@ export const node = LayerNode.make({
     Image.node,
     CrossSpawnSpawner.node,
     Instruction.node,
+    Coordination.node,
     SessionRunState.node,
     SessionRevert.node,
     SessionSummary.node,

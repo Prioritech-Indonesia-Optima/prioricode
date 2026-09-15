@@ -93,7 +93,7 @@ async function plugin(
         version: "1.0.0",
         ...(server ? { main: "./server.js" } : {}),
         ...(Object.keys(exports).length ? { exports } : {}),
-        ...(themes?.length ? { "oc-themes": themes } : {}),
+        ...(themes?.length ? { "prioricode-themes": themes } : {}),
       },
       null,
       2,
@@ -440,7 +440,7 @@ describe("plugin.install.task", () => {
     expect(await Filesystem.exists(path.join(tmp.path, ".prioricode", "prioricode.jsonc"))).toBe(false)
   })
 
-  test("writes tui config for oc-themes-only packages", async () => {
+  test("writes tui config for prioricode-themes-only packages", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, undefined, undefined, ["themes/forest.json"])
     await fs.mkdir(path.join(target, "themes"), { recursive: true })
@@ -461,7 +461,7 @@ describe("plugin.install.task", () => {
     expect(tui.plugin).toEqual(["acme@1.2.3"])
   })
 
-  test("returns false for oc-themes outside plugin directory", async () => {
+  test("returns false for prioricode-themes outside plugin directory", async () => {
     await using tmp = await tmpdir()
     const target = await plugin(tmp.path, undefined, undefined, ["../outside.json"])
     const run = createPlugTask(
