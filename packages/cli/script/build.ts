@@ -105,7 +105,7 @@ for (const item of targets) {
         name: `@prioricode/${name}`,
         version: Script.version,
         license: "MIT",
-        repository: { type: "git", url: "git+https://github.com/anomalyco/prioricode.git" },
+        repository: { type: "git", url: "git+https://github.com/Prioritech-Indonesia-Optima/prioricode.git" },
         os: [item.os],
         cpu: [item.arch],
       },

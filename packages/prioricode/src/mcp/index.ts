@@ -38,13 +38,13 @@ import { McpBrowser } from "./browser"
 const DEFAULT_TIMEOUT = 30_000
 const CLIENT_OPTIONS = {
   capabilities: {
-    // https://github.com/anomalyco/prioricode/issues/11948
+    // https://github.com/Prioritech-Indonesia-Optima/prioricode/issues/11948
     // sampling: {},
-    // https://github.com/anomalyco/prioricode/issues/23066
+    // https://github.com/Prioritech-Indonesia-Optima/prioricode/issues/23066
     // elicitation: {},
-    // https://github.com/anomalyco/prioricode/issues/2308
+    // https://github.com/Prioritech-Indonesia-Optima/prioricode/issues/2308
     roots: {},
-    // https://github.com/anomalyco/prioricode/issues/28567
+    // https://github.com/Prioritech-Indonesia-Optima/prioricode/issues/28567
     // tasks: {},
   },
 } satisfies ClientOptions

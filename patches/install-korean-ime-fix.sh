@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # prioricode Korean IME Fix Installer
-# https://github.com/anomalyco/prioricode/issues/14371
+# https://github.com/Prioritech-Indonesia-Optima/prioricode/issues/14371
 #
 # Patches prioricode to prevent Korean (and other CJK) IME last character
 # truncation when pressing Enter in Kitty and other terminals.

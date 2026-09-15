@@ -8,11 +8,7 @@
   </a>
 </p>
 <p align="center">The open source AI coding agent.</p>
-<p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+<p align="center">prioricode, by Prioritech Indonesia Optima.</p>
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -58,7 +54,7 @@ brew install prioricode              # macOS and Linux (official brew formula, u
 sudo pacman -S prioricode            # Arch Linux (Stable)
 paru -S prioricode-bin               # Arch Linux (Latest from AUR)
 mise use -g prioricode               # Any OS
-nix run nixpkgs#prioricode           # or github:anomalyco/prioricode for latest dev branch
+nix run nixpkgs#prioricode           # or github:Prioritech-Indonesia-Optima/prioricode for latest dev branch
 ```
 
 > [!TIP]
@@ -66,7 +62,7 @@ nix run nixpkgs#prioricode           # or github:anomalyco/prioricode for latest
 
 ### Desktop App (BETA)
 
-PrioriCode is also available as a desktop application. Download directly from the [releases page](https://github.com/anomalyco/prioricode/releases) or [prioricode.ai/download](https://prioricode.ai/download).
+PrioriCode is also available as a desktop application. Download directly from the [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) or [prioricode.ai/download](https://prioricode.ai/download).
 
 | Platform              | Download                           |
 | --------------------- | ---------------------------------- |
@@ -126,4 +122,4 @@ If you are working on a project that's related to PrioriCode and is using "prior
 
 ---
 
-**Join our community** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)
+prioricode is maintained by Prioritech Indonesia Optima.

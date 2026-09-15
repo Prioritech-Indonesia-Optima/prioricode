@@ -364,7 +364,7 @@ jobs:
           persist-credentials: false
 
       - name: Run prioricode
-        uses: anomalyco/prioricode/github@latest${envStr}
+        uses: Prioritech-Indonesia-Optima/prioricode/github@latest${envStr}
         with:
           model: ${provider}/${model}`,
         )

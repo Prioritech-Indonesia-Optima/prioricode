@@ -138,7 +138,7 @@ function getConfig() {
         appId,
         productName: "PrioriCode Beta",
         protocols: { name: "PrioriCode Beta", schemes: ["prioricode"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "prioricode-beta", channel: "latest" },
+        publish: { provider: "github", owner: "Prioritech-Indonesia-Optima", repo: "prioricode-beta", channel: "latest" },
         deb: { fpm: [metainfoFpm(appId)] },
         rpm: { packageName: "prioricode-beta", fpm: [metainfoFpm(appId)] },
       }
@@ -149,7 +149,7 @@ function getConfig() {
         appId,
         productName: "PrioriCode",
         protocols: { name: "PrioriCode", schemes: ["prioricode"] },
-        publish: { provider: "github", owner: "anomalyco", repo: "prioricode", channel: "latest" },
+        publish: { provider: "github", owner: "Prioritech-Indonesia-Optima", repo: "prioricode", channel: "latest" },
         deb: { fpm: [metainfoFpm(appId), legacyDesktopEntryFpm] },
         rpm: { packageName: "prioricode", fpm: [metainfoFpm(appId), legacyDesktopEntryFpm] },
       }

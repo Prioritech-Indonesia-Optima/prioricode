@@ -15,7 +15,7 @@ This extension requires the [prioricode CLI](https://prioricode.ai) to be instal
 
 ## Support
 
-This is an early release. If you encounter issues or have feedback, please create an issue at https://github.com/anomalyco/prioricode/issues.
+This is an early release. If you encounter issues or have feedback, please create an issue at https://github.com/Prioritech-Indonesia-Optima/prioricode/issues.
 
 ## Development
 

@@ -161,7 +161,7 @@ export default function Home() {
             <a href="https://x.com/prioricode">{i18n.t("footer.x")}</a>
           </div>
           <div data-slot="cell">
-            <a href="https://github.com/anomalyco/prioricode">{i18n.t("footer.github")}</a>
+            <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode">{i18n.t("footer.github")}</a>
           </div>
           <div data-slot="cell">
             <a href="https://prioricode.ai/discord">{i18n.t("footer.discord")}</a>

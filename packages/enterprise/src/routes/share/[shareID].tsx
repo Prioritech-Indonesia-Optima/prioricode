@@ -281,7 +281,7 @@ export default function () {
                             <div class="flex gap-3 items-center">
                               <IconButton
                                 as={"a"}
-                                href="https://github.com/anomalyco/prioricode"
+                                href="https://github.com/Prioritech-Indonesia-Optima/prioricode"
                                 target="_blank"
                                 icon="github"
                                 variant="ghost"

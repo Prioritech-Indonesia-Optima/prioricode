@@ -5,7 +5,7 @@ export default {
   console: stage === "production" ? "https://prioricode.ai/auth" : `https://${stage}.prioricode.ai/auth`,
   email: "help@anoma.ly",
   socialCard: "https://social-cards.sst.dev",
-  github: "https://github.com/anomalyco/prioricode",
+  github: "https://github.com/Prioritech-Indonesia-Optima/prioricode",
   discord: "https://prioricode.ai/discord",
   headerLinks: [
     { name: "app.header.home", url: "/" },

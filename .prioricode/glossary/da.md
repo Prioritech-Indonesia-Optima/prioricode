@@ -2,7 +2,7 @@
 
 ## Sources
 
-- PR #9821: https://github.com/anomalyco/prioricode/pull/9821
+- PR #9821: https://github.com/Prioritech-Indonesia-Optima/prioricode/pull/9821
 
 ## Do Not Translate (Locale Additions)
 

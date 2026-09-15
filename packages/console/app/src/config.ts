@@ -7,7 +7,7 @@ export const config = {
 
   // GitHub
   github: {
-    repoUrl: "https://github.com/anomalyco/prioricode",
+    repoUrl: "https://github.com/Prioritech-Indonesia-Optima/prioricode",
     starsFormatted: {
       compact: "195K",
       full: "195,000",

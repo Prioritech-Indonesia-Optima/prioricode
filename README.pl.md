@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
+  <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
 
 <p align="center">
@@ -58,7 +58,7 @@ brew install prioricode              # macOS i Linux (oficjalna formuła brew, r
 sudo pacman -S prioricode            # Arch Linux (Stable)
 paru -S prioricode-bin               # Arch Linux (Latest from AUR)
 mise use -g prioricode               # dowolny system
-nix run nixpkgs#prioricode           # lub github:anomalyco/prioricode dla najnowszej gałęzi dev
+nix run nixpkgs#prioricode           # lub github:Prioritech-Indonesia-Optima/prioricode dla najnowszej gałęzi dev
 ```
 
 > [!TIP]
@@ -66,7 +66,7 @@ nix run nixpkgs#prioricode           # lub github:anomalyco/prioricode dla najno
 
 ### Aplikacja desktopowa (BETA)
 
-PrioriCode jest także dostępny jako aplikacja desktopowa. Pobierz ją bezpośrednio ze strony [releases](https://github.com/anomalyco/prioricode/releases) lub z [prioricode.ai/download](https://prioricode.ai/download).
+PrioriCode jest także dostępny jako aplikacja desktopowa. Pobierz ją bezpośrednio ze strony [releases](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) lub z [prioricode.ai/download](https://prioricode.ai/download).
 
 | Platforma             | Pobieranie                         |
 | --------------------- | ---------------------------------- |

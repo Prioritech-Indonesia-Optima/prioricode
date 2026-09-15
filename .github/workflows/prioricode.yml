@@ -26,7 +26,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
 
       - name: Run prioricode
-        uses: anomalyco/prioricode/github@2c14fc5586fe0b88e5c04732d2e846769cc35671 # latest
+        uses: Prioritech-Indonesia-Optima/prioricode/github@2c14fc5586fe0b88e5c04732d2e846769cc35671 # latest
         env:
           PRIORICODE_API_KEY: ${{ secrets.PRIORICODE_API_KEY }}
           PRIORICODE_PERMISSION: '{"bash": "deny"}'

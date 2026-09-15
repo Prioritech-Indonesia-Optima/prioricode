@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/prioricode/actions/workflows/publish.yml"><img alt="สถานะการสร้าง" src="https://img.shields.io/github/actions/workflow/status/anomalyco/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
+  <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="สถานะการสร้าง" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
 
 <p align="center">
@@ -58,7 +58,7 @@ brew install prioricode              # macOS และ Linux (brew formula อ�
 sudo pacman -S prioricode            # Arch Linux (Stable)
 paru -S prioricode-bin               # Arch Linux (Latest from AUR)
 mise use -g prioricode               # ระบบปฏิบัติการใดก็ได้
-nix run nixpkgs#prioricode           # หรือ github:anomalyco/prioricode สำหรับสาขาพัฒนาล่าสุด
+nix run nixpkgs#prioricode           # หรือ github:Prioritech-Indonesia-Optima/prioricode สำหรับสาขาพัฒนาล่าสุด
 ```
 
 > [!TIP]
@@ -66,7 +66,7 @@ nix run nixpkgs#prioricode           # หรือ github:anomalyco/prioricode 
 
 ### แอปพลิเคชันเดสก์ท็อป (เบต้า)
 
-PrioriCode มีให้ใช้งานเป็นแอปพลิเคชันเดสก์ท็อป ดาวน์โหลดโดยตรงจาก [หน้ารุ่น](https://github.com/anomalyco/prioricode/releases) หรือ [prioricode.ai/download](https://prioricode.ai/download)
+PrioriCode มีให้ใช้งานเป็นแอปพลิเคชันเดสก์ท็อป ดาวน์โหลดโดยตรงจาก [หน้ารุ่น](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) หรือ [prioricode.ai/download](https://prioricode.ai/download)
 
 | แพลตฟอร์ม             | ดาวน์โหลด                          |
 | --------------------- | ---------------------------------- |

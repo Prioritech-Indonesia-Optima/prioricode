@@ -11,7 +11,7 @@
 <p align="center">
   <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
+  <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
 
 <p align="center">
@@ -58,7 +58,7 @@ brew install prioricode              # macOS 和 Linux（官方 brew formula，�
 sudo pacman -S prioricode            # Arch Linux (Stable)
 paru -S prioricode-bin               # Arch Linux (Latest from AUR)
 mise use -g prioricode               # 任意系统
-nix run nixpkgs#prioricode           # 或用 github:anomalyco/prioricode 获取最新 dev 分支
+nix run nixpkgs#prioricode           # 或用 github:Prioritech-Indonesia-Optima/prioricode 获取最新 dev 分支
 ```
 
 > [!TIP]
@@ -66,7 +66,7 @@ nix run nixpkgs#prioricode           # 或用 github:anomalyco/prioricode 获取
 
 ### 桌面应用程序 (BETA)
 
-PrioriCode 也提供桌面版应用。可直接从 [发布页 (releases page)](https://github.com/anomalyco/prioricode/releases) 或 [prioricode.ai/download](https://prioricode.ai/download) 下载。
+PrioriCode 也提供桌面版应用。可直接从 [发布页 (releases page)](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) 或 [prioricode.ai/download](https://prioricode.ai/download) 下载。
 
 | 平台                  | 下载文件                           |
 | --------------------- | ---------------------------------- |
