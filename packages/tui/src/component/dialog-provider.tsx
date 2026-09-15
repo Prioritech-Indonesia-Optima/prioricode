@@ -91,14 +91,9 @@ export function createDialogProviderOptions() {
   const { theme } = useTheme()
   const onboarded = useConnected()
 
-  async function promptCustomProviderID(): Promise<string | undefined> {
-    const value = await DialogPrompt.show(dialog, "Other", {
-      placeholder: "Provider id",
-      description: () => (
-        <text fg={theme.textMuted}>
-          This only stores a credential. Configure the provider in prioricode.json to use it.
-        </text>
-      ),
+  async function promptProviderID(): Promise<string | undefined> {
+    const value = await DialogPrompt.show(dialog, "Custom provider", {
+      placeholder: "Provider id (e.g. my-llm)",
     })
     if (value === null) return
 
@@ -110,7 +105,77 @@ export function createDialogProviderOptions() {
       message:
         "Provider ids must start with a lowercase letter or number and only use lowercase letters, numbers, hyphens, and underscores",
     })
-    return promptCustomProviderID()
+    return promptProviderID()
+  }
+
+  async function promptRequired(label: string, placeholder: string): Promise<string | undefined> {
+    const value = await DialogPrompt.show(dialog, label, { placeholder })
+    if (value === null) return
+    const trimmed = value.trim()
+    if (trimmed) return trimmed
+    toast.show({ variant: "error", message: "This value is required" })
+    return promptRequired(label, placeholder)
+  }
+
+  async function promptNumber(label: string, fallback: number): Promise<number | undefined> {
+    const value = await DialogPrompt.show(dialog, label, {
+      placeholder: String(fallback),
+      value: String(fallback),
+    })
+    if (value === null) return
+    const parsed = Number(value.trim())
+    if (Number.isFinite(parsed) && parsed > 0) return parsed
+    return fallback
+  }
+
+  async function promptCustomProvider(): Promise<string | undefined> {
+    const providerID = await promptProviderID()
+    if (!providerID) return
+
+    const npmValue = await DialogPrompt.show(dialog, "SDK package", {
+      placeholder: "@ai-sdk/openai-compatible",
+      value: "@ai-sdk/openai-compatible",
+      description: () => (
+        <text fg={theme.textMuted}>The AI SDK npm package used to talk to this provider.</text>
+      ),
+    })
+    if (npmValue === null) return
+    const npm = npmValue.trim() || "@ai-sdk/openai-compatible"
+
+    const baseURL = await promptRequired("Base URL", "https://api.example.com/v1")
+    if (!baseURL) return
+
+    const modelID = await promptRequired("Model id", "e.g. llama-3.3-70b-instruct")
+    if (!modelID) return
+
+    const context = await promptNumber("Context window (tokens)", 128_000)
+    if (context === undefined) return
+
+    const output = await promptNumber("Max output (tokens)", 8_192)
+    if (output === undefined) return
+
+    try {
+      await sdk.client.global.config.update(
+        {
+          config: {
+            provider: {
+              [providerID]: {
+                npm,
+                options: { baseURL },
+                models: { [modelID]: { limit: { context, output } } },
+              },
+            },
+          },
+        },
+        { throwOnError: true },
+      )
+    } catch (err) {
+      toast.error(err)
+      return
+    }
+
+    await sync.bootstrap({ fatal: false }).catch(() => undefined)
+    return providerID
   }
 
   const options = createMemo(() => {
@@ -124,9 +189,9 @@ export function createDialogProviderOptions() {
             description: provider.description,
             category: provider.category,
             async onSelect() {
-              const providerID = await promptCustomProviderID()
+              const providerID = await promptCustomProvider()
               if (!providerID) return
-              return dialog.replace(() => <ApiMethod providerID={providerID} title="API key" custom />)
+              return dialog.replace(() => <ApiMethod providerID={providerID} title="API key" />)
             },
           }
         }
@@ -353,13 +418,11 @@ interface ApiMethodProps {
   providerID: string
   title: string
   metadata?: Record<string, string>
-  custom?: boolean
 }
 function ApiMethod(props: ApiMethodProps) {
   const dialog = useDialog()
   const sdk = useSDK()
   const sync = useSync()
-  const toast = useToast()
   const { theme } = useTheme()
 
   return (
@@ -404,14 +467,6 @@ function ApiMethod(props: ApiMethodProps) {
         })
         await sdk.client.instance.dispose()
         await sync.bootstrap()
-        if (props.custom && !sync.data.provider_next.all.some((provider) => provider.id === props.providerID)) {
-          toast.show({
-            variant: "info",
-            message: `Saved credential for ${props.providerID}. Configure it in prioricode.json to use it.`,
-          })
-          dialog.clear()
-          return
-        }
         dialog.replace(() => <DialogModel providerID={props.providerID} />)
       }}
     />
