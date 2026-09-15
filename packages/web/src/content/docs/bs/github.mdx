@@ -3,7 +3,7 @@ title: GitHub
 description: Koristite PrioriCode u GitHub problemima i zahtjevima za povlačenjem.
 ---
 
-PrioriCode se integriše sa vašim GitHub tokovom rada. Spomenite `/prioricode` ili `/oc` u svom komentaru i PrioriCode će izvršiti zadatke unutar vašeg GitHub Actions runnera.
+PrioriCode se integriše sa vašim GitHub tokovom rada. Spomenite `/prioricode` ili `/pc` u svom komentaru i PrioriCode će izvršiti zadatke unutar vašeg GitHub Actions runnera.
 
 ---
 
@@ -48,7 +48,7 @@ Ili ga možete postaviti ručno.
    jobs:
      prioricode:
        if: |
-         contains(github.event.comment.body, '/oc') ||
+         contains(github.event.comment.body, '/pc') ||
          contains(github.event.comment.body, '/prioricode')
        runs-on: ubuntu-latest
        permissions:
@@ -101,8 +101,8 @@ Također možete koristiti [Personal Access Tokens](https://docs.github.com/en/a
 PrioriCode se može pokrenuti sljedećim GitHub događajima:
 | Vrsta događaja | Pokrenuo | Detalji
 |----------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `issue_comment` | Komentirajte problem ili PR | Navedite `/prioricode` ili `/oc` u svom komentaru. PrioriCode čita kontekst i može kreirati grane, otvarati PR-ove ili odgovarati. |
-| `pull_request_review_comment` | Komentirajte određene linije koda u PR-u | Navedite `/prioricode` ili `/oc` dok pregledavate kod. PrioriCode prima putanju datoteke, brojeve redova i kontekst razlike. |
+| `issue_comment` | Komentirajte problem ili PR | Navedite `/prioricode` ili `/pc` u svom komentaru. PrioriCode čita kontekst i može kreirati grane, otvarati PR-ove ili odgovarati. |
+| `pull_request_review_comment` | Komentirajte određene linije koda u PR-u | Navedite `/prioricode` ili `/pc` dok pregledavate kod. PrioriCode prima putanju datoteke, brojeve redova i kontekst razlike. |
 | `issues` | Broj otvoren ili uređen | Automatski pokrenite PrioriCode kada se problemi kreiraju ili modificiraju. Zahtijeva `prompt` unos. |
 | `pull_request` | PR otvoren ili ažuriran | Automatski pokrenite PrioriCode kada se PR-ovi otvore, sinkroniziraju ili ponovo otvore. Korisno za automatske recenzije. |
 | `schedule` | Cron baziran raspored | Pokrenite PrioriCode prema rasporedu. Zahtijeva `prompt` unos. Izlaz ide u dnevnike i PR-ove (nema problema za komentarisanje). |
@@ -289,7 +289,7 @@ I PrioriCode će kreirati novu granu, implementirati promjene i otvoriti PR sa p
   Ostavite sljedeći komentar na GitHub PR-u.
 
 ```
-  Delete the attachment from S3 when the note is removed /oc
+  Delete the attachment from S3 when the note is removed /pc
 ```
 
 PrioriCode će implementirati traženu promjenu i posvetiti je istom PR-u.
@@ -299,7 +299,7 @@ PrioriCode će implementirati traženu promjenu i posvetiti je istom PR-u.
 
 ```
   [Comment on specific lines in Files tab]
-  /oc add error handling here
+  /pc add error handling here
 ```
 
 Kada komentarišete određene linije, PrioriCode prima:

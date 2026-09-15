@@ -200,7 +200,7 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
             `    1. Commit the \`${WORKFLOW_FILE}\` file and push`,
             step2,
             "",
-            "    3. Go to a GitHub issue and comment `/oc summarize` to see the agent in action",
+            "    3. Go to a GitHub issue and comment `/pc summarize` to see the agent in action",
             "",
             "   Learn more about the GitHub agent - https://prioricode.ai/docs/github/#usage-examples",
           ].join("\n"),
@@ -347,8 +347,8 @@ on:
 jobs:
   prioricode:
     if: |
-      contains(github.event.comment.body, ' /oc') ||
-      startsWith(github.event.comment.body, '/oc') ||
+      contains(github.event.comment.body, ' /pc') ||
+      startsWith(github.event.comment.body, '/pc') ||
       contains(github.event.comment.body, ' /prioricode') ||
       startsWith(github.event.comment.body, '/prioricode')
     runs-on: ubuntu-latest
@@ -744,7 +744,7 @@ export const githubRun = Effect.fn("Cli.github.run")(function* (args: { event?: 
       }
 
       const reviewContext = getReviewCommentContext()
-      const mentions = (process.env["MENTIONS"] || "/prioricode,/oc")
+      const mentions = (process.env["MENTIONS"] || "/prioricode,/pc")
         .split(",")
         .map((m) => m.trim().toLowerCase())
         .filter(Boolean)

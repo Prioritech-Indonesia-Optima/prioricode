@@ -3,7 +3,7 @@ title: GitHub
 description: Use PrioriCode in GitHub issues and pull-requests.
 ---
 
-PrioriCode integrates with your GitHub workflow. Mention `/prioricode` or `/oc` in your comment, and PrioriCode will execute tasks within your GitHub Actions runner.
+PrioriCode integrates with your GitHub workflow. Mention `/prioricode` or `/pc` in your comment, and PrioriCode will execute tasks within your GitHub Actions runner.
 
 ---
 
@@ -51,7 +51,7 @@ Or you can set it up manually.
    jobs:
      prioricode:
        if: |
-         contains(github.event.comment.body, '/oc') ||
+         contains(github.event.comment.body, '/pc') ||
          contains(github.event.comment.body, '/prioricode')
        runs-on: ubuntu-latest
        permissions:
@@ -84,7 +84,7 @@ Or you can set it up manually.
 - `agent`: The agent to use. Must be a primary agent. Falls back to `default_agent` from config or `"build"` if not found.
 - `share`: Whether to share the PrioriCode session. Defaults to **true** for public repositories.
 - `prompt`: Optional custom prompt to override the default behavior. Use this to customize how PrioriCode processes requests.
-- `mentions`: Comma-separated list of trigger phrases, case-insensitive. Defaults to `/prioricode,/oc`.
+- `mentions`: Comma-separated list of trigger phrases, case-insensitive. Defaults to `/prioricode,/pc`.
 - `variant`: Model variant for provider-specific reasoning effort, for example `high`, `max`, or `minimal`.
 - `oidc_base_url`: Base URL for the OIDC token exchange API. Only needed when running a custom GitHub App install. Defaults to `https://api.prioricode.ai`.
 - `use_github_token`: Set to `true` to use a caller-provided `GITHUB_TOKEN` instead of exchanging an OIDC token for an PrioriCode App installation token. Defaults to `false`.
@@ -117,8 +117,8 @@ PrioriCode can be triggered by the following GitHub events:
 
 | Event Type                    | Triggered By                           | Details                                                                                                           |
 | ----------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `issue_comment`               | Comment on an issue or PR              | Mention `/prioricode` or `/oc` in your comment. PrioriCode reads context and can create branches, open PRs, or reply. |
-| `pull_request_review_comment` | Comment on specific code lines in a PR | Mention `/prioricode` or `/oc` while reviewing code. PrioriCode receives file path, line numbers, and diff context.   |
+| `issue_comment`               | Comment on an issue or PR              | Mention `/prioricode` or `/pc` in your comment. PrioriCode reads context and can create branches, open PRs, or reply. |
+| `pull_request_review_comment` | Comment on specific code lines in a PR | Mention `/prioricode` or `/pc` while reviewing code. PrioriCode receives file path, line numbers, and diff context.   |
 | `issues`                      | Issue opened or edited                 | Automatically trigger PrioriCode when issues are created or modified. Requires `prompt` input.                      |
 | `pull_request`                | PR opened or updated                   | Automatically trigger PrioriCode when PRs are opened, synchronized, or reopened. Useful for automated reviews.      |
 | `schedule`                    | Cron-based schedule                    | Run PrioriCode on a schedule. Requires `prompt` input. Output goes to logs and PRs (no issue to comment on).        |
@@ -308,7 +308,7 @@ Here are some examples of how you can use PrioriCode in GitHub.
   Leave the following comment on a GitHub PR.
 
   ```
-  Delete the attachment from S3 when the note is removed /oc
+  Delete the attachment from S3 when the note is removed /pc
   ```
 
   PrioriCode will implement the requested change and commit it to the same PR.
@@ -319,7 +319,7 @@ Here are some examples of how you can use PrioriCode in GitHub.
 
   ```
   [Comment on specific lines in Files tab]
-  /oc add error handling here
+  /pc add error handling here
   ```
 
   When commenting on specific lines, PrioriCode receives:
