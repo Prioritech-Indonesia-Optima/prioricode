@@ -56,6 +56,8 @@ import { SessionTable } from "@prioricode/core/session/sql"
 import { SessionReminders } from "./reminders"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@prioricode/llm"
+import { triggerPoint } from "./overflow"
+import { Token } from "@/util/token"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
@@ -1165,6 +1167,16 @@ const layer = Layer.effect(
           ) {
             yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
             continue
+          }
+
+          const cfg = yield* config.get()
+          if (cfg.compaction?.threshold !== undefined && cfg.compaction?.auto !== false) {
+            const estimated = Token.estimate(JSON.stringify(msgs))
+            const trigger = triggerPoint({ cfg, model, outputTokenMax: flags.outputTokenMax })
+            if (trigger > 0 && estimated >= trigger) {
+              yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
+              continue
+            }
           }
 
           const agent = yield* agents.get(lastUser.agent)

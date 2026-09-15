@@ -6,9 +6,17 @@ import { ProviderTransform } from "@/provider/transform"
 import type { MessageV2 } from "./message-v2"
 
 const COMPACTION_BUFFER = 20_000
+const DEFAULT_CONTEXT_WINDOW = 128_000
+
+function effectiveContext(cfg: ConfigV1.Info, model: Provider.Model): number {
+  if (model.limit.context > 0) return model.limit.context
+  const fallback = cfg.compaction?.default_context
+  if (fallback === 0) return 0
+  return fallback ?? DEFAULT_CONTEXT_WINDOW
+}
 
 export function usable(input: { cfg: ConfigV1.Info; model: Provider.Model; outputTokenMax?: number }) {
-  const context = input.model.limit.context
+  const context = effectiveContext(input.cfg, input.model)
   if (context === 0) return 0
 
   const reserved =
@@ -19,6 +27,15 @@ export function usable(input: { cfg: ConfigV1.Info; model: Provider.Model; outpu
     : Math.max(0, context - ProviderTransform.maxOutputTokens(input.model, input.outputTokenMax))
 }
 
+export function triggerPoint(input: { cfg: ConfigV1.Info; model: Provider.Model; outputTokenMax?: number }) {
+  const threshold = input.cfg.compaction?.threshold
+  if (threshold === undefined) return usable(input)
+
+  const context = effectiveContext(input.cfg, input.model)
+  if (context === 0) return 0
+  return Math.max(0, Math.floor(context * Math.min(threshold, 100) / 100))
+}
+
 export function isOverflow(input: {
   cfg: ConfigV1.Info
   tokens: SessionV1.Assistant["tokens"]
@@ -26,9 +43,11 @@ export function isOverflow(input: {
   outputTokenMax?: number
 }) {
   if (input.cfg.compaction?.auto === false) return false
-  if (input.model.limit.context === 0) return false
+
+  const context = effectiveContext(input.cfg, input.model)
+  if (context === 0) return false
 
   const count =
     input.tokens.total || input.tokens.input + input.tokens.output + input.tokens.cache.read + input.tokens.cache.write
-  return count >= usable(input)
+  return count >= triggerPoint(input)
 }

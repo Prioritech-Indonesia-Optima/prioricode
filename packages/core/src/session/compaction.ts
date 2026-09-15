@@ -63,6 +63,8 @@ type Settings = {
   readonly auto: boolean
   readonly buffer: number
   readonly tokens: number
+  readonly threshold: number | undefined
+  readonly defaultContext: number
 }
 
 type Dependencies = {
@@ -129,8 +131,10 @@ const settings = (documents: readonly Config.Entry[]) => {
       auto: current.auto ?? result.auto,
       buffer: current.buffer ?? result.buffer,
       tokens: current.keep?.tokens ?? result.tokens,
+      threshold: current.threshold ?? result.threshold,
+      defaultContext: current.default_context ?? result.defaultContext,
     }),
-    { auto: true, buffer: DEFAULT_BUFFER, tokens: DEFAULT_KEEP_TOKENS },
+    { auto: true, buffer: DEFAULT_BUFFER, tokens: DEFAULT_KEEP_TOKENS, threshold: undefined, defaultContext: 128_000 },
   )
 }
 
@@ -176,8 +180,9 @@ export const buildPrompt = (input: { readonly previousSummary?: string; readonly
 export const make = (dependencies: Dependencies) => {
   const config = settings(dependencies.config)
   const compactAfterOverflow = Effect.fn("SessionCompaction.compactAfterOverflow")(function* (input: Input) {
-    const context = input.model.route.defaults.limits?.context
-    if (context === undefined || context <= 0) return false
+    const rawContext = input.model.route.defaults.limits?.context
+    const context = rawContext && rawContext > 0 ? rawContext : config.defaultContext
+    if (context <= 0) return false
     const output = input.request.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
     const selected = select(input.entries, config.tokens)
     const previousSummary = input.entries.find((entry) => entry.message.type === "compaction")?.message
@@ -231,14 +236,15 @@ export const make = (dependencies: Dependencies) => {
   })
   const compactIfNeeded = Effect.fn("SessionCompaction.compactIfNeeded")(function* (input: Input) {
     if (!config.auto) return false
-    const context = input.model.route.defaults.limits?.context
-    if (context === undefined || context <= 0) return false
+    const rawContext = input.model.route.defaults.limits?.context
+    const context = rawContext && rawContext > 0 ? rawContext : config.defaultContext
+    if (context <= 0) return false
     const output = input.request.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
-    if (
-      estimate({ system: input.request.system, messages: input.request.messages, tools: input.request.tools }) <=
-      context - Math.max(output, config.buffer)
-    )
-      return false
+    const estimated = estimate({ system: input.request.system, messages: input.request.messages, tools: input.request.tools })
+    const limit = config.threshold !== undefined
+      ? Math.floor(context * Math.min(config.threshold, 100) / 100)
+      : context - Math.max(output, config.buffer)
+    if (estimated <= limit) return false
     return yield* compactAfterOverflow(input)
   })
   return {

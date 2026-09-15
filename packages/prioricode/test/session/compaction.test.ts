@@ -533,14 +533,20 @@ describe("session.compaction.isOverflow", () => {
   )
 
   it.live(
-    "returns false when model context limit is 0",
-    provideTmpdirInstance(() =>
-      Effect.gen(function* () {
-        const compact = yield* SessionCompaction.Service
-        const model = createModel({ context: 0, output: 32_000 })
-        const tokens = { input: 100_000, output: 10_000, reasoning: 0, cache: { read: 0, write: 0 } }
-        expect(yield* compact.isOverflow({ tokens, model })).toBe(false)
-      }),
+    "returns false when model context limit is 0 and default_context is explicitly 0",
+    provideTmpdirInstance(
+      () =>
+        Effect.gen(function* () {
+          const compact = yield* SessionCompaction.Service
+          const model = createModel({ context: 0, output: 32_000 })
+          const tokens = { input: 100_000, output: 10_000, reasoning: 0, cache: { read: 0, write: 0 } }
+          expect(yield* compact.isOverflow({ tokens, model })).toBe(false)
+        }),
+      {
+        config: {
+          compaction: { default_context: 0 },
+        },
+      },
     ),
   )
 
