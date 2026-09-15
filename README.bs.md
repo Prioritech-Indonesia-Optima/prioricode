@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">PrioriCode je open source AI agent za programiranje.</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### Instalacija
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # Package manageri
 npm i -g prioricode-ai@latest        # ili bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # ili github:Prioritech-Indonesia-Optima/pr
 
 ### Desktop aplikacija (BETA)
 
-PrioriCode je dostupan i kao desktop aplikacija. Preuzmi je direktno sa [stranice izdanja](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) ili sa [prioricode.ai/download](https://prioricode.ai/download).
+PrioriCode je dostupan i kao desktop aplikacija. Preuzmi je direktno sa [stranice izdanja](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) ili sa [prioritech.co.id/download](https://prioritech.co.id/download).
 
 | Platforma             | Preuzimanje                        |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ Instalacijska skripta koristi sljedeći redoslijed prioriteta za putanju instala
 
 ```bash
 # Primjeri
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Agenti
@@ -110,11 +107,29 @@ PrioriCode uključuje dva ugrađena agenta između kojih možeš prebacivati tas
 Uključen je i **general** pod-agent za složene pretrage i višekoračne zadatke.
 Koristi se interno i može se pozvati pomoću `@general` u porukama.
 
-Saznaj više o [agentima](https://prioricode.ai/docs/agents).
+Saznaj više o [agentima](https://prioritech.co.id/docs/agents).
+
+### Izgrađeno na OpenCode
+
+PrioriCode je fork od [OpenCode](https://github.com/anomalyco/opencode), open source AI agenta za programiranje. Hvala OpenCode timu i njegovim doprinosiocima za temelj na kojem se ovaj projekt gradi.
+
+### PrioriCode u poređenju sa OpenCode
+
+| Mogućnost | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| Open source AI agent za programiranje (TUI + desktop) | ✓ | ✓ |
+| Više LLM provajdera, pluginovi i MCP | ✓ | ✓ |
+| GitHub Actions integracija | ✓ | ✓ |
+| Podesivo sabijanje konteksta | ✓ | ✓ |
+| Koordinacija između sesija (alat `sessions`) | — | ✓ |
+
+**Koordinacija između sesija.** Konkurentne PrioriCode sesije u istom projektu mogu se koordinirati kroz ugrađeni `sessions` alat: otkrivanje sestrinskih sesija, rezervisanje datoteka da se izbjegnu sudari uređivanja, slanje poruka i postavljanje pitanja sa ograničenim čekanjem. Bilješke su trajne i isporučuju se automatski — pozadinski promatrajar budi neaktivnu sesiju da pročitaju bilješku vršnjaka bez pollinga.
+
+**Podesivo sabijanje konteksta.** Kontrolišite kako se obrađuje pun prozor konteksta pomoću `compaction` konfiguracije: rezervišite bafer tokena, uključite ili isključite automatsko sabijanje i podesite koliko nedavnih rundi ili tokena se čuva doslovno.
 
 ### Dokumentacija
 
-Za više informacija o konfiguraciji PrioriCode-a, [**pogledaj dokumentaciju**](https://prioricode.ai/docs).
+Za više informacija o konfiguraciji PrioriCode-a, [**pogledaj dokumentaciju**](https://prioritech.co.id/docs).
 
 ### Doprinosi
 
@@ -126,4 +141,3 @@ Ako radiš na projektu koji je povezan s PrioriCode-om i koristi "prioricode" ka
 
 ---
 
-**Pridruži se našoj zajednici** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

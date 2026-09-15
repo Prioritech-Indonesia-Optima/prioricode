@@ -623,6 +623,11 @@ describe("tool.task", () => {
             action: "deny",
           },
           {
+            permission: "sessions",
+            pattern: "*",
+            action: "deny",
+          },
+          {
             permission: "bash",
             pattern: "*",
             action: "deny",

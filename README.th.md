@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">เอเจนต์การเขียนโค้ดด้วย AI แบบโอเพนซอร์ส</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="สถานะการสร้าง" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### การติดตั้ง
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # ตัวจัดการแพ็กเกจ
 npm i -g prioricode-ai@latest        # หรือ bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # หรือ github:Prioritech-Indonesia-
 
 ### แอปพลิเคชันเดสก์ท็อป (เบต้า)
 
-PrioriCode มีให้ใช้งานเป็นแอปพลิเคชันเดสก์ท็อป ดาวน์โหลดโดยตรงจาก [หน้ารุ่น](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) หรือ [prioricode.ai/download](https://prioricode.ai/download)
+PrioriCode มีให้ใช้งานเป็นแอปพลิเคชันเดสก์ท็อป ดาวน์โหลดโดยตรงจาก [หน้ารุ่น](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) หรือ [prioritech.co.id/download](https://prioritech.co.id/download)
 
 | แพลตฟอร์ม             | ดาวน์โหลด                          |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ scoop bucket add extras; scoop install extras/prioricode-desktop
 
 ```bash
 # ตัวอย่าง
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### เอเจนต์
@@ -110,11 +107,29 @@ PrioriCode รวมเอเจนต์ในตัวสองตัวที
 นอกจากนี้ยังมีเอเจนต์ย่อย **general** สำหรับการค้นหาที่ซับซ้อนและงานหลายขั้นตอน
 ใช้ภายในและสามารถเรียกใช้ได้โดยใช้ `@general` ในข้อความ
 
-เรียนรู้เพิ่มเติมเกี่ยวกับ [เอเจนต์](https://prioricode.ai/docs/agents)
+เรียนรู้เพิ่มเติมเกี่ยวกับ [เอเจนต์](https://prioritech.co.id/docs/agents)
+
+### สร้างบน OpenCode
+
+PrioriCode เป็น fork ของ [OpenCode](https://github.com/anomalyco/opencode) ซึ่งเป็น AI coding agent แบบ open source เราขอขอบคุณทีม OpenCode และผู้มีส่วนร่วมเป็นพื้นฐานที่โปรเจกต์นี้สร้างขึ้น
+
+### เปรียบเทียบ PrioriCode กับ OpenCode
+
+| ความสามารถ | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| AI coding agent แบบ open source (TUI + desktop) | ✓ | ✓ |
+| LLM providers หลายเจ้า, plugins และ MCP | ✓ | ✓ |
+| การบูรณาการ GitHub Actions | ✓ | ✓ |
+| การย่อ context ที่ปรับได้ | ✓ | ✓ |
+| การประสานงานข้าม session (เครื่องมือ `sessions`) | — | ✓ |
+
+**การประสานงานข้าม session.** PrioriCode sessions ที่ทำงานพร้อมกันในโปรเจกต์เดียวกันสามารถประสานงานผ่านเครื่องมือ `sessions` ที่ฝังอยู่: ค้นพบ session พี่น้อง, อ้างสิทธิ์ไฟล์เพื่อเลี่ยงการชนกันของแก้ไข, ส่งข้อความ, และตั้งคำถามด้วยการรอที่จำกัด บันทึกนั้นถาวรและจัดส่งอัตโนมัติ — watcher ในพื้นหลังจะปลุก session ที่ว่างเพื่อให้อ่านบันทึกจากเพื่อนร่วมโดยไม่ต้อง poll
+
+**การย่อ context ที่ปรับได้.** ควบคุมวิธีจัดการเมื่อ context window เต็มผ่านค่า `compaction`: สำรอง buffer ของ token, เปิดหรือปิดการย่ออัตโนมัติ, และปรับจำนวนรอบหรือ token ล่าสุดที่จะเก็บไว้ตามตัวอักษร
 
 ### เอกสารประกอบ
 
-สำหรับข้อมูลเพิ่มเติมเกี่ยวกับวิธีกำหนดค่า PrioriCode [**ไปที่เอกสารของเรา**](https://prioricode.ai/docs)
+สำหรับข้อมูลเพิ่มเติมเกี่ยวกับวิธีกำหนดค่า PrioriCode [**ไปที่เอกสารของเรา**](https://prioritech.co.id/docs)
 
 ### การมีส่วนร่วม
 
@@ -126,4 +141,3 @@ PrioriCode รวมเอเจนต์ในตัวสองตัวที
 
 ---
 
-**ร่วมชุมชนของเรา** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

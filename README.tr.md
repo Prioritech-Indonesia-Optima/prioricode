@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://prioricode.ai">
+  <a href="https://prioritech.co.id">
     <picture>
       <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
       <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
@@ -9,7 +9,6 @@
 </p>
 <p align="center">Açık kaynaklı yapay zeka kodlama asistanı.</p>
 <p align="center">
-  <a href="https://prioricode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
   <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
@@ -39,15 +38,13 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![PrioriCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://prioricode.ai)
-
 ---
 
 ### Kurulum
 
 ```bash
 # YOLO
-curl -fsSL https://prioricode.ai/install | bash
+curl -fsSL https://prioritech.co.id/install | bash
 
 # Paket yöneticileri
 npm i -g prioricode-ai@latest        # veya bun/pnpm/yarn
@@ -66,7 +63,7 @@ nix run nixpkgs#prioricode           # veya en güncel geliştirme dalı için g
 
 ### Masaüstü Uygulaması (BETA)
 
-PrioriCode ayrıca masaüstü uygulaması olarak da mevcuttur. Doğrudan [sürüm sayfasından](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) veya [prioricode.ai/download](https://prioricode.ai/download) adresinden indirebilirsiniz.
+PrioriCode ayrıca masaüstü uygulaması olarak da mevcuttur. Doğrudan [sürüm sayfasından](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) veya [prioritech.co.id/download](https://prioritech.co.id/download) adresinden indirebilirsiniz.
 
 | Platform              | İndirme                            |
 | --------------------- | ---------------------------------- |
@@ -93,8 +90,8 @@ Kurulum betiği (install script), kurulum yolu (installation path) için aşağ�
 
 ```bash
 # Örnekler
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioricode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioricode.ai/install | bash
+PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
 ```
 
 ### Ajanlar
@@ -110,11 +107,29 @@ PrioriCode, `Tab` tuşuyla aralarında geçiş yapabileceğiniz iki yerleşik (b
 Ayrıca, karmaşık aramalar ve çok adımlı görevler için bir **genel** alt ajan bulunmaktadır.
 Bu dahili olarak kullanılır ve mesajlarda `@general` ile çağrılabilir.
 
-[Ajanlar](https://prioricode.ai/docs/agents) hakkında daha fazla bilgi edinin.
+[Ajanlar](https://prioritech.co.id/docs/agents) hakkında daha fazla bilgi edinin.
+
+### OpenCode Üzerine Kuruldu
+
+PrioriCode, açık kaynak yapay zekâ kodlama ajanı [OpenCode](https://github.com/anomalyco/opencode) tabanlı bir fork'tur. Bu projenin temeli olan OpenCode ekibine ve katkıda bulunanlara teşekkür ederiz.
+
+### PrioriCode'un OpenCode ile Karşılaştırması
+
+| Özellik | OpenCode | PrioriCode |
+| --- | :---: | :---: |
+| Açık kaynak yapay zekâ kodlama ajanı (TUI + masaüstü) | ✓ | ✓ |
+| Birden fazla LLM sağlayıcısı, eklentiler ve MCP | ✓ | ✓ |
+| GitHub Actions entegrasyonu | ✓ | ✓ |
+| Ayarlanabilir bağlam sıkıştırma | ✓ | ✓ |
+| Oturumlar arası koordinasyon (`sessions` aracı) | — | ✓ |
+
+**Oturumlar arası koordinasyon.** Aynı projede eşzamanlı çalışan birden çok PrioriCode oturumu, yerleşik `sessions` aracıyla koordine olabilir: kardeş oturumları keşfetme, düzenleme çakışmalarını önlemek için dosyaları talep etme, mesaj gönderme ve sınırlı beklemeyle soru sorma. Notlar kalıcıdır ve otomatik olarak teslim edilir — arka plan izleyicisi, bir oturumu uyandırır ki bir akranın notunu polling olmadan okusun.
+
+**Ayarlanabilir bağlam sıkıştırma.** Dolu bir bağlam penceresinin nasıl işlendiğini `compaction` yapılandırmasıyla kontrol edin: token tamponu ayırın, otomatik sıkıştırmayı etkinleştirin veya devre dışı bırakın ve sıkıştırma sonrası kelimesi kelimesine korunacak son turların veya token sayısını ayarlayın.
 
 ### Dokümantasyon
 
-PrioriCode'u nasıl yapılandıracağınız hakkında daha fazla bilgi için [**dokümantasyonumuza göz atın**](https://prioricode.ai/docs).
+PrioriCode'u nasıl yapılandıracağınız hakkında daha fazla bilgi için [**dokümantasyonumuza göz atın**](https://prioritech.co.id/docs).
 
 ### Katkıda Bulunma
 
@@ -126,4 +141,3 @@ PrioriCode ile ilgili bir proje üzerinde çalışıyorsanız ve projenizin adı
 
 ---
 
-**Topluluğumuza katılın** [Discord](https://discord.gg/prioricode) | [X.com](https://x.com/prioricode)

@@ -3,7 +3,7 @@ title: GitHub
 description: ใช้ PrioriCode ในปัญหา GitHub และคำขอแบบดึง
 ---
 
-PrioriCode ผสานรวมกับเวิร์กโฟลว์ GitHub ของคุณ พูดถึง `/prioricode` หรือ `/oc` ในความคิดเห็นของคุณ แล้ว PrioriCode จะดำเนินการงานภายใน GitHub Actions runner ของคุณ
+PrioriCode ผสานรวมกับเวิร์กโฟลว์ GitHub ของคุณ พูดถึง `/prioricode` หรือ `/pc` ในความคิดเห็นของคุณ แล้ว PrioriCode จะดำเนินการงานภายใน GitHub Actions runner ของคุณ
 
 ---
 
@@ -51,7 +51,7 @@ prioricode github install
    jobs:
      prioricode:
        if: |
-         contains(github.event.comment.body, '/oc') ||
+         contains(github.event.comment.body, '/pc') ||
          contains(github.event.comment.body, '/prioricode')
        runs-on: ubuntu-latest
        permissions:
@@ -107,8 +107,8 @@ PrioriCode สามารถทริกเกอร์ได้โดยเห
 
 | ประเภทเหตุการณ์               | กระตุ้นโดย                                                | รายละเอียด                                                                                                        |
 | ----------------------------- | --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `issue_comment`               | แสดงความคิดเห็นในประเด็นหรือประชาสัมพันธ์                 | พูดถึง `/prioricode` หรือ `/oc` ในความคิดเห็นของคุณ PrioriCode อ่านบริบทและสามารถสร้างสาขา เปิด PR หรือตอบกลับได้     |
-| `pull_request_review_comment` | แสดงความคิดเห็นเกี่ยวกับบรรทัดรหัสเฉพาะในการประชาสัมพันธ์ | พูดถึง `/prioricode` หรือ `/oc` ในขณะที่ตรวจสอบโค้ด PrioriCode รับเส้นทางไฟล์ หมายเลขบรรทัด และบริบทที่แตกต่าง        |
+| `issue_comment`               | แสดงความคิดเห็นในประเด็นหรือประชาสัมพันธ์                 | พูดถึง `/prioricode` หรือ `/pc` ในความคิดเห็นของคุณ PrioriCode อ่านบริบทและสามารถสร้างสาขา เปิด PR หรือตอบกลับได้     |
+| `pull_request_review_comment` | แสดงความคิดเห็นเกี่ยวกับบรรทัดรหัสเฉพาะในการประชาสัมพันธ์ | พูดถึง `/prioricode` หรือ `/pc` ในขณะที่ตรวจสอบโค้ด PrioriCode รับเส้นทางไฟล์ หมายเลขบรรทัด และบริบทที่แตกต่าง        |
 | `issues`                      | ปัญหาเปิดหรือแก้ไข                                        | ทริกเกอร์ PrioriCode โดยอัตโนมัติเมื่อมีการสร้างหรือแก้ไขปัญหา ต้องป้อนข้อมูล `prompt`                              |
 | `pull_request`                | PR เปิดหรืออัปเดตแล้ว                                     | ทริกเกอร์ PrioriCode โดยอัตโนมัติเมื่อมีการเปิด ซิงโครไนซ์ หรือเปิด PR อีกครั้ง มีประโยชน์สำหรับการตรวจสอบอัตโนมัติ |
 | `schedule`                    | กำหนดการตาม Cron                                          | เรียกใช้ PrioriCode ตามกำหนดเวลา ต้องป้อนข้อมูล `prompt` เอาต์พุตไปที่บันทึกและ PR (ไม่มีปัญหาในการแสดงความคิดเห็น) |
@@ -298,7 +298,7 @@ jobs:
   แสดงความคิดเห็นต่อไปนี้ใน GitHub PR
 
   ```
-  Delete the attachment from S3 when the note is removed /oc
+  Delete the attachment from S3 when the note is removed /pc
   ```
 
   PrioriCode จะดำเนินการเปลี่ยนแปลงที่ร้องขอและส่งมอบให้กับ PR เดียวกัน
@@ -309,7 +309,7 @@ jobs:
 
   ```
   [Comment on specific lines in Files tab]
-  /oc add error handling here
+  /pc add error handling here
   ```
 
   เมื่อแสดงความคิดเห็นในบรรทัดใดบรรทัดหนึ่ง PrioriCode จะได้รับ:

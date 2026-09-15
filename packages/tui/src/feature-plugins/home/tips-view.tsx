@@ -246,7 +246,7 @@ const TIPS: Tip[] = [
   "Use {highlight}/prioricode{/highlight} in GitHub issues/PRs to trigger AI actions",
   "Run {highlight}prioricode github install{/highlight} to set up the GitHub workflow",
   "Comment {highlight}/prioricode fix this{/highlight} on issues to auto-create PRs",
-  "Comment {highlight}/oc{/highlight} on PR code lines for targeted code reviews",
+  "Comment {highlight}/pc{/highlight} on PR code lines for targeted code reviews",
   'Use {highlight}"theme": "system"{/highlight} to match your terminal\'s colors',
   "Create JSON theme files in {highlight}.prioricode/themes/{/highlight} directory",
   "Themes support dark/light variants for both modes",

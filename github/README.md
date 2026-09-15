@@ -27,7 +27,7 @@ Leave the following comment on a GitHub issue. prioricode will create a new bran
 Leave the following comment on a GitHub PR. prioricode will implement the requested change and commit it to the same PR.
 
 ```
-Delete the attachment from S3 when the note is removed /oc
+Delete the attachment from S3 when the note is removed /pc
 ```
 
 #### Review specific code lines
@@ -36,7 +36,7 @@ Leave a comment directly on code lines in the PR's "Files" tab. prioricode will 
 
 ```
 [Comment on specific lines in Files tab]
-/oc add error handling here
+/pc add error handling here
 ```
 
 When commenting on specific lines, prioricode receives:
@@ -75,8 +75,8 @@ This will walk you through installing the GitHub app, creating the workflow, and
    jobs:
      prioricode:
        if: |
-         contains(github.event.comment.body, '/oc') ||
-         contains(github.event.comment.body, '/prioricode')
+          contains(github.event.comment.body, '/pc') ||
+          contains(github.event.comment.body, '/prioricode')
        runs-on: ubuntu-latest
        permissions:
          id-token: write

@@ -26,6 +26,9 @@ target
 .scripts
 .direnv/
 
+# Local agent instructions (kept out of the open-source tree during rebrand)
+AGENTS.md
+
 # Local dev files
 prioricode-dev
 UPCOMING_CHANGELOG.md

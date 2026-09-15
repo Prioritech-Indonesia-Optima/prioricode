@@ -3,7 +3,7 @@ title: GitHub
 description: Utilice PrioriCode en problemas y solicitudes de extracción de GitHub.
 ---
 
-PrioriCode se integra con su flujo de trabajo GitHub. Mencione `/prioricode` o `/oc` en su comentario y PrioriCode ejecutará tareas dentro de su corredor de acciones GitHub.
+PrioriCode se integra con su flujo de trabajo GitHub. Mencione `/prioricode` o `/pc` en su comentario y PrioriCode ejecutará tareas dentro de su corredor de acciones GitHub.
 
 ---
 
@@ -51,7 +51,7 @@ O puede configurarlo manualmente.
    jobs:
      prioricode:
        if: |
-         contains(github.event.comment.body, '/oc') ||
+         contains(github.event.comment.body, '/pc') ||
          contains(github.event.comment.body, '/prioricode')
        runs-on: ubuntu-latest
        permissions:
@@ -107,8 +107,8 @@ PrioriCode puede desencadenarse por los siguientes eventos GitHub:
 
 | Tipo de evento                | Activado por                                  | Detalles                                                                                                                                        |
 | ----------------------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `issue_comment`               | Comentar sobre un tema o PR                   | Mencione `/prioricode` o `/oc` en su comentario. PrioriCode lee el contexto y puede crear ramas, abrir relaciones públicas o responder.             |
-| `pull_request_review_comment` | Comente líneas de código específicas en un PR | Mencione `/prioricode` o `/oc` mientras revisa el código. PrioriCode recibe la ruta del archivo, los números de línea y el contexto de diferencias. |
+| `issue_comment`               | Comentar sobre un tema o PR                   | Mencione `/prioricode` o `/pc` en su comentario. PrioriCode lee el contexto y puede crear ramas, abrir relaciones públicas o responder.             |
+| `pull_request_review_comment` | Comente líneas de código específicas en un PR | Mencione `/prioricode` o `/pc` mientras revisa el código. PrioriCode recibe la ruta del archivo, los números de línea y el contexto de diferencias. |
 | `issues`                      | Número abierto o editado                      | Activa automáticamente PrioriCode cuando se crean o modifican problemas. Requiere entrada `prompt`.                                               |
 | `pull_request`                | PR abierto o actualizado                      | Activa automáticamente PrioriCode cuando los PR se abren, sincronizan o vuelven a abrir. Útil para revisiones automatizadas.                      |
 | `schedule`                    | Programación basada en cron                   | Ejecute PrioriCode según una programación. Requiere entrada `prompt`. La salida va a registros y relaciones públicas (no hay temas que comentar). |
@@ -298,7 +298,7 @@ A continuación se muestran algunos ejemplos de cómo puede utilizar PrioriCode 
   Deja el siguiente comentario en un GitHub PR.
 
   ```
-  Delete the attachment from S3 when the note is removed /oc
+  Delete the attachment from S3 when the note is removed /pc
   ```
 
   PrioriCode implementará el cambio solicitado y lo comprometerá con el mismo PR.
@@ -309,7 +309,7 @@ A continuación se muestran algunos ejemplos de cómo puede utilizar PrioriCode 
 
   ```
   [Comment on specific lines in Files tab]
-  /oc add error handling here
+  /pc add error handling here
   ```
 
   Al comentar líneas específicas, PrioriCode recibe:

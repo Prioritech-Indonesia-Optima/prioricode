@@ -5,7 +5,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { eq } from "drizzle-orm"
 import { EventV2Bridge } from "@/event-v2-bridge"
-import { expect } from "bun:test"
+import { describe, expect } from "bun:test"
 import { Cause, Deferred, Duration, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
 import { fileURLToPath } from "url"
@@ -26,6 +26,8 @@ import { Image } from "../../src/image/image"
 import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
 import { Session } from "@/session/session"
+import { Coordination } from "@/session/coordination"
+import { CoordinationWatcher } from "@/session/coordination-watcher"
 import { SessionMessageTable } from "@prioricode/core/session/sql"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
@@ -255,6 +257,19 @@ const withMcpInstructions = testEffect(
 )
 const unix = process.platform !== "win32" ? it.instance : it.instance.skip
 const unixNoLLMServer = process.platform !== "win32" ? noLLMServer.instance : noLLMServer.instance.skip
+
+function makeHttpCoordination() {
+  const root = LayerNode.group([promptRoot, testLLMServerNode, Coordination.node, CoordinationWatcher.node])
+  const replacements = [
+    [SessionSummary.node, summary],
+    [LSP.node, lsp],
+    [MCP.node, makeMcp()],
+    [RuntimeFlags.node, runtimeFlags],
+  ] as const
+  return LayerNode.compile(root, replacements)
+}
+
+const coordinationIt = testEffect(makeHttpCoordination())
 
 // Config that registers a custom "test" provider with a "test-model" model
 // so provider model lookup succeeds inside the loop.
@@ -2468,3 +2483,157 @@ noLLMServer.instance(
     }),
   30_000,
 )
+
+describe("cross-session coordination", () => {
+  coordinationIt.instance(
+    "injects pending coordination notes into the model system context at the turn boundary",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const chat = yield* sessions.create({
+          title: "receiver",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+        yield* coordination.post({
+          projectID: chat.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: chat.id,
+          body: "PEER_NOTE_123",
+        })
+
+        yield* llm.hang
+        yield* user(chat.id, "hello")
+        const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+        yield* awaitWithTimeout(llm.wait(1), "timed out waiting for the coordination turn request", "10 seconds")
+
+        const body = JSON.stringify((yield* llm.hits)[0]?.body)
+        expect(body).toContain("Cross-session coordination")
+        expect(body).toContain("PEER_NOTE_123")
+        yield* Fiber.interrupt(fiber)
+      }),
+    15_000,
+  )
+
+  coordinationIt.instance(
+    "claim-once: a note surfaced by context injection is not re-delivered on the next turn",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const chat = yield* sessions.create({
+          title: "receiver",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+        yield* coordination.post({
+          projectID: chat.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: chat.id,
+          body: "ONLY_ONCE_777",
+        })
+
+        yield* llm.text("first")
+        yield* user(chat.id, "hello")
+        yield* prompt.loop({ sessionID: chat.id })
+
+        // The single pending note has now been consumed.
+        expect(yield* coordination.inbox({ sessionID: chat.id, kinds: ["message"], unreadOnly: true })).toHaveLength(0)
+
+        // A second turn must not re-surface it.
+        yield* llm.text("second")
+        yield* user(chat.id, "again")
+        yield* prompt.loop({ sessionID: chat.id })
+
+        const body = JSON.stringify((yield* llm.hits).at(-1)?.body)
+        expect(body).not.toContain("ONLY_ONCE_777")
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "sweep wakes an idle session with pending notes and delivers them durably",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const target = yield* sessions.create({
+          title: "target",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: target.id,
+          body: "WAKE_NOTE_456",
+        })
+
+        yield* llm.text("ack")
+        const woken = yield* watcher.sweep()
+        expect(woken).toBe(1)
+
+        // Delivered exactly once: the recipient's unread inbox is drained.
+        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(0)
+
+        // The target actually ran a turn whose transcript carries the note.
+        const messages = yield* sessions.messages({ sessionID: target.id })
+        const transcript = JSON.stringify(messages.map((message) => message.parts))
+        expect(transcript).toContain("WAKE_NOTE_456")
+        expect(yield* llm.calls).toBeGreaterThanOrEqual(1)
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "sweep does not wake a session that is currently busy",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const target = yield* sessions.create({
+          title: "target",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+
+        // Put the target into a busy turn that hangs on the LLM.
+        yield* llm.hang
+        yield* user(target.id, "working")
+        const busy = yield* prompt.loop({ sessionID: target.id }).pipe(Effect.forkChild)
+        yield* waitForBusy(target.id)
+
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: target.id,
+          body: "DEFERRED_999",
+        })
+
+        // While busy, the poller must not start a second concurrent turn.
+        const woken = yield* watcher.sweep()
+        expect(woken).toBe(0)
+        // The note stays queued for delivery at the next turn boundary.
+        expect(
+          yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true }),
+        ).toHaveLength(1)
+
+        yield* Fiber.interrupt(busy)
+      }),
+    20_000,
+  )
+})
