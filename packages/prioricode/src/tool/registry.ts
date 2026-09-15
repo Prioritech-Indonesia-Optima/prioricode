@@ -10,6 +10,7 @@ import { GlobTool } from "./glob"
 import { GrepTool } from "./grep"
 import { ReadTool } from "./read"
 import { TaskTool } from "./task"
+import { SessionsTool } from "./sessions"
 import { Database } from "@prioricode/core/database/database"
 import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
@@ -40,6 +41,8 @@ import { InstanceState } from "@/effect/instance-state"
 import { EffectBridge } from "@/effect/bridge"
 import { Question } from "../question"
 import { Todo } from "../session/todo"
+import { Coordination } from "@/session/coordination"
+import { SessionStatus } from "@/session/status"
 import { LSP } from "@/lsp/lsp"
 import { Instruction } from "../session/instruction"
 import { FSUtil } from "@prioricode/core/fs-util"
@@ -100,6 +103,7 @@ const layer = Layer.effect(
 
     const invalid = yield* InvalidTool
     const task = yield* TaskTool
+    const sessionsTool = yield* SessionsTool
     const read = yield* ReadTool
     const question = yield* QuestionTool
     const todo = yield* TodoWriteTool
@@ -215,6 +219,7 @@ const layer = Layer.effect(
           edit: Tool.init(edit),
           write: Tool.init(writetool),
           task: Tool.init(task),
+          sessions: Tool.init(sessionsTool),
           fetch: Tool.init(webfetch),
           todo: Tool.init(todo),
           search: Tool.init(websearch),
@@ -238,6 +243,7 @@ const layer = Layer.effect(
             tool.edit,
             tool.write,
             tool.task,
+            tool.sessions,
             tool.fetch,
             tool.todo,
             tool.search,
@@ -435,6 +441,8 @@ export const node = LayerNode.make({
     Agent.node,
     Skill.node,
     Session.node,
+    Coordination.node,
+    SessionStatus.node,
     BackgroundJob.node,
     Provider.node,
     LSP.node,

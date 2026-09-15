@@ -1,0 +1,14 @@
+Coordinate with other concurrent PrioriCode sessions working on the same project. Engineers often run several sessions against one codebase; use this tool to discover them, avoid editing files they are actively changing, and exchange coordination notes so your work does not collide.
+
+Actions:
+- discover: list sibling sessions in this project, which are busy, the files each has claimed, and any pending messages or requests addressed to you. Call this before starting multi-session work.
+- claim: declare the file paths this session is actively editing so peers can avoid them. Re-claim as the set changes.
+- release: release file-path claims you no longer need.
+- send: leave a fire-and-forget coordination note in another session's inbox (target + message).
+- ask: send a request to another session and wait (up to timeout seconds) for it to respond. Returns the answer, or reports that it is still pending.
+- respond: answer a pending request using its request_id.
+
+Notes:
+- Coordination is durable and shared across processes on this machine. If a peer is busy or running in another process, your note stays queued in its inbox and it sees the note when it next checks; a best-effort wake is attempted only when the peer is idle.
+- Do not start a reply back-and-forth unless coordination genuinely requires it; avoid auto-responding to every note.
+- Claims are advisory coordination, not a lock. Always re-read a file before editing if a peer has claimed it.
