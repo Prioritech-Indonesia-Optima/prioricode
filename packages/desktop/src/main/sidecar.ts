@@ -61,7 +61,7 @@ async function start(command: StartCommand) {
       hostname: command.hostname,
       username: "prioricode",
       password: command.password,
-      cors: ["oc://renderer"],
+      cors: ["pc://renderer"],
     })
     parentPort.postMessage({ type: "ready" })
   } catch (error) {
