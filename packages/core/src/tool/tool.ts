@@ -28,6 +28,33 @@ export type AnyTool = Definition<any, any>
 export const Failure = ToolFailure
 export type Failure = ToolFailure
 
+/**
+ * Standardized model-facing tool failure. The message states what failed and
+ * always carries the underlying cause text, because the settled error result is
+ * the model's only feedback channel for self-correction. The raw error is kept
+ * on the failure for diagnostics.
+ */
+export const failure = (message: string, error?: unknown) =>
+  new ToolFailure({
+    message: error === undefined ? message : `${message}: ${causeText(error)}`,
+    ...(error === undefined ? {} : { error }),
+  })
+
+function causeText(error: unknown) {
+  if (error instanceof Error) return error.message || error.name || String(error)
+  if (typeof error === "string") return error || "unknown error"
+  if (typeof error === "object" && error !== null) {
+    const message = (error as { message?: unknown }).message
+    if (typeof message === "string" && message) return message
+    try {
+      return JSON.stringify(error) || String(error)
+    } catch {
+      return String(error)
+    }
+  }
+  return String(error)
+}
+
 export class RegistrationError extends Schema.TaggedErrorClass<RegistrationError>()("Tool.RegistrationError", {
   name: Schema.String,
   message: Schema.String,

@@ -1,6 +1,5 @@
 export * as TodoWriteTool from "./todowrite"
 
-import { ToolFailure } from "@prioricode/llm"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
 import { PermissionV2 } from "../permission"
@@ -48,7 +47,7 @@ const layer = Layer.effectDiscard(
               })
               yield* todos.update({ sessionID: context.sessionID, todos: input.todos })
               return { todos: input.todos }
-            }).pipe(Effect.mapError(() => new ToolFailure({ message: "Unable to update todos" }))),
+            }).pipe(Effect.mapError((error) => Tool.failure("Unable to update todos", error))),
         }),
       })
       .pipe(Effect.orDie)

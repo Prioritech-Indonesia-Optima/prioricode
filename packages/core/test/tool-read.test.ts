@@ -539,7 +539,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-read", name: "read", input: { path: "README.md" } },
         }),
-      ).toEqual({ type: "error", value: "Unable to read README.md" })
+      ).toEqual({ type: "error", value: expect.stringContaining("Unable to read README.md") })
       expect(readCalls).toEqual([])
     }),
   )
@@ -554,7 +554,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-missing-path", name: "read", input: { path: missingPath } },
         }),
-      ).toEqual({ type: "error", value: `Unable to read ${missingPath}` })
+      ).toEqual({ type: "error", value: expect.stringContaining(`Unable to read ${missingPath}`) })
       expect(assertions).toEqual([])
       expect(readCalls).toEqual([])
     }),
@@ -594,7 +594,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-read-directory-denied", name: "read", input: { path: "src" } },
         }),
-      ).toEqual({ type: "error", value: "Unable to read src" })
+      ).toEqual({ type: "error", value: expect.stringContaining("Unable to read src") })
       expect(listCalls).toEqual([])
     }),
   )

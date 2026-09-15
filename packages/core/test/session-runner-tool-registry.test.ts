@@ -203,6 +203,32 @@ describe("ToolRegistry", () => {
     }),
   )
 
+  it.effect("surfaces the underlying cause in standardized tool failures so the model can retry", () =>
+    Effect.gen(function* () {
+      const service = yield* ToolRegistry.Service
+      yield* service.register({
+        caused: Tool.make({
+          description: "Fails with an internal cause",
+          input: Schema.Struct({}),
+          output: Schema.Struct({ ok: Schema.Boolean }),
+          execute: () =>
+            Effect.fail(new Error("ENOENT: no such file or directory, open 'missing.txt'")).pipe(
+              Effect.mapError((error) => Tool.failure("Unable to read missing.txt", error)),
+            ),
+        }),
+      })
+      const result = yield* executeTool(service, {
+        sessionID,
+        ...identity,
+        call: { type: "tool-call", id: "caused", name: "caused", input: {} },
+      })
+      expect(result).toEqual({
+        type: "error",
+        value: "Unable to read missing.txt: ENOENT: no such file or directory, open 'missing.txt'",
+      })
+    }),
+  )
+
   it.effect("propagates retention failures through settlement", () =>
     Effect.gen(function* () {
       const service = yield* ToolRegistry.Service

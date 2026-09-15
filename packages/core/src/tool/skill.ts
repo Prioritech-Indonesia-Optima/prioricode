@@ -1,7 +1,6 @@
 export * as SkillTool from "./skill"
 
 import path from "path"
-import { ToolFailure } from "@prioricode/llm"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
 import { FSUtil } from "../fs-util"
@@ -51,8 +50,7 @@ export const toModelOutput = (skill: SkillV2.Info, files: ReadonlyArray<string>)
   ].join("\n")
 }
 
-const unableToLoad = (name: string, error?: unknown) =>
-  new ToolFailure({ message: `Unable to load skill ${name}`, error })
+const unableToLoad = (name: string, error?: unknown) => Tool.failure(`Unable to load skill ${name}`, error)
 
 const layer = Layer.effectDiscard(
   Effect.gen(function* () {
