@@ -5,6 +5,7 @@ import { DialogSelect } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
 import { createDialogProviderOptions, DialogProvider } from "./dialog-provider"
 import { DialogVariant } from "./dialog-variant"
+import { DialogModelSettings } from "./dialog-model-settings"
 import * as fuzzysort from "fuzzysort"
 import { useConnected } from "./use-connected"
 import { useSync } from "../context/sync"
@@ -171,6 +172,18 @@ export function DialogModel(props: { providerID?: string }) {
           hidden: !connected(),
           onTrigger: (option) => {
             local.model.toggleFavorite(option.value as { providerID: string; modelID: string })
+          },
+        },
+        {
+          command: "model.dialog.settings",
+          title: "Edit settings",
+          hidden: !connected(),
+          onTrigger: (option) => {
+            const value = option.value as { providerID?: string; modelID?: string }
+            const providerID = value.providerID
+            const modelID = value.modelID
+            if (!providerID || !modelID) return
+            dialog.replace(() => <DialogModelSettings providerID={providerID} modelID={modelID} />)
           },
         },
       ]}
