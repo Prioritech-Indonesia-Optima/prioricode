@@ -10,7 +10,7 @@ Technical reference for the current TUI plugin system.
 - Package plugins can be installed from CLI or TUI.
 - v1 plugin modules are target-exclusive: a module can export `server` or `tui`, never both.
 - Server runtime keeps v0 legacy fallback (function exports / enumerated exports) after v1 parsing.
-- npm packages can be TUI theme-only via `package.json["oc-themes"]` without a `./tui` entrypoint.
+- npm packages can be TUI theme-only via `package.json["prioricode-themes"]` without a `./tui` entrypoint.
 
 ## TUI config
 
@@ -122,8 +122,8 @@ export default plugin
 - If package `exports` exists, loader only resolves `./tui` or `./server`; it never falls back to `exports["."]`.
 - For npm package specs, TUI does not use `package.json` `main` as a fallback entry.
 - `package.json` `main` is only used for server plugin entrypoint resolution.
-- If a configured TUI package has no `./tui` entrypoint and no valid `oc-themes`, it is skipped with a warning (not a load failure).
-- If a configured TUI package has no `./tui` entrypoint but has valid `oc-themes`, runtime creates a no-op module record and still loads it for theme sync and plugin state.
+- If a configured TUI package has no `./tui` entrypoint and no valid `prioricode-themes`, it is skipped with a warning (not a load failure).
+- If a configured TUI package has no `./tui` entrypoint but has valid `prioricode-themes`, runtime creates a no-op module record and still loads it for theme sync and plugin state.
 - If a package supports both server and TUI, use separate files and package `exports` (`./server` and `./tui`) so each target resolves to a target-only module.
 - File/path plugins must export a non-empty `id`.
 - npm plugins may omit `id`; package `name` is used.
@@ -140,14 +140,14 @@ Install target detection is inferred from `package.json` entrypoints and theme m
 
 - `server` target when `exports["./server"]` exists or `main` is set.
 - `tui` target when `exports["./tui"]` exists.
-- `tui` target when `oc-themes` exists and resolves to a non-empty set of valid package-relative theme paths.
+- `tui` target when `prioricode-themes` exists and resolves to a non-empty set of valid package-relative theme paths.
 
-`oc-themes` rules:
+`prioricode-themes` rules:
 
-- `oc-themes` is an array of relative paths.
+- `prioricode-themes` is an array of relative paths. The legacy `oc-themes` key (pre-rebrand packages) is still read when `prioricode-themes` is absent.
 - Absolute paths and `file://` paths are rejected.
 - Resolved theme paths must stay inside the package directory.
-- Invalid `oc-themes` causes manifest read failure for install.
+- Invalid `prioricode-themes` causes manifest read failure for install.
 
 Example:
 
@@ -407,7 +407,7 @@ Theme install behavior:
 
 - Relative theme paths are resolved from the plugin root.
 - Theme name is the JSON basename.
-- `api.theme.install(...)` and `oc-themes` auto-sync share the same installer path.
+- `api.theme.install(...)` and `prioricode-themes` auto-sync share the same installer path.
 - Theme copy/write runs under cross-process lock key `tui-theme:<dest>`.
 - First install writes only when the destination file is missing.
 - If the theme name already exists, install is skipped unless plugin metadata state is `updated`.
@@ -455,7 +455,7 @@ Slot notes:
 - `api.plugins.add(spec)` treats the input as the runtime plugin spec and loads it without re-reading `tui.json`.
 - `api.plugins.add(spec)` no-ops when that resolved spec (or resolved plugin id) is already loaded.
 - `api.plugins.add(spec)` assumes enabled and always attempts initialization (it does not consult config/KV enable state).
-- `api.plugins.add(spec)` can load theme-only packages (`oc-themes` with no `./tui`) as runtime entries.
+- `api.plugins.add(spec)` can load theme-only packages (`prioricode-themes` with no `./tui`) as runtime entries.
 - `api.plugins.install(spec, { global? })` runs install -> manifest read -> config patch using the same helper flow as CLI install.
 - `api.plugins.install(...)` returns either `{ ok: false, message, missing? }` or `{ ok: true, dir, tui }`.
 - `api.plugins.install(...)` does not load plugins into the current session. Call `api.plugins.add(spec)` to load after install.
@@ -485,11 +485,11 @@ Metadata is persisted by plugin id.
 - External TUI plugins load from `tuiConfig.plugin`.
 - `--pure` / `PRIORICODE_PURE` skips external TUI plugins only.
 - External plugin resolution and import are parallel.
-- Packages with no `./tui` entrypoint and valid `oc-themes` are loaded as synthetic no-op TUI plugin modules.
+- Packages with no `./tui` entrypoint and valid `prioricode-themes` are loaded as synthetic no-op TUI plugin modules.
 - Theme-only packages loaded this way appear in `api.plugins.list()` and plugin manager rows like other external plugins.
-- Packages with no `./tui` entrypoint and no valid `oc-themes` are skipped with warning.
+- Packages with no `./tui` entrypoint and no valid `prioricode-themes` are skipped with warning.
 - External plugin activation is sequential to keep command, route, and side-effect order deterministic.
-- Theme auto-sync from `oc-themes` runs before plugin `tui(...)` execution and only on metadata state `first` or `updated`.
+- Theme auto-sync from `prioricode-themes` runs before plugin `tui(...)` execution and only on metadata state `first` or `updated`.
 - File plugins that fail initially are retried once after waiting for config dependency installation.
 - Runtime add uses the same external loader path, including the file-plugin retry after dependency wait.
 - Runtime add skips duplicates by resolved spec and returns `true` when the spec is already loaded.
@@ -532,7 +532,7 @@ The plugin manager is exposed as a command with title `Plugins` and value `plugi
 - Install is blocked until `api.state.path.directory` is available; current guard message is `Paths are still syncing. Try again in a moment.`.
 - Manager install uses `api.plugins.install(spec, { global })`.
 - If the installed package has no `tui` target (`tui=false`), manager reports that and does not expect a runtime load.
-- `tui` target detection includes `exports["./tui"]` and valid `oc-themes`.
+- `tui` target detection includes `exports["./tui"]` and valid `prioricode-themes`.
 - If install reports `tui=true`, manager then calls `api.plugins.add(spec)`.
 - If runtime add fails, TUI shows a warning and restart remains the fallback.
 

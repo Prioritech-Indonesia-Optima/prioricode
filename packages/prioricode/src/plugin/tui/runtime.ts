@@ -365,7 +365,7 @@ async function readThemeFiles(spec: string, pkg?: PluginPackage) {
   return Promise.resolve()
     .then(() => readPackageThemes(spec, pkg))
     .catch((error) => {
-      warn("invalid tui plugin oc-themes", {
+      warn("invalid tui plugin prioricode-themes", {
         path: spec,
         pkg: pkg.pkg,
         error,
@@ -380,7 +380,7 @@ async function syncPluginThemes(plugin: PluginEntry) {
   const install = createThemeInstaller(plugin.load.origin, plugin.load.plugin_root, plugin.load.spec, plugin)
   for (const file of plugin.load.theme_files) {
     await install(file).catch((error) => {
-      warn("failed to sync tui plugin oc-themes", { path: plugin.load.spec, id: plugin.id, theme: file, error })
+      warn("failed to sync tui plugin prioricode-themes", { path: plugin.load.spec, id: plugin.id, theme: file, error })
     })
   }
 }
@@ -931,7 +931,7 @@ async function installPluginBySpec(
     if (manifest.code === "manifest_no_targets") {
       return {
         ok: false,
-        message: `"${spec}" does not expose plugin entrypoints or oc-themes in package.json`,
+        message: `"${spec}" does not expose plugin entrypoints or prioricode-themes in package.json`,
       }
     }
 

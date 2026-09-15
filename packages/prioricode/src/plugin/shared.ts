@@ -235,27 +235,29 @@ export async function createPluginEntry(spec: string, target: string, kind: Plug
   }
 }
 
+// "oc-themes" is the legacy manifest key from the OpenCode era; "prioricode-themes"
+// is canonical. Both are read so published theme plugins keep working.
 export function readPackageThemes(spec: string, pkg: PluginPackage) {
-  const field = pkg.json["oc-themes"]
+  const field = pkg.json["prioricode-themes"] ?? pkg.json["oc-themes"]
   if (field === undefined) return []
   if (!Array.isArray(field)) {
-    throw new TypeError(`Plugin ${spec} has invalid oc-themes field`)
+    throw new TypeError(`Plugin ${spec} has invalid prioricode-themes field`)
   }
 
   const list = field.map((item) => {
     if (typeof item !== "string") {
-      throw new TypeError(`Plugin ${spec} has invalid oc-themes entry`)
+      throw new TypeError(`Plugin ${spec} has invalid prioricode-themes entry`)
     }
 
     const raw = item.trim()
     if (!raw) {
-      throw new TypeError(`Plugin ${spec} has empty oc-themes entry`)
+      throw new TypeError(`Plugin ${spec} has empty prioricode-themes entry`)
     }
     if (raw.startsWith("file://") || isAbsolutePath(raw)) {
-      throw new TypeError(`Plugin ${spec} oc-themes entry must be relative: ${item}`)
+      throw new TypeError(`Plugin ${spec} prioricode-themes entry must be relative: ${item}`)
     }
 
-    return resolvePackageFile(spec, raw, "oc-themes", pkg)
+    return resolvePackageFile(spec, raw, "prioricode-themes", pkg)
   })
 
   return Array.from(new Set(list))
