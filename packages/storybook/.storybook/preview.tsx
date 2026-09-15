@@ -1,6 +1,6 @@
-import "@opencode-ai/ui/styles/tailwind"
-import "@opencode-ai/session-ui/styles"
-import "@opencode-ai/ui/v2/styles/tailwind.css"
+import "@prioricode/ui/styles/tailwind"
+import "@prioricode/session-ui/styles"
+import "@prioricode/ui/v2/styles/tailwind.css"
 
 import { createEffect, onCleanup, onMount } from "solid-js"
 import addonA11y from "@storybook/addon-a11y"
@@ -9,10 +9,10 @@ import { MetaProvider } from "@solidjs/meta"
 import { addons } from "storybook/preview-api"
 import { GLOBALS_UPDATED } from "storybook/internal/core-events"
 import { createJSXDecorator, definePreview } from "storybook-solidjs-vite"
-import { DialogProvider } from "@opencode-ai/ui/context/dialog"
-import { MarkedProvider } from "@opencode-ai/ui/context/marked"
-import { ThemeProvider, useTheme, type ColorScheme } from "@opencode-ai/ui/theme"
-import { Font } from "@opencode-ai/ui/font"
+import { DialogProvider } from "@prioricode/ui/context/dialog"
+import { MarkedProvider } from "@prioricode/ui/context/marked"
+import { ThemeProvider, useTheme, type ColorScheme } from "@prioricode/ui/theme"
+import { Font } from "@prioricode/ui/font"
 
 function resolveScheme(value: unknown): ColorScheme {
   if (value === "light" || value === "dark" || value === "system") return value

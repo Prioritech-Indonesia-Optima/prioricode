@@ -1,0 +1,4 @@
+{
+  "$schema": "https://prioricode.ai/config.json",
+  "model": "anthropic/claude-sonnet"
+}

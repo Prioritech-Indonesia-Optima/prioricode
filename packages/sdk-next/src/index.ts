@@ -1,7 +1,7 @@
-export * as OpenCode from "./opencode"
+export * as PrioriCode from "./prioricode"
 export * as Tool from "./tool"
 
-export { ClientError } from "@opencode-ai/client/effect"
+export { ClientError } from "@prioricode/client/effect"
 export {
   AbsolutePath,
   Agent,
@@ -13,5 +13,5 @@ export {
   Session,
   SessionInput,
   SessionMessage,
-} from "@opencode-ai/client/effect"
-export type { OpenCodeEvent } from "@opencode-ai/client/effect"
+} from "@prioricode/client/effect"
+export type { PrioriCodeEvent } from "@prioricode/client/effect"

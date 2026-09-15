@@ -9,7 +9,7 @@ const lake = deployAws ? await import("./lake") : undefined
 ////////////////
 
 const cluster = planetscale.getDatabaseOutput({
-  name: "opencode",
+  name: "prioricode",
   organization: "anomalyco",
 })
 
@@ -104,7 +104,7 @@ export const stripeWebhook = new stripe.WebhookEndpoint("StripeWebhookEndpoint",
 })
 
 const zenLiteProduct = new stripe.Product("ZenLite", {
-  name: "OpenCode Go",
+  name: "PrioriCode Go",
 })
 const zenLiteCouponFirstMonth50 = new stripe.Coupon("ZenLiteCouponFirstMonth50", {
   name: "First month 50% off",
@@ -163,7 +163,7 @@ const ZEN_LITE_PRICE = new sst.Linkable("ZEN_LITE_PRICE", {
 })
 
 const zenBlackProduct = new stripe.Product("ZenBlack", {
-  name: "OpenCode Black",
+  name: "PrioriCode Black",
 })
 const zenBlackPriceProps = {
   product: zenBlackProduct.id,
@@ -224,7 +224,7 @@ const AUTH_API_URL = new sst.Linkable("AUTH_API_URL", {
 })
 // Preview branches have independent databases; do not send their workspaces to shared dev.
 const migrationDomain =
-  $app.stage === "production" ? "opencode.ai" : $app.stage === "dev" ? "dev.opencode.ai" : undefined
+  $app.stage === "production" ? "prioricode.ai" : $app.stage === "dev" ? "dev.prioricode.ai" : undefined
 const consoleMigration = new sst.Linkable("ConsoleMigration", {
   properties: {
     consoleUrl: migrationDomain ? `https://${migrationDomain}/console` : "",

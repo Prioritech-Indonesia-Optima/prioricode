@@ -1,7 +1,7 @@
 import type { APIEvent } from "@solidjs/start/server"
-import { Quota } from "@opencode-ai/console-core/quota.js"
-import { safeEqual } from "@opencode-ai/console-core/util/crypto.js"
-import { Resource } from "@opencode-ai/console-resource"
+import { Quota } from "@prioricode/console-core/quota.js"
+import { safeEqual } from "@prioricode/console-core/util/crypto.js"
+import { Resource } from "@prioricode/console-resource"
 import z from "zod"
 
 const Body = z.object({

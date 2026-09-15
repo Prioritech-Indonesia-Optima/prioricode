@@ -1,13 +1,13 @@
 import { Component, Show, createMemo, createResource, onMount, type JSX } from "solid-js"
-import { Button } from "@opencode-ai/ui/button"
-import { Icon } from "@opencode-ai/ui/icon"
-import { Select } from "@opencode-ai/ui/select"
-import { Switch } from "@opencode-ai/ui/switch"
-import { TextField } from "@opencode-ai/ui/text-field"
-import { Tooltip } from "@opencode-ai/ui/tooltip"
-import { Tag } from "@opencode-ai/ui/v2/badge-v2"
-import { useTheme, type ColorScheme } from "@opencode-ai/ui/theme/context"
-import { useDialog } from "@opencode-ai/ui/context/dialog"
+import { Button } from "@prioricode/ui/button"
+import { Icon } from "@prioricode/ui/icon"
+import { Select } from "@prioricode/ui/select"
+import { Switch } from "@prioricode/ui/switch"
+import { TextField } from "@prioricode/ui/text-field"
+import { Tooltip } from "@prioricode/ui/tooltip"
+import { Tag } from "@prioricode/ui/v2/badge-v2"
+import { useTheme, type ColorScheme } from "@prioricode/ui/theme/context"
+import { useDialog } from "@prioricode/ui/context/dialog"
 import { useParams } from "@solidjs/router"
 import { useLanguage } from "@/context/language"
 import { usePermission } from "@/context/permission"
@@ -482,7 +482,7 @@ export const SettingsGeneral: Component = () => {
           description={
             <>
               {language.t("settings.general.row.theme.description")}{" "}
-              <ExternalLink href="https://opencode.ai/docs/themes/">{language.t("common.learnMore")}</ExternalLink>
+              <ExternalLink href="https://prioricode.ai/docs/themes/">{language.t("common.learnMore")}</ExternalLink>
             </>
           }
         >

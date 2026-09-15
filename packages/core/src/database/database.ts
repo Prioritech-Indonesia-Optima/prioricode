@@ -1,6 +1,6 @@
 export * as Database from "./database"
 
-import { EffectDrizzleSqlite } from "@opencode-ai/effect-drizzle-sqlite"
+import { EffectDrizzleSqlite } from "@prioricode/effect-drizzle-sqlite"
 import { layer as sqliteLayer } from "#sqlite"
 import { Context, Effect, Layer } from "effect"
 import { Global } from "../global"
@@ -17,7 +17,7 @@ export interface Interface {
   db: DatabaseShape
 }
 
-export class Service extends Context.Service<Service, Interface>()("@opencode/v2/storage/Database") {}
+export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/storage/Database") {}
 
 const layer = Layer.effect(
   Service,
@@ -41,17 +41,17 @@ export function layerFromPath(filename: string) {
 }
 
 export function path() {
-  if (Flag.OPENCODE_DB) {
-    if (Flag.OPENCODE_DB === ":memory:" || isAbsolute(Flag.OPENCODE_DB)) return Flag.OPENCODE_DB
-    return join(Global.Path.data, Flag.OPENCODE_DB)
+  if (Flag.PRIORICODE_DB) {
+    if (Flag.PRIORICODE_DB === ":memory:" || isAbsolute(Flag.PRIORICODE_DB)) return Flag.PRIORICODE_DB
+    return join(Global.Path.data, Flag.PRIORICODE_DB)
   }
   if (
     ["latest", "beta", "prod"].includes(InstallationChannel) ||
-    process.env.OPENCODE_DISABLE_CHANNEL_DB === "1" ||
-    process.env.OPENCODE_DISABLE_CHANNEL_DB === "true"
+    process.env.PRIORICODE_DISABLE_CHANNEL_DB === "1" ||
+    process.env.PRIORICODE_DISABLE_CHANNEL_DB === "true"
   )
-    return join(Global.Path.data, "opencode.db")
-  return join(Global.Path.data, `opencode-${InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")}.db`)
+    return join(Global.Path.data, "prioricode.db")
+  return join(Global.Path.data, `prioricode-${InstallationChannel.replace(/[^a-zA-Z0-9._-]/g, "-")}.db`)
 }
 
 export const node = makeGlobalNode({ service: Service, layer: layerFromPath(path()), deps: [] })

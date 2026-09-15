@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=PrioriCode
+Exec=/opt/PrioriCode/ai.prioricode.desktop %U
+Terminal=false
+Type=Application
+Icon=ai.prioricode.desktop
+StartupWMClass=ai.prioricode.desktop
+NoDisplay=true
+Comment=Open source AI coding agent
+Categories=Development;

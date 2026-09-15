@@ -2,21 +2,21 @@ import fs from "fs/promises"
 import path from "path"
 import { describe, expect } from "bun:test"
 import { DateTime, Effect, Equal, Hash, Schema } from "effect"
-import { Tool } from "@opencode-ai/core/tool/tool"
-import { define } from "@opencode-ai/plugin/v2/effect"
-import { AgentV2 } from "@opencode-ai/core/agent"
-import { Catalog } from "@opencode-ai/core/catalog"
-import { AppNodeBuilder } from "@opencode-ai/core/effect/app-node-builder"
-import { LayerNode } from "@opencode-ai/core/effect/layer-node"
-import { LocationServiceMap } from "@opencode-ai/core/location-services"
-import { Location } from "@opencode-ai/core/location"
-import { PluginV2 } from "@opencode-ai/core/plugin"
-import { ModelV2 } from "@opencode-ai/core/model"
-import { ProjectV2 } from "@opencode-ai/core/project"
-import { ProviderV2 } from "@opencode-ai/core/provider"
-import { AbsolutePath } from "@opencode-ai/core/schema"
-import { SessionV2 } from "@opencode-ai/core/session"
-import { SessionRunnerModel } from "@opencode-ai/core/session/runner/model"
+import { Tool } from "@prioricode/core/tool/tool"
+import { define } from "@prioricode/plugin/v2/effect"
+import { AgentV2 } from "@prioricode/core/agent"
+import { Catalog } from "@prioricode/core/catalog"
+import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
+import { LayerNode } from "@prioricode/core/effect/layer-node"
+import { LocationServiceMap } from "@prioricode/core/location-services"
+import { Location } from "@prioricode/core/location"
+import { PluginV2 } from "@prioricode/core/plugin"
+import { ModelV2 } from "@prioricode/core/model"
+import { ProjectV2 } from "@prioricode/core/project"
+import { ProviderV2 } from "@prioricode/core/provider"
+import { AbsolutePath } from "@prioricode/core/schema"
+import { SessionV2 } from "@prioricode/core/session"
+import { SessionRunnerModel } from "@prioricode/core/session/runner/model"
 import { tmpdir } from "./fixture/tmpdir"
 import { testEffect } from "./lib/effect"
 import { toolDefinitions } from "./lib/tool"
@@ -78,7 +78,7 @@ describe("LocationServiceMap", () => {
           })
           yield* Effect.promise(() =>
             fs.writeFile(
-              path.join(blocked.path, "opencode.json"),
+              path.join(blocked.path, "prioricode.json"),
               JSON.stringify({
                 experimental: { policies: [{ effect: "deny", action: "provider.use", resource: "test" }] },
               }),
@@ -150,7 +150,7 @@ describe("LocationServiceMap", () => {
           const location = Location.Ref.make({ directory: AbsolutePath.make(dir.path) })
           yield* Effect.promise(() =>
             fs.writeFile(
-              path.join(dir.path, "opencode.json"),
+              path.join(dir.path, "prioricode.json"),
               JSON.stringify({
                 providers: {
                   unavailable: {

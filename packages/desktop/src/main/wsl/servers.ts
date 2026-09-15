@@ -3,7 +3,7 @@ import type {
   WslInstalledDistro,
   WslJob,
   WslOnlineDistro,
-  WslOpencodeCheck,
+  WslPrioricodeCheck,
   WslRuntimeCheck,
   WslServerConfig,
   WslServerItem,
@@ -13,12 +13,12 @@ import type {
 } from "../../preload/types"
 import { WSL_SERVERS_KEY } from "../store-keys"
 import { getStore } from "../store"
-import { expectOpencodeVersion, pendingRestartAfterWslInstall, wslServerIdsToStartOnInitialize } from "./startup"
+import { expectPrioricodeVersion, pendingRestartAfterWslInstall, wslServerIdsToStartOnInitialize } from "./startup"
 import { clearWslDistroState, wslServerIdToRestart } from "./policy"
 import { nativeT } from "../native-translations"
 import {
   installWslDistro,
-  installWslOpencode,
+  installWslPrioricode,
   installWslRuntimeElevated,
   listInstalledWslDistros,
   listOnlineWslDistros,
@@ -26,7 +26,7 @@ import {
   probeWslDistro,
   probeWslRuntime,
   readWslCommandVersion,
-  resolveWslOpencode,
+  resolveWslPrioricode,
   summarize,
 } from "./runtime"
 
@@ -49,7 +49,7 @@ type WslServersControllerOptions = {
   readServers?: () => WslServerConfig[]
   writeServers?: (servers: WslServerConfig[]) => void
   probeDistro?: typeof probeWslDistro
-  resolveOpencode?: typeof resolveWslOpencode
+  resolvePrioricode?: typeof resolveWslPrioricode
   readCommandVersion?: typeof readWslCommandVersion
 }
 
@@ -122,25 +122,25 @@ export function createWslServersController(
     updateServer(id, (item) => ({ ...item, runtime }))
   }
 
-  const setOpencodeCheck = (distro: string, check: WslOpencodeCheck) => {
+  const setPrioricodeCheck = (distro: string, check: WslPrioricodeCheck) => {
     setState({
-      opencodeChecks: {
-        ...state.opencodeChecks,
+      prioricodeChecks: {
+        ...state.prioricodeChecks,
         [distro]: check,
       },
     })
   }
 
-  const checkOpencode = async (distro: string, opts?: { signal?: AbortSignal }) => {
-    const resolved = await (options?.resolveOpencode ?? resolveWslOpencode)(distro, opts)
+  const checkPrioricode = async (distro: string, opts?: { signal?: AbortSignal }) => {
+    const resolved = await (options?.resolvePrioricode ?? resolveWslPrioricode)(distro, opts)
     const version = resolved
       ? await (options?.readCommandVersion ?? readWslCommandVersion)(resolved, distro, opts)
       : null
-    return opencodeCheck(distro, resolved, version, appVersion)
+    return prioricodeCheck(distro, resolved, version, appVersion)
   }
 
-  const refreshOpencodeCheck = async (distro: string, opts?: { signal?: AbortSignal }) => {
-    setOpencodeCheck(distro, await checkOpencode(distro, opts))
+  const refreshPrioricodeCheck = async (distro: string, opts?: { signal?: AbortSignal }) => {
+    setPrioricodeCheck(distro, await checkPrioricode(distro, opts))
   }
 
   const probeAddableDistros = async (distros: string[], opts?: { signal?: AbortSignal }) => {
@@ -154,14 +154,14 @@ export function createWslServersController(
       setState({ distroProbes: { ...state.distroProbes, ...Object.fromEntries(distroProbes) } })
     }
 
-    const opencodeChecks = await Promise.all(
+    const prioricodeChecks = await Promise.all(
       unique
         .filter((distro) => distroProbeReady(state.distroProbes[distro]))
-        .filter((distro) => !state.opencodeChecks[distro])
-        .map(async (distro) => [distro, await checkOpencode(distro, opts)] as const),
+        .filter((distro) => !state.prioricodeChecks[distro])
+        .map(async (distro) => [distro, await checkPrioricode(distro, opts)] as const),
     )
-    if (opencodeChecks.length) {
-      setState({ opencodeChecks: { ...state.opencodeChecks, ...Object.fromEntries(opencodeChecks) } })
+    if (prioricodeChecks.length) {
+      setState({ prioricodeChecks: { ...state.prioricodeChecks, ...Object.fromEntries(prioricodeChecks) } })
     }
   }
 
@@ -169,29 +169,29 @@ export function createWslServersController(
     return state.servers.some((item) => item.config.id === id && item.config.distro === distro)
   }
 
-  const refreshOpencodeCheckBackground = (id: string, distro: string) => {
-    void checkOpencode(distro)
+  const refreshPrioricodeCheckBackground = (id: string, distro: string) => {
+    void checkPrioricode(distro)
       .then((check) => {
         if (!hasServer(id, distro)) return
-        setOpencodeCheck(distro, check)
+        setPrioricodeCheck(distro, check)
       })
       .catch((error) => {
         const message = error instanceof Error ? error.message : String(error)
-        logger?.error("wsl opencode check failed", { id, distro, message })
+        logger?.error("wsl prioricode check failed", { id, distro, message })
       })
   }
 
-  const refreshOpencodeChecks = async () => {
+  const refreshPrioricodeChecks = async () => {
     await Promise.all(
       state.servers.map((item) =>
-        checkOpencode(item.config.distro)
+        checkPrioricode(item.config.distro)
           .then((check) => {
             if (!hasServer(item.config.id, item.config.distro)) return
-            setOpencodeCheck(item.config.distro, check)
+            setPrioricodeCheck(item.config.distro, check)
           })
           .catch((error) => {
             const message = error instanceof Error ? error.message : String(error)
-            logger?.error("wsl opencode check failed", {
+            logger?.error("wsl prioricode check failed", {
               id: item.config.id,
               distro: item.config.distro,
               message,
@@ -252,7 +252,7 @@ export function createWslServersController(
         setRuntime(id, { kind: "failed", message })
         logger?.error("wsl sidecar exited", { id, distro: item.config.distro, code, signal })
       })
-      refreshOpencodeCheckBackground(id, item.config.distro)
+      refreshPrioricodeCheckBackground(id, item.config.distro)
       logger?.log("wsl sidecar ready", { id, distro: item.config.distro, url: sidecar.url })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
@@ -304,7 +304,7 @@ export function createWslServersController(
 
     async initialize() {
       refreshFromStore()
-      void refreshOpencodeChecks()
+      void refreshPrioricodeChecks()
       for (const id of wslServerIdsToStartOnInitialize(state.servers.map((item) => item.config))) void startServer(id)
     },
 
@@ -360,14 +360,14 @@ export function createWslServersController(
       })
     },
 
-    async installOpencode(name: string) {
-      await runJob({ kind: "install-opencode", distro: name, startedAt: Date.now() }, async (abort) => {
-        const result = await installWslOpencode(appVersion, name, { signal: abort.signal })
+    async installPrioricode(name: string) {
+      await runJob({ kind: "install-prioricode", distro: name, startedAt: Date.now() }, async (abort) => {
+        const result = await installWslPrioricode(appVersion, name, { signal: abort.signal })
         if (result.code !== 0) {
-          throw new Error(summarize(result.stderr || result.stdout) || nativeT("desktop.wsl.error.installOpencode"))
+          throw new Error(summarize(result.stderr || result.stdout) || nativeT("desktop.wsl.error.installPrioricode"))
         }
-        await refreshOpencodeCheck(name, { signal: abort.signal })
-        expectOpencodeVersion(state.opencodeChecks[name]?.version ?? null, appVersion, name)
+        await refreshPrioricodeCheck(name, { signal: abort.signal })
+        expectPrioricodeVersion(state.prioricodeChecks[name]?.version ?? null, appVersion, name)
         const id = wslServerIdToRestart(state.servers, name)
         if (id) await startServer(id)
       })
@@ -402,7 +402,7 @@ export function createWslServersController(
       persistServers(remaining)
       setState({
         servers: state.servers.filter((item) => item.config.id !== id),
-        ...(distro ? clearWslDistroState(state.distroProbes, state.opencodeChecks, distro) : {}),
+        ...(distro ? clearWslDistroState(state.distroProbes, state.prioricodeChecks, distro) : {}),
       })
     },
 
@@ -428,7 +428,7 @@ function initialState(): WslServersState {
     installed: [],
     online: [],
     distroProbes: {},
-    opencodeChecks: {},
+    prioricodeChecks: {},
     pendingRestart: false,
     servers: [],
     job: null,
@@ -464,12 +464,12 @@ function normalizePersistedServer(value: unknown): WslServerConfig[] {
   ]
 }
 
-function opencodeCheck(
+function prioricodeCheck(
   distro: string,
   resolvedPath: string | null,
   version: string | null,
   expectedVersion: string,
-): WslOpencodeCheck {
+): WslPrioricodeCheck {
   if (!resolvedPath) {
     return {
       distro,
@@ -477,7 +477,7 @@ function opencodeCheck(
       version: null,
       expectedVersion,
       matchesDesktop: null,
-      error: nativeT("desktop.wsl.error.opencodeMissing"),
+      error: nativeT("desktop.wsl.error.prioricodeMissing"),
     }
   }
   if (!version) {
@@ -487,7 +487,7 @@ function opencodeCheck(
       version: null,
       expectedVersion,
       matchesDesktop: null,
-      error: nativeT("desktop.wsl.error.opencodeCannotRun"),
+      error: nativeT("desktop.wsl.error.prioricodeCannotRun"),
     }
   }
   return {
@@ -514,7 +514,7 @@ export type {
   WslOnlineDistro,
   WslRuntimeCheck,
   WslDistroProbe,
-  WslOpencodeCheck,
+  WslPrioricodeCheck,
   WslServerConfig,
   WslServerItem,
   WslServerRuntime,

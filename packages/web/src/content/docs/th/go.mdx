@@ -7,9 +7,9 @@ import config from "../../../../config.mjs"
 export const console = config.console
 export const email = `mailto:${config.email}`
 
-OpenCode Go คือการสมัครสมาชิกในราคาประหยัด **$10/เดือน** ซึ่งให้คุณเข้าถึงโมเดลโอเพนซอร์สยอดนิยมสำหรับการเขียนโค้ดได้อย่างเสถียร
+PrioriCode Go คือการสมัครสมาชิกในราคาประหยัด **$10/เดือน** ซึ่งให้คุณเข้าถึงโมเดลโอเพนซอร์สยอดนิยมสำหรับการเขียนโค้ดได้อย่างเสถียร
 
-Go ทำงานเหมือนกับผู้ให้บริการ (provider) รายอื่นๆ ใน OpenCode คุณสามารถสมัครสมาชิก OpenCode Go และรับ API key ของคุณ บริการนี้เป็น**ทางเลือกเพิ่มเติม** และคุณไม่จำเป็นต้องใช้มันเพื่อใช้งาน OpenCode
+Go ทำงานเหมือนกับผู้ให้บริการ (provider) รายอื่นๆ ใน PrioriCode คุณสามารถสมัครสมาชิก PrioriCode Go และรับ API key ของคุณ บริการนี้เป็น**ทางเลือกเพิ่มเติม** และคุณไม่จำเป็นต้องใช้มันเพื่อใช้งาน PrioriCode
 
 บริการนี้ออกแบบมาโดยเน้นผู้ใช้ในต่างประเทศเป็นหลัก และให้บริการได้อย่างเสถียรทั่วโลก
 
@@ -22,7 +22,7 @@ Go ทำงานเหมือนกับผู้ให้บริกา�
 อย่างไรก็ตาม การเข้าถึงโมเดลเหล่านี้อย่างเสถียรและมีค่า Latency ต่ำนั้นอาจเป็นเรื่องยาก ผู้ให้บริการแต่ละรายมีคุณภาพและความพร้อมในการให้บริการแตกต่างกันไป
 
 :::tip
-เราได้ทดสอบกลุ่มโมเดลและผู้ให้บริการที่คัดเลือกมาเพื่อให้ทำงานร่วมกับ OpenCode ได้เป็นอย่างดี
+เราได้ทดสอบกลุ่มโมเดลและผู้ให้บริการที่คัดเลือกมาเพื่อให้ทำงานร่วมกับ PrioriCode ได้เป็นอย่างดี
 :::
 
 เพื่อแก้ปัญหานี้ เราได้ดำเนินการดังต่อไปนี้:
@@ -31,20 +31,20 @@ Go ทำงานเหมือนกับผู้ให้บริกา�
 2. จากนั้นเราได้ทำงานร่วมกับผู้ให้บริการบางรายเพื่อให้แน่ใจว่าการให้บริการเป็นไปอย่างถูกต้อง
 3. สุดท้าย เราได้ทำการวัดประสิทธิภาพ (benchmark) ของการทำงานร่วมกันระหว่างโมเดลและผู้ให้บริการ จนได้รายชื่อที่เรามั่นใจในการแนะนำ
 
-OpenCode Go ให้คุณเข้าถึงโมเดลเหล่านี้ได้ในราคา **$10/เดือน**
+PrioriCode Go ให้คุณเข้าถึงโมเดลเหล่านี้ได้ในราคา **$10/เดือน**
 
 ---
 
 ## How it works
 
-OpenCode Go ทำงานเหมือนกับผู้ให้บริการรายอื่นๆ ใน OpenCode
+PrioriCode Go ทำงานเหมือนกับผู้ให้บริการรายอื่นๆ ใน PrioriCode
 
-1. ลงชื่อเข้าใช้ที่ **<a href={console}>OpenCode Zen</a>**, สมัครสมาชิก Go และคัดลอก API key ของคุณ
-2. รันคำสั่ง `/connect` ใน TUI, เลือก `OpenCode Go`, และวาง API key ของคุณ
+1. ลงชื่อเข้าใช้ที่ **<a href={console}>PrioriCode Zen</a>**, สมัครสมาชิก Go และคัดลอก API key ของคุณ
+2. รันคำสั่ง `/connect` ใน TUI, เลือก `PrioriCode Go`, และวาง API key ของคุณ
 3. รัน `/models` ใน TUI เพื่อดูรายชื่อโมเดลที่ใช้งานได้ผ่าน Go
 
 :::note
-มีเพียงสมาชิกหนึ่งคนต่อ workspace เท่านั้นที่สามารถสมัครสมาชิก OpenCode Go ได้
+มีเพียงสมาชิกหนึ่งคนต่อ workspace เท่านั้นที่สามารถสมัครสมาชิก PrioriCode Go ได้
 :::
 
 รายชื่อโมเดลในปัจจุบันประกอบด้วย:
@@ -83,29 +83,29 @@ OpenCode Go ทำงานเหมือนกับผู้ให้บร�
 
 ## ใช้งานได้ที่ไหน?
 
-OpenCode Go ออกแบบมาสำหรับ [OpenCode](https://opencode.ai) และ coding agent อื่นๆ ที่สร้างคำขอประเภทเดียวกัน
+PrioriCode Go ออกแบบมาสำหรับ [PrioriCode](https://prioricode.ai) และ coding agent อื่นๆ ที่สร้างคำขอประเภทเดียวกัน
 ระบบจะตรวจสอบทราฟฟิกเพื่อหาการใช้งานในทางที่ผิดซึ่งทำให้ประสบการณ์ของผู้ใช้รายอื่นแย่ลง
 
 ไคลเอนต์ของคุณควร:
 
 1. ส่งทราฟฟิกตามปกติของ coding agent
 2. ระบุตัวตนด้วย user agent ของตนเอง เช่น `my-coding-agent/1.0` แทนชื่อ SDK หรือไลบรารี HTTP แบบทั่วไป
-3. ส่ง session ID ที่คงที่ใน `x-opencode-session` สำหรับแต่ละบทสนทนา เพื่อให้เราปรับ routing และ prompt caching ให้เหมาะสมได้
+3. ส่ง session ID ที่คงที่ใน `x-prioricode-session` สำหรับแต่ละบทสนทนา เพื่อให้เราปรับ routing และ prompt caching ให้เหมาะสมได้
 
 ### ไคลเอนต์ที่ผ่านการตรวจสอบแล้ว
 
-นอกจาก OpenCode แล้ว ไคลเอนต์ต่อไปนี้ได้รับการตรวจสอบแล้วว่าทำงานกับ OpenCode Go ได้อย่างถูกต้อง
+นอกจาก PrioriCode แล้ว ไคลเอนต์ต่อไปนี้ได้รับการตรวจสอบแล้วว่าทำงานกับ PrioriCode Go ได้อย่างถูกต้อง
 อย่างไรก็ตาม เราไม่รับประกันว่าไคลเอนต์เหล่านี้จะยังคงทำงานได้ต่อไปในอนาคต
 
 | ไคลเอนต์          | การรองรับเซสชัน                                                                                                                                                                                                                                  |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Hermes**        | บิลด์ที่มี [PR #101864](https://github.com/NousResearch/hermes-agent/pull/101864) จะส่งส่วนหัวในคำขอ OpenCode ทั้งคำขอหลักและคำขอเสริม การแก้ไขนี้ถูก merge หลัง v0.21.0 ดังนั้นตัวรีลีส v0.21.0 เองจึงยังไม่มีการแก้ไขนี้                       |
+| **Hermes**        | บิลด์ที่มี [PR #101864](https://github.com/NousResearch/hermes-agent/pull/101864) จะส่งส่วนหัวในคำขอ PrioriCode ทั้งคำขอหลักและคำขอเสริม การแก้ไขนี้ถูก merge หลัง v0.21.0 ดังนั้นตัวรีลีส v0.21.0 เองจึงยังไม่มีการแก้ไขนี้                       |
 | **Claude Code**   | Go รู้จักส่วนหัวเซสชันแบบ native ของ Claude Code จึงไม่ต้องใช้ wrapper เพื่อเพิ่มส่วนหัวแบบกำหนดเอง                                                                                                                                              |
 | **Codex**         | Go รู้จักส่วนหัวเซสชันแบบ native ของ Codex แต่บางเวอร์ชันและการตั้งค่า proxy ยังไม่ส่งส่วนหัวนี้ โปรดคงส่วนหัวเซสชันไว้เมื่อ forward คำขอ                                                                                                        |
-| **ZCode**         | Go รู้จักส่วนหัวเซสชันแบบ native ของ ZCode [คำขอให้เพิ่ม `x-opencode-session`](https://github.com/zai-org/feedback/issues/492) ของเรายังเปิดอยู่ แต่ไม่จำเป็นต้องส่งส่วนหัวเฉพาะนี้อีกต่อไป                                                      |
-| **Pi**            | บิลด์ปัจจุบันส่งข้อมูลเซสชันสำหรับ OpenCode โปรดอัปเดตการติดตั้งเวอร์ชันเก่า                                                                                                                                                                     |
+| **ZCode**         | Go รู้จักส่วนหัวเซสชันแบบ native ของ ZCode [คำขอให้เพิ่ม `x-prioricode-session`](https://github.com/zai-org/feedback/issues/492) ของเรายังเปิดอยู่ แต่ไม่จำเป็นต้องส่งส่วนหัวเฉพาะนี้อีกต่อไป                                                      |
+| **Pi**            | บิลด์ปัจจุบันส่งข้อมูลเซสชันสำหรับ PrioriCode โปรดอัปเดตการติดตั้งเวอร์ชันเก่า                                                                                                                                                                     |
 | **jcode**         | อัปเดตเป็น **v0.81.6 หรือใหม่กว่า** ซึ่งมี[การแก้ไขส่วนหัวเซสชัน](https://github.com/1jehuang/jcode/issues/1167)                                                                                                                                 |
-| **Kilo Code CLI** | บิลด์ที่มี [PR #13752](https://github.com/Kilo-Org/kilocode/pull/13752) จะทำให้ส่วนหัวเซสชันของ OpenCode กลับมาทำงาน การแก้ไขนี้ครอบคลุม CLI แต่ไม่ครอบคลุมส่วนขยาย VS Code ดู [issue #13723](https://github.com/Kilo-Org/kilocode/issues/13723) |
+| **Kilo Code CLI** | บิลด์ที่มี [PR #13752](https://github.com/Kilo-Org/kilocode/pull/13752) จะทำให้ส่วนหัวเซสชันของ PrioriCode กลับมาทำงาน การแก้ไขนี้ครอบคลุม CLI แต่ไม่ครอบคลุมส่วนขยาย VS Code ดู [issue #13723](https://github.com/Kilo-Org/kilocode/issues/13723) |
 
 ### ไคลเอนต์ที่ทราบว่ามีปัญหา
 
@@ -271,36 +271,36 @@ OpenCode Go ออกแบบมาสำหรับ [OpenCode](https://openco
 
 | Model                        | Model ID                     | Endpoint                                         | AI SDK Package              |
 | ---------------------------- | ---------------------------- | ------------------------------------------------ | --------------------------- |
-| Grok 4.6                     | grok-4.6                     | `https://opencode.ai/zen/go/v1/responses`        | `@ai-sdk/openai`            |
-| GPT 5.6 Luna                 | gpt-5.6-luna                 | `https://opencode.ai/zen/go/v1/responses`        | `@ai-sdk/openai`            |
-| GLM-5.3-Flash                | glm-5.3-flash                | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| GLM-5.3                      | glm-5.3                      | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| GLM-5.2                      | glm-5.2                      | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| GLM-5.1                      | glm-5.1                      | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| Kimi K3                      | kimi-k3                      | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| Kimi K2.7 Code               | kimi-k2.7-code               | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| Kimi K2.6                    | kimi-k2.6                    | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| LongCat-2.0                  | longcat-2.0                  | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| DeepSeek V4.1 Flash          | deepseek-v4.1-flash          | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| DeepSeek V4 Pro              | deepseek-v4-pro              | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| DeepSeek V4 Flash            | deepseek-v4-flash            | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| DeepSeek V4 Flash Vision Exp | deepseek-v4-flash-vision-exp | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| MiMo-V2.5                    | mimo-v2.5                    | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| MiMo-V2.5-Pro                | mimo-v2.5-pro                | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| MiniMax M3                   | minimax-m3                   | `https://opencode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
-| MiniMax M2.7                 | minimax-m2.7                 | `https://opencode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
-| MiniMax M2.5                 | minimax-m2.5                 | `https://opencode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
-| Muse Spark 1.3 Contributor   | muse-spark-1.3-contributor   | `https://opencode.ai/zen/go/v1/responses`        | `@ai-sdk/openai`            |
-| Muse Spark 1.2 Contributor   | muse-spark-1.2-contributor   | `https://opencode.ai/zen/go/v1/responses`        | `@ai-sdk/openai`            |
-| Qwen3.8 Max                  | qwen3.8-max                  | `https://opencode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
-| Qwen3.8 Flash                | qwen3.8-flash                | `https://opencode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
-| Qwen3.7 Max                  | qwen3.7-max                  | `https://opencode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
-| Qwen3.7 Plus                 | qwen3.7-plus                 | `https://opencode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
-| Qwen3.6 Plus                 | qwen3.6-plus                 | `https://opencode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
-| Hy4 preview                  | hy4-preview                  | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
-| Hy3                          | hy3                          | `https://opencode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Grok 4.6                     | grok-4.6                     | `https://prioricode.ai/zen/go/v1/responses`        | `@ai-sdk/openai`            |
+| GPT 5.6 Luna                 | gpt-5.6-luna                 | `https://prioricode.ai/zen/go/v1/responses`        | `@ai-sdk/openai`            |
+| GLM-5.3-Flash                | glm-5.3-flash                | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| GLM-5.3                      | glm-5.3                      | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| GLM-5.2                      | glm-5.2                      | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| GLM-5.1                      | glm-5.1                      | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Kimi K3                      | kimi-k3                      | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Kimi K2.7 Code               | kimi-k2.7-code               | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Kimi K2.6                    | kimi-k2.6                    | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| LongCat-2.0                  | longcat-2.0                  | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| DeepSeek V4.1 Flash          | deepseek-v4.1-flash          | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| DeepSeek V4 Pro              | deepseek-v4-pro              | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| DeepSeek V4 Flash            | deepseek-v4-flash            | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| DeepSeek V4 Flash Vision Exp | deepseek-v4-flash-vision-exp | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| MiMo-V2.5                    | mimo-v2.5                    | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| MiMo-V2.5-Pro                | mimo-v2.5-pro                | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| MiniMax M3                   | minimax-m3                   | `https://prioricode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
+| MiniMax M2.7                 | minimax-m2.7                 | `https://prioricode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
+| MiniMax M2.5                 | minimax-m2.5                 | `https://prioricode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
+| Muse Spark 1.3 Contributor   | muse-spark-1.3-contributor   | `https://prioricode.ai/zen/go/v1/responses`        | `@ai-sdk/openai`            |
+| Muse Spark 1.2 Contributor   | muse-spark-1.2-contributor   | `https://prioricode.ai/zen/go/v1/responses`        | `@ai-sdk/openai`            |
+| Qwen3.8 Max                  | qwen3.8-max                  | `https://prioricode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
+| Qwen3.8 Flash                | qwen3.8-flash                | `https://prioricode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
+| Qwen3.7 Max                  | qwen3.7-max                  | `https://prioricode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
+| Qwen3.7 Plus                 | qwen3.7-plus                 | `https://prioricode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
+| Qwen3.6 Plus                 | qwen3.6-plus                 | `https://prioricode.ai/zen/go/v1/messages`         | `@ai-sdk/anthropic`         |
+| Hy4 preview                  | hy4-preview                  | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
+| Hy3                          | hy3                          | `https://prioricode.ai/zen/go/v1/chat/completions` | `@ai-sdk/openai-compatible` |
 
-[model id](/docs/config/#models) ใน OpenCode config ของคุณจะใช้รูปแบบ `opencode-go/<model-id>` ตัวอย่างเช่น สำหรับ Kimi K3 คุณจะใช้ `opencode-go/kimi-k3` ใน config ของคุณ
+[model id](/docs/config/#models) ใน PrioriCode config ของคุณจะใช้รูปแบบ `prioricode-go/<model-id>` ตัวอย่างเช่น สำหรับ Kimi K3 คุณจะใช้ `prioricode-go/kimi-k3` ใน config ของคุณ
 
 ---
 
@@ -309,7 +309,7 @@ OpenCode Go ออกแบบมาสำหรับ [OpenCode](https://openco
 คุณสามารถดึงรายการโมเดลทั้งหมดที่พร้อมใช้งานและ metadata ของมันได้จาก:
 
 ```
-https://opencode.ai/zen/go/v1/models
+https://prioricode.ai/zen/go/v1/models
 ```
 
 ---
@@ -356,9 +356,9 @@ https://opencode.ai/zen/go/v1/models
 
 ## Goals
 
-เราสร้าง OpenCode Go เพื่อ:
+เราสร้าง PrioriCode Go เพื่อ:
 
 1. ทำให้การเขียนโค้ดด้วย AI **เข้าถึงได้** สำหรับผู้คนจำนวนมากขึ้นด้วยการสมัครสมาชิกในราคาประหยัด
 2. มอบการเข้าถึงโมเดลโอเพนซอร์สสำหรับการเขียนโค้ดที่ดีที่สุดได้อย่าง**เสถียร**
 3. คัดสรรโมเดลที่ผ่าน**การทดสอบและวัดประสิทธิภาพ**สำหรับการใช้งาน coding agent แล้ว
-4. **ไม่ผูกขาดการใช้งาน (no lock-in)** โดยอนุญาตให้คุณใช้งานผู้ให้บริการรายอื่นๆ ร่วมกับ OpenCode ได้เช่นกัน
+4. **ไม่ผูกขาดการใช้งาน (no lock-in)** โดยอนุญาตให้คุณใช้งานผู้ให้บริการรายอื่นๆ ร่วมกับ PrioriCode ได้เช่นกัน

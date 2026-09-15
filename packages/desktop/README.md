@@ -1,6 +1,6 @@
-# OpenCode Desktop
+# PrioriCode Desktop
 
-The OpenCode Desktop app, built with Electron.
+The PrioriCode Desktop app, built with Electron.
 
 ## Development
 
