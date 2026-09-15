@@ -226,7 +226,14 @@ const layer = Layer.effect(
           yield* Flock.effect(lockKey)
           return yield* fetchAndWrite()
         }),
+      ).pipe(
+        Effect.catch((error) =>
+          Effect.logWarning("models.dev unreachable; continuing without the hosted catalog", { cause: error }).pipe(
+            Effect.as(undefined),
+          ),
+        ),
       )
+      if (text === undefined) return {}
       return JSON.parse(text) as Record<string, Provider>
     }).pipe(Effect.withSpan("ModelsDev.populate"), Effect.orDie)
 
