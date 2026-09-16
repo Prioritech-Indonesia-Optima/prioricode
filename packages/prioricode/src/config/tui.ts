@@ -7,6 +7,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Cause, Context, Effect, Fiber, Layer } from "effect"
 import { ConfigParse } from "@/config/parse"
 import * as ConfigPaths from "@/config/paths"
+import { ConfigPatch } from "@/config/patch"
 import { migrateTuiConfig } from "./tui-migrate"
 import { resolveHostAttentionSoundPaths } from "./tui-host-attention"
 import { Flag } from "@prioricode/core/flag/flag"
@@ -40,6 +41,7 @@ export type HostMetadata = {
 
 export interface Interface {
   readonly get: () => Effect.Effect<Resolved>
+  readonly updatePatch: (patch: Partial<Info>) => Effect.Effect<void, Error>
   readonly pluginOrigins: () => Effect.Effect<ConfigPlugin.Origin[]>
   readonly waitForDependencies: () => Effect.Effect<void>
 }
@@ -83,6 +85,7 @@ function dropUnknownKeybinds(input: Record<string, unknown>) {
 const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: string }) {
   const afs = yield* FSUtil.Service
   let appliedOrder = 0
+  const tried: string[] = []
 
   const resolvePlugins = (config: Info, configFilepath: string): Effect.Effect<Info> =>
     Effect.gen(function* () {
@@ -148,6 +151,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
 
   const mergeFile = (acc: Acc, file: string) =>
     Effect.gen(function* () {
+      tried.push(file)
       const data = yield* loadFile(file)
       if (Object.keys(data).length) {
         appliedOrder += 1
@@ -220,6 +224,7 @@ const loadState = Effect.fn("TuiConfig.loadState")(function* (ctx: { directory: 
 
   return {
     config: result,
+    files: unique(tried),
     pluginOrigins: acc.plugin_origins,
     dirs: result.plugin?.length ? dirs : [],
   }
@@ -229,6 +234,7 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const directory = yield* CurrentWorkingDirectory
+    const afs = yield* FSUtil.Service
     const npm = yield* Npm.Service
     const data = yield* loadState({ directory })
     const deps = yield* Effect.forEach(
@@ -252,10 +258,54 @@ const layer = Layer.effect(
     const get = Effect.fn("TuiConfig.get")(() => Effect.succeed(data.config))
     const pluginOrigins = Effect.fn("TuiConfig.pluginOrigins")(() => Effect.succeed(data.pluginOrigins))
 
+    const toError = (error: unknown) => (error instanceof Error ? error : new Error(String(error)))
+
+    // Settings changes persist to the highest-precedence tui config file that
+    // exists (so the value written is the value the next load resolves), and
+    // fall back to the global file when no tui config exists yet.
+    const updatePatch = Effect.fn("TuiConfig.updatePatch")(function* (patch: Partial<Info>) {
+      const { keybinds: _keybinds, ...writable } = patch
+      if (Object.keys(writable).length === 0) return
+
+      let target = path.join(Global.Path.config, "tui.json")
+      let before = "{}"
+      for (const file of data.files.toReversed()) {
+        const text = yield* afs.readFileStringSafe(file).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
+        if (text === undefined) continue
+        target = file
+        before = text
+        break
+      }
+
+      const merged = yield* Effect.try({
+        try: () => {
+          const existing = ConfigParse.jsonc(before, target)
+          const next = mergeDeep(isRecord(existing) ? existing : {}, writable)
+          ConfigParse.schema(Info, next, target)
+          return next
+        },
+        catch: toError,
+      })
+
+      const text = yield* Effect.try({
+        try: () => {
+          try {
+            return ConfigPatch.patchJsonc(before, writable)
+          } catch {
+            return JSON.stringify(merged, null, 2)
+          }
+        },
+        catch: toError,
+      })
+
+      yield* afs.writeFileString(target, text).pipe(Effect.mapError(toError))
+      yield* Effect.logInfo("updated tui config", { path: target })
+    })
+
     const waitForDependencies = Effect.fn("TuiConfig.waitForDependencies")(() =>
       Effect.forEach(deps, Fiber.join, { concurrency: "unbounded" }).pipe(Effect.ignore(), Effect.asVoid),
     )
-    return Service.of({ get, pluginOrigins, waitForDependencies })
+    return Service.of({ get, updatePatch, pluginOrigins, waitForDependencies })
   }).pipe(Effect.withSpan("TuiConfig.layer")),
 )
 
@@ -269,6 +319,10 @@ export async function waitForDependencies() {
 
 export async function get() {
   return runPromise((svc) => svc.get())
+}
+
+export async function updatePatch(patch: Partial<Info>) {
+  await runPromise((svc) => svc.updatePatch(patch))
 }
 
 export async function pluginOrigins() {

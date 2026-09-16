@@ -2,7 +2,9 @@ export * as TuiConfig from "."
 
 import { createBindingLookup } from "@opentui/keymap/extras"
 import { Schema } from "effect"
-import { createContext, type JSX, useContext } from "solid-js"
+import { mergeDeep } from "remeda"
+import { batch, createContext, type JSX, useContext } from "solid-js"
+import { createStore, produce, unwrap } from "solid-js/store"
 import { TuiKeybind } from "./keybind"
 
 export const AttentionSoundName = Schema.Literals([
@@ -137,12 +139,64 @@ export function resolve(input: Info, options: ResolveOptions): Resolved {
 
 const ConfigContext = createContext<Resolved>()
 
-export function TuiConfigProvider(props: { config: Resolved; children: JSX.Element }) {
-  return <ConfigContext.Provider value={props.config}>{props.children}</ConfigContext.Provider>
+type ConfigWrite = {
+  update: (patch: Partial<Info>) => Promise<void>
+}
+
+const ConfigWriteContext = createContext<ConfigWrite>()
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function applyPatchTarget(current: Resolved, key: keyof Info, value: unknown) {
+  const previous = current[key]
+  if (isPlainRecord(value)) {
+    const merged = mergeDeep(isPlainRecord(previous) ? (unwrap(previous) as Record<string, unknown>) : {}, value)
+    if (key === "cursor") return { style: "block", blinking: true, ...merged }
+    return merged
+  }
+  return value
+}
+
+export function TuiConfigProvider(props: {
+  config: Resolved
+  save?: (patch: Partial<Info>) => Promise<void>
+  children: JSX.Element
+}) {
+  const [store, setStore] = createStore({ value: { ...props.config } })
+  const update = async (patch: Partial<Info>) => {
+    const { keybinds: _keybinds, ...writable } = patch
+    const entries = Object.entries(writable).filter(([, value]) => value !== undefined)
+    if (entries.length === 0) return
+    await props.save?.(writable)
+    batch(() => {
+      setStore(
+        "value",
+        produce((draft) => {
+          for (const [key, value] of entries) {
+            ;(draft as Record<string, unknown>)[key] = applyPatchTarget(draft as Resolved, key as keyof Info, value)
+          }
+        }),
+      )
+    })
+  }
+
+  return (
+    <ConfigContext.Provider value={store.value}>
+      <ConfigWriteContext.Provider value={{ update }}>{props.children}</ConfigWriteContext.Provider>
+    </ConfigContext.Provider>
+  )
 }
 
 export function useTuiConfig() {
   const value = useContext(ConfigContext)
+  if (!value) throw new Error("TuiConfigProvider is missing")
+  return value
+}
+
+export function useTuiConfigWrite() {
+  const value = useContext(ConfigWriteContext)
   if (!value) throw new Error("TuiConfigProvider is missing")
   return value
 }

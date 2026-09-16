@@ -10,7 +10,6 @@ import fsNode from "fs/promises"
 import { Flag } from "@prioricode/core/flag/flag"
 import { Auth } from "../auth"
 import { Env } from "../env"
-import { applyEdits, modify } from "jsonc-parser"
 import { InstallationLocal, InstallationVersion } from "@prioricode/core/installation/version"
 import { existsSync } from "fs"
 import { Account } from "@/account/account"
@@ -31,6 +30,7 @@ import { ConfigCommand } from "./command"
 import { ConfigManaged } from "./managed"
 import { ConfigParse } from "./parse"
 import { ConfigPaths } from "./paths"
+import { ConfigPatch } from "./patch"
 import { ConfigPlugin } from "./plugin"
 import { ConfigVariable } from "./variable"
 import { ConfigV2Compat } from "./v2-compat"
@@ -145,20 +145,6 @@ function globalConfigFile() {
     if (existsSync(file)) return file
   }
   return candidates[0]
-}
-
-function patchJsonc(input: string, patch: unknown, path: string[] = []): string {
-  if (!isRecord(patch)) {
-    const edits = modify(input, path, patch, {
-      formattingOptions: {
-        insertSpaces: true,
-        tabSize: 2,
-      },
-    })
-    return applyEdits(input, edits)
-  }
-
-  return Object.entries(patch).reduce((result, [key, value]) => patchJsonc(result, value, [...path, key]), input)
 }
 
 function writable(info: Info) {
@@ -669,7 +655,7 @@ const layer = Layer.effect(
         changed = serialized !== before
         if (changed) yield* fs.writeFileString(file, serialized).pipe(Effect.orDie)
       } else {
-        const updated = patchJsonc(before, patch)
+        const updated = ConfigPatch.patchJsonc(before, patch)
         next = yield* decodeConfig(ConfigParse.jsonc(updated, file), file)
         changed = updated !== before
         if (changed) yield* fs.writeFileString(file, updated).pipe(Effect.orDie)

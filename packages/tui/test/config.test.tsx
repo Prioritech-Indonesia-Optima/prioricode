@@ -11,6 +11,7 @@ import {
   TuiConfigProvider,
   type Info as TuiConfigInfo,
   useTuiConfig,
+  useTuiConfigWrite,
 } from "../src/config"
 
 const decodeInfo = Schema.decodeUnknownSync(Info)
@@ -139,4 +140,49 @@ test("provides resolved config through Solid context", async () => {
 
 test("requires the config provider", () => {
   expect(() => useTuiConfig()).toThrow("TuiConfigProvider is missing")
+})
+
+test("persists config updates before applying them locally", async () => {
+  const config = resolve({ theme: "custom" }, { terminalSuspend: true })
+  const saved: TuiConfigInfo[] = []
+  let write!: ReturnType<typeof useTuiConfigWrite>
+
+  function Collector() {
+    write = useTuiConfigWrite()
+    const value = useTuiConfig()
+    return <text>{`${value.mouse} ${value.attention.notifications}`}</text>
+  }
+
+  const app = await testRender(() => (
+    <TuiConfigProvider
+      config={config}
+      save={async (patch) => {
+        saved.push(patch)
+        if (patch.mouse === false) throw new Error("disk full")
+      }}
+    >
+      <Collector />
+    </TuiConfigProvider>
+  ))
+  try {
+    await app.renderOnce()
+    expect(app.captureCharFrame()).toContain("true true")
+
+    await write.update({ scroll_speed: 5, keybinds: { session_list: "ctrl+l" } })
+    expect(saved).toEqual([{ scroll_speed: 5 }])
+
+    await write.update({ attention: { notifications: false } })
+    await app.renderOnce()
+    expect(saved).toHaveLength(2)
+    expect(saved[1]).toEqual({ attention: { notifications: false } })
+    expect(config.attention.notifications).toBe(true)
+    expect(app.captureCharFrame()).toContain("true false")
+
+    // A failed save must not change the effective config.
+    await write.update({ mouse: false }).catch(() => undefined)
+    await app.renderOnce()
+    expect(app.captureCharFrame()).toContain("true false")
+  } finally {
+    app.renderer.destroy()
+  }
 })

@@ -4,7 +4,7 @@ import { createDefaultOpenTuiKeymap } from "@opentui/keymap/opentui"
 import { Deferred, Effect } from "effect"
 import { Global } from "@prioricode/core/global"
 import { Flag } from "@prioricode/core/flag/flag"
-import { InstallationVersion } from "@prioricode/core/installation/version"
+import { ProductVersion } from "@prioricode/core/installation/version"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
 import { ExitProvider, useExit } from "./context/exit"
 import { EpilogueProvider } from "./context/epilogue"
@@ -45,6 +45,7 @@ import { DialogMcp } from "./component/dialog-mcp"
 import { DialogStatus } from "./component/dialog-status"
 import { DialogDebug } from "./component/dialog-debug"
 import { DialogThemeList } from "./component/dialog-theme-list"
+import { DialogSettings } from "./component/dialog-settings"
 import { DialogHelp } from "./ui/dialog-help"
 import { DialogAgent } from "./component/dialog-agent"
 import { DialogSessionList } from "./component/dialog-session-list"
@@ -143,6 +144,7 @@ export type TuiInput = {
   url: string
   args: Args
   config: TuiConfig.Resolved
+  saveTuiConfig?: (patch: Partial<TuiConfig.Info>) => Promise<void>
   onSnapshot?: () => Promise<string[]>
   directory?: string
   fetch?: typeof fetch
@@ -293,7 +295,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                         : undefined
                                     }
                                   >
-                                    <TuiConfigProvider config={input.config}>
+                                    <TuiConfigProvider config={input.config} save={input.saveTuiConfig}>
                                       <PluginRuntimeProvider value={pluginRuntime}>
                                         <SDKProvider
                                           url={input.url}
@@ -387,7 +389,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
 
   const api = createTuiApi(
     createTuiApiAdapters({
-      version: InstallationVersion,
+      version: ProductVersion,
       tuiConfig,
       dialog,
       keymap,
@@ -444,10 +446,17 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
 
     renderer.clearSelection()
   }
-  const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
-  const [pasteSummaryEnabled, setPasteSummaryEnabled] = createSignal(
-    kv.get("paste_summary_enabled", !sync.data.config.experimental?.disable_paste_summary),
+  const [terminalTitleEnabled, setTerminalTitleEnabled] = kv.signal("terminal_title_enabled", true)
+  const [pasteSummaryEnabled, setPasteSummaryEnabled] = kv.signal(
+    "paste_summary_enabled",
+    !sync.data.config.experimental?.disable_paste_summary,
   )
+
+  // Live-apply mouse capture when changed from the settings page.
+  createEffect(() => {
+    const next = !Flag.PRIORICODE_DISABLE_MOUSE && tuiConfig.mouse
+    if (renderer.useMouse !== next) renderer.useMouse = next
+  })
 
   // Update terminal window title based on current route and session
   createEffect(() => {
@@ -779,6 +788,16 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         category: "System",
       },
       {
+        name: "app.settings",
+        title: "Open settings",
+        suggested: true,
+        slashName: "settings",
+        run: () => {
+          dialog.replace(() => <DialogSettings />)
+        },
+        category: "System",
+      },
+      {
         name: "theme.switch",
         title: "Switch theme",
         slashName: "themes",
@@ -883,7 +902,6 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         run: () => {
           setTerminalTitleEnabled((prev) => {
             const next = !prev
-            kv.set("terminal_title_enabled", next)
             if (!next) renderer.setTerminalTitle("")
             return next
           })
