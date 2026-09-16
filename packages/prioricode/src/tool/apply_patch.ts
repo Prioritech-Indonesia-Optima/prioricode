@@ -7,6 +7,7 @@ import { InstanceState } from "@/effect/instance-state"
 import { Patch } from "../patch"
 import { createTwoFilesPatch, diffLines } from "diff"
 import { assertExternalDirectoryEffect } from "./external-directory"
+import { FileCollision } from "./file-collision"
 import { trimDiff } from "./edit"
 import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
@@ -26,6 +27,7 @@ export const ApplyPatchTool = Tool.define(
     const afs = yield* FSUtil.Service
     const format = yield* Format.Service
     const events = yield* EventV2Bridge.Service
+    const collision = yield* FileCollision.Service
 
     const run = Effect.fn("ApplyPatchTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
@@ -68,6 +70,7 @@ export const ApplyPatchTool = Tool.define(
       }> = []
 
       let totalDiff = ""
+      const collisionNotices: string[] = []
 
       for (const hunk of hunks) {
         const filePath = path.resolve(instance.directory, hunk.path)
@@ -111,6 +114,9 @@ export const ApplyPatchTool = Tool.define(
                 new Error(`apply_patch verification failed: Failed to read file to update: ${filePath}`),
               )
             }
+
+            const notice = yield* collision.check(filePath, ctx.sessionID, instance.project.id)
+            if (notice) collisionNotices.push(notice)
 
             const source = yield* Bom.readFile(afs, filePath)
             const oldContent = source.text
@@ -169,6 +175,8 @@ export const ApplyPatchTool = Tool.define(
               ),
             )
             const contentToDelete = source.text
+            const notice = yield* collision.check(filePath, ctx.sessionID, instance.project.id)
+            if (notice) collisionNotices.push(notice)
             const deleteDiff = trimDiff(createTwoFilesPatch(filePath, filePath, contentToDelete, ""))
 
             const deletions = contentToDelete.split("\n").length
@@ -257,6 +265,12 @@ export const ApplyPatchTool = Tool.define(
         }
       }
 
+      for (const change of fileChanges) {
+        if (change.type === "add") yield* collision.record(change.filePath, ctx.sessionID)
+        if (change.type === "update") yield* collision.record(change.filePath, ctx.sessionID)
+        if (change.type === "move" && change.movePath) yield* collision.record(change.movePath, ctx.sessionID)
+      }
+
       // Publish file change events
       for (const update of updates) {
         yield* events.publish(Watcher.Event.Updated, update)
@@ -282,6 +296,7 @@ export const ApplyPatchTool = Tool.define(
         return `M ${path.relative(instance.worktree, target).replaceAll("\\", "/")}`
       })
       let output = `Success. Updated the following files:\n${summaryLines.join("\n")}`
+      if (collisionNotices.length > 0) output = `${collisionNotices.join("\n")}\n\n${output}`
 
       for (const change of fileChanges) {
         if (change.type === "delete") continue

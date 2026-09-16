@@ -4,6 +4,7 @@ import fs from "fs/promises"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { EditTool } from "../../src/tool/edit"
+import { FileCollision } from "../../src/tool/file-collision"
 import { disposeAllInstances, TestInstance } from "../fixture/fixture"
 import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
@@ -32,7 +33,15 @@ afterEach(async () => {
 })
 
 const layer = LayerNode.compile(
-  LayerNode.group([LSP.node, FSUtil.node, Format.node, EventV2Bridge.node, Truncate.node, Agent.node]),
+  LayerNode.group([
+    LSP.node,
+    FSUtil.node,
+    Format.node,
+    EventV2Bridge.node,
+    Truncate.node,
+    Agent.node,
+    FileCollision.node,
+  ]),
 )
 
 const it = testEffect(layer)
@@ -568,6 +577,52 @@ describe("tool.edit", () => {
         ])
 
         expect(yield* load(filepath)).toBe("top = 1\nmiddle = keep\nbottom = 2\n")
+      }),
+    )
+  })
+
+  describe("cross-session collision", () => {
+    it.instance("surfaces a change notice when the file was modified after this session last wrote it", () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const filepath = path.join(test.directory, "collide.txt")
+        yield* put(filepath, "line1\nline2\nline3")
+        // Establish this session's last-seen state via an edit.
+        yield* run({ filePath: filepath, oldString: "line2", newString: "line2a" })
+        // A peer (or any external writer) changes the file afterwards.
+        yield* put(filepath, "line1\nline2a\nline3\nline4")
+
+        const result = yield* run({ filePath: filepath, oldString: "line3", newString: "line3a" })
+        expect(result.output).toContain("changed since you last read it")
+        expect(result.output).toContain("Edit applied successfully")
+        expect(yield* load(filepath)).toBe("line1\nline2a\nline3a\nline4")
+      }),
+    )
+
+    it.instance("enriches a stale oldString failure with the change notice", () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const filepath = path.join(test.directory, "stale.txt")
+        yield* put(filepath, "alpha\nbeta\ngamma")
+        yield* run({ filePath: filepath, oldString: "beta", newString: "betaX" })
+        // The peer replaces the line this session is about to edit.
+        yield* put(filepath, "alpha\nsomething-else\ngamma")
+
+        const err = yield* fail({ filePath: filepath, oldString: "beta", newString: "betaY" })
+        expect(err.message).toContain("Could not find oldString")
+        expect(err.message).toContain("changed since you last read it")
+      }),
+    )
+
+    it.instance("does not surface a notice when no external change occurred", () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const filepath = path.join(test.directory, "quiet.txt")
+        yield* put(filepath, "one\ntwo\nthree")
+        yield* run({ filePath: filepath, oldString: "two", newString: "twoX" })
+        // This session's own follow-up edit should not warn about itself.
+        const result = yield* run({ filePath: filepath, oldString: "three", newString: "threeX" })
+        expect(result.output).not.toContain("changed since you last read it")
       }),
     )
   })

@@ -5,6 +5,7 @@ import { PermissionV1 } from "@prioricode/core/v1/permission"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Cause, Effect, Exit, Layer, Schema } from "effect"
 import { ApplyPatchTool } from "../../src/tool/apply_patch"
+import { FileCollision } from "../../src/tool/file-collision"
 import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Format } from "../../src/format"
@@ -17,7 +18,15 @@ import { testEffect } from "../lib/effect"
 
 const it = testEffect(
   LayerNode.compile(
-    LayerNode.group([LSP.node, FSUtil.node, Format.node, EventV2Bridge.node, Truncate.node, Agent.node]),
+    LayerNode.group([
+      LSP.node,
+      FSUtil.node,
+      Format.node,
+      EventV2Bridge.node,
+      Truncate.node,
+      Agent.node,
+      FileCollision.node,
+    ]),
   ),
 )
 
@@ -544,6 +553,51 @@ EOF`
       yield* execute({ patchText }, ctx)
       // Result has ASCII quotes because that's what the patch specifies
       expect(yield* readText(target)).toBe(`He said "hi"\nsome${emDash}dash\nend\n`)
+    }),
+  )
+
+  it.instance("surfaces a change notice when the file was modified after this session last patched it", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const target = path.join(test.directory, "collide.txt")
+      yield* writeText(target, "line1\nline2\nline3\n")
+
+      // Establish this session's last-seen state via an update.
+      yield* execute(
+        { patchText: "*** Begin Patch\n*** Update File: collide.txt\n@@\n-line2\n+line2a\n*** End Patch" },
+        ctx,
+      )
+      // A peer (or any external writer) changes the file afterwards.
+      yield* writeText(target, "line1\nline2a\nline3\nline4\n")
+
+      const result = yield* execute(
+        { patchText: "*** Begin Patch\n*** Update File: collide.txt\n@@\n-line3\n+line3a\n*** End Patch" },
+        ctx,
+      )
+      expect(result.output).toContain("changed since you last read it")
+      expect(result.output).toContain("Success. Updated the following files")
+      expect(yield* readText(target)).toBe("line1\nline2a\nline3a\nline4\n")
+    }),
+  )
+
+  it.instance("does not surface a notice when no external change occurred", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const { ctx } = makeCtx()
+      const target = path.join(test.directory, "quiet.txt")
+      yield* writeText(target, "one\ntwo\nthree\n")
+
+      yield* execute(
+        { patchText: "*** Begin Patch\n*** Update File: quiet.txt\n@@\n-two\n+twoX\n*** End Patch" },
+        ctx,
+      )
+      // This session's own follow-up patch should not warn about itself.
+      const result = yield* execute(
+        { patchText: "*** Begin Patch\n*** Update File: quiet.txt\n@@\n-three\n+threeX\n*** End Patch" },
+        ctx,
+      )
+      expect(result.output).not.toContain("changed since you last read it")
     }),
   )
 })

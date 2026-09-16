@@ -33,7 +33,10 @@ const IS_PREVIEW = CHANNEL !== "latest"
 
 const VERSION = await (async () => {
   if (env.PRIORICODE_VERSION) return env.PRIORICODE_VERSION
-  if (IS_PREVIEW) return `0.0.0-${CHANNEL}-${new Date().toISOString().slice(0, 16).replace(/[-:T]/g, "")}`
+  if (IS_PREVIEW) {
+    const hash = await $`git rev-parse --short HEAD`.text().then((x) => x.trim())
+    return hash
+  }
   const version = await fetch("https://registry.npmjs.org/prioricode-ai/latest")
     .then((res) => {
       if (!res.ok) throw new Error(res.statusText)

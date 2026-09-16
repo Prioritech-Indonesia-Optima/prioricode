@@ -13,6 +13,7 @@ import { FileSystem } from "@prioricode/core/filesystem"
 import { Watcher } from "@prioricode/core/filesystem/watcher"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { Format } from "../format"
+import { FileCollision } from "./file-collision"
 import { InstanceState } from "@/effect/instance-state"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectoryEffect } from "./external-directory"
@@ -62,6 +63,7 @@ export const EditTool = Tool.define(
     const afs = yield* FSUtil.Service
     const format = yield* Format.Service
     const events = yield* EventV2Bridge.Service
+    const collision = yield* FileCollision.Service
 
     return {
       description: DESCRIPTION,
@@ -85,7 +87,8 @@ export const EditTool = Tool.define(
           let diff = ""
           let contentOld = ""
           let contentNew = ""
-          yield* lock(filePath).withPermits(1)(
+          let collisionNotice: string | undefined
+          const locked = lock(filePath).withPermits(1)(
             Effect.gen(function* () {
               if (params.oldString === "") {
                 const existed = yield* afs.existsSafe(filePath)
@@ -123,6 +126,7 @@ export const EditTool = Tool.define(
               const info = yield* afs.stat(filePath).pipe(Effect.catch(() => Effect.succeed(undefined)))
               if (!info) throw new Error(`File ${filePath} not found`)
               if (info.type === "Directory") throw new Error(`Path is a directory, not a file: ${filePath}`)
+              collisionNotice = yield* collision.check(filePath, ctx.sessionID, instance.project.id)
               const source = yield* Bom.readFile(afs, filePath)
               contentOld = source.text
 
@@ -171,6 +175,15 @@ export const EditTool = Tool.define(
               )
             }).pipe(Effect.orDie),
           )
+          yield* locked.pipe(
+            Effect.catchDefect((defect) => {
+              if (collisionNotice && defect instanceof Error && defect.message.startsWith("Could not find oldString")) {
+                return Effect.die(new Error(`${defect.message}\n${collisionNotice}`))
+              }
+              return Effect.die(defect)
+            }),
+          )
+          yield* collision.record(filePath, ctx.sessionID)
 
           let additions = 0
           let deletions = 0
@@ -194,6 +207,7 @@ export const EditTool = Tool.define(
           })
 
           let output = "Edit applied successfully."
+          if (collisionNotice) output = `${collisionNotice}\n\n${output}`
           yield* lsp.touchFile(filePath, "document")
           const diagnostics = yield* lsp.diagnostics()
           const normalizedFilePath = FSUtil.normalizePath(filePath)

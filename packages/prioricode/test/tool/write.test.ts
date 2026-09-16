@@ -4,6 +4,7 @@ import { Effect, Layer } from "effect"
 import path from "path"
 import fs from "fs/promises"
 import { WriteTool } from "../../src/tool/write"
+import { FileCollision } from "../../src/tool/file-collision"
 import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
@@ -41,6 +42,7 @@ const it = testEffect(
       CrossSpawnSpawner.node,
       Truncate.node,
       Agent.node,
+      FileCollision.node,
     ]),
   ),
 )
@@ -273,6 +275,34 @@ describe("tool.write", () => {
 
         const result = yield* run({ filePath: filepath, content: "export const Button = () => {}" })
         expect(result.title).toEndWith(path.join("src", "components", "Button.tsx"))
+      }),
+    )
+  })
+
+  describe("cross-session collision", () => {
+    it.instance("surfaces a change notice when the file was modified after this session last wrote it", () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const filepath = path.join(test.directory, "collide.txt")
+        yield* Effect.promise(() => fs.writeFile(filepath, "seed", "utf-8"))
+        // Establish this session's last-seen state via a write.
+        yield* run({ filePath: filepath, content: "first" })
+        // A peer (or any external writer) changes the file afterwards.
+        yield* Effect.promise(() => fs.writeFile(filepath, "changed-by-other", "utf-8"))
+
+        const result = yield* run({ filePath: filepath, content: "second" })
+        expect(result.output).toContain("changed since you last read it")
+        expect(result.output).toContain("Wrote file successfully")
+        expect(yield* Effect.promise(() => fs.readFile(filepath, "utf-8"))).toBe("second")
+      }),
+    )
+
+    it.instance("does not surface a notice for a brand-new file", () =>
+      Effect.gen(function* () {
+        const test = yield* TestInstance
+        const filepath = path.join(test.directory, "fresh.txt")
+        const result = yield* run({ filePath: filepath, content: "brand new" })
+        expect(result.output).not.toContain("changed since you last read it")
       }),
     )
   })

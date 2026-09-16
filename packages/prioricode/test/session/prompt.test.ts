@@ -719,6 +719,67 @@ it.instance("loop stops provider overflow instead of auto-compacting when disabl
   }),
 )
 
+it.instance("loop triggers pre-emptive auto-compaction when estimated tokens exceed threshold", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig((url) => ({
+      ...providerCfg(url),
+      compaction: { threshold: 1 },
+    }))
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "Threshold" })
+
+    // 5000 chars of text → JSON ~5500 chars → Token.estimate ≈ 1375 > trigger (1000)
+    const bigText = "x".repeat(5_000)
+
+    // Response 1: compaction summary (called by compaction.process)
+    yield* llm.text("summary", { usage: { input: 100, output: 100 } })
+    // Response 2: reply to the synthetic "Continue" message after compaction
+    yield* llm.text("done", { usage: { input: 100, output: 100 } })
+
+    yield* prompt.prompt({
+      sessionID: chat.id,
+      agent: "build",
+      noReply: true,
+      parts: [{ type: "text", text: bigText }],
+    })
+
+    yield* prompt.loop({ sessionID: chat.id })
+    const messages = yield* sessions.messages({ sessionID: chat.id })
+
+    const hasCompaction = messages.some((m) => m.parts.some((p) => p.type === "compaction"))
+    expect(hasCompaction).toBe(true)
+  }),
+)
+
+it.instance("loop does not trigger pre-emptive auto-compaction when estimated tokens are below threshold", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig((url) => ({
+      ...providerCfg(url),
+      compaction: { threshold: 80 },
+    }))
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "BelowThreshold" })
+
+    // Short message → Token.estimate well below trigger (80000)
+    yield* llm.text("response", { usage: { input: 100, output: 100 } })
+
+    yield* prompt.prompt({
+      sessionID: chat.id,
+      agent: "build",
+      noReply: true,
+      parts: [{ type: "text", text: "hello" }],
+    })
+
+    yield* prompt.loop({ sessionID: chat.id })
+    const messages = yield* sessions.messages({ sessionID: chat.id })
+
+    const hasCompaction = messages.some((m) => m.parts.some((p) => p.type === "compaction"))
+    expect(hasCompaction).toBe(false)
+  }),
+)
+
 noLLMServer.instance.skip(
   "prompt emits v2 prompted and synthetic events (v2 projector disabled)",
   () =>

@@ -15,6 +15,7 @@ import { Permission } from "../../src/permission"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { Instruction } from "../../src/session/instruction"
 import { ReadTool } from "../../src/tool/read"
+import { FileCollision } from "../../src/tool/file-collision"
 import { Truncate } from "@/tool/truncate"
 import { Tool } from "@/tool/tool"
 import { Filesystem } from "@/util/filesystem"
@@ -54,6 +55,7 @@ const readLayer = (flags: Partial<RuntimeFlags.Info> = {}) =>
       LSP.node,
       Ripgrep.node,
       Truncate.node,
+      FileCollision.node,
     ]),
   )
 

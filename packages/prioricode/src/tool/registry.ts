@@ -42,6 +42,7 @@ import { EffectBridge } from "@/effect/bridge"
 import { Question } from "../question"
 import { Todo } from "../session/todo"
 import { Coordination } from "@/session/coordination"
+import { FileCollision } from "./file-collision"
 import { SessionStatus } from "@/session/status"
 import { LSP } from "@/lsp/lsp"
 import { Instruction } from "../session/instruction"
@@ -442,6 +443,7 @@ export const node = LayerNode.make({
     Skill.node,
     Session.node,
     Coordination.node,
+    FileCollision.node,
     SessionStatus.node,
     BackgroundJob.node,
     Provider.node,
