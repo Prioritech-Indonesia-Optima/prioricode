@@ -11,7 +11,6 @@
 <p align="center">prioricode, by Prioritech Indonesia Optima.</p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/prioricode-ai"><img alt="npm" src="https://img.shields.io/npm/v/prioricode-ai?style=flat-square" /></a>
   <a href="https://github.com/Prioritech-Indonesia-Optima/prioricode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/Prioritech-Indonesia-Optima/prioricode/publish.yml?style=flat-square&branch=dev" /></a>
 </p>
 
@@ -53,38 +52,19 @@
 # YOLO
 curl -fsSL https://prioritech.co.id/install | bash
 
-# Package managers
-npm i -g prioricode-ai@latest        # or bun/pnpm/yarn
-scoop install prioricode             # Windows
-choco install prioricode             # Windows
-brew install anomalyco/tap/prioricode # macOS and Linux (recommended, always up to date)
-brew install prioricode              # macOS and Linux (official brew formula, updated less)
-sudo pacman -S prioricode            # Arch Linux (Stable)
-paru -S prioricode-bin               # Arch Linux (Latest from AUR)
-mise use -g prioricode               # Any OS
-nix run nixpkgs#prioricode           # or github:Prioritech-Indonesia-Optima/prioricode for latest dev branch
+# Or download a binary directly from GitHub Releases
+# https://github.com/Prioritech-Indonesia-Optima/prioricode/releases
+
+# From source (Nix)
+nix run github:Prioritech-Indonesia-Optima/prioricode
 ```
 
 > [!TIP]
 > Remove versions older than 0.1.x before installing.
 
-### Desktop App (BETA)
+### Desktop App (coming soon)
 
-PrioriCode is also available as a desktop application. Download directly from the [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) or [prioritech.co.id/download](https://prioritech.co.id/download).
-
-| Platform              | Download                           |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
-| Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, or `.AppImage`     |
-
-```bash
-# macOS (Homebrew)
-brew install --cask prioricode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/prioricode-desktop
-```
+Desktop builds are not published yet. The CLI above is the supported way to run PrioriCode; desktop downloads will appear on the [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases).
 
 #### Installation Directory
 

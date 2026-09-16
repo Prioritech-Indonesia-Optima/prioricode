@@ -2,8 +2,16 @@
 export function deactivate() {}
 
 import * as vscode from "vscode"
+import { spawnSync } from "child_process"
 
 const TERMINAL_NAME = "prioricode"
+
+function hasCli() {
+  if (process.platform === "win32") {
+    return spawnSync("where", ["prioricode"], { windowsHide: true }).status === 0
+  }
+  return spawnSync("sh", ["-c", "command -v prioricode >/dev/null 2>&1"]).status === 0
+}
 
 export function activate(context: vscode.ExtensionContext) {
   const openNewTerminalDisposable = vscode.commands.registerCommand("prioricode.openNewTerminal", async () => {
@@ -43,6 +51,25 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(openNewTerminalDisposable, openTerminalDisposable, addFilepathDisposable)
 
   async function openTerminal() {
+    if (!hasCli()) {
+      const message = "The prioricode CLI was not found on your PATH."
+      if (process.platform === "win32") {
+        const choice = await vscode.window.showInformationMessage(message, "View install instructions")
+        if (choice === "View install instructions") {
+          await vscode.env.openExternal(vscode.Uri.parse("https://prioritech.co.id/docs"))
+        }
+        return
+      }
+
+      const choice = await vscode.window.showInformationMessage(message, "Install prioricode")
+      if (choice === "Install prioricode") {
+        const terminal = vscode.window.createTerminal({ name: "Install prioricode" })
+        terminal.show()
+        terminal.sendText("curl -fsSL https://prioritech.co.id/install | bash")
+      }
+      return
+    }
+
     // Create a new terminal in split screen
     const port = Math.floor(Math.random() * (65535 - 16384 + 1)) + 16384
     const terminal = vscode.window.createTerminal({

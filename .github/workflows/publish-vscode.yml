@@ -35,3 +35,20 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
           OPENVSX_TOKEN: ${{ secrets.OPENVSX_TOKEN }}
+
+      # Marked --prerelease so it never becomes "releases/latest", which the
+      # curl installer resolves for CLI binaries via releases/latest/download.
+      - name: Attach .vsix to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag=$(git describe --tags --match 'vscode-v*' --abbrev=0)
+          version=${tag#vscode-v}
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release upload "$tag" sdks/vscode/dist/prioricode.vsix --clobber
+          else
+            gh release create "$tag" sdks/vscode/dist/prioricode.vsix \
+              --title "PrioriCode VS Code extension $version" \
+              --notes "Direct .vsix download for the PrioriCode VS Code extension. Prefer installing from the VS Code Marketplace or Open VSX." \
+              --prerelease
+          fi

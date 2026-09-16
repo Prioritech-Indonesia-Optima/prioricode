@@ -14,8 +14,17 @@ echo "Latest version: $version"
 # package-marketplace
 vsce package --no-git-tag-version --no-update-package-json --no-dependencies --skip-license -o dist/prioricode.vsix "$version"
 
-# publish-marketplace
-vsce publish --packagePath dist/prioricode.vsix
+# publish-marketplace (optional; skipped when VSCE_PAT is not set —
+# upload dist/prioricode.vsix via https://marketplace.visualstudio.com/manage instead)
+if [ -n "${VSCE_PAT:-}" ]; then
+    vsce publish --packagePath dist/prioricode.vsix
+else
+    echo "VSCE_PAT not set; skipping marketplace publish"
+fi
 
-# publish-openvsx
-npx ovsx publish dist/prioricode.vsix -p "$OPENVSX_TOKEN"
+# publish-openvsx (optional; skipped when OPENVSX_TOKEN is not set)
+if [ -n "${OPENVSX_TOKEN:-}" ]; then
+    npx ovsx publish dist/prioricode.vsix -p "$OPENVSX_TOKEN"
+else
+    echo "OPENVSX_TOKEN not set; skipping Open VSX publish"
+fi

@@ -19,9 +19,17 @@ Options:
     -b, --binary <path>     Install from a local binary instead of downloading
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
 
+Environment:
+    PRIORICODE_INSTALL_DIR  Custom installation directory (highest priority)
+    XDG_BIN_DIR             XDG-compliant directory, e.g. $HOME/.local/bin
+
+    Install directory priority: $PRIORICODE_INSTALL_DIR > $XDG_BIN_DIR >
+    $HOME/bin > $HOME/.prioricode/bin
+
 Examples:
-    curl -fsSL https://prioricode.ai/install | bash
-    curl -fsSL https://prioricode.ai/install | bash -s -- --version 1.0.180
+    curl -fsSL https://prioritech.co.id/install | bash
+    curl -fsSL https://prioritech.co.id/install | bash -s -- --version 1.0.180
+    PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
     ./install --binary /path/to/prioricode
 EOF
 }
@@ -65,8 +73,24 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-INSTALL_DIR=$HOME/.prioricode/bin
-mkdir -p "$INSTALL_DIR"
+resolve_install_dir() {
+    if [ -n "${PRIORICODE_INSTALL_DIR:-}" ]; then
+        echo "$PRIORICODE_INSTALL_DIR"
+    elif [ -n "${XDG_BIN_DIR:-}" ]; then
+        echo "$XDG_BIN_DIR"
+    elif [ -d "$HOME/bin" ] || mkdir -p "$HOME/bin" 2>/dev/null; then
+        echo "$HOME/bin"
+    else
+        echo "$HOME/.prioricode/bin"
+    fi
+}
+
+INSTALL_DIR=$(resolve_install_dir)
+if ! mkdir -p "$INSTALL_DIR" 2>/dev/null; then
+    echo -e "${RED}Error: cannot create installation directory ${INSTALL_DIR}${NC}"
+    echo -e "${MUTED}Set PRIORICODE_INSTALL_DIR to a writable directory and retry.${NC}"
+    exit 1
+fi
 
 # If --binary is provided, skip all download/detection logic
 if [ -n "$binary_path" ]; then
@@ -340,8 +364,16 @@ download_and_install() {
         unzip -q "$tmp_dir/$filename" -d "$tmp_dir"
     fi
 
-    mv "$tmp_dir/prioricode" "$INSTALL_DIR"
-    chmod 755 "${INSTALL_DIR}/prioricode"
+    if [ -f "$tmp_dir/prioricode" ]; then
+        mv "$tmp_dir/prioricode" "$INSTALL_DIR"
+        chmod 755 "${INSTALL_DIR}/prioricode"
+    elif [ -f "$tmp_dir/prioricode.exe" ]; then
+        mv "$tmp_dir/prioricode.exe" "$INSTALL_DIR"
+        chmod 755 "${INSTALL_DIR}/prioricode.exe"
+    else
+        echo -e "${RED}Error: archive did not contain a prioricode binary${NC}"
+        exit 1
+    fi
     rm -rf "$tmp_dir"
 }
 
