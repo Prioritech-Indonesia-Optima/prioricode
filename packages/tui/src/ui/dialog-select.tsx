@@ -789,3 +789,24 @@ function Option(props: {
     </>
   )
 }
+
+DialogSelect.show = <T,>(
+  dialog: DialogContext,
+  title: string,
+  options: DialogSelectOption<T>[],
+  opts?: { default?: T },
+) => {
+  return new Promise<T | null>((resolve) => {
+    const resolved = options.map((o) => ({
+      ...o,
+      onSelect: (ctx: DialogContext) => {
+        o.onSelect?.(ctx)
+        resolve(o.value)
+      },
+    }))
+    dialog.replace(
+      () => <DialogSelect<T> title={title} options={resolved} flat current={opts?.default} />,
+      () => resolve(null),
+    )
+  })
+}

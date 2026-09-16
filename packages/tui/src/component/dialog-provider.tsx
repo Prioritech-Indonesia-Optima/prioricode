@@ -154,6 +154,12 @@ export function createDialogProviderOptions() {
     const output = await promptNumber("Max output (tokens)", 8_192)
     if (output === undefined) return
 
+    const supportsImage = await DialogSelect.show(dialog, "Image input", [
+      { value: true, title: "Yes", description: "Model can see images" },
+      { value: false, title: "No", description: "Text only" },
+    ], { default: true })
+    if (supportsImage === null) return
+
     try {
       await sdk.client.global.config.update(
         {
@@ -162,7 +168,15 @@ export function createDialogProviderOptions() {
               [providerID]: {
                 npm,
                 options: { baseURL },
-                models: { [modelID]: { limit: { context, output } } },
+                models: {
+                  [modelID]: {
+                    limit: { context, output },
+                    modalities: {
+                      input: supportsImage ? ["text", "image"] : ["text"],
+                      output: ["text"],
+                    },
+                  },
+                },
               },
             },
           },
