@@ -9,6 +9,7 @@ import { errorMessage } from "@/util/error"
 import { ChildProcess } from "effect/unstable/process"
 import { AppProcess } from "@prioricode/core/process"
 import path from "path"
+import os from "os"
 import { makeRuntime } from "@prioricode/core/effect/runtime"
 import semver from "semver"
 import { InstallationChannel, InstallationVersion } from "@prioricode/core/installation/version"
@@ -144,14 +145,30 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
 
     const upgradeCurl = Effect.fnUntraced(
       function* (target: string) {
-        const response = yield* httpOk.execute(HttpClientRequest.get("https://prioricode.ai/install"))
+        const installEnv: Record<string, string> = { VERSION: target, PRIORICODE_INSTALL_DIR: path.dirname(process.execPath) }
+
+        if (process.platform === "win32") {
+          const result = yield* appProcess.run(
+            ChildProcess.make("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://code.prioritech.co.id/install.ps1 | iex"], {
+              env: installEnv,
+              extendEnv: true,
+            }),
+          )
+          return {
+            code: result.exitCode,
+            stdout: result.stdout.toString("utf8"),
+            stderr: result.stderr.toString("utf8"),
+          }
+        }
+
+        const response = yield* httpOk.execute(HttpClientRequest.get("https://code.prioritech.co.id/install"))
         const body = yield* response.text
         const bodyBytes = new TextEncoder().encode(body)
         const shell = yield* upgradeScriptShell()
         const result = yield* appProcess.run(
           ChildProcess.make(shell, [], {
             stdin: Stream.make(bodyBytes),
-            env: { VERSION: target },
+            env: installEnv,
             extendEnv: true,
           }),
         )
@@ -174,6 +191,7 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
       method: Effect.fn("Installation.method")(function* () {
         if (process.execPath.includes(path.join(".prioricode", "bin"))) return "curl" as Method
         if (process.execPath.includes(path.join(".local", "bin"))) return "curl" as Method
+        if (process.execPath.startsWith(path.join(os.homedir(), "bin") + path.sep)) return "curl" as Method
         const exec = process.execPath.toLowerCase()
 
         const checks: Array<{ name: Method; command: () => Effect.Effect<string> }> = [

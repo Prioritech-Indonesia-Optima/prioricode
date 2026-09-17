@@ -17,6 +17,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
+if (-not $Version -and $env:VERSION) { $Version = $env:VERSION }
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 $app = "prioricode"
