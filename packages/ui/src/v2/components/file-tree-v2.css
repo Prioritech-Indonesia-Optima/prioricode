@@ -37,11 +37,16 @@
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"][data-selected] {
   color: var(--pc-text-base);
-  background-color: var(--pc-overlay-pressed);
+  background-color: var(--pc-bg-layer-02);
+  box-shadow: inset 3px 0 0 0 var(--pc-gold-600);
+}
+
+[data-component="file-tree-v2"]:dir(rtl) [data-slot="file-tree-v2-row"][data-selected] {
+  box-shadow: inset -3px 0 0 0 var(--pc-gold-600);
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"][data-selected]:hover {
-  background-color: var(--pc-overlay-pressed);
+  background-color: var(--pc-bg-layer-03);
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-guide"] {
