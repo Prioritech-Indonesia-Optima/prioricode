@@ -53,19 +53,15 @@ export function activate(context: vscode.ExtensionContext) {
   async function openTerminal() {
     if (!hasCli()) {
       const message = "The prioricode CLI was not found on your PATH."
-      if (process.platform === "win32") {
-        const choice = await vscode.window.showInformationMessage(message, "View install instructions")
-        if (choice === "View install instructions") {
-          await vscode.env.openExternal(vscode.Uri.parse("https://prioritech.co.id/docs"))
-        }
-        return
-      }
-
       const choice = await vscode.window.showInformationMessage(message, "Install prioricode")
       if (choice === "Install prioricode") {
         const terminal = vscode.window.createTerminal({ name: "Install prioricode" })
         terminal.show()
-        terminal.sendText("curl -fsSL https://prioritech.co.id/install | bash")
+        terminal.sendText(
+          process.platform === "win32"
+            ? "irm https://code.prioritech.co.id/install.ps1 | iex"
+            : "curl -fsSL https://code.prioritech.co.id/install | bash",
+        )
       }
       return
     }

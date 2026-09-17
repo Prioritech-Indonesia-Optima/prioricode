@@ -1,8 +1,8 @@
 # PrioriCode Installer for Windows (PowerShell)
 #
 # Usage:
-#   irm https://prioritech.co.id/install.ps1 | iex
-#   irm https://prioritech.co.id/install.ps1 | iex -Version 2.0.4
+#   irm https://code.prioritech.co.id/install.ps1 | iex
+#   irm https://code.prioritech.co.id/install.ps1 | iex -Version 2.0.4
 #   .\install.ps1 -NoModifyPath
 #
 # Environment:

@@ -27,9 +27,9 @@ Environment:
     $HOME/bin > $HOME/.prioricode/bin
 
 Examples:
-    curl -fsSL https://prioritech.co.id/install | bash
-    curl -fsSL https://prioritech.co.id/install | bash -s -- --version 1.0.180
-    PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
+    curl -fsSL https://code.prioritech.co.id/install | bash
+    curl -fsSL https://code.prioritech.co.id/install | bash -s -- --version 1.0.180
+    PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://code.prioritech.co.id/install | bash
     ./install --binary /path/to/prioricode
 EOF
 }
