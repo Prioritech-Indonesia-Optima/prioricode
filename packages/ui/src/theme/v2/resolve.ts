@@ -2,7 +2,7 @@
 
 import { generateNeutralScale, hexToOklch, oklchToHex, shift } from "../color"
 import { mapV2Foreground } from "./foreground"
-import { mapV2Semantics, mergeV2Tokens } from "./mapping"
+import { mapV2Semantics, mergeV2Tokens, migrateV2Overrides } from "./mapping"
 import type { DesktopTheme, HexColor, ResolvedV2Theme, ThemeVariant, V2ColorValue } from "../types"
 import { V2_PRIMITIVES_DEFAULT } from "./default-primitives"
 
@@ -27,7 +27,7 @@ function clamp(v: number, min: number, max: number) {
 }
 
 /** v2 ramps: 100 = lightest, 1200 = darkest — wider spread than v1 `generateScale`. */
-function generateV2HueScale(seed: HexColor, isDark: boolean): HexColor[] {
+export function generateV2HueScale(seed: HexColor, isDark: boolean): HexColor[] {
   const base = hexToOklch(seed)
   const chromaBoost = isDark ? 1 : 1.05
   const lightSteps = [
@@ -56,7 +56,7 @@ function generateV2HueScale(seed: HexColor, isDark: boolean): HexColor[] {
 }
 
 /** Grey ramp: 100 = lightest, 1200 = darkest. Derived from palette neutral → ink like v1. */
-function generateV2NeutralScale(neutral: HexColor, ink: HexColor, isDark: boolean): HexColor[] {
+export function generateV2NeutralScale(neutral: HexColor, ink: HexColor, isDark: boolean): HexColor[] {
   const scale = generateNeutralScale(neutral, isDark, ink)
   return isDark ? scale.toReversed() : scale
 }
@@ -64,7 +64,7 @@ function generateV2NeutralScale(neutral: HexColor, ink: HexColor, isDark: boolea
 function assignHueRamp(prefix: string, scale: HexColor[]): Record<string, V2ColorValue> {
   const tokens: Record<string, V2ColorValue> = {}
   for (let i = 0; i < V2_STEPS.length; i++) {
-    tokens[`v2-${prefix}-${V2_STEPS[i]}`] = scale[i]!
+    tokens[`pc-${prefix}-${V2_STEPS[i]}`] = scale[i]!
   }
   return tokens
 }
@@ -121,6 +121,7 @@ export function generateV2Primitives(variant: ThemeVariant, isDark: boolean): Re
   return {
     ...V2_PRIMITIVES_DEFAULT,
     ...assignHueRamp("grey", grey),
+    ...assignHueRamp("gold", generateV2HueScale(colors.primary, isDark)),
     ...assignHueRamp("blue", blue),
     ...assignHueRamp("green", green),
     ...assignHueRamp("yellow", yellow),
@@ -136,7 +137,7 @@ export function resolveThemeVariantV2(variant: ThemeVariant, isDark: boolean): R
   const primitives = generateV2Primitives(variant, isDark)
   const semantics = mapV2Semantics(isDark)
   const foreground = mapV2Foreground(readPalette(variant).ink, isDark, primitives, variant.overrides)
-  return mergeV2Tokens(primitives, semantics, foreground, variant.v2Overrides ?? {})
+  return mergeV2Tokens(primitives, semantics, foreground, migrateV2Overrides(variant.v2Overrides))
 }
 
 export function resolveThemeV2(theme: DesktopTheme): { light: ResolvedV2Theme; dark: ResolvedV2Theme } {

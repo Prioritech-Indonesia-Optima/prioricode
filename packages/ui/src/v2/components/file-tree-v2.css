@@ -18,7 +18,7 @@
   border: none;
   border-radius: 6px;
   background-color: transparent;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
   text-align: start;
   cursor: pointer;
   scroll-margin-block: 8px;
@@ -28,20 +28,20 @@
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"][data-ignored] {
-  color: var(--v2-text-text-faint);
+  color: var(--pc-text-faint);
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"]:hover {
-  background-color: var(--v2-overlay-simple-overlay-hover);
+  background-color: var(--pc-overlay-hover);
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"][data-selected] {
-  color: var(--v2-text-text-base);
-  background-color: var(--v2-overlay-simple-overlay-pressed);
+  color: var(--pc-text-base);
+  background-color: var(--pc-overlay-pressed);
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"][data-selected]:hover {
-  background-color: var(--v2-overlay-simple-overlay-pressed);
+  background-color: var(--pc-overlay-pressed);
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-guide"] {
@@ -51,7 +51,7 @@
   height: calc(100% + 2px);
   width: 1px;
   pointer-events: none;
-  background-color: var(--v2-border-border-muted);
+  background-color: var(--pc-border-muted);
   opacity: 0;
 }
 
@@ -60,7 +60,7 @@
 }
 
 [data-component="file-tree-v2"] .filetree-icon--mono {
-  color: var(--v2-icon-icon-muted);
+  color: var(--pc-icon-muted);
 }
 
 [data-component="file-tree-v2"] .filetree-iconpair .filetree-icon--color {
@@ -76,7 +76,7 @@
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-chevron"] {
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-chevron"] svg {
@@ -92,7 +92,7 @@
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-row"][data-selected] [data-slot="file-tree-v2-chevron"] {
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 [data-component="file-tree-v2"] .filetree-iconpair {
@@ -129,13 +129,13 @@
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-change"][data-change="modified"] {
-  color: var(--v2-state-fg-info);
+  color: var(--pc-state-fg-info);
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-change"][data-change="added"] {
-  color: var(--v2-state-fg-success);
+  color: var(--pc-state-fg-success);
 }
 
 [data-component="file-tree-v2"] [data-slot="file-tree-v2-change"][data-change="deleted"] {
-  color: var(--v2-state-fg-danger);
+  color: var(--pc-state-fg-danger);
 }

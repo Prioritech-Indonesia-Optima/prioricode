@@ -26,8 +26,8 @@ interface SessionContextUsageProps {
 function ContextTooltipRow(props: { name: JSX.Element; value: JSX.Element }) {
   return (
     <div class="flex min-w-0 items-center gap-4">
-      <span class="shrink-0 text-v2-text-text-muted">{props.name}</span>
-      <span class="ml-auto min-w-0 truncate text-right text-v2-text-text-base">{props.value}</span>
+      <span class="shrink-0 text-pc-text-muted">{props.name}</span>
+      <span class="ml-auto min-w-0 truncate text-right text-pc-text-base">{props.value}</span>
     </div>
   )
 }
@@ -110,9 +110,9 @@ export function SessionContextUsage(props: SessionContextUsageProps) {
         style={
           variant() === "indicator"
             ? {
-                "--progress-circle-background": "var(--v2-background-bg-layer-04, var(--border-weak-base))",
-                "--progress-circle-background-overlay": "var(--v2-overlay-simple-overlay-pressed, transparent)",
-                "--progress-circle-progress": "var(--v2-icon-icon-base, var(--icon-base))",
+                "--progress-circle-background": "var(--pc-bg-layer-04, var(--border-weak-base))",
+                "--progress-circle-background-overlay": "var(--pc-overlay-pressed, transparent)",
+                "--progress-circle-progress": "var(--pc-icon-base, var(--icon-base))",
               }
             : undefined
         }

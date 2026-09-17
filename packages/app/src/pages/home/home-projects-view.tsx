@@ -79,7 +79,7 @@ export function HomeProjectsView(props: HomeProjectsViewProps) {
       }}
     >
       <div class="flex h-7 min-w-0 shrink-0 items-center justify-between pl-1.5 pr-3">
-        <div class="text-v2-text-text-muted [font-weight:530]">{props.language.t("home.projects")}</div>
+        <div class="text-pc-text-muted [font-weight:530]">{props.language.t("home.projects")}</div>
         <Show
           when={props.servers().length === 1 && !(props.projects().length === 0 && props.recentlyClosed().length > 0)}
         >
@@ -88,7 +88,7 @@ export function HomeProjectsView(props: HomeProjectsViewProps) {
               data-action="home-add-project"
               variant="ghost-muted"
               size="large"
-              class="titlebar-icon [&_[data-slot=icon-svg]]:text-v2-icon-icon-muted"
+              class="titlebar-icon [&_[data-slot=icon-svg]]:text-pc-icon-muted"
               icon={<IconV2 name="folder-add-left" />}
               disabled={props.serverHealth(props.servers()[0])?.healthy === false}
               onClick={() => props.onChooseProject(props.servers()[0])}
@@ -134,7 +134,7 @@ export function HomeProjectsView(props: HomeProjectsViewProps) {
                       health={props.serverHealth(item)}
                     />
                     <Show when={healthy() && hasProjects() && !collapsed()}>
-                      <div class="mx-3 h-px bg-v2-border-border-base" />
+                      <div class="mx-3 h-px bg-pc-border-base" />
                       <HomeProjectList {...props} {...contextMenuProps} server={item} items={projects()} />
                     </Show>
                   </div>
@@ -164,7 +164,7 @@ export function HomeUtilityNav(props: {
     <div class={`${props.class ?? ""} min-w-0 flex-col gap-1 pr-3`}>
       <HomeProjectNavButton
         type="button"
-        class="text-v2-text-text-faint [&>[data-slot=icon-svg]]:text-v2-icon-icon-muted"
+        class="text-pc-text-faint [&>[data-slot=icon-svg]]:text-pc-icon-muted"
         onClick={props.onOpenSettings}
       >
         <IconV2 name="settings-gear" size="small" />
@@ -172,7 +172,7 @@ export function HomeUtilityNav(props: {
       </HomeProjectNavButton>
       <HomeProjectNavButton
         type="button"
-        class="text-v2-text-text-faint [&>[data-slot=icon-svg]]:text-v2-icon-icon-muted"
+        class="text-pc-text-faint [&>[data-slot=icon-svg]]:text-pc-icon-muted"
         onClick={props.onOpenHelp}
       >
         <IconV2 name="help" size="small" />
@@ -220,10 +220,10 @@ function HomeServerRow(props: {
           data-action="home-server-collapse"
           class={`
             -ml-0.5 -mr-1.5 inline-flex size-5 shrink-0 items-center justify-center
-            rounded-[4px] text-v2-icon-icon-muted
+            rounded-[4px] text-pc-icon-muted
           `}
           classList={{
-            "hover:bg-v2-overlay-simple-overlay-hover": canToggle(),
+            "hover:bg-pc-overlay-hover": canToggle(),
             "cursor-default opacity-40": !canToggle(),
           }}
           aria-label={
@@ -255,8 +255,8 @@ function HomeServerRow(props: {
             {(label) => (
               <span
                 class={`
-                  shrink-0 rounded-[3px] border border-v2-border-border-base px-1 py-0.5
-                  text-[9px] leading-none text-v2-text-text-muted
+                  shrink-0 rounded-[3px] border border-pc-border-base px-1 py-0.5
+                  text-[9px] leading-none text-pc-text-muted
                 `}
               >
                 {label()}
@@ -395,7 +395,7 @@ function HomeProjectEmpty(
       <HomeProjectNavButton
         type="button"
         data-action="home-add-project-row"
-        class="disabled:opacity-60 [&>[data-slot=icon-svg]]:text-v2-icon-icon-muted"
+        class="disabled:opacity-60 [&>[data-slot=icon-svg]]:text-pc-icon-muted"
         disabled={unreachable()}
         onClick={() => props.onChooseProject(props.server)}
       >
@@ -404,7 +404,7 @@ function HomeProjectEmpty(
       </HomeProjectNavButton>
       <Show when={props.items.length > 0}>
         <div class="mt-3 flex h-7 min-w-0 shrink-0 items-center pl-1.5 pr-3">
-          <div class="text-v2-text-text-faint [font-weight:530]">{props.language.t("home.recentlyClosed")}</div>
+          <div class="text-pc-text-faint [font-weight:530]">{props.language.t("home.recentlyClosed")}</div>
         </div>
         <For each={props.items}>
           {(project) => <HomeRecentlyClosedRow {...props} project={project} server={props.server} />}
@@ -485,7 +485,7 @@ function HomeProjectRow(
         data-component="home-project-row"
         class="pr-16 disabled:opacity-60"
         classList={{
-          "bg-v2-background-bg-layer-01 text-v2-text-text-base": sortable.isDragSource(),
+          "bg-pc-bg-layer-01 text-pc-text-base": sortable.isDragSource(),
         }}
         data-selected={props.selected ? "" : undefined}
         aria-current={props.selected ? "page" : undefined}
@@ -592,12 +592,12 @@ function HomeProjectNavButton(props: JSX.ButtonHTMLAttributes<HTMLButtonElement>
       {...rest}
       class={`
         flex h-7 min-w-0 w-full shrink-0 cursor-default items-center gap-2 rounded-[6px] bg-transparent px-1.5 text-left
-        text-v2-text-text-muted [font-weight:440] transition-[background-color,color,box-shadow] duration-[120ms] ease-in-out
-        hover:bg-v2-background-bg-layer-01 hover:text-v2-text-text-base
-        data-[selected]:bg-v2-background-bg-layer-03 data-[selected]:text-v2-text-text-base
-        data-[selected]:hover:bg-v2-background-bg-layer-03
-        focus-visible:bg-v2-background-bg-layer-01 focus-visible:text-v2-text-text-base focus-visible:outline-none
-        focus-visible:[box-shadow:inset_0_0_0_0.5px_var(--v2-border-border-muted)]
+        text-pc-text-muted [font-weight:440] transition-[background-color,color,box-shadow] duration-[120ms] ease-in-out
+        hover:bg-pc-bg-layer-01 hover:text-pc-text-base
+        data-[selected]:bg-pc-bg-layer-03 data-[selected]:text-pc-text-base data-[selected]:shadow-[inset_3px_0_0_0_var(--pc-gold-600)] rtl:data-[selected]:shadow-[inset_-3px_0_0_0_var(--pc-gold-600)]
+        data-[selected]:hover:bg-pc-bg-layer-03
+        focus-visible:bg-pc-bg-layer-01 focus-visible:text-pc-text-base focus-visible:outline-none
+        focus-visible:[box-shadow:inset_0_0_0_0.5px_var(--pc-border-muted)]
         ${local.class ?? ""}
       `}
       classList={local.classList}

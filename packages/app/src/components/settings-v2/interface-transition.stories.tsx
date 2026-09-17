@@ -35,7 +35,7 @@ function NoticeExample() {
   const [state, setState] = createStore({ dismissed: false })
   return (
     <Frame>
-      <Show when={!state.dismissed} fallback={<span class="text-v2-text-text-muted">Notice dismissed</span>}>
+      <Show when={!state.dismissed} fallback={<span class="text-pc-text-muted">Notice dismissed</span>}>
         <LayoutRetirementNotice
           title={copy.noticeTitle}
           description={copy.noticeDescription}

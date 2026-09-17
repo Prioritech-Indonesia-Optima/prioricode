@@ -22,9 +22,9 @@
   user-select: none;
   -webkit-user-select: none;
   border-radius: 8px;
-  color: var(--v2-text-text-base);
-  background: var(--v2-background-bg-layer-01);
-  box-shadow: var(--v2-elevation-floating);
+  color: var(--pc-text-base);
+  background: var(--pc-bg-layer-01);
+  box-shadow: var(--pc-elevation-floating);
   transition:
     transform 280ms cubic-bezier(0.2, 0, 0, 1),
     opacity 160ms ease-out,
@@ -37,8 +37,8 @@
 
   &:focus-visible {
     box-shadow:
-      var(--v2-elevation-floating),
-      0 0 0 2px var(--v2-border-border-focus);
+      var(--pc-elevation-floating),
+      0 0 0 2px var(--pc-border-focus);
   }
 
   &[data-expanded="true"] {
@@ -62,7 +62,7 @@
     justify-content: center;
     width: 16px;
     height: 20px;
-    color: var(--v2-icon-icon-base);
+    color: var(--pc-icon-base);
   }
 
   > [data-content] {
@@ -93,7 +93,7 @@
     border-radius: 4px;
     transform: none;
     background: transparent;
-    color: var(--v2-icon-icon-muted);
+    color: var(--pc-icon-muted);
     cursor: pointer;
     display: inline-flex;
     align-items: center;
@@ -105,16 +105,16 @@
   }
 
   > [data-close-button]:hover {
-    background: var(--v2-overlay-simple-overlay-hover);
-    color: var(--v2-icon-icon-base);
+    background: var(--pc-overlay-hover);
+    color: var(--pc-icon-base);
   }
 
   > [data-close-button]:active {
-    background: var(--v2-overlay-simple-overlay-pressed);
+    background: var(--pc-overlay-pressed);
   }
 
   > [data-close-button]:focus-visible {
-    outline: 2px solid var(--v2-border-border-focus);
+    outline: 2px solid var(--pc-border-focus);
     outline-offset: 2px;
   }
 
@@ -129,7 +129,7 @@
 
   [data-title],
   [data-slot="toast-v2-title"] {
-    color: var(--v2-text-text-base);
+    color: var(--pc-text-base);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -144,7 +144,7 @@
 
   [data-description],
   [data-slot="toast-v2-description"] {
-    color: var(--v2-text-text-muted);
+    color: var(--pc-text-muted);
     text-wrap-style: pretty;
     overflow-wrap: anywhere;
     word-break: break-word;
@@ -193,7 +193,7 @@
     justify-content: center;
     width: 16px;
     height: 20px;
-    color: var(--v2-icon-icon-base);
+    color: var(--pc-icon-base);
   }
 
   [data-slot="toast-v2-content"] {

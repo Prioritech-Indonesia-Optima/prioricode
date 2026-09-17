@@ -4,7 +4,7 @@
   height: 1px;
   transform: scaleY(0.5);
   border: none;
-  background: var(--v2-border-border-strong);
+  background: var(--pc-border-strong);
   flex: none;
   align-self: stretch;
   flex-grow: 0;

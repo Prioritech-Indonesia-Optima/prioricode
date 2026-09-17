@@ -6,7 +6,7 @@
 }
 
 [data-component="dialog-v2"][data-variant="settings"] [data-slot="dialog-container"] {
-  background: var(--v2-background-bg-base);
+  background: var(--pc-bg-base);
 }
 
 [data-component="dialog-v2"][data-variant="settings"] [data-slot="dialog-body"] {
@@ -36,14 +36,14 @@
   top: 0;
   z-index: 10;
   padding: 40px 40px 32px;
-  background: linear-gradient(to bottom, var(--v2-background-bg-base) calc(100% - 24px), transparent);
+  background: linear-gradient(to bottom, var(--pc-bg-base) calc(100% - 24px), transparent);
 }
 
 .settings-v2-tab-title {
   font-size: 15px;
   font-weight: 640;
   line-height: 1;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-tab-body {
@@ -55,13 +55,13 @@
 }
 
 [data-slot="settings-v2-row-description"] a.settings-v2-link {
-  color: var(--v2-text-text-accent);
+  color: var(--pc-text-accent);
   cursor: pointer;
   text-decoration: none;
 }
 
 [data-slot="settings-v2-row-description"] a.settings-v2-link:hover {
-  color: var(--v2-text-text-accent-hover);
+  color: var(--pc-text-accent-hover);
 }
 
 .settings-v2-section {
@@ -75,7 +75,7 @@
   font-size: 15px;
   font-weight: 640;
   line-height: 1;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-section-title + [data-component="settings-v2-list"] {
@@ -85,14 +85,14 @@
 
 [data-component="settings-v2-list"] {
   border-radius: 8px;
-  background-color: var(--v2-background-bg-layer-01);
+  background-color: var(--pc-bg-layer-01);
   padding-inline: 20px;
-  box-shadow: inset 0 0 0 0.5px var(--v2-border-border-muted);
+  box-shadow: inset 0 0 0 0.5px var(--pc-border-muted);
 }
 
 .settings-v2-interface-feature [data-component="settings-v2-list"] {
-  background-color: var(--v2-background-bg-base);
-  box-shadow: var(--v2-elevation-raised);
+  background-color: var(--pc-bg-base);
+  box-shadow: var(--pc-elevation-raised);
 }
 
 [data-component="settings-v2-row"] {
@@ -101,7 +101,7 @@
   align-items: center;
   gap: 16px;
   padding-block: 20px;
-  border-bottom: 0.5px solid var(--v2-border-border-base);
+  border-bottom: 0.5px solid var(--pc-border-base);
 }
 
 [data-component="settings-v2-row"]:last-child {
@@ -128,7 +128,7 @@
   font-weight: 530;
   line-height: 1;
   letter-spacing: -0.04px;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
   font-variation-settings: "slnt" 0;
 }
 
@@ -137,7 +137,7 @@
   font-size: 13px;
   font-weight: 440;
   line-height: 20px;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
 }
 
 [data-slot="settings-v2-row-control"] {
@@ -175,7 +175,7 @@
 }
 
 [data-component="tabs-v2"][data-variant="settings"][data-orientation="vertical"] [data-slot="tabs-v2-list"] {
-  background-color: var(--v2-background-bg-layer-01);
+  background-color: var(--pc-bg-layer-01);
 }
 
 @media (max-width: 639px) {
@@ -199,7 +199,7 @@
   font-size: 11px;
   font-weight: 440;
   line-height: 1;
-  color: var(--v2-text-text-faint);
+  color: var(--pc-text-faint);
 }
 
 .settings-v2-legacy-panel {
@@ -218,7 +218,7 @@
   justify-content: space-between;
   gap: 16px;
   padding-block: 20px;
-  border-bottom: 0.5px solid var(--v2-border-border-base);
+  border-bottom: 0.5px solid var(--pc-border-base);
 }
 
 .settings-v2-provider-row:last-child {
@@ -232,7 +232,7 @@
 }
 
 .settings-v2-providers [data-component="provider-icon"] {
-  color: var(--v2-icon-icon-base);
+  color: var(--pc-icon-base);
 }
 
 .settings-v2-provider-lead {
@@ -267,7 +267,7 @@
   font-size: 13px;
   font-weight: 530;
   line-height: 16px;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-provider-description {
@@ -275,7 +275,7 @@
   font-size: 13px;
   font-weight: 440;
   line-height: 20px;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .settings-v2-provider-empty {
@@ -283,7 +283,7 @@
   font-size: 13px;
   font-weight: 440;
   line-height: 1;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .settings-v2-provider-env-hint {
@@ -291,7 +291,7 @@
   font-size: 13px;
   font-weight: 440;
   line-height: 1;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
   opacity: 0;
   transition: opacity 200ms ease;
   cursor: default;
@@ -309,13 +309,13 @@
   font-size: 13px;
   font-weight: 530;
   line-height: 1;
-  color: var(--v2-text-text-accent);
+  color: var(--pc-text-accent);
   cursor: pointer;
   text-align: start;
 }
 
 .settings-v2-providers-view-all:hover {
-  color: var(--v2-text-text-accent-hover);
+  color: var(--pc-text-accent-hover);
 }
 
 .settings-v2-tab-body.settings-v2-providers {
@@ -399,17 +399,17 @@
   border: 0;
   border-radius: 4px;
   background: transparent;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-models-group-trigger:focus-visible {
-  outline: 2px solid var(--v2-border-border-focus);
+  outline: 2px solid var(--pc-border-focus);
   outline-offset: 2px;
 }
 
 @media (hover: hover) {
   .settings-v2-models-group-trigger:not(:disabled):hover {
-    background-color: var(--v2-background-bg-layer-02);
+    background-color: var(--pc-bg-layer-02);
   }
 }
 
@@ -424,7 +424,7 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  color: var(--v2-icon-icon-muted);
+  color: var(--pc-icon-muted);
 }
 
 .settings-v2-models-group-label {
@@ -441,7 +441,7 @@
 }
 
 .settings-v2-models [data-component="provider-icon"] {
-  color: var(--v2-icon-icon-base);
+  color: var(--pc-icon-base);
 }
 
 .settings-v2-models [data-component="settings-v2-list"] {
@@ -480,12 +480,12 @@
   font-size: 13px;
   font-weight: 440;
   line-height: 1;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
   text-align: center;
 }
 
 .settings-v2-models-status-filter {
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-shortcuts .settings-v2-section {
@@ -520,7 +520,7 @@
 .settings-v2-shortcuts [data-component="settings-v2-list"] > div:not(:last-child) {
   padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 0.5px solid var(--v2-border-border-base);
+  border-bottom: 0.5px solid var(--pc-border-base);
 }
 
 .settings-v2-shortcuts [data-component="settings-v2-list"] > div > span {
@@ -528,7 +528,7 @@
   font-size: 13px;
   line-height: 1;
   letter-spacing: -0.04px;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
   font-variation-settings: "slnt" 0;
 }
 
@@ -551,22 +551,22 @@
     "tnum" on,
     "lnum" on;
   font-variation-settings: "slnt" 0;
-  color: var(--v2-text-text-faint);
+  color: var(--pc-text-faint);
 }
 
 .settings-v2-keybind-button:hover {
-  background-color: var(--v2-background-bg-layer-02);
+  background-color: var(--pc-bg-layer-02);
 }
 
 .settings-v2-keybind-button:focus-visible {
-  outline: 2px solid var(--v2-border-border-focus);
+  outline: 2px solid var(--pc-border-focus);
   outline-offset: 2px;
 }
 
 .settings-v2-keybind-button--active {
-  color: var(--v2-text-text-faint);
+  color: var(--pc-text-faint);
   border-radius: 2px;
-  background-color: var(--v2-background-bg-layer-02);
+  background-color: var(--pc-bg-layer-02);
 }
 
 .settings-v2-shortcuts-status {
@@ -579,12 +579,12 @@
   font-size: 13px;
   font-weight: 440;
   line-height: 1;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
   text-align: center;
 }
 
 .settings-v2-shortcuts-status-filter {
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-tab-body.settings-v2-servers {
@@ -625,7 +625,7 @@
 .settings-v2-servers-row:not(:last-child) {
   padding-bottom: 16px;
   margin-bottom: 16px;
-  border-bottom: 0.5px solid var(--v2-border-border-base);
+  border-bottom: 0.5px solid var(--pc-border-base);
 }
 
 .settings-v2-servers-actions {
@@ -656,14 +656,14 @@
   font-size: 13px;
   font-weight: 530;
   line-height: 1;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-servers-meta {
   font-size: 11px;
   font-weight: 440;
   line-height: 1;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .settings-v2-servers-status {
@@ -676,12 +676,12 @@
   font-size: 13px;
   font-weight: 440;
   line-height: 1;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
   text-align: center;
 }
 
 .settings-v2-servers-status-filter {
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 [data-component="dialog-v2"].settings-v2-server-dialog [data-slot="dialog-container"] {
@@ -718,12 +718,12 @@
   font-size: 13px;
   font-weight: 530;
   line-height: 1;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-server-dialog-error {
   font-size: 11px;
   font-weight: 440;
   line-height: 1;
-  color: var(--v2-state-fg-danger);
+  color: var(--pc-state-fg-danger);
 }

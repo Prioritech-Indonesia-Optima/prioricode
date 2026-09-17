@@ -19,7 +19,7 @@ Compact single-line text field with neutral elevation, optional trailing copy ac
 - **Focus** (\`:focus-within\`): focus border, elevation removed.
 - **Invalid**: danger border and text.
 - **Disabled**: 50% opacity.
-- Uses \`data-component="text-input-v2"\` with \`--v2-background-bg-base\`, \`--v2-elevation-button-neutral\`, \`--v2-text-text-faint\` (placeholder), and \`--v2-icon-icon-muted\` (copy icon).
+- Uses \`data-component="text-input-v2"\` with \`--pc-bg-base\`, \`--pc-elevation-button-neutral\`, \`--pc-text-faint\` (placeholder), and \`--pc-icon-muted\` (copy icon).
 
 ### Field
 Compose with \`Field\` for label, helper prefix/suffix, and tooltip — see the **Field** story.
@@ -85,7 +85,7 @@ export const Controlled = {
         <TextInputV2 value={value()} onInput={(e) => setValue(e.currentTarget.value)} placeholder="Type here…" />
         <div
           style={{
-            "font-family": "var(--v2-font-family-sans)",
+            "font-family": "var(--pc-font-sans)",
             "font-size": "12px",
             color: "var(--text-text-faint)",
           }}

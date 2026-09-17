@@ -37,7 +37,7 @@ export const PromptContextItems: Component<ContextItemsProps> = (props) => {
                     <span
                       classList={{
                         "truncate-start [unicode-bidi:plaintext] min-w-0": true,
-                        "text-v2-text-text-muted": props.newLayoutDesigns,
+                        "text-pc-text-muted": props.newLayoutDesigns,
                         "text-text-invert-base": !props.newLayoutDesigns,
                       }}
                     >

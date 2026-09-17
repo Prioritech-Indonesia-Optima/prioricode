@@ -227,7 +227,7 @@ function SessionErrorFallback(props: { error: unknown; sessionID?: string; serve
             {(sessionID) => (
               <div class="max-w-full flex flex-col items-center gap-1">
                 <div class="max-w-full text-11-regular text-text-faint break-all">{displayServer()}</div>
-                <code class="max-w-full rounded-[4px] px-1 py-0.5 font-mono text-xs font-medium leading-4 text-text-base break-all bg-[color-mix(in_oklch,var(--v2-text-text-base)_8%,transparent)]">
+                <code class="max-w-full rounded-[4px] px-1 py-0.5 font-mono text-xs font-medium leading-4 text-text-base break-all bg-[color-mix(in_oklch,var(--pc-text-base)_8%,transparent)]">
                   {sessionID()}
                 </code>
               </div>
@@ -339,10 +339,10 @@ function SessionPanelFrame(props: ParentProps<{ newLayout: boolean; raised?: boo
     <div
       classList={{
         "flex-1 min-h-0 flex flex-col": true,
-        "bg-v2-background-bg-base": props.newLayout,
+        "bg-pc-bg-base": props.newLayout,
         "bg-background-stronger": !props.newLayout,
-        "rounded-[10px] overflow-hidden": props.newLayout,
-        "shadow-[var(--v2-elevation-raised)]": props.newLayout && props.raised,
+        "rounded-[12px] overflow-hidden": props.newLayout,
+        "shadow-[var(--pc-elevation-raised)]": props.newLayout && props.raised,
       }}
     >
       {props.children}
@@ -1349,7 +1349,7 @@ export default function Page() {
   const reviewPanelV2Rendered = createMemo<boolean>((prev) => prev || !store.deferRender, false)
 
   const reviewPanelV2 = () => (
-    <div class="flex flex-col h-full overflow-hidden bg-v2-background-bg-base contain-strict">
+    <div class="flex flex-col h-full overflow-hidden bg-pc-bg-base contain-strict">
       <Show when={reviewPanelV2Rendered()}>
         <ReviewPanelV2 {...reviewPanelV2Props()} />
       </Show>
@@ -1360,7 +1360,7 @@ export default function Page() {
     <div
       classList={{
         "flex flex-col h-full overflow-hidden contain-strict": true,
-        "bg-v2-background-bg-base": settings.general.newLayoutDesigns(),
+        "bg-pc-bg-base": settings.general.newLayoutDesigns(),
         "bg-background-stronger": !settings.general.newLayoutDesigns(),
       }}
     >

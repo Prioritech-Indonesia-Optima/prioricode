@@ -26,8 +26,8 @@ type ModelInfo = {
 function ModelTooltipRow(props: { name: JSX.Element; value: JSX.Element }) {
   return (
     <div class="flex min-w-0 items-center gap-4">
-      <span class="shrink-0 text-v2-text-text-muted">{props.name}</span>
-      <span class="ml-auto min-w-0 truncate text-right text-v2-text-text-base">{props.value}</span>
+      <span class="shrink-0 text-pc-text-muted">{props.name}</span>
+      <span class="ml-auto min-w-0 truncate text-right text-pc-text-base">{props.value}</span>
     </div>
   )
 }

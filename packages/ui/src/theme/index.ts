@@ -38,7 +38,7 @@ export { ThemeProvider, useTheme, type ColorScheme } from "./context"
 
 export {
   DEFAULT_THEMES,
-  pc2Theme,
+  prioricodeTheme,
   amoledTheme,
   auraTheme,
   ayuTheme,
@@ -63,7 +63,6 @@ export {
   nordTheme,
   oneDarkTheme,
   oneDarkProTheme,
-  prioricodeTheme,
   orngTheme,
   osakaJadeTheme,
   palenightTheme,

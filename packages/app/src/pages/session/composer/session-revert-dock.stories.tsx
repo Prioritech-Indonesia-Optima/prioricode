@@ -45,9 +45,9 @@ const btn = (accent?: boolean) =>
   ({
     padding: "6px 12px",
     "border-radius": "6px",
-    border: "1px solid var(--v2-border-border-base, #0000001a)",
-    background: accent ? "var(--v2-background-bg-contrast, #242424)" : "var(--v2-background-bg-base, #fff)",
-    color: accent ? "var(--v2-text-text-contrast, #fafafa)" : "var(--v2-text-text-base, #161616)",
+    border: "1px solid var(--pc-border-base, #0000001a)",
+    background: accent ? "var(--pc-bg-contrast, #242424)" : "var(--pc-bg-base, #fff)",
+    color: accent ? "var(--pc-text-contrast, #fafafa)" : "var(--pc-text-base, #161616)",
     cursor: "pointer",
     "font-size": "13px",
   }) as const
@@ -84,7 +84,7 @@ function Stage(props: { count: number }) {
           style={{ position: "relative", "z-index": 70, "margin-top": "-18px" }}
           classList={{
             "min-h-24 w-full rounded-[12px] px-4 py-3 text-[13px]": true,
-            "bg-v2-background-bg-base text-v2-text-text-faint": v2(),
+            "bg-pc-bg-base text-pc-text-faint": v2(),
             "text-text-weak": !v2(),
           }}
         >
@@ -92,7 +92,7 @@ function Stage(props: { count: number }) {
         </DockShell>
       </div>
 
-      <div class="text-[12px] text-v2-text-text-faint">
+      <div class="text-[12px] text-pc-text-faint">
         Restored so far:{" "}
         <For each={seed()}>
           {(item) => <span>{store.items.some((current) => current.id === item.id) ? "" : `“${item.text}” `}</span>}

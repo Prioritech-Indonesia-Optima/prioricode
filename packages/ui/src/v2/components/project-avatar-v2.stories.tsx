@@ -16,7 +16,7 @@ Saturated 16px project avatar with color variants and optional unread dot.
 - Unread dot with corner mask when \`unread\` is set.
 
 ### Theming
-- Uses \`--v2-avatar-bg-*\` and \`--v2-avatar-border-*\` tokens with inset box-shadow borders.
+- Uses \`--pc-avatar-bg-*\` and \`--pc-avatar-border-*\` tokens with inset box-shadow borders.
 `
 
 export default {

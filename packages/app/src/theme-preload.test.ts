@@ -19,26 +19,26 @@ beforeEach(() => {
 })
 
 describe("theme preload", () => {
-  for (const legacy of ["oc-1", "oc-2"]) {
-    test(`migrates legacy ${legacy} to pc-2 before mount`, () => {
+  for (const legacy of ["oc-1", "oc-2", "pc-2"]) {
+    test(`migrates legacy ${legacy} to prioricode before mount`, () => {
       localStorage.setItem("prioricode-theme-id", legacy)
-      localStorage.setItem("prioricode-theme-css-light", "--background-base:#fff;")
-      localStorage.setItem("prioricode-theme-css-dark", "--background-base:#000;")
+      localStorage.setItem("prioricode-pc-css-light", "--background-base:#fff;")
+      localStorage.setItem("prioricode-pc-css-dark", "--background-base:#000;")
 
       run()
 
-      expect(document.documentElement.dataset.theme).toBe("pc-2")
+      expect(document.documentElement.dataset.theme).toBe("prioricode")
       expect(document.documentElement.dataset.colorScheme).toBe("light")
-      expect(localStorage.getItem("prioricode-theme-id")).toBe("pc-2")
-      expect(localStorage.getItem("prioricode-theme-css-light")).toBeNull()
-      expect(localStorage.getItem("prioricode-theme-css-dark")).toBeNull()
+      expect(localStorage.getItem("prioricode-theme-id")).toBe("prioricode")
+      expect(localStorage.getItem("prioricode-pc-css-light")).toBeNull()
+      expect(localStorage.getItem("prioricode-pc-css-dark")).toBeNull()
       expect(document.getElementById("pc-theme-preload")).toBeNull()
     })
   }
 
   test("keeps cached css for non-default themes", () => {
     localStorage.setItem("prioricode-theme-id", "nightowl")
-    localStorage.setItem("prioricode-theme-css-light", "--background-base:#fff;")
+    localStorage.setItem("prioricode-pc-css-light", "--background-base:#fff;")
 
     run()
 

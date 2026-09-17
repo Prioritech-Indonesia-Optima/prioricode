@@ -30,11 +30,11 @@ const imageClass =
 const imageClassV2 = "w-[58px] h-[46px] rounded-[6px] object-cover"
 // inset box-shadows do not paint over <img> content, so the hairline is a separate overlay
 const imageHairlineClassV2 =
-  "absolute inset-0 rounded-[6px] shadow-[inset_0_0_0_0.5px_var(--v2-border-border-base)] pointer-events-none"
+  "absolute inset-0 rounded-[6px] shadow-[inset_0_0_0_0.5px_var(--pc-border-base)] pointer-events-none"
 const removeClass =
   "absolute -top-1.5 -right-1.5 size-5 rounded-full bg-surface-raised-stronger-non-alpha border border-border-base flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-surface-raised-base-hover"
 const removeClassV2 =
-  "absolute -top-1 -right-1 size-4 rounded-full bg-v2-icon-icon-muted outline-solid outline-1 outline-v2-icon-icon-contrast flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+  "absolute -top-1 -right-1 size-4 rounded-full bg-pc-icon-muted outline-solid outline-1 outline-pc-icon-contrast flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
 const nameClass = "absolute bottom-0 left-0 right-0 px-1 py-0.5 bg-black/50 rounded-b-md"
 
 export const PromptImageAttachments: Component<PromptImageAttachmentsProps> = (props) => {
@@ -73,7 +73,7 @@ export const PromptImageAttachments: Component<PromptImageAttachmentsProps> = (p
                     class={removeClassV2}
                     aria-label={props.removeLabel}
                   >
-                    <IconV2 name="outline-xmark" class="text-v2-icon-icon-contrast" />
+                    <IconV2 name="outline-xmark" class="text-pc-icon-contrast" />
                   </button>
                 </div>
               )}
@@ -121,7 +121,7 @@ export const PromptImageAttachments: Component<PromptImageAttachmentsProps> = (p
                   aria-label={props.removeLabel}
                 >
                   <Show when={props.newLayoutDesigns} fallback={<Icon name="close" class="size-3 text-text-weak" />}>
-                    <IconV2 name="outline-xmark" class="text-v2-icon-icon-contrast" />
+                    <IconV2 name="outline-xmark" class="text-pc-icon-contrast" />
                   </Show>
                 </button>
               )
@@ -156,11 +156,11 @@ export const PromptImageAttachments: Component<PromptImageAttachmentsProps> = (p
         <Show when={props.newLayoutDesigns}>
           <div
             data-slot="prompt-attachments-fade-left"
-            class="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-[linear-gradient(to_right,var(--v2-background-bg-base),transparent)]"
+            class="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-[linear-gradient(to_right,var(--pc-bg-base),transparent)]"
           />
           <div
             data-slot="prompt-attachments-fade-right"
-            class="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-[linear-gradient(to_left,var(--v2-background-bg-base),transparent)]"
+            class="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-[linear-gradient(to_left,var(--pc-bg-base),transparent)]"
           />
         </Show>
       </div>

@@ -1,6 +1,6 @@
 [data-component="avatar-v2"] {
-  --avatar-bg: var(--v2-background-bg-layer-02);
-  --avatar-fg: var(--v2-text-text-muted);
+  --avatar-bg: var(--pc-bg-layer-02);
+  --avatar-fg: var(--pc-text-muted);
   --avatar-radius: 9999px;
   --avatar-font-size: 11px;
   --avatar-tracking: 0.05px;
@@ -13,7 +13,7 @@
   width: 28px;
   height: 28px;
   border-radius: var(--avatar-radius);
-  border: 0.5px solid var(--v2-border-border-base);
+  border: 0.5px solid var(--pc-border-base);
   font-weight: 530;
   font-size: var(--avatar-font-size);
   line-height: 1;
@@ -29,7 +29,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, var(--v2-alpha-light-16) 0%, var(--v2-alpha-light-0) 100%);
+  background: linear-gradient(180deg, var(--pc-alpha-light-16) 0%, var(--pc-alpha-light-0) 100%);
   pointer-events: none;
 }
 

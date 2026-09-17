@@ -26,7 +26,7 @@ export function TabsInfoPopup() {
     <Drawer open={drawerOpen()} onOpenChange={setDrawerOpen} side={rtl() ? "left" : "right"}>
       <Show when={settings.general.shouldDisplayTabsToast()}>
         <div
-          class="fixed bottom-5 end-5 z-50 h-[240px] w-[192px] rounded-[8px] bg-v2-background-bg-base p-1 shadow-[var(--v2-elevation-floating)]"
+          class="fixed bottom-5 end-5 z-50 h-[240px] w-[192px] rounded-[8px] bg-pc-bg-base p-1 shadow-[var(--pc-elevation-floating)]"
           aria-label={language.t("help.tabs.toast.ariaLabel")}
         >
           <button
@@ -102,13 +102,13 @@ export function TabsInfoPopup() {
           />
         </Show>
         <div
-          class="flex w-full shrink-0 items-center gap-4 self-stretch border-b border-v2-border-border-muted"
+          class="flex w-full shrink-0 items-center gap-4 self-stretch border-b border-pc-border-muted"
           classList={{
             "h-[40px] px-4": windows(),
             "h-[52px] p-4": !windows(),
           }}
         >
-          <p class="min-h-0 min-w-0 flex-1 text-[13px] font-[530] leading-5 tracking-[-0.04px] tabular-nums text-v2-text-text-muted">
+          <p class="min-h-0 min-w-0 flex-1 text-[13px] font-[530] leading-5 tracking-[-0.04px] tabular-nums text-pc-text-muted">
             {language.t("help.tabs.date")}
           </p>
           <Show when={!windows()}>
@@ -123,10 +123,10 @@ export function TabsInfoPopup() {
           </Show>
         </div>
         <div class="relative flex min-h-0 w-full flex-1 flex-col items-start gap-6 overflow-y-auto p-8">
-          <p class="w-full shrink-0 self-stretch text-[21px] font-[610] leading-6 tracking-[-0.37px] tabular-nums text-v2-text-text-base">
+          <p class="w-full shrink-0 self-stretch text-[21px] font-[610] leading-6 tracking-[-0.37px] tabular-nums text-pc-text-base">
             {language.t("help.tabs.title")}
           </p>
-          <div class="flex w-full flex-1 flex-col gap-4 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-base">
+          <div class="flex w-full flex-1 flex-col gap-4 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-pc-text-base">
             <p>{language.t("help.tabs.introduction")}</p>
             <img src={tabsImage} alt="" class="aspect-video w-full rounded-[6px] object-cover" />
             <p>{language.t("help.tabs.sessions")}</p>

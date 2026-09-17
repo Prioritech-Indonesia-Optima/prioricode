@@ -386,11 +386,11 @@ const agentTones: Record<string, string> = {
 }
 
 const v2AgentTones: Record<string, string> = {
-  build: "var(--v2-agent-build-solid)",
-  explore: "var(--v2-agent-explore-solid)",
-  plan: "var(--v2-agent-plan-solid)",
-  review: "var(--v2-agent-review-solid)",
-  writer: "var(--v2-agent-writer-solid)",
+  build: "var(--pc-agent-build-solid)",
+  explore: "var(--pc-agent-explore-solid)",
+  plan: "var(--pc-agent-plan-solid)",
+  review: "var(--pc-agent-review-solid)",
+  writer: "var(--pc-agent-writer-solid)",
 }
 
 const agentThemeColors: Record<string, string> = {
@@ -404,13 +404,13 @@ const agentThemeColors: Record<string, string> = {
 }
 
 const v2AgentThemeColors: Record<string, string> = {
-  primary: "var(--v2-text-text-accent)",
-  secondary: "var(--v2-text-text-muted)",
-  accent: "var(--v2-icon-icon-accent)",
-  success: "var(--v2-state-fg-success)",
-  warning: "var(--v2-state-fg-warning)",
-  error: "var(--v2-state-fg-danger)",
-  info: "var(--v2-state-fg-info)",
+  primary: "var(--pc-text-accent)",
+  secondary: "var(--pc-text-muted)",
+  accent: "var(--pc-icon-accent)",
+  success: "var(--pc-state-fg-success)",
+  warning: "var(--pc-state-fg-warning)",
+  error: "var(--pc-state-fg-danger)",
+  info: "var(--pc-state-fg-info)",
 }
 
 const agentPalette = [
@@ -2046,7 +2046,7 @@ ToolRegistry.register({
                 <span data-component="task-tool-spinner" style={{ color: tone() ?? "var(--icon-interactive-base)" }}>
                   <Show when={newLayout()} fallback={<Spinner />}>
                     <SessionProgressIndicatorV2
-                      style={{ color: v2Tone() ?? "light-dark(var(--v2-text-text-base), #ffffff)" }}
+                      style={{ color: v2Tone() ?? "light-dark(var(--pc-text-base), #ffffff)" }}
                     />
                   </Show>
                 </span>

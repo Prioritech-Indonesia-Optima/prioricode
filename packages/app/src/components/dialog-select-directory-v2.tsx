@@ -251,7 +251,7 @@ export function DialogSelectDirectoryV2(props: DialogSelectDirectoryV2Props) {
           box-shadow: none !important;
         }
         button[data-type="item"]:hover {
-          background: var(--v2-overlay-simple-overlay-hover) !important;
+          background: var(--pc-overlay-hover) !important;
         }
         button[data-type="item"]:focus-visible {
           outline: none !important;

@@ -4,18 +4,18 @@ import type { ColorValue, HexColor, V2ColorValue } from "../types"
 
 const GREY_STEPS = [100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200] as const
 
-const greyRef = (step: number): V2ColorValue => `var(--v2-grey-${step})`
+const greyRef = (step: number): V2ColorValue => `var(--pc-grey-${step})`
 
 function greyHex(primitives: Record<string, V2ColorValue>, step: number) {
-  const hex = primitives[`v2-grey-${step}`]
+  const hex = primitives[`pc-grey-${step}`]
   if (typeof hex === "string" && hex.startsWith("#")) return hex as HexColor
 }
 
 function resolveGreyRef(value: V2ColorValue, primitives: Record<string, V2ColorValue>) {
-  const step = value.match(/^var\(--v2-grey-(\d+)\)$/)?.[1]
+  const step = value.match(/^var\(--pc-grey-(\d+)\)$/)?.[1]
   if (!step) throw new Error(`Expected grey primitive ref, got ${value}`)
   const hex = greyHex(primitives, Number(step))
-  if (!hex) throw new Error(`Missing grey primitive v2-grey-${step}`)
+  if (!hex) throw new Error(`Missing grey primitive pc-grey-${step}`)
   return hex
 }
 
@@ -41,20 +41,20 @@ export function mapV2Foreground(
   })
 
   const semantics = mapV2Semantics(isDark)
-  const bgBase = resolveGreyRef(semantics["v2-background-bg-base"], primitives)
-  const bgContrast = resolveGreyRef(semantics["v2-background-bg-contrast"], primitives)
-  const bgInverse = resolveGreyRef(semantics["v2-background-bg-inverse"], primitives)
+  const bgBase = resolveGreyRef(semantics["pc-bg-base"], primitives)
+  const bgContrast = resolveGreyRef(semantics["pc-bg-contrast"], primitives)
+  const bgInverse = resolveGreyRef(semantics["pc-bg-inverse"], primitives)
   const inverseTarget = hexToOklch(bgInverse).l > 0.55 ? 1100 : greyHex(primitives, 50) ? 50 : 100
 
   return {
-    "v2-text-text-base": isDark ? blend("#ffffff", body, 0.9) : shift(body, { l: -0.07, c: 1.04 }),
-    "v2-text-text-muted": overrides["text-weak"] ?? shift(body, { l: isDark ? -0.11 : 0.11, c: 0.9 }),
-    "v2-text-text-faint": shift(body, { l: isDark ? -0.2 : 0.21, c: isDark ? 0.78 : 0.72 }),
-    "v2-icon-icon-base": greyRef(pickGrey(primitives, bgBase, 7, isDark ? 400 : 800)),
-    "v2-icon-icon-muted": greyRef(pickGrey(primitives, bgBase, 3, 600)),
-    "v2-icon-icon-inverse": greyRef(pickGrey(primitives, bgInverse, 7, inverseTarget)),
-    "v2-icon-icon-contrast": greyRef(pickGrey(primitives, bgContrast, 7, 100)),
-    "v2-icon-icon-accent": isDark ? "var(--v2-blue-400)" : "var(--v2-blue-600)",
-    "v2-icon-icon-accent-hover": isDark ? "var(--v2-blue-300)" : "var(--v2-blue-700)",
+    "pc-text-base": isDark ? blend("#ffffff", body, 0.9) : shift(body, { l: -0.07, c: 1.04 }),
+    "pc-text-muted": overrides["text-weak"] ?? shift(body, { l: isDark ? -0.11 : 0.11, c: 0.9 }),
+    "pc-text-faint": shift(body, { l: isDark ? -0.2 : 0.21, c: isDark ? 0.78 : 0.72 }),
+    "pc-icon-base": greyRef(pickGrey(primitives, bgBase, 7, isDark ? 400 : 800)),
+    "pc-icon-muted": greyRef(pickGrey(primitives, bgBase, 3, 600)),
+    "pc-icon-inverse": greyRef(pickGrey(primitives, bgInverse, 7, inverseTarget)),
+    "pc-icon-contrast": greyRef(pickGrey(primitives, bgContrast, 7, 100)),
+    "pc-icon-accent": isDark ? "var(--pc-gold-400)" : "var(--pc-gold-700)",
+    "pc-icon-accent-hover": isDark ? "var(--pc-gold-300)" : "var(--pc-gold-800)",
   }
 }

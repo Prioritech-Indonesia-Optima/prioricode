@@ -296,14 +296,14 @@ export function SessionSidePanel(props: {
         inert={!open()}
         class="relative min-w-0 flex overflow-hidden"
         classList={{
-          "bg-v2-background-bg-base": settings.general.newLayoutDesigns(),
+          "bg-pc-bg-base": settings.general.newLayoutDesigns(),
           "bg-background-base": !settings.general.newLayoutDesigns(),
           "h-full shrink-0": !props.stacked,
           "h-full min-h-0": props.stacked,
           "pointer-events-none": !open(),
           "transition-[width] duration-[240ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[width] motion-reduce:transition-none":
             !props.size.active() && !props.reviewSnap,
-          "rounded-[10px] shadow-[var(--v2-elevation-raised)] overflow-hidden": settings.general.newLayoutDesigns(),
+          "rounded-[12px] shadow-[var(--pc-elevation-raised)] overflow-hidden": settings.general.newLayoutDesigns(),
           "flex-1": reviewOpen(),
         }}
         style={{ width: panelWidth() }}
@@ -319,14 +319,14 @@ export function SessionSidePanel(props: {
               <div
                 class="relative min-w-0 h-full flex-1 overflow-hidden"
                 classList={{
-                  "bg-v2-background-bg-base": settings.general.newLayoutDesigns(),
+                  "bg-pc-bg-base": settings.general.newLayoutDesigns(),
                   "bg-background-base": !settings.general.newLayoutDesigns(),
                 }}
               >
                 <div
                   class="size-full min-w-0 h-full"
                   classList={{
-                    "bg-v2-background-bg-base": settings.general.newLayoutDesigns(),
+                    "bg-pc-bg-base": settings.general.newLayoutDesigns(),
                     "bg-background-base": !settings.general.newLayoutDesigns(),
                   }}
                 >
@@ -438,7 +438,7 @@ export function SessionSidePanel(props: {
                               <div
                                 class="h-full shrink-0 sticky right-0 z-10 flex items-center justify-center pr-3"
                                 classList={{
-                                  "bg-v2-background-bg-base": settings.general.newLayoutDesigns(),
+                                  "bg-pc-bg-base": settings.general.newLayoutDesigns(),
                                   "bg-background-stronger": !settings.general.newLayoutDesigns(),
                                 }}
                               >
@@ -555,7 +555,7 @@ export function SessionSidePanel(props: {
                           >
                             <Show when={props.reviewSidebarToggle}>
                               {(toggle) => (
-                                <div class="session-review-v2-sidebar-toggle-slot h-full shrink-0 sticky left-0 z-10 flex items-center justify-center bg-v2-background-bg-base">
+                                <div class="session-review-v2-sidebar-toggle-slot h-full shrink-0 sticky left-0 z-10 flex items-center justify-center bg-pc-bg-base">
                                   {toggle()(activeTab() === SESSION_OPEN_FILE_TAB)}
                                 </div>
                               )}
@@ -657,7 +657,7 @@ export function SessionSidePanel(props: {
                             <div
                               class="h-full shrink-0 sticky right-0 z-10 flex items-center justify-center"
                               classList={{
-                                "bg-v2-background-bg-base": settings.general.newLayoutDesigns(),
+                                "bg-pc-bg-base": settings.general.newLayoutDesigns(),
                                 "bg-background-stronger": !settings.general.newLayoutDesigns(),
                               }}
                             >

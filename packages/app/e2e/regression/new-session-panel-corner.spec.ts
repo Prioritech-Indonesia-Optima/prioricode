@@ -29,7 +29,7 @@ test("matches the rounded panel corners to the dark new-session background", asy
   await page.addInitScript(
     ({ directory, draftID, server }) => {
       localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
-      localStorage.setItem("prioricode-theme-id", "pc-2")
+      localStorage.setItem("prioricode-theme-id", "prioricode")
       localStorage.setItem("prioricode-color-scheme", "dark")
       localStorage.setItem(
         "prioricode.global.dat:server",

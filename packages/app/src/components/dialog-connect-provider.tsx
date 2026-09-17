@@ -123,7 +123,7 @@ export const DialogConnectProvider: Component<{
     >
       <DialogV2
         containerClass="!h-[min(calc(100vh_-_16px),512px)] !w-[min(calc(100vw_-_16px),640px)]"
-        class="[font-family:var(--v2-font-family-sans)] [&_[data-slot=dialog-header]]:!px-5 [&_[data-slot=dialog-header-title]]:!text-[15px] [&_[data-slot=dialog-header-title]]:!tracking-[-0.13px]"
+        class="[font-family:var(--pc-font-sans)] [&_[data-slot=dialog-header]]:!px-5 [&_[data-slot=dialog-header-title]]:!text-[15px] [&_[data-slot=dialog-header-title]]:!tracking-[-0.13px]"
       >
         <DialogHeader closeLabel={language.t("common.close")}>
           <Show
@@ -132,7 +132,7 @@ export const DialogConnectProvider: Component<{
           >
             <button
               type="button"
-              class="flex size-5 items-center justify-center rounded-sm text-v2-icon-icon-muted hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none"
+              class="flex size-5 items-center justify-center rounded-sm text-pc-icon-muted hover:bg-pc-overlay-hover focus-visible:bg-pc-overlay-hover focus-visible:outline-none"
               onClick={() => back.current()}
               aria-label={language.t("common.goBack")}
             >
@@ -297,7 +297,7 @@ function ProviderPickerV2(props: {
         <TextInputV2
           ref={search}
           type="search"
-          class="!w-full [font-family:var(--v2-font-family-sans)]"
+          class="!w-full [font-family:var(--pc-font-sans)]"
           leadingIcon={<Icon name="magnifying-glass" size="small" />}
           placeholder={language.t("dialog.provider.search.placeholder")}
           value={store.filter}
@@ -317,7 +317,7 @@ function ProviderPickerV2(props: {
             {(group) => (
               <Show when={group.items().length > 0}>
                 <section class="flex flex-col">
-                  <div class="px-3 pb-2 text-[13px] font-[440] leading-none tracking-[-0.04px] text-v2-text-text-muted">
+                  <div class="px-3 pb-2 text-[13px] font-[440] leading-none tracking-[-0.04px] text-pc-text-muted">
                     {group.title}
                   </div>
                   <For each={group.items()}>
@@ -325,34 +325,34 @@ function ProviderPickerV2(props: {
                       <button
                         type="button"
                         data-provider-id={provider.id}
-                        class="flex min-h-9 w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-[13px] leading-none tracking-[-0.04px] hover:bg-v2-overlay-simple-overlay-hover focus:bg-v2-overlay-simple-overlay-hover focus:outline-none"
-                        classList={{ "bg-v2-overlay-simple-overlay-hover": store.active === provider.id }}
+                        class="flex min-h-9 w-full items-center gap-2 rounded-md px-3 py-2.5 text-left text-[13px] leading-none tracking-[-0.04px] hover:bg-pc-overlay-hover focus:bg-pc-overlay-hover focus:outline-none"
+                        classList={{ "bg-pc-overlay-hover": store.active === provider.id }}
                         onMouseEnter={() => setStore("active", provider.id)}
                         disabled={store.connecting !== undefined}
                         aria-busy={store.connecting === provider.id}
                         onClick={() => connect(provider.id)}
                       >
-                        <ProviderIcon id={provider.id} class="size-4 shrink-0 text-v2-icon-icon-base" />
-                        <span class="min-w-0 truncate font-[530] text-v2-text-text-base">{provider.name}</span>
+                        <ProviderIcon id={provider.id} class="size-4 shrink-0 text-pc-icon-base" />
+                        <span class="min-w-0 truncate font-[530] text-pc-text-base">{provider.name}</span>
                         <Show when={provider.id === "prioricode" || provider.id === "prioricode-go"}>
-                          <span class="min-w-0 truncate font-[440] text-v2-text-text-muted">
+                          <span class="min-w-0 truncate font-[440] text-pc-text-muted">
                             {language.t(
                               provider.id === "prioricode"
                                 ? "dialog.provider.prioricode.tagline"
                                 : "dialog.provider.prioricodeGo.tagline",
                             )}
                           </span>
-                          <span class="flex h-4 shrink-0 items-center rounded-xs border-[0.5px] border-v2-border-border-base bg-v2-background-bg-layer-03 px-1 text-[11px] font-[530] leading-none tracking-[0.05px] text-v2-text-text-muted">
+                          <span class="flex h-4 shrink-0 items-center rounded-xs border-[0.5px] border-pc-border-base bg-pc-bg-layer-03 px-1 text-[11px] font-[530] leading-none tracking-[0.05px] text-pc-text-muted">
                             {language.t("dialog.provider.tag.recommended")}
                           </span>
                         </Show>
                         <Show when={provider.id === CUSTOM_ID}>
-                          <span class="flex h-4 shrink-0 items-center rounded-xs border-[0.5px] border-v2-border-border-base bg-v2-background-bg-layer-03 px-1 text-[11px] font-[530] leading-none tracking-[0.05px] text-v2-text-text-muted">
+                          <span class="flex h-4 shrink-0 items-center rounded-xs border-[0.5px] border-pc-border-base bg-pc-bg-layer-03 px-1 text-[11px] font-[530] leading-none tracking-[0.05px] text-pc-text-muted">
                             {language.t("settings.providers.tag.custom")}
                           </span>
                         </Show>
                         <Show when={store.connecting === provider.id}>
-                          <Spinner class="ml-auto size-4 shrink-0 text-v2-icon-icon-muted" />
+                          <Spinner class="ml-auto size-4 shrink-0 text-pc-icon-muted" />
                         </Show>
                       </button>
                     )}
@@ -362,14 +362,14 @@ function ProviderPickerV2(props: {
             )}
           </For>
           <Show when={rows().length === 0}>
-            <div class="flex h-24 items-center justify-center text-[13px] font-[440] text-v2-text-text-muted">
+            <div class="flex h-24 items-center justify-center text-[13px] font-[440] text-pc-text-muted">
               {language.t("dialog.provider.empty")}
             </div>
           </Show>
         </div>
         <div
           class="pointer-events-none absolute inset-x-0 bottom-0 h-10"
-          style={{ background: "linear-gradient(to bottom, transparent, var(--v2-background-bg-layer-01))" }}
+          style={{ background: "linear-gradient(to bottom, transparent, var(--pc-bg-layer-01))" }}
         />
       </div>
     </div>
@@ -742,7 +742,7 @@ function ProviderConnection(props: {
     if (newLayout())
       return (
         <div class="flex flex-col gap-2">
-          <div class="px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-muted">
+          <div class="px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-pc-text-muted">
             {language.t("provider.connect.selectMethod", { provider: provider().name })}
           </div>
           <div class="flex flex-col">
@@ -752,15 +752,15 @@ function ProviderConnection(props: {
                 return (
                   <button
                     type="button"
-                    class="group flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-[13px] leading-5 tracking-[-0.04px] hover:bg-v2-overlay-simple-overlay-hover focus-visible:bg-v2-overlay-simple-overlay-hover focus-visible:outline-none"
+                    class="group flex h-9 w-full items-center gap-2 rounded-md px-3 text-left text-[13px] leading-5 tracking-[-0.04px] hover:bg-pc-overlay-hover focus-visible:bg-pc-overlay-hover focus-visible:outline-none"
                     onClick={() => void selectMethod(index())}
                   >
-                    <span class="flex h-2 w-4 shrink-0 items-center justify-center rounded-[1px] bg-v2-background-bg-base shadow-[var(--v2-elevation-button-neutral)]">
-                      <span class="hidden h-0.5 w-2.5 bg-v2-icon-icon-base group-hover:block group-focus-visible:block" />
+                    <span class="flex h-2 w-4 shrink-0 items-center justify-center rounded-[1px] bg-pc-bg-base shadow-[var(--pc-elevation-button-neutral)]">
+                      <span class="hidden h-0.5 w-2.5 bg-pc-icon-base group-hover:block group-focus-visible:block" />
                     </span>
-                    <span class="font-[530] text-v2-text-text-base">{details().label}</span>
+                    <span class="font-[530] text-pc-text-base">{details().label}</span>
                     <Show when={details().hint}>
-                      {(hint) => <span class="font-[440] text-v2-text-text-muted">{hint()}</span>}
+                      {(hint) => <span class="font-[440] text-pc-text-muted">{hint()}</span>}
                     </Show>
                   </button>
                 )
@@ -838,7 +838,7 @@ function ProviderConnection(props: {
 
     if (newLayout())
       return (
-        <div class="flex flex-col gap-5 px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-muted">
+        <div class="flex flex-col gap-5 px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-pc-text-muted">
           <Show
             when={provider().id === "prioricode"}
             fallback={language.t("provider.connect.apiKey.description", { provider: provider().name })}
@@ -850,7 +850,7 @@ function ProviderConnection(props: {
                 {language.t("provider.connect.prioricodeZen.visit.prefix")}
                 <ExternalLink
                   href="https://prioricode.ai/zen"
-                  class="text-v2-text-text-base focus-visible:rounded-xs focus-visible:outline-2 focus-visible:outline-v2-border-border-focus"
+                  class="text-pc-text-base focus-visible:rounded-xs focus-visible:outline-2 focus-visible:outline-pc-border-focus"
                 >
                   {language.t("provider.connect.prioricodeZen.visit.link")}
                 </ExternalLink>
@@ -859,7 +859,7 @@ function ProviderConnection(props: {
             </div>
           </Show>
           <form onSubmit={handleSubmit} class="flex flex-col items-start gap-5 self-stretch">
-            <label class="flex w-full flex-col gap-1 font-[530] leading-4 text-v2-text-text-base">
+            <label class="flex w-full flex-col gap-1 font-[530] leading-4 text-pc-text-base">
               {language.t("provider.connect.apiKey.label", { provider: provider().name })}
               <TextInputV2
                 ref={apiKey}
@@ -877,7 +877,7 @@ function ProviderConnection(props: {
             </label>
             <Show when={formStore.error}>
               {(error) => (
-                <div id={errorID} role="alert" class="-mt-4 text-xs text-v2-state-fg-danger">
+                <div id={errorID} role="alert" class="-mt-4 text-xs text-pc-state-fg-danger">
                   {error()}
                 </div>
               )}
@@ -976,16 +976,16 @@ function ProviderConnection(props: {
 
     if (newLayout())
       return (
-        <div class="flex flex-col gap-5 px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-muted">
+        <div class="flex flex-col gap-5 px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-pc-text-muted">
           <div>
             {language.t("provider.connect.oauth.code.visit.prefix")}
-            <ExternalLink href={store.authorization!.url} class="text-v2-text-text-base">
+            <ExternalLink href={store.authorization!.url} class="text-pc-text-base">
               {language.t("provider.connect.oauth.code.visit.link")}
             </ExternalLink>
             {language.t("provider.connect.oauth.code.visit.suffix", { provider: provider().name })}
           </div>
           <form onSubmit={handleSubmit} class="flex flex-col items-start gap-5 self-stretch">
-            <label class="flex w-full flex-col gap-1 font-[530] leading-4 text-v2-text-text-base">
+            <label class="flex w-full flex-col gap-1 font-[530] leading-4 text-pc-text-base">
               {language.t("provider.connect.oauth.code.label", { method: method()?.label ?? "" })}
               <TextInputV2
                 ref={codeInput}
@@ -1002,7 +1002,7 @@ function ProviderConnection(props: {
             </label>
             <Show when={formStore.error}>
               {(error) => (
-                <div id={errorID} role="alert" class="-mt-4 text-xs text-v2-state-fg-danger">
+                <div id={errorID} role="alert" class="-mt-4 text-xs text-pc-state-fg-danger">
                   {error()}
                 </div>
               )}
@@ -1116,12 +1116,12 @@ function ProviderConnection(props: {
       <div class={newLayout() ? "flex h-10 shrink-0 items-start gap-2 px-3" : "flex items-center gap-4 px-2.5"}>
         <ProviderIcon
           id={props.provider}
-          class={newLayout() ? "mt-0.5 size-4 shrink-0 text-v2-icon-icon-base" : "size-5 shrink-0 icon-strong-base"}
+          class={newLayout() ? "mt-0.5 size-4 shrink-0 text-pc-icon-base" : "size-5 shrink-0 icon-strong-base"}
         />
         <div
           class={
             newLayout()
-              ? "text-[15px] font-[530] leading-5 tracking-[-0.13px] text-v2-text-text-base"
+              ? "text-[15px] font-[530] leading-5 tracking-[-0.13px] text-pc-text-base"
               : "text-16-medium text-text-strong"
           }
         >

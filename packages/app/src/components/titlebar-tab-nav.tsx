@@ -228,14 +228,14 @@ export function TabNavItem(props: {
           if (props.suppressNavigation?.()) return
           props.onNavigate()
         }}
-        class="flex h-full min-w-0 flex-1 flex-row items-center gap-1.5 text-[13px] font-medium text-v2-text-text-faint group-data-[active='true']:text-v2-text-text-base group-data-[editing='true']:text-v2-text-text-base [-webkit-user-drag:none]"
+        class="flex h-full min-w-0 flex-1 flex-row items-center gap-1.5 text-[13px] font-medium text-pc-text-faint group-data-[active='true']:text-pc-text-base group-data-[editing='true']:text-pc-text-base [-webkit-user-drag:none]"
       >
         <span data-slot="project-avatar-slot" class="flex size-4 shrink-0 items-center justify-center">
           <Show
             when={props.session()}
             keyed
             fallback={
-              <span class="block size-4 rounded-[3px] border border-v2-border-border-muted" aria-hidden="true" />
+              <span class="block size-4 rounded-[3px] border border-pc-border-muted" aria-hidden="true" />
             }
           >
             {(session) => (
@@ -403,7 +403,7 @@ export function DraftTabItem(props: {
           if (props.suppressNavigation?.()) return
           props.onNavigate()
         }}
-        class="flex h-full min-w-0 flex-1 flex-row items-center gap-1.5 text-[13px] font-medium text-v2-text-text-faint group-data-[active='true']:text-v2-text-text-base [-webkit-user-drag:none]"
+        class="flex h-full min-w-0 flex-1 flex-row items-center gap-1.5 text-[13px] font-medium text-pc-text-faint group-data-[active='true']:text-pc-text-base [-webkit-user-drag:none]"
       >
         <span class="flex size-4 shrink-0 items-center justify-center">
           <IconV2 name="edit" />

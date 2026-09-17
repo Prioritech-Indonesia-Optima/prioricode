@@ -250,7 +250,7 @@ export function SortableTerminalTabV2(props: {
               </span>
             </Tabs.Trigger>
             <Show when={store.editing}>
-              <div class="absolute inset-0 flex items-center bg-v2-background-bg-layer-01 z-10 pointer-events-auto rounded-[6px] shadow-[inset_0_0_0_0.5px_var(--v2-border-border-muted)] px-2">
+              <div class="absolute inset-0 flex items-center bg-pc-bg-layer-01 z-10 pointer-events-auto rounded-[6px] shadow-[inset_0_0_0_0.5px_var(--pc-border-muted)] px-2">
                 <input
                   ref={input}
                   type="text"
@@ -259,7 +259,7 @@ export function SortableTerminalTabV2(props: {
                   onBlur={save}
                   onKeyDown={keydown}
                   onMouseDown={(e) => e.stopPropagation()}
-                  class="bg-transparent border-none outline-none min-w-0 flex-1 p-0 text-[13px] leading-4 tracking-[-0.04px] text-v2-text-text-base [font-weight:440] [font-variation-settings:'slnt'_0] [font-variant-numeric:tabular-nums]"
+                  class="bg-transparent border-none outline-none min-w-0 flex-1 p-0 text-[13px] leading-4 tracking-[-0.04px] text-pc-text-base [font-weight:440] [font-variation-settings:'slnt'_0] [font-variant-numeric:tabular-nums]"
                 />
               </div>
             </Show>

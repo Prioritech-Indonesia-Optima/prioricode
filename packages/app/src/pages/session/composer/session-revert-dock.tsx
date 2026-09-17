@@ -104,7 +104,7 @@ export function SessionRevertDock(props: {
     >
       <div
         data-component="session-revert-dock"
-        class="w-full overflow-hidden rounded-xl border-[0.5px] border-v2-border-border-base bg-v2-background-bg-layer-01"
+        class="w-full overflow-hidden rounded-xl border-[0.5px] border-pc-border-base bg-pc-bg-layer-01"
       >
         <div
           class="flex h-[42px] items-center gap-2 pl-4 pr-2"
@@ -113,18 +113,18 @@ export function SessionRevertDock(props: {
           onClick={toggle}
           onKeyDown={onHeaderKeyDown}
         >
-          <IconV2 name="outline-reset" size="normal" class="text-v2-icon-icon-muted" />
+          <IconV2 name="outline-reset" size="normal" class="text-pc-icon-muted" />
           <span
             classList={{
               "font-[440] shrink-0 cursor-default text-[13px] leading-5 tracking-[-0.04px]": true,
-              "text-v2-text-text-base": !store.collapsed,
-              "text-v2-text-text-muted": store.collapsed,
+              "text-pc-text-base": !store.collapsed,
+              "text-pc-text-muted": store.collapsed,
             }}
           >
             {label()}
           </span>
           <Show when={store.collapsed && preview()}>
-            <span class="min-w-0 flex-1 truncate cursor-default text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-faint">
+            <span class="min-w-0 flex-1 truncate cursor-default text-[13px] font-[440] leading-5 tracking-[-0.04px] text-pc-text-faint">
               {preview()}
             </span>
           </Show>
@@ -160,7 +160,7 @@ export function SessionRevertDock(props: {
             <For each={props.items}>
               {(item) => (
                 <div class="flex h-6 min-w-0 items-center gap-2">
-                  <span class="min-w-0 flex-1 truncate text-[13px] font-[400] leading-5 tracking-[-0.04px] text-v2-text-text-muted">
+                  <span class="min-w-0 flex-1 truncate text-[13px] font-[400] leading-5 tracking-[-0.04px] text-pc-text-muted">
                     {item.text}
                   </span>
                   <ButtonV2

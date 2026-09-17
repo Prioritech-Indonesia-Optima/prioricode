@@ -11,7 +11,7 @@
     :disabled
   ) {
   outline: none;
-  background-color: var(--v2-overlay-simple-overlay-hover);
+  background-color: var(--pc-overlay-hover);
 }
 
 [data-slot="titlebar-tab-item"]

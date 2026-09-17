@@ -386,12 +386,12 @@ export function TitlebarTabStrip(props: {
       <div
         data-slot="titlebar-tabs-fade-left"
         aria-hidden="true"
-        class="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-[linear-gradient(to_right,var(--v2-background-bg-deep),transparent)]"
+        class="pointer-events-none absolute inset-y-0 left-0 z-10 w-6 bg-[linear-gradient(to_right,var(--pc-bg-deep),transparent)]"
       />
       <div
         data-slot="titlebar-tabs-fade-right"
         aria-hidden="true"
-        class="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-[linear-gradient(to_left,var(--v2-background-bg-deep),transparent)]"
+        class="pointer-events-none absolute inset-y-0 right-0 z-10 w-6 bg-[linear-gradient(to_left,var(--pc-bg-deep),transparent)]"
       />
     </div>
   )

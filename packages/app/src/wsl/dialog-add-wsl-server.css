@@ -47,8 +47,8 @@
   max-width: calc(100vw - 32px);
   min-height: 264px;
   height: auto;
-  background: var(--v2-background-bg-layer-01);
-  box-shadow: var(--v2-elevation-overlay);
+  background: var(--pc-bg-layer-01);
+  box-shadow: var(--pc-elevation-overlay);
   border-radius: 10px;
 }
 
@@ -104,7 +104,7 @@
   letter-spacing: -0.13px;
   font-variant-numeric: tabular-nums;
   font-variation-settings: "slnt" 0;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-wsl-not-installed-description {
@@ -123,7 +123,7 @@
   letter-spacing: -0.04px;
   font-variant-numeric: tabular-nums;
   font-variation-settings: "slnt" 0;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .settings-v2-wsl-unavailable-error {
@@ -138,7 +138,7 @@
   letter-spacing: -0.04px;
   font-variant-numeric: tabular-nums;
   font-variation-settings: "slnt" 0;
-  color: var(--v2-text-text-faint);
+  color: var(--pc-text-faint);
   overflow-wrap: anywhere;
 }
 
@@ -163,7 +163,7 @@
   line-height: 16px;
   letter-spacing: -0.04px;
   font-variation-settings: "slnt" 0;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-wsl-distro-list {
@@ -177,8 +177,8 @@
   max-height: 220px;
   padding: 0;
   border-radius: 8px;
-  background: var(--v2-background-bg-base);
-  box-shadow: var(--v2-elevation-raised);
+  background: var(--pc-bg-base);
+  box-shadow: var(--pc-elevation-raised);
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -197,7 +197,7 @@
   width: 100%;
   min-height: 62px;
   padding: 14px 14px 14px 16px;
-  border-bottom: 0.5px solid var(--v2-border-border-base);
+  border-bottom: 0.5px solid var(--pc-border-base);
 }
 
 .settings-v2-wsl-distro-row:last-child {
@@ -246,15 +246,15 @@
 }
 
 .settings-v2-wsl-distro-status[data-tone="success"] {
-  color: var(--v2-state-fg-success);
+  color: var(--pc-state-fg-success);
 }
 
 .settings-v2-wsl-distro-status[data-tone="warning"] {
-  color: var(--v2-state-fg-warning);
+  color: var(--pc-state-fg-warning);
 }
 
 .settings-v2-wsl-distro-status[data-tone="muted"] {
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .settings-v2-wsl-distro-row:where([data-disabled]) .settings-v2-wsl-distro-status {
@@ -266,7 +266,7 @@
   font-size: 13px;
   font-weight: 440;
   line-height: 1.4;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .settings-v2-wsl-catalog-card {
@@ -280,7 +280,7 @@
   width: 100%;
   min-height: 64px;
   padding: 14px 14px 16px 16px;
-  border: 0.5px solid var(--v2-border-border-base);
+  border: 0.5px solid var(--pc-border-base);
   border-radius: 8px;
   background: transparent;
   cursor: pointer;
@@ -288,7 +288,7 @@
 }
 
 .settings-v2-wsl-catalog-card:focus-visible {
-  outline: 2px solid var(--v2-border-border-focus);
+  outline: 2px solid var(--pc-border-focus);
   outline-offset: 2px;
 }
 
@@ -305,7 +305,7 @@
   justify-content: center;
   width: 16px;
   height: 16px;
-  color: var(--v2-icon-icon-base);
+  color: var(--pc-icon-base);
 }
 
 .settings-v2-wsl-catalog-copy {
@@ -326,7 +326,7 @@
   line-height: 16px;
   letter-spacing: -0.04px;
   font-variation-settings: "slnt" 0;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
 }
 
 .settings-v2-wsl-catalog-description {
@@ -337,7 +337,7 @@
   line-height: 12px;
   letter-spacing: 0.05px;
   font-variation-settings: "slnt" 0;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
 }
 
 .settings-v2-wsl-catalog-chevron {
@@ -348,7 +348,7 @@
   justify-content: center;
   width: 16px;
   height: 16px;
-  color: var(--v2-icon-icon-muted);
+  color: var(--pc-icon-muted);
 }
 
 .settings-v2-wsl-catalog-list {
@@ -362,7 +362,7 @@
   max-height: 220px;
   padding: 0;
   border-radius: 8px;
-  box-shadow: inset 0 0 0 0.5px var(--v2-border-border-strong);
+  box-shadow: inset 0 0 0 0.5px var(--pc-border-strong);
   overflow-x: hidden;
   overflow-y: auto;
 }
@@ -387,6 +387,6 @@
   font-size: 13px;
   font-weight: 440;
   line-height: 1;
-  color: var(--v2-text-text-muted);
+  color: var(--pc-text-muted);
   text-align: center;
 }

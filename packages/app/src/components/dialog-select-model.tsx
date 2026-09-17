@@ -378,19 +378,19 @@ function ModelSelectorPopoverV2View(props: {
       <MenuV2.Portal>
         <MenuV2.Content
           ref={(element: HTMLDivElement) => (contentRef = element)}
-          class="w-[284px] overflow-hidden rounded-md border-0 bg-v2-background-bg-layer-01 !p-0 shadow-[var(--v2-elevation-floating)] focus:outline-none"
+          class="w-[284px] overflow-hidden rounded-md border-0 bg-pc-bg-layer-01 !p-0 shadow-[var(--pc-elevation-floating)] focus:outline-none"
           onPointerDownOutside={dismiss.preventTriggerRestore}
           onFocusOutside={dismiss.preventTriggerRestore}
           onCloseAutoFocus={dismiss.onCloseAutoFocus}
         >
           <div class="flex flex-col p-0.5">
-            <div class="flex h-7 items-center gap-2 rounded-sm pl-3 pr-2.5 text-v2-icon-icon-muted">
+            <div class="flex h-7 items-center gap-2 rounded-sm pl-3 pr-2.5 text-pc-icon-muted">
               <Icon name="magnifying-glass" size="small" class="shrink-0" />
               <input
                 ref={(el) => (searchRef = el)}
                 value={store.search}
                 placeholder={language.t("dialog.model.search.placeholder")}
-                class="h-7 min-w-0 flex-1 border-0 bg-transparent text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-base outline-none placeholder:text-v2-text-text-faint"
+                class="h-7 min-w-0 flex-1 border-0 bg-transparent text-[13px] font-[440] leading-5 tracking-[-0.04px] text-pc-text-base outline-none placeholder:text-pc-text-faint"
                 spellcheck={false}
                 autocorrect="off"
                 autocomplete="off"
@@ -426,7 +426,7 @@ function ModelSelectorPopoverV2View(props: {
               <Show when={store.search.trim()}>
                 <button
                   type="button"
-                  class="flex size-5 items-center justify-center rounded-sm text-v2-icon-icon-muted hover:bg-v2-overlay-simple-overlay-hover"
+                  class="flex size-5 items-center justify-center rounded-sm text-pc-icon-muted hover:bg-pc-overlay-hover"
                   onPointerDown={(event) => event.preventDefault()}
                   onClick={() => setSearch("")}
                   aria-label={language.t("common.clear")}
@@ -436,13 +436,13 @@ function ModelSelectorPopoverV2View(props: {
               </Show>
             </div>
           </div>
-          <div class="h-px bg-v2-border-border-muted" />
+          <div class="h-px bg-pc-border-muted" />
           <ScrollView data-slot="model-selector-scroll" class="max-h-[220px] min-h-0">
             <div class="flex flex-col p-0.5 pt-0">
               <Show
                 when={models().length > 0}
                 fallback={
-                  <div class="flex h-12 items-center px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-faint">
+                  <div class="flex h-12 items-center px-3 text-[13px] font-[440] leading-5 tracking-[-0.04px] text-pc-text-faint">
                     {language.t("dialog.model.empty")}
                   </div>
                 }
@@ -450,7 +450,7 @@ function ModelSelectorPopoverV2View(props: {
                 <For each={groups()}>
                   {(group) => (
                     <MenuV2.Group>
-                      <MenuV2.GroupLabel class="sticky top-0 z-10 gap-2 bg-v2-background-bg-layer-01 px-3">
+                      <MenuV2.GroupLabel class="sticky top-0 z-10 gap-2 bg-pc-bg-layer-01 px-3">
                         <span class="min-w-0 truncate">{group.items[0].provider.name}</span>
                       </MenuV2.GroupLabel>
                       <MenuV2.RadioGroup value={props.current()}>
@@ -475,7 +475,7 @@ function ModelSelectorPopoverV2View(props: {
                                 data-option-key={modelKey(item)}
                                 data-selected-model={props.current() === modelKey(item) ? true : undefined}
                                 class="scroll-my-6 w-full"
-                                classList={{ "!bg-v2-overlay-simple-overlay-hover": store.active === modelKey(item) }}
+                                classList={{ "!bg-pc-overlay-hover": store.active === modelKey(item) }}
                                 onMouseEnter={() => {
                                   setStore("active", modelKey(item))
                                   setTimeout(() => searchRef?.focus())
@@ -500,11 +500,11 @@ function ModelSelectorPopoverV2View(props: {
               </Show>
             </div>
           </ScrollView>
-          <div class="h-px bg-v2-border-border-muted" />
+          <div class="h-px bg-pc-border-muted" />
           <div class="flex flex-col p-0.5">
             <MenuV2.Item
               data-option-key={manageKey}
-              classList={{ "!bg-v2-overlay-simple-overlay-hover": store.active === manageKey }}
+              classList={{ "!bg-pc-overlay-hover": store.active === manageKey }}
               onMouseEnter={() => {
                 setStore("active", manageKey)
                 setTimeout(() => searchRef?.focus())

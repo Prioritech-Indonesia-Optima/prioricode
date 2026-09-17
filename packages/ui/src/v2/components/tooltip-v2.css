@@ -15,8 +15,8 @@
   padding: 5px 6px;
   gap: 6px;
 
-  background: var(--v2-background-bg-layer-01);
-  box-shadow: var(--v2-elevation-floating);
+  background: var(--pc-bg-layer-01);
+  box-shadow: var(--pc-elevation-floating);
   border-radius: 4px;
 
   font-style: normal;
@@ -24,7 +24,7 @@
   font-size: 11px;
   line-height: 12px;
   letter-spacing: 0.05px;
-  color: var(--v2-text-text-base);
+  color: var(--pc-text-base);
   font-variant-numeric: tabular-nums;
   font-variation-settings: "slnt" 0;
 

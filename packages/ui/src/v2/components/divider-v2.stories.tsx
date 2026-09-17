@@ -9,7 +9,7 @@ Horizontal hairline divider for v2 layouts.
 
 ### Theming/tokens
 - Uses \`data-component="divider-v2"\`.
-- Border color: \`--v2-border-border-strong\`.
+- Border color: \`--pc-border-strong\`.
 `
 
 export default {

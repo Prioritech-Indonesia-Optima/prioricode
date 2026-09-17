@@ -76,7 +76,7 @@ export const SettingsServersV2: Component = () => {
                 variant="ghost-muted"
                 size="small"
                 class="settings-v2-tab-search-clear"
-                icon={<IconV2 name="close" size="large" class="text-v2-icon-icon-muted" />}
+                icon={<IconV2 name="close" size="large" class="text-pc-icon-muted" />}
                 onClick={() => setStore("filter", "")}
               />
             </Show>

@@ -1,7 +1,7 @@
 import windowState from "electron-window-state"
 import { resolveThemeVariant } from "@prioricode/ui/theme/resolve"
 import type { DesktopTheme } from "@prioricode/ui/theme/types"
-import pc2ThemeJson from "../../../ui/src/theme/themes/pc-2.json"
+import prioricodeThemeJson from "../../../ui/src/theme/themes/prioricode.json"
 import { randomUUID } from "node:crypto"
 import { rmSync } from "node:fs"
 import { app, BrowserWindow, dialog, net, nativeImage, nativeTheme, protocol, shell } from "electron"
@@ -24,10 +24,10 @@ const rendererHost = "renderer"
 const clipboardWritePermission = "clipboard-sanitized-write"
 const notificationPermission = "notifications"
 const rendererPermissions = new Set([clipboardWritePermission, notificationPermission])
-const pc2Theme = pc2ThemeJson as DesktopTheme
-const pc2Background = {
-  light: resolveThemeVariant(pc2Theme.light, false)["background-base"],
-  dark: resolveThemeVariant(pc2Theme.dark, true)["background-base"],
+const prioricodeTheme = prioricodeThemeJson as DesktopTheme
+const prioricodeBackground = {
+  light: resolveThemeVariant(prioricodeTheme.light, false)["background-base"],
+  dark: resolveThemeVariant(prioricodeTheme.dark, true)["background-base"],
 }
 const documentPolicyHeader = "Document-Policy"
 const jsCallStacksDocumentPolicy = "include-js-call-stacks-in-crash-reports"
@@ -99,7 +99,7 @@ function tone() {
 }
 
 function defaultBackgroundColor() {
-  return pc2Background[tone()]
+  return prioricodeBackground[tone()]
 }
 
 function overlay(theme: Partial<TitlebarTheme> = {}, zoom = 1) {

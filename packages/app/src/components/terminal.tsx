@@ -272,7 +272,7 @@ export const Terminal = (props: TerminalProps) => {
     const resolved = resolveThemeVariant(variant, mode === "dark")
     const text = resolved["text-stronger"] ?? fallback.foreground
     const background = settings.general.newLayoutDesigns()
-      ? (resolveV2Token(resolveThemeVariantV2(variant, mode === "dark"), "v2-background-bg-base") ??
+      ? (resolveV2Token(resolveThemeVariantV2(variant, mode === "dark"), "pc-bg-base") ??
         fallback.background)
       : (resolved["background-stronger"] ?? fallback.background)
     const alpha = mode === "dark" ? 0.25 : 0.2

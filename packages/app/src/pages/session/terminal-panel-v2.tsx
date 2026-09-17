@@ -172,12 +172,12 @@ export function TerminalPanelV2(props: { stacked?: boolean } = {}) {
       aria-label={language.t("terminal.title")}
       aria-hidden={!opened()}
       inert={!opened()}
-      class="relative shrink-0 overflow-hidden bg-v2-background-bg-base"
+      class="relative shrink-0 overflow-hidden bg-pc-bg-base"
       classList={{
         "w-full": !isDesktop() || stacked(),
         "min-w-0 h-full flex-1": isDesktop() && opened() && !stacked(),
         "w-0 h-full pointer-events-none": isDesktop() && !opened(),
-        "rounded-[10px] shadow-[var(--v2-elevation-raised)]": isDesktop() && newLayout(),
+        "rounded-[12px] shadow-[var(--pc-elevation-raised)]": isDesktop() && newLayout(),
         "transition-[height] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[height] motion-reduce:transition-none":
           !isDesktop() && !size.active(),
       }}
@@ -214,7 +214,7 @@ export function TerminalPanelV2(props: { stacked?: boolean } = {}) {
           when={terminal.ready()}
           fallback={
             <div class="flex flex-col h-full pointer-events-none">
-              <div class="h-10 flex items-center gap-2 px-2 border-b border-border-weaker-base bg-v2-background-bg-base overflow-hidden">
+              <div class="h-10 flex items-center gap-2 px-2 border-b border-border-weaker-base bg-pc-bg-base overflow-hidden">
                 <For each={handoff()}>
                   {(title) => (
                     <div class="px-2 py-1 rounded-md bg-surface-base text-14-regular text-text-weak truncate max-w-40">

@@ -32,9 +32,9 @@ const unsafeCSS = `
     color-mix(in lab, var(--diffs-bg) 60%, var(--diffs-addition-base))
   );
   --diffs-bg-addition-number-override: var(--diffs-bg-addition-override);
-  --diffs-selection-base: var(--v2-background-bg-accent);
-  --diffs-selection-number-fg: var(--v2-text-text-accent);
-  --diffs-comment-bg: rgb(from var(--v2-background-bg-accent) r g b / 0.06);
+  --diffs-selection-base: var(--pc-bg-accent);
+  --diffs-selection-number-fg: var(--pc-text-accent);
+  --diffs-comment-bg: rgb(from var(--pc-bg-accent) r g b / 0.06);
   /* Use explicit alpha instead of color-mix(..., transparent) to avoid Safari's non-premultiplied interpolation bugs. */
   --diffs-bg-selection: var(--diffs-bg-selection-override, rgb(from var(--diffs-selection-base) r g b / 0.2));
   --diffs-bg-selection-number: var(--diffs-bg-selection-number-override, var(--diffs-bg-selection));

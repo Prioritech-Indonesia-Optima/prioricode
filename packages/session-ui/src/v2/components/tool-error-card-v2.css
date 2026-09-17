@@ -1,11 +1,11 @@
 [data-component="tool-error-card"] {
-  --tec-border: var(--v2-state-fg-danger);
-  --tec-title: var(--v2-text-text-base);
-  --tec-sep: var(--v2-text-text-muted);
-  --tec-subtitle: var(--v2-text-text-muted);
-  --tec-suffix: var(--v2-text-text-faint);
-  --tec-chevron: var(--v2-text-text-faint);
-  --tec-icon: var(--v2-icon-icon-base);
+  --tec-border: var(--pc-state-fg-danger);
+  --tec-title: var(--pc-text-base);
+  --tec-sep: var(--pc-text-muted);
+  --tec-subtitle: var(--pc-text-muted);
+  --tec-suffix: var(--pc-text-faint);
+  --tec-chevron: var(--pc-text-faint);
+  --tec-icon: var(--pc-icon-base);
 
   box-sizing: border-box;
   display: flex;
@@ -36,7 +36,7 @@
   }
 
   [data-slot="tool-error-card-trigger"]:focus-visible {
-    outline: 2px solid var(--v2-border-border-focus);
+    outline: 2px solid var(--pc-border-focus);
     outline-offset: 2px;
   }
 

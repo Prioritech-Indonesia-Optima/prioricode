@@ -196,7 +196,7 @@ function StatusPopoverView(props: { state: StatusPopoverState }) {
         <div class="relative size-4">
           <IconV2 name={props.state.shown ? "status-active" : "status"} />
           <div
-            class={`absolute -top-1 -right-1 size-2 rounded-full border border-[var(--v2-background-bg-deep)] ${serverStatusDotClass(props.state)}`}
+            class={`absolute -top-1 -right-1 size-2 rounded-full border border-[var(--pc-bg-deep)] ${serverStatusDotClass(props.state)}`}
           />
         </div>
       }

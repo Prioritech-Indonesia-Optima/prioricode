@@ -98,7 +98,7 @@ export function SessionTodoDock(props: {
       component={settings.general.newLayoutDesigns() ? "div" : DockTray}
       data-component="session-todo-dock"
       classList={{
-        "w-full overflow-hidden rounded-xl border-[0.5px] border-v2-border-border-base bg-v2-background-bg-layer-01":
+        "w-full overflow-hidden rounded-xl border-[0.5px] border-pc-border-base bg-pc-bg-layer-01":
           settings.general.newLayoutDesigns(),
       }}
       style={{
@@ -127,7 +127,7 @@ export function SessionTodoDock(props: {
           <span
             classList={{
               "cursor-default inline-flex items-baseline shrink-0 overflow-visible": true,
-              "font-[440] text-[13px] leading-5 tracking-[-0.04px] text-v2-text-text-muted":
+              "font-[440] text-[13px] leading-5 tracking-[-0.04px] text-pc-text-muted":
                 settings.general.newLayoutDesigns(),
               "text-14-regular text-text-strong": !settings.general.newLayoutDesigns(),
             }}
@@ -164,7 +164,7 @@ export function SessionTodoDock(props: {
             <TextReveal
               class={
                 settings.general.newLayoutDesigns()
-                  ? "cursor-default text-[13px] font-[440] leading-5 tracking-[-0.04px] text-v2-text-text-faint"
+                  ? "cursor-default text-[13px] font-[440] leading-5 tracking-[-0.04px] text-pc-text-faint"
                   : "text-14-regular text-text-base cursor-default"
               }
               text={props.collapsed ? preview() : undefined}

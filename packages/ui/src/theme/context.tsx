@@ -4,7 +4,7 @@ import { createEffect, onMount } from "solid-js"
 import { createStore } from "solid-js/store"
 import { makeEventListener } from "@solid-primitives/event-listener"
 import { createSimpleContext } from "../context/helper"
-import pc2ThemeJson from "./themes/pc-2.json"
+import prioricodeThemeJson from "./themes/prioricode.json"
 import { resolveThemeVariant, themeToCss } from "./resolve"
 import { resolveThemeVariantV2, themeV2ToCss } from "./v2/resolve"
 import type { DesktopTheme } from "./types"
@@ -14,8 +14,8 @@ export type ColorScheme = "light" | "dark" | "system"
 const STORAGE_KEYS = {
   THEME_ID: "prioricode-theme-id",
   COLOR_SCHEME: "prioricode-color-scheme",
-  THEME_CSS_LIGHT: "prioricode-theme-css-light",
-  THEME_CSS_DARK: "prioricode-theme-css-dark",
+  THEME_CSS_LIGHT: "prioricode-pc-css-light",
+  THEME_CSS_DARK: "prioricode-pc-css-dark",
 } as const
 
 const THEME_STYLE_ID = "pc-theme"
@@ -44,7 +44,6 @@ function knownThemes() {
 }
 
 const names: Record<string, string> = {
-  "pc-2": "PC-2",
   amoled: "AMOLED",
   aura: "Aura",
   ayu: "Ayu",
@@ -82,11 +81,11 @@ const names: Record<string, string> = {
   vesper: "Vesper",
   zenburn: "Zenburn",
 }
-const pc2Theme = pc2ThemeJson as DesktopTheme
+const prioricodeTheme = prioricodeThemeJson as DesktopTheme
 
-// "oc-1"/"oc-2" are the pre-rebrand OpenCode theme ids; stored values migrate forward.
+// "oc-1"/"oc-2" are the pre-rebrand OpenCode theme ids and "pc-2" the pre-block default; stored values migrate forward.
 function normalize(id: string | null | undefined) {
-  if (id === "oc-1" || id === "oc-2") return "pc-2"
+  if (id === "oc-1" || id === "oc-2" || id === "pc-2") return "prioricode"
   return id
 }
 
@@ -139,7 +138,7 @@ function applyThemeCss(theme: DesktopTheme, themeId: string, mode: "light" | "da
   const css = themeToCss(tokens)
   const v2 = themeV2ToCss(resolveThemeVariantV2(variant, isDark))
 
-  if (themeId !== "pc-2") {
+  if (themeId !== "prioricode") {
     write(isDark ? STORAGE_KEYS.THEME_CSS_DARK : STORAGE_KEYS.THEME_CSS_LIGHT, `${css}\n  ${v2}`)
   }
 
@@ -154,15 +153,15 @@ function applyThemeCss(theme: DesktopTheme, themeId: string, mode: "light" | "da
   ensureThemeStyleElement().textContent = fullCss
   document.documentElement.dataset.theme = themeId
   document.documentElement.dataset.colorScheme = mode
-  document.documentElement.style.backgroundColor = isDark ? "#080808" : "#fafafa"
+  document.documentElement.style.backgroundColor = isDark ? "#100f0d" : "#f7f6ef"
 
   // Update theme-color meta tag to match light/dark mode
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute("content", isDark ? "#080808" : "#fafafa")
+  if (meta) meta.setAttribute("content", isDark ? "#100f0d" : "#f7f6ef")
 }
 
 function cacheThemeVariants(theme: DesktopTheme, themeId: string) {
-  if (themeId === "pc-2") return
+  if (themeId === "prioricode") return
   for (const mode of ["light", "dark"] as const) {
     const isDark = mode === "dark"
     const variant = isDark ? theme.dark : theme.light
@@ -179,12 +178,12 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     defaultTheme?: string
     onThemeApplied?: (theme: DesktopTheme, mode: "light" | "dark", scheme: ColorScheme) => void
   }) => {
-    const themeId = normalize(read(STORAGE_KEYS.THEME_ID) ?? props.defaultTheme) ?? "pc-2"
+    const themeId = normalize(read(STORAGE_KEYS.THEME_ID) ?? props.defaultTheme) ?? "prioricode"
     const colorScheme = (read(STORAGE_KEYS.COLOR_SCHEME) as ColorScheme | null) ?? "system"
     const mode = colorScheme === "system" ? getSystemMode() : colorScheme
     const [store, setStore] = createStore({
       themes: {
-        "pc-2": pc2Theme,
+        "prioricode": prioricodeTheme,
       } as Record<string, DesktopTheme>,
       themeId,
       colorScheme,
@@ -237,9 +236,9 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       if (e.key === STORAGE_KEYS.THEME_ID && e.newValue) {
         const next = normalize(e.newValue)
         if (!next) return
-        if (next !== "pc-2" && !knownThemes().has(next) && !store.themes[next]) return
+        if (next !== "prioricode" && !knownThemes().has(next) && !store.themes[next]) return
         setStore("themeId", next)
-        if (next === "pc-2") {
+        if (next === "prioricode") {
           clear()
           return
         }
@@ -265,7 +264,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       makeEventListener(mediaQuery, "change", onMedia)
 
       const rawTheme = read(STORAGE_KEYS.THEME_ID)
-      const savedTheme = normalize(rawTheme ?? props.defaultTheme) ?? "pc-2"
+      const savedTheme = normalize(rawTheme ?? props.defaultTheme) ?? "prioricode"
       const savedScheme = (read(STORAGE_KEYS.COLOR_SCHEME) as ColorScheme | null) ?? "system"
       if (rawTheme && rawTheme !== savedTheme) {
         write(STORAGE_KEYS.THEME_ID, savedTheme)
@@ -292,12 +291,12 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
         console.warn(`Theme "${id}" not found`)
         return
       }
-      if (next !== "pc-2" && !knownThemes().has(next) && !store.themes[next]) {
+      if (next !== "prioricode" && !knownThemes().has(next) && !store.themes[next]) {
         console.warn(`Theme "${id}" not found`)
         return
       }
       setStore("themeId", next)
-      if (next === "pc-2") {
+      if (next === "prioricode") {
         write(STORAGE_KEYS.THEME_ID, next)
         clear()
         return
@@ -329,7 +328,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
       previewTheme: (id: string) => {
         const next = normalize(id)
         if (!next) return
-        if (next !== "pc-2" && !knownThemes().has(next) && !store.themes[next]) return
+        if (next !== "prioricode" && !knownThemes().has(next) && !store.themes[next]) return
         setStore("previewThemeId", next)
         void load(next).then((theme) => {
           if (!theme || store.previewThemeId !== next) return

@@ -16,9 +16,9 @@
 }
 
 [data-dock-border-underlay="v2"] {
-  --dock-shell-visual-shadow: var(--v2-elevation-raised);
+  --dock-shell-visual-shadow: var(--pc-elevation-raised);
   --dock-shell-border-underlay-width: 0.5px;
-  --dock-shell-border-underlay-background: var(--v2-background-bg-base);
+  --dock-shell-border-underlay-background: var(--pc-bg-base);
 }
 
 [data-dock-surface="tray"] {

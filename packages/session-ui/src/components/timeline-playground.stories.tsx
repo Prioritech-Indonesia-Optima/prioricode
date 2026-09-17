@@ -2011,7 +2011,7 @@ function Playground() {
       {/* Main area: timeline preview */}
       <div
         ref={previewRef!}
-        style={{ flex: "1", overflow: "auto", "min-width": "0", "background-color": "var(--v2-background-bg-base)" }}
+        style={{ flex: "1", overflow: "auto", "min-width": "0", "background-color": "var(--pc-bg-base)" }}
       >
         <DataProvider data={data()} directory="/project">
           <FileComponentProvider component={FileStub}>

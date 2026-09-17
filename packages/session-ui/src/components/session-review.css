@@ -21,7 +21,7 @@
 
   [data-slot="session-review-header"] {
     z-index: 120;
-    background-color: var(--v2-background-bg-base);
+    background-color: var(--pc-bg-base);
     height: 40px;
     padding-bottom: 8px;
     flex-shrink: 0;
@@ -213,7 +213,7 @@
 
   [data-slot="session-review-large-diff"] {
     padding: 12px;
-    background: var(--v2-background-bg-base);
+    background: var(--pc-bg-base);
   }
 
   [data-slot="session-review-large-diff-title"] {

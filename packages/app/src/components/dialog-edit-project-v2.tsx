@@ -38,16 +38,16 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
           </Field>
 
           <div class="flex w-full flex-col gap-2">
-            <div class="select-none text-[13px] font-[530] leading-none tracking-[-0.04px] text-v2-text-text-base">
+            <div class="select-none text-[13px] font-[530] leading-none tracking-[-0.04px] text-pc-text-base">
               {language.t("dialog.project.edit.icon")}
             </div>
             <div class="flex items-center gap-3">
               <button
                 type="button"
                 aria-label={language.t("dialog.project.edit.icon.alt")}
-                class="relative size-16 shrink-0 cursor-pointer overflow-hidden rounded-[6px] outline outline-1 outline-transparent transition-[background-color,outline-color] focus-visible:outline-v2-border-border-focus"
+                class="relative size-16 shrink-0 cursor-pointer overflow-hidden rounded-[6px] outline outline-1 outline-transparent transition-[background-color,outline-color] focus-visible:outline-pc-border-focus"
                 classList={{
-                  "bg-v2-overlay-simple-overlay-hover outline-v2-border-border-focus": model.store.dragOver,
+                  "bg-pc-overlay-hover outline-pc-border-focus": model.store.dragOver,
                 }}
                 onMouseEnter={() => model.setStore("iconHover", true)}
                 onMouseLeave={() => model.setStore("iconHover", false)}
@@ -67,7 +67,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                   class="!size-16 [&_[data-slot=project-avatar-surface]]:!rounded-[6px] [&_[data-slot=project-avatar-surface]]:!text-[32px]"
                 />
                 <span
-                  class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-[6px] bg-v2-background-bg-contrast/80 text-v2-icon-icon-contrast backdrop-blur-[2px] transition-opacity"
+                  class="pointer-events-none absolute inset-0 flex items-center justify-center rounded-[6px] bg-pc-bg-contrast/80 text-pc-icon-contrast backdrop-blur-[2px] transition-opacity"
                   classList={{
                     "opacity-100": model.store.iconHover,
                     "opacity-0": !model.store.iconHover,
@@ -85,7 +85,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                 class="hidden"
                 onChange={model.inputChange}
               />
-              <div class="flex select-none flex-col gap-[6px] text-[11px] font-[440] leading-none tracking-[0.05px] text-v2-text-text-muted">
+              <div class="flex select-none flex-col gap-[6px] text-[11px] font-[440] leading-none tracking-[0.05px] text-pc-text-muted">
                 <span>{language.t("dialog.project.edit.icon.hint")}</span>
                 <span>{language.t("dialog.project.edit.icon.recommended")}</span>
               </div>
@@ -94,7 +94,7 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
 
           <Show when={!model.store.iconOverride}>
             <div class="flex w-full flex-col gap-2">
-              <div class="select-none text-[13px] font-[530] leading-none tracking-[-0.04px] text-v2-text-text-base">
+              <div class="select-none text-[13px] font-[530] leading-none tracking-[-0.04px] text-pc-text-base">
                 {language.t("dialog.project.edit.color")}
               </div>
               <div class="-ml-1 flex gap-1.5">
@@ -104,9 +104,9 @@ export function DialogEditProjectV2(props: { project: LocalProject; server: Serv
                       type="button"
                       aria-label={language.t("dialog.project.edit.color.select", { color })}
                       aria-pressed={getProjectAvatarVariant(model.store.color) === color}
-                      class="flex size-8 items-center justify-center rounded-[10px] p-1 outline outline-1 outline-transparent transition-[background-color,outline-color] hover:bg-v2-overlay-simple-overlay-hover focus-visible:outline-v2-border-border-focus"
+                      class="flex size-8 items-center justify-center rounded-[12px] p-1 outline outline-1 outline-transparent transition-[background-color,outline-color] hover:bg-pc-overlay-hover focus-visible:outline-pc-border-focus"
                       classList={{
-                        "bg-v2-overlay-simple-overlay-hover [box-shadow:inset_0_0_0_2px_var(--v2-border-border-focus)]":
+                        "bg-pc-overlay-hover [box-shadow:inset_0_0_0_2px_var(--pc-border-focus)]":
                           getProjectAvatarVariant(model.store.color) === color,
                       }}
                       onClick={() => {

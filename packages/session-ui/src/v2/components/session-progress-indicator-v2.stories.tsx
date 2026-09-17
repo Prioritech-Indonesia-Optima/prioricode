@@ -17,7 +17,7 @@ Derived from Figma \`_sessionProgressIndicator\` with 8-frame rotation.
 - Sets \`aria-hidden="true"\` by default.
 
 ### Theming
-- Uses \`currentColor\` via \`--v2-icon-icon-muted\`.
+- Uses \`currentColor\` via \`--pc-icon-muted\`.
 `
 
 export default {
