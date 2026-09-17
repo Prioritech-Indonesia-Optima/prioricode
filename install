@@ -355,7 +355,7 @@ download_and_install() {
 
     if [[ "$os" == "windows" ]] || ! [ -t 2 ] || ! download_with_progress "$url" "$tmp_dir/$filename"; then
         # Fallback to standard curl on Windows, non-TTY environments, or if custom progress fails
-        curl -# -L -o "$tmp_dir/$filename" "$url"
+        curl -# -L --retry 3 --retry-delay 2 --retry-all-errors -o "$tmp_dir/$filename" "$url"
     fi
 
     if [ "$os" = "linux" ]; then
