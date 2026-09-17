@@ -1,4 +1,5 @@
 import type { Argv } from "yargs"
+import semver from "semver"
 import { UI } from "../ui"
 import * as prompts from "@clack/prompts"
 import { Installation } from "../../installation"
@@ -26,7 +27,7 @@ export const UpgradeCommand = {
     UI.empty()
     prompts.intro("Upgrade")
     const detectedMethod = await Installation.method()
-    const method = (args.method as Installation.Method) ?? detectedMethod
+    let method = (args.method as Installation.Method) ?? detectedMethod
     if (method === "unknown") {
       prompts.log.error(`prioricode is installed to ${process.execPath} and may be managed by a package manager`)
       const install = await prompts.select({
@@ -41,12 +42,26 @@ export const UpgradeCommand = {
         prompts.outro("Done")
         return
       }
+      method = "curl"
     }
     prompts.log.info("Using method: " + method)
-    const target = args.target ? args.target.replace(/^v/, "") : await Installation.latest()
+    const target = args.target ? args.target.replace(/^v/, "") : await Installation.latest(method)
 
     if (InstallationVersion === target) {
       prompts.log.warn(`prioricode upgrade skipped: ${target} is already installed`)
+      prompts.outro("Done")
+      return
+    }
+
+    if (
+      !args.target &&
+      semver.valid(InstallationVersion) &&
+      semver.valid(target) &&
+      semver.gt(InstallationVersion, target)
+    ) {
+      prompts.log.warn(
+        `prioricode upgrade skipped: installed version ${InstallationVersion} is newer than available ${target}`,
+      )
       prompts.outro("Done")
       return
     }
