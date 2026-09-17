@@ -15,7 +15,7 @@ Usage: install.sh [options]
 
 Options:
     -h, --help              Display this help message
-    -v, --version <version> Install a specific version (e.g., 1.0.180)
+    -v, --version <version> Install a specific version (e.g., 0.1.0)
     -b, --binary <path>     Install from a local binary instead of downloading
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
 
@@ -28,7 +28,7 @@ Environment:
 
 Examples:
     curl -fsSL https://code.prioritech.co.id/install | bash
-    curl -fsSL https://code.prioritech.co.id/install | bash -s -- --version 1.0.180
+    curl -fsSL https://code.prioritech.co.id/install | bash -s -- --version 0.1.0
     PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://code.prioritech.co.id/install | bash
     ./install --binary /path/to/prioricode
 EOF
@@ -476,10 +476,7 @@ if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
 fi
 
 echo -e ""
-echo -e "${MUTED}                    ${NC}             ▄     "
-echo -e "${MUTED}█▀▀█ █▀▀█ █▀▀█ █▀▀▄ ${NC}█▀▀▀ █▀▀█ █▀▀█ █▀▀█"
-echo -e "${MUTED}█░░█ █░░█ █▀▀▀ █░░█ ${NC}█░░░ █░░█ █░░█ █▀▀▀"
-echo -e "${MUTED}▀▀▀▀ █▀▀▀ ▀▀▀▀ ▀  ▀ ${NC}▀▀▀▀ ▀▀▀▀ ▀▀▀▀ ▀▀▀▀"
+echo -e "${ORANGE}PrioriCode${NC} ${MUTED}— The open source AI coding agent${NC}"
 echo -e ""
 echo -e ""
 echo -e "${MUTED}PrioriCode includes free models, to start:${NC}"
