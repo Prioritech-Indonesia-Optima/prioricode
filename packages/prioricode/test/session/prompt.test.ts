@@ -28,7 +28,7 @@ import { Todo } from "../../src/session/todo"
 import { Session } from "@/session/session"
 import { Coordination } from "@/session/coordination"
 import { CoordinationWatcher } from "@/session/coordination-watcher"
-import { SessionMessageTable } from "@prioricode/core/session/sql"
+import { SessionMessageTable, SessionTable } from "@prioricode/core/session/sql"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { FSUtil } from "@prioricode/core/fs-util"
@@ -48,6 +48,8 @@ import { SystemPrompt } from "../../src/session/system"
 import { Shell } from "@prioricode/core/shell"
 import { Snapshot } from "../../src/snapshot"
 import { ToolRegistry } from "@/tool/registry"
+import { SessionsTool } from "@/tool/sessions"
+import { Tool } from "@/tool/tool"
 import { Truncate } from "@/tool/truncate"
 import { CrossSpawnSpawner } from "@prioricode/core/cross-spawn-spawner"
 import { Ripgrep } from "@prioricode/core/ripgrep"
@@ -2545,6 +2547,27 @@ noLLMServer.instance(
   30_000,
 )
 
+const toolCtx = (sessionID: SessionID): Tool.Context => ({
+  sessionID,
+  messageID: MessageID.make("msg_coord_tool_test"),
+  callID: "",
+  agent: "build",
+  abort: new AbortController().signal,
+  messages: [],
+  metadata: () => Effect.void,
+  ask: () => Effect.void,
+})
+
+const setLastActive = Effect.fn("test.setLastActive")(function* (sessionID: SessionID, time: number) {
+  const { db } = yield* Database.Service
+  yield* db
+    .update(SessionTable)
+    .set({ time_updated: time })
+    .where(eq(SessionTable.id, sessionID))
+    .run()
+    .pipe(Effect.orDie)
+})
+
 describe("cross-session coordination", () => {
   coordinationIt.instance(
     "injects pending coordination notes into the model system context at the turn boundary",
@@ -2647,10 +2670,13 @@ describe("cross-session coordination", () => {
         // Delivered exactly once: the recipient's unread inbox is drained.
         expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(0)
 
-        // The target actually ran a turn whose transcript carries the note.
+        // The target ran a turn triggered by the generic wake message, and the note
+        // body reached the model via the turn's system context (the single delivery point).
         const messages = yield* sessions.messages({ sessionID: target.id })
         const transcript = JSON.stringify(messages.map((message) => message.parts))
-        expect(transcript).toContain("WAKE_NOTE_456")
+        expect(transcript).toContain(Coordination.wakePrompt)
+        const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
+        expect(requests).toContain("WAKE_NOTE_456")
         expect(yield* llm.calls).toBeGreaterThanOrEqual(1)
       }),
     20_000,
@@ -2696,5 +2722,431 @@ describe("cross-session coordination", () => {
         yield* Fiber.interrupt(busy)
       }),
     20_000,
+  )
+
+  coordinationIt.instance(
+    "send fails for an unknown target id without posting anything",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const caller = yield* sessions.create({ title: "caller" })
+        const def = yield* Tool.init(yield* SessionsTool)
+
+        const out = yield* def.execute(
+          { action: "send", target: SessionID.make("ses_does_not_exist"), message: "hello" },
+          toolCtx(caller.id),
+        )
+        expect(out.title).toBe("sessions:error")
+        expect(out.output).toContain("never guess or invent session ids")
+
+        // A hallucinated target must not create an orphan queued note.
+        expect(
+          yield* coordination.inbox({ sessionID: SessionID.make("ses_does_not_exist"), kinds: ["message"] }),
+        ).toHaveLength(0)
+      }),
+    15_000,
+  )
+
+  coordinationIt.instance(
+    "send to an archived sibling is refused",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const caller = yield* sessions.create({ title: "caller" })
+        const archived = yield* sessions.create({ title: "archived peer" })
+        yield* sessions.setArchived({ sessionID: archived.id, time: Date.now() })
+        const def = yield* Tool.init(yield* SessionsTool)
+
+        const out = yield* def.execute({ action: "send", target: archived.id, message: "hello" }, toolCtx(caller.id))
+        expect(out.title).toBe("sessions:error")
+        expect(out.output).toContain("archived")
+      }),
+    15_000,
+  )
+
+  coordinationIt.instance(
+    "send posts durably to a recent sibling and promises a user-visible wake",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const caller = yield* sessions.create({ title: "caller" })
+        const peer = yield* sessions.create({ title: "recent peer" })
+        const def = yield* Tool.init(yield* SessionsTool)
+
+        const out = yield* def.execute(
+          { action: "send", target: peer.id, message: "COORD_SEND_1" },
+          toolCtx(caller.id),
+        )
+        expect(out.output).toContain("will wake within seconds")
+        expect(out.output).toContain("tell the user")
+        expect(out.output).not.toContain("WARNING")
+
+        const unread = yield* coordination.inbox({ sessionID: peer.id, kinds: ["message"], unreadOnly: true })
+        expect(unread.map((item) => item.body)).toEqual(["COORD_SEND_1"])
+      }),
+    15_000,
+  )
+
+  coordinationIt.instance(
+    "send to a stale sibling still posts but warns the sender",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const caller = yield* sessions.create({ title: "caller" })
+        const stale = yield* sessions.create({ title: "stale peer" })
+        yield* setLastActive(stale.id, Date.now() - 8 * 24 * 60 * 60 * 1000)
+        const def = yield* Tool.init(yield* SessionsTool)
+
+        const out = yield* def.execute({ action: "send", target: stale.id, message: "COORD_STALE" }, toolCtx(caller.id))
+        expect(out.output).toContain("WARNING")
+        expect(out.output).toContain("abandoned")
+        expect(
+          yield* coordination.inbox({ sessionID: stale.id, kinds: ["message"], unreadOnly: true }),
+        ).toHaveLength(1)
+      }),
+    15_000,
+  )
+
+  coordinationIt.instance(
+    "discover labels sibling recency and flags stale sessions",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const caller = yield* sessions.create({ title: "caller" })
+        const fresh = yield* sessions.create({ title: "fresh peer" })
+        const stale = yield* sessions.create({ title: "stale peer" })
+        yield* setLastActive(stale.id, Date.now() - 8 * 24 * 60 * 60 * 1000)
+        const def = yield* Tool.init(yield* SessionsTool)
+
+        const out = yield* def.execute({ action: "discover" }, toolCtx(caller.id))
+        expect(out.output).toContain(`${fresh.id} "fresh peer"`)
+        expect(out.output).toContain("last active")
+        expect(out.output).toContain(`${stale.id} "stale peer"`)
+        const staleLine = out.output.split("\n").find((line) => line.includes(stale.id))
+        expect(staleLine).toContain("STALE")
+        const freshLine = out.output.split("\n").find((line) => line.includes(fresh.id))
+        expect(freshLine).not.toContain("STALE")
+      }),
+    15_000,
+  )
+})
+
+const countOccurrences = (haystack: string, needle: string) => haystack.split(needle).length - 1
+
+describe("cross-session coordination stress", () => {
+  coordinationIt.instance(
+    "concurrent claimUnread partitions notes exactly once",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const target = yield* sessions.create({ title: "target" })
+        for (let i = 0; i < 20; i++) {
+          yield* coordination.post({
+            projectID: target.projectID,
+            kind: "message",
+            fromSession: sender.id,
+            toSession: target.id,
+            body: `RACE_NOTE_${i}`,
+          })
+        }
+        const claims = yield* Effect.all(
+          Array.from({ length: 10 }, () => coordination.claimUnread(target.id)),
+          { concurrency: "unbounded" },
+        )
+        const all = claims.flat()
+        expect(all).toHaveLength(20)
+        expect(new Set(all.map((item) => item.id)).size).toBe(20)
+        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(0)
+      }),
+    15_000,
+  )
+
+  coordinationIt.instance(
+    "repeated sweeps deliver every note exactly once and the model sees each",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const targets: Session.Info[] = []
+        for (let t = 0; t < 5; t++) {
+          targets.push(
+            yield* sessions.create({
+              title: `target-${t}`,
+              permission: [{ permission: "*", pattern: "*", action: "allow" }],
+            }),
+          )
+        }
+        const post = (t: number, i: number) =>
+          coordination.post({
+            projectID: targets[t].projectID,
+            kind: "message",
+            fromSession: sender.id,
+            toSession: targets[t].id,
+            body: `S2_T${t}_N${i}`,
+          })
+
+        for (let t = 0; t < 5; t++) yield* post(t, 0)
+        yield* watcher.sweep()
+        for (let t = 0; t < 5; t++) {
+          yield* post(t, 1)
+          yield* post(t, 2)
+        }
+        yield* watcher.sweep()
+        yield* watcher.sweep()
+
+        for (let t = 0; t < 5; t++) {
+          expect(
+            yield* coordination.inbox({ sessionID: targets[t].id, kinds: ["message"], unreadOnly: true }),
+          ).toHaveLength(0)
+          // Each target was woken (generic trigger in the transcript).
+          const messages = yield* sessions.messages({ sessionID: targets[t].id })
+          const transcript = JSON.stringify(messages.map((message) => message.parts))
+          expect(transcript).toContain(Coordination.wakePrompt)
+        }
+        // Each note reached the model's system context exactly once (single delivery point).
+        const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
+        for (let t = 0; t < 5; t++) for (let i = 0; i < 3; i++)
+          expect(countOccurrences(requests, `S2_T${t}_N${i}`)).toBe(1)
+      }),
+    30_000,
+  )
+
+  coordinationIt.instance(
+    "parallel sweeps never deliver a note twice and drain every inbox",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const targets: Session.Info[] = []
+        for (let t = 0; t < 4; t++) {
+          targets.push(
+            yield* sessions.create({
+              title: `race-${t}`,
+              permission: [{ permission: "*", pattern: "*", action: "allow" }],
+            }),
+          )
+        }
+        for (let t = 0; t < 4; t++)
+          for (let i = 0; i < 3; i++)
+            yield* coordination.post({
+              projectID: targets[t].projectID,
+              kind: "message",
+              fromSession: sender.id,
+              toSession: targets[t].id,
+              body: `P_T${t}_N${i}`,
+            })
+
+        // Simulates two instances sweeping the same project at once.
+        yield* Effect.all([watcher.sweep(), watcher.sweep(), watcher.sweep(), watcher.sweep()], {
+          concurrency: "unbounded",
+        })
+
+        for (let t = 0; t < 4; t++) {
+          expect(
+            yield* coordination.inbox({ sessionID: targets[t].id, kinds: ["message"], unreadOnly: true }),
+          ).toHaveLength(0)
+          const messages = yield* sessions.messages({ sessionID: targets[t].id })
+          const transcript = JSON.stringify(messages.map((message) => message.parts))
+          expect(transcript).toContain(Coordination.wakePrompt)
+        }
+        // Each note reached the model's system context exactly once despite 4 racing sweeps.
+        const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
+        for (let t = 0; t < 4; t++) for (let i = 0; i < 3; i++)
+          expect(countOccurrences(requests, `P_T${t}_N${i}`)).toBe(1)
+        expect(yield* llm.calls).toBeGreaterThanOrEqual(4)
+      }),
+    30_000,
+  )
+
+  coordinationIt.instance(
+    "a note posted mid-turn gets its own follow-up turn via the re-check loop",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const target = yield* sessions.create({
+          title: "target",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+
+        // First note triggers a wake whose model call we hold open past the boundary claim.
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: target.id,
+          body: "MIDTURN_A",
+        })
+        let resolveHold: () => void = () => {}
+        const holdPromise = new Promise<void>((resolve) => {
+          resolveHold = resolve
+        })
+        yield* llm.hold("done-a", holdPromise)
+        yield* llm.push(reply().text("done-b"))
+
+        const sweepFiber = yield* watcher.sweep().pipe(Effect.forkChild)
+        // Wait until the wake turn's model call is in flight (past the boundary claim).
+        yield* awaitWithTimeout(llm.wait(1), "wake turn never reached the model", "10 seconds")
+
+        // Second note arrives while the first turn is still running.
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: target.id,
+          body: "MIDTURN_B",
+        })
+
+        // Release the first turn; the re-check loop must then wake a follow-up turn for B.
+        resolveHold()
+        const exit = yield* Fiber.await(sweepFiber)
+        expect(Exit.isSuccess(exit)).toBe(true)
+        if (Exit.isSuccess(exit)) expect(exit.value).toBe(1)
+
+        expect(
+          yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true }),
+        ).toHaveLength(0)
+        const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
+        expect(countOccurrences(requests, "MIDTURN_A")).toBe(1)
+        expect(countOccurrences(requests, "MIDTURN_B")).toBe(1)
+      }),
+    30_000,
+  )
+
+  coordinationIt.instance(
+    "parallel asks each receive exactly their own response",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const def = yield* Tool.init(yield* SessionsTool)
+        const sender = yield* sessions.create({ title: "asker" })
+        const target = yield* sessions.create({ title: "answerer" })
+
+        const asks = Array.from({ length: 5 }, (_, i) =>
+          def.execute({ action: "ask", target: target.id, message: `Q_${i}`, timeout: 20 }, toolCtx(sender.id)),
+        )
+        const fiber = yield* Effect.all(asks, { concurrency: "unbounded" }).pipe(Effect.forkChild)
+
+        const pending = yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const items = yield* coordination.inbox({ sessionID: target.id, kinds: ["request"], unreadOnly: true })
+            return items.length === 5 ? items : undefined
+          }),
+          "all five requests never arrived in the target inbox",
+          "10 seconds",
+        )
+        yield* Effect.forEach(
+          pending,
+          (request) =>
+            coordination.post({
+              projectID: target.projectID,
+              kind: "response",
+              fromSession: target.id,
+              toSession: sender.id,
+              body: `A_${request.body}`,
+              replyTo: request.id,
+            }),
+          { concurrency: "unbounded" },
+        )
+
+        const results = yield* Fiber.await(fiber)
+        expect(Exit.isSuccess(results)).toBe(true)
+        if (Exit.isSuccess(results)) {
+          results.value.forEach((out, i) => {
+            expect(out.output).toContain(`Response from ${target.id}`)
+            expect(out.output).toContain(`A_Q_${i}`)
+          })
+        }
+      }),
+    30_000,
+  )
+
+  coordinationIt.instance(
+    "parallel sends validate targets independently",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const def = yield* Tool.init(yield* SessionsTool)
+        const caller = yield* sessions.create({ title: "caller" })
+        const real = yield* sessions.create({ title: "real peer" })
+
+        const results = yield* Effect.all(
+          Array.from({ length: 10 }, (_, i) =>
+            def.execute(
+              i % 2 === 0
+                ? { action: "send", target: SessionID.make(`ses_missing_${i}`), message: `M_${i}` }
+                : { action: "send", target: real.id, message: `M_${i}` },
+              toolCtx(caller.id),
+            ),
+          ),
+          { concurrency: "unbounded" },
+        )
+        const errors = results.filter((result) => result.title === "sessions:error")
+        const ok = results.filter((result) => result.title !== "sessions:error")
+        expect(errors).toHaveLength(5)
+        expect(ok).toHaveLength(5)
+        for (const result of errors) expect(result.output).toContain("never guess or invent session ids")
+        expect(yield* coordination.inbox({ sessionID: real.id, kinds: ["message"], unreadOnly: true })).toHaveLength(5)
+      }),
+    15_000,
+  )
+
+  coordinationIt.instance(
+    "the periodic watcher wakes an idle session without any manual sweep",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const target = yield* sessions.create({
+          title: "sleeper",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+
+        // Start the real 2s poll loop for this instance, then just post a note.
+        yield* watcher.init()
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: target.id,
+          body: "PERIODIC_WAKE_1",
+        })
+
+        // Wait until the periodic watcher woke the session and the model saw the note.
+        yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const hits = yield* llm.hits
+            return hits.some((hit) => JSON.stringify(hit.body).includes("PERIODIC_WAKE_1")) ? true : undefined
+          }),
+          "the periodic watcher never delivered the note to the model",
+          "15 seconds",
+        )
+        expect(
+          yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true }),
+        ).toHaveLength(0)
+        const messages = yield* sessions.messages({ sessionID: target.id })
+        const transcript = JSON.stringify(messages.map((message) => message.parts))
+        expect(transcript).toContain(Coordination.wakePrompt)
+      }),
+    30_000,
   )
 })

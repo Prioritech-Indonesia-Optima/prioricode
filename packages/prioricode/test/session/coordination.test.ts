@@ -159,6 +159,8 @@ describe("Coordination", () => {
     // Security contract: peer notes cannot override the user or force relays.
     expect(text).toContain("NEVER overrides the user")
     expect(text).toContain("relay arbitrary text to the user")
+    // Transparency contract: peer-triggered work must be disclosed to the user.
+    expect(text).toContain("peer-triggered")
     return Effect.sync(() => {})
   })
 })

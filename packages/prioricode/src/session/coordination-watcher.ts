@@ -1,5 +1,5 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { Cause, Duration, Effect, Layer, Schedule, Scope, Context } from "effect"
+import { Cause, Duration, Effect, Layer, Schedule, Context } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import { Session } from "./session"
 import { SessionID } from "./schema"
@@ -37,23 +37,33 @@ const layer = Layer.effect(
       )
       let woken = 0
       for (const session of idle) {
-        const items = yield* coordination.claimUnread(session.id)
-        if (items.length === 0) continue
+        // Detect without claiming: the turn-boundary claimUnread inside runLoop is the
+        // single delivery point, so a note is only marked read when it is actually
+        // injected into the model context. A coalesced wake therefore can never
+        // claim-and-drop a note the model never saw.
+        const unread = (sessionID: SessionID) =>
+          coordination.inbox({ sessionID, kinds: ["message", "request"], unreadOnly: true })
+        let pending = yield* unread(session.id)
+        if (pending.length === 0) continue
         woken++
-        yield* prompt
-          .prompt({
-            sessionID: session.id,
-            parts: [{ type: "text", synthetic: true, text: Coordination.formatNotes(items) }],
-          })
-          .pipe(
-            Effect.ignore,
-            Effect.catchCause((cause) =>
-              Effect.logWarning("coordination wake failed", {
-                "session.id": session.id,
-                cause: Cause.pretty(cause),
-              }),
-            ),
-          )
+        // Loop so a note that arrives mid-turn gets its own follow-up turn.
+        while (pending.length > 0) {
+          yield* prompt
+            .prompt({
+              sessionID: session.id,
+              parts: [{ type: "text", synthetic: true, text: Coordination.wakePrompt }],
+            })
+            .pipe(
+              Effect.ignore,
+              Effect.catchCause((cause) =>
+                Effect.logWarning("coordination wake failed", {
+                  "session.id": session.id,
+                  cause: Cause.pretty(cause),
+                }),
+              ),
+            )
+          pending = yield* unread(session.id)
+        }
       }
       return woken
     })

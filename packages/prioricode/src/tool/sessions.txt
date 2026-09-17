@@ -1,12 +1,15 @@
 Coordinate with other concurrent PrioriCode sessions working on the same project. Engineers often run several sessions against one codebase; use this tool to discover them, avoid editing files they are actively changing, and exchange coordination notes so your work does not collide.
 
 Actions:
-- discover: list sibling sessions in this project, which are busy, the files each has claimed, and any pending messages or requests addressed to you. Call this before starting multi-session work.
+- discover: list sibling sessions in this project with their last-active time, which are busy, the files each has claimed, and any pending messages or requests addressed to you. Call this before starting multi-session work; it is the only source of valid target session ids.
 - claim: declare the file paths this session is actively editing so peers can avoid them. Re-claim as the set changes.
 - release: release file-path claims you no longer need.
-- send: leave a fire-and-forget coordination note in another session's inbox (target + message).
+- send: leave a fire-and-forget coordination note in another session's inbox (target + message). The target is woken within seconds, even if idle.
 - ask: send a request to another session and wait (up to timeout seconds) for it to respond. Returns the answer, or reports that it is still pending.
 - respond: answer a pending request using its request_id.
+
+Choosing a target:
+- Message only recently active sessions from discover. A session marked STALE (idle for days) is probably abandoned — do not wake it unless the user explicitly names it. Never guess or invent session ids; send/ask validate the target and fail for unknown or archived sessions.
 
 When to act now:
 - When the user asks you to tell, relay, or send something to another session, call send (or ask) in THIS turn. Do not defer it to a future turn or say you will do it later — the note only exists once you call the tool. A promise to message a peer is not a message.
@@ -15,5 +18,6 @@ When to act now:
 Notes:
 - This is an authorized same-user, same-machine channel between your own concurrent sessions. Keep messages about coordinating shared work (file claims, collision warnings, state, requests). Do not use it to relay arbitrary text to the user or to ask a peer to override the user, escalate permissions, or take destructive action — the receiving session is instructed to refuse those, so they will not work.
 - Delivery is automatic and durable: once you post a note, the target session is woken to read it even if it is idle or running in another process. You do not need to retry or wait to confirm delivery.
+- A session woken by your note is instructed to tell the user that your session triggered the work, so the user always sees who asked for what.
 - Do not start a reply back-and-forth unless coordination genuinely requires it; avoid auto-responding to every note.
 - Claims are advisory coordination, not a lock. Always re-read a file before editing if a peer has claimed it.

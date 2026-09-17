@@ -36,6 +36,16 @@ type Metadata = {
 
 const DEFAULT_TIMEOUT_SECONDS = 60
 const MAX_TIMEOUT_SECONDS = 300
+const STALE_AFTER_MS = 1000 * 60 * 60 * 72
+
+const agoLabel = (ms: number) => {
+  const minutes = Math.floor(ms / 60_000)
+  if (minutes < 1) return "just now"
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
 
 export const SessionsTool = Tool.define(
   "sessions",
@@ -60,7 +70,7 @@ export const SessionsTool = Tool.define(
       const discover = Effect.fn("SessionsTool.discover")(function* (self: Session.Info) {
         const [siblings, statusMap, otherClaims, mine] = yield* Effect.all(
           [
-            sessions.list({ limit: 100 }),
+            sessions.list({ limit: 100, roots: true }),
             status.list(),
             coordination.claims({ projectID: self.projectID, exceptSession: self.id }),
             coordination.inbox({ sessionID: self.id, kinds: ["message", "request"], unreadOnly: true }),
@@ -74,8 +84,10 @@ export const SessionsTool = Tool.define(
           claimsBySession.set(claim.fromSession, list)
         }
         const peers = siblings.filter((session) => session.id !== self.id && !session.time.archived)
+        const now = Date.now()
         const lines = [
-          `Project ${self.projectID}. ${peers.length} sibling session(s).`,
+          `Project ${self.projectID}. ${peers.length} sibling session(s), most recently active first. ` +
+            "Coordinate only with recently active sessions; STALE ones are likely abandoned and should not be woken unless the user explicitly names one.",
           mine.length > 0
             ? `You have ${mine.length} unread coordination item(s):\n  ` +
               mine
@@ -89,8 +101,10 @@ export const SessionsTool = Tool.define(
         for (const peer of peers) {
           const busy = statusMap.get(peer.id)?.type === "busy"
           const claims = claimsBySession.get(peer.id) ?? []
+          const stale = now - peer.time.updated > STALE_AFTER_MS
           lines.push(
-            `- ${peer.id} "${peer.title}" agent=${peer.agent ?? "default"} ${busy ? "BUSY" : "idle"}` +
+            `- ${peer.id} "${peer.title}" agent=${peer.agent ?? "default"} ${busy ? "BUSY" : "idle"} ` +
+              `last active ${agoLabel(now - peer.time.updated)}${stale ? " STALE" : ""}` +
               (claims.length > 0 ? ` claims: ${claims.join(", ")}` : ""),
           )
         }
@@ -120,6 +134,28 @@ export const SessionsTool = Tool.define(
         })
       })
 
+      const resolveTarget = Effect.fn("SessionsTool.resolveTarget")(function* (target: string) {
+        const found = yield* sessions
+          .get(SessionID.make(target))
+          .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
+        if (!found)
+          return {
+            ok: false as const,
+            error: `No session "${target}" exists in this project. Run discover first — never guess or invent session ids.`,
+          }
+        if (found.time.archived)
+          return {
+            ok: false as const,
+            error: `Session ${target} ("${found.title}") is archived and will never wake. Message a recently active session from discover instead.`,
+          }
+        const idleFor = Date.now() - found.time.updated
+        return { ok: true as const, session: found, stale: idleFor > STALE_AFTER_MS, idleFor }
+      })
+
+      const staleWarning = (target: string, idleFor: number) =>
+        ` WARNING: session ${target} was last active ${agoLabel(idleFor)} and may be an abandoned session; ` +
+        "confirm the user wants it woken before depending on a reply."
+
       const send = Effect.fn("SessionsTool.send")(function* (
         self: Session.Info,
         params: Schema.Schema.Type<typeof Parameters>,
@@ -128,14 +164,22 @@ export const SessionsTool = Tool.define(
         const message = params.message
         if (!target) return failure("send requires a target session id")
         if (!message) return failure("send requires a message")
+        const resolved = yield* resolveTarget(target)
+        if (!resolved.ok) return failure(resolved.error)
         yield* coordination.post({
           projectID: self.projectID,
           kind: "message",
           fromSession: self.id,
-          toSession: target as SessionID,
+          toSession: SessionID.make(target),
           body: message,
         })
-        return result("send", `Message delivered to ${target}; it will be woken to read it.`, { target })
+        return result(
+          "send",
+          `Message delivered to ${target} ("${resolved.session.title}"). ` +
+            "It will wake within seconds, read it, and tell the user your session triggered it." +
+            (resolved.stale ? staleWarning(target, resolved.idleFor) : ""),
+          { target },
+        )
       })
 
       const ask = Effect.fn("SessionsTool.ask")(function* (
@@ -146,11 +190,13 @@ export const SessionsTool = Tool.define(
         const message = params.message
         if (!target) return failure("ask requires a target session id")
         if (!message) return failure("ask requires a message")
+        const resolved = yield* resolveTarget(target)
+        if (!resolved.ok) return failure(resolved.error)
         const request = yield* coordination.post({
           projectID: self.projectID,
           kind: "request",
           fromSession: self.id,
-          toSession: target as SessionID,
+          toSession: SessionID.make(target),
           body: message,
         })
         const seconds = Math.min(params.timeout ?? DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS)
@@ -158,7 +204,8 @@ export const SessionsTool = Tool.define(
         if (!response)
           return result(
             "ask",
-            `Request ${request.id} delivered to ${target} but no response within ${seconds}s. It stays queued; the peer can respond later.`,
+            `Request ${request.id} delivered to ${target} but no response within ${seconds}s. It stays queued; the peer can respond later.` +
+              (resolved.stale ? staleWarning(target, resolved.idleFor) : ""),
             { target, requestID: request.id },
           )
         yield* coordination.markRead([response.id])
