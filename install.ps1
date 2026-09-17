@@ -98,7 +98,7 @@ if ($existing) {
 
 Write-Host ""
 Write-MutedN "Installing $app "
-Write-Muted "version: "
+Write-MutedN "version: "
 Write-Host $specificVersion
 
 # --- download + extract ---
