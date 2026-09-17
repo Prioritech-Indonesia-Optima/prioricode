@@ -414,7 +414,18 @@ install_clipboard_support() {
     local on_wayland=false
     if [ -n "${DISPLAY:-}" ] || [ "${XDG_SESSION_TYPE:-}" = "x11" ]; then on_x11=true; fi
     if [ -n "${WAYLAND_DISPLAY:-}" ] || [ "${XDG_SESSION_TYPE:-}" = "wayland" ]; then on_wayland=true; fi
-    if [ "$on_x11" != "true" ] && [ "$on_wayland" != "true" ]; then return 0; fi
+    # SSH login shells do not inherit a desktop session's environment. Probe the
+    # invoking user's compositor sockets so an install run over SSH against a
+    # desktop machine still detects it and sets clipboard tools up.
+    if [ "$on_x11" != "true" ] || [ "$on_wayland" != "true" ]; then
+        local runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+        if [ "$on_wayland" != "true" ] && compgen -G "$runtime_dir/wayland-*" >/dev/null 2>&1; then on_wayland=true; fi
+        if [ "$on_x11" != "true" ] && compgen -G "/tmp/.X11-unix/X*" >/dev/null 2>&1; then on_x11=true; fi
+    fi
+    if [ "$on_x11" != "true" ] && [ "$on_wayland" != "true" ]; then
+        print_message info "Skipped clipboard tools install: no X11/Wayland session detected. Image paste needs wl-clipboard (Wayland) or xclip (X11)."
+        return 0
+    fi
 
     local -a packages=()
     if [ "$on_wayland" = "true" ] && ! command -v wl-paste >/dev/null 2>&1; then
