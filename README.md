@@ -80,7 +80,7 @@ The install script respects the following priority order for the installation pa
 
 ```bash
 # Examples
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://code.prioritech.co.id/install | bash
+curl -fsSL https://code.prioritech.co.id/install | PRIORICODE_INSTALL_DIR=/usr/local/bin bash
 XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://code.prioritech.co.id/install | bash
 ```
 

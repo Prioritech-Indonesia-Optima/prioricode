@@ -90,8 +90,8 @@ Tập lệnh cài đặt tuân theo thứ tự ưu tiên sau cho đường dẫn
 
 ```bash
 # Ví dụ
-PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://prioritech.co.id/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://prioritech.co.id/install | bash
+curl -fsSL https://prioritech.co.id/install | PRIORICODE_INSTALL_DIR=/usr/local/bin bash
+curl -fsSL https://prioritech.co.id/install | XDG_BIN_DIR=$HOME/.local/bin bash
 ```
 
 ### Agents (Đại diện)

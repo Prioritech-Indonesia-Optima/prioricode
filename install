@@ -18,10 +18,12 @@ Options:
     -v, --version <version> Install a specific version (e.g., 0.1.0)
     -b, --binary <path>     Install from a local binary instead of downloading
         --no-modify-path    Don't modify shell config files (.zshrc, .bashrc, etc.)
+        --no-clipboard      Skip automatic installation of Linux clipboard tools
 
 Environment:
     PRIORICODE_INSTALL_DIR  Custom installation directory (highest priority)
     XDG_BIN_DIR             XDG-compliant directory, e.g. $HOME/.local/bin
+    PRIORICODE_NO_CLIPBOARD Set to 1 to skip automatic clipboard tool installation
 
     Install directory priority: $PRIORICODE_INSTALL_DIR > $XDG_BIN_DIR >
     $HOME/bin > $HOME/.prioricode/bin
@@ -29,13 +31,14 @@ Environment:
 Examples:
     curl -fsSL https://code.prioritech.co.id/install | bash
     curl -fsSL https://code.prioritech.co.id/install | bash -s -- --version 0.1.0
-    PRIORICODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://code.prioritech.co.id/install | bash
+    curl -fsSL https://code.prioritech.co.id/install | PRIORICODE_INSTALL_DIR=/usr/local/bin bash
     ./install --binary /path/to/prioricode
 EOF
 }
 
 requested_version=${VERSION:-}
 no_modify_path=false
+no_clipboard=false
 binary_path=""
 
 while [[ $# -gt 0 ]]; do
@@ -64,6 +67,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --no-modify-path)
             no_modify_path=true
+            shift
+            ;;
+        --no-clipboard)
+            no_clipboard=true
             shift
             ;;
         *)
@@ -383,6 +390,101 @@ install_from_binary() {
     chmod 755 "${INSTALL_DIR}/prioricode"
 }
 
+clipboard_pkg_install() {
+    local sudo_bin="$1"
+    shift
+    if [ -n "$sudo_bin" ]; then
+        "$sudo_bin" "$@"
+    else
+        "$@"
+    fi
+}
+
+# Image paste in the TUI depends on wl-clipboard (Wayland) or xclip (X11) on
+# Linux; every other platform reads the clipboard through system tools. Install
+# the missing helper automatically so pasted screenshots work out of the box.
+# Best-effort only: nothing in here may fail the prioricode install itself.
+install_clipboard_support() {
+    if [ "$(uname -s)" != "Linux" ]; then return 0; fi
+    if [ "$no_clipboard" = "true" ] || [ "${PRIORICODE_NO_CLIPBOARD:-}" = "1" ]; then return 0; fi
+    if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then return 0; fi
+    if grep -qiE "microsoft|wsl" /proc/version 2>/dev/null; then return 0; fi
+
+    local on_x11=false
+    local on_wayland=false
+    if [ -n "${DISPLAY:-}" ] || [ "${XDG_SESSION_TYPE:-}" = "x11" ]; then on_x11=true; fi
+    if [ -n "${WAYLAND_DISPLAY:-}" ] || [ "${XDG_SESSION_TYPE:-}" = "wayland" ]; then on_wayland=true; fi
+    if [ "$on_x11" != "true" ] && [ "$on_wayland" != "true" ]; then return 0; fi
+
+    local -a packages=()
+    if [ "$on_wayland" = "true" ] && ! command -v wl-paste >/dev/null 2>&1; then
+        packages+=("wl-clipboard")
+    fi
+    if [ "$on_x11" = "true" ] && ! command -v xclip >/dev/null 2>&1 && ! command -v xsel >/dev/null 2>&1; then
+        packages+=("xclip")
+    fi
+    if [ ${#packages[@]} -eq 0 ]; then return 0; fi
+
+    local manager=""
+    local -a manager_args=()
+    if command -v apt-get >/dev/null 2>&1; then
+        manager="apt-get"; manager_args=("install" "-y" "--no-install-recommends")
+    elif command -v dnf >/dev/null 2>&1; then
+        manager="dnf"; manager_args=("install" "-y")
+    elif command -v yum >/dev/null 2>&1; then
+        manager="yum"; manager_args=("install" "-y")
+    elif command -v pacman >/dev/null 2>&1; then
+        manager="pacman"; manager_args=("-S" "--noconfirm" "--needed")
+    elif command -v zypper >/dev/null 2>&1; then
+        manager="zypper"; manager_args=("install" "-y")
+    elif command -v apk >/dev/null 2>&1; then
+        manager="apk"; manager_args=("add")
+    else
+        print_message warning "Could not detect a supported package manager. For image paste, install ${packages[*]} manually."
+        return 0
+    fi
+
+    local stdin_source="/dev/null"
+    local sudo_bin=""
+    if [ "$(id -u)" -eq 0 ]; then
+        sudo_bin=""
+    elif command -v sudo >/dev/null 2>&1; then
+        sudo_bin="sudo"
+        print_message info "\n${MUTED}Installing ${NC}${packages[*]}${MUTED} for TUI image paste (sudo may ask for your password)...${NC}"
+        if tty -s 2>/dev/null </dev/tty; then
+            if ! sudo -v </dev/tty; then
+                print_message warning "Could not obtain sudo access. Skipping clipboard tool install."
+                return 0
+            fi
+            stdin_source="/dev/tty"
+        fi
+    else
+        print_message warning "Need sudo to install ${packages[*]}. For image paste, install them manually."
+        return 0
+    fi
+
+    if [ -z "$sudo_bin" ]; then
+        print_message info "\n${MUTED}Installing ${NC}${packages[*]}${MUTED} for TUI image paste...${NC}"
+    fi
+
+    if clipboard_pkg_install "$sudo_bin" "$manager" "${manager_args[@]}" "${packages[@]}" <"$stdin_source"; then
+        print_message info "Clipboard tools installed. Image paste is ready."
+        return 0
+    fi
+
+    if [ "$manager" = "apt-get" ]; then
+        print_message info "${MUTED}Refreshing package index and retrying...${NC}"
+        clipboard_pkg_install "$sudo_bin" apt-get update -y <"$stdin_source" >/dev/null 2>&1 || true
+        if clipboard_pkg_install "$sudo_bin" "$manager" "${manager_args[@]}" "${packages[@]}" <"$stdin_source"; then
+            print_message info "Clipboard tools installed. Image paste is ready."
+            return 0
+        fi
+    fi
+
+    print_message warning "Could not install ${packages[*]} automatically. Image paste can still be used by installing them manually or dragging a file into the prompt."
+    return 0
+}
+
 if [ -n "$binary_path" ]; then
     install_from_binary
 else
@@ -409,7 +511,7 @@ add_to_path() {
 
 XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
 
-current_shell=$(basename "$SHELL")
+current_shell=$(basename "${SHELL:-sh}")
 case $current_shell in
     fish)
         config_files="$HOME/.config/fish/config.fish"
@@ -474,6 +576,8 @@ if [ -n "${GITHUB_ACTIONS-}" ] && [ "${GITHUB_ACTIONS}" == "true" ]; then
     echo "$INSTALL_DIR" >> $GITHUB_PATH
     print_message info "Added $INSTALL_DIR to \$GITHUB_PATH"
 fi
+
+install_clipboard_support
 
 echo -e ""
 echo -e "${ORANGE}PrioriCode${NC} ${MUTED}— The open source AI coding agent${NC}"
