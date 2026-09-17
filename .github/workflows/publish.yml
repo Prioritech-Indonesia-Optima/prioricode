@@ -34,7 +34,7 @@ permissions:
 jobs:
   version:
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    if: github.repository == 'Prioritech-Indonesia-Optima/prioricode'
+    if: github.repository == 'Prioritech-Indonesia-Optima/prioricode' && vars.PRIORICODE_APP_ID != ''
     steps:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
@@ -407,7 +407,7 @@ jobs:
       - build-cli
       - sign-cli-windows
       - build-electron
-    if: always() && !failure() && !cancelled()
+    if: always() && !failure() && !cancelled() && vars.PRIORICODE_APP_ID != ''
     runs-on: blacksmith-4vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0

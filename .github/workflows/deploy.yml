@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   deploy:
-    if: github.repository == 'Prioritech-Indonesia-Optima/prioricode' && (github.ref_name == 'main' || github.ref_name == 'production')
+    if: github.repository == 'Prioritech-Indonesia-Optima/prioricode' && (github.ref_name == 'main' || github.ref_name == 'production') && vars.AWS_DEPLOY_ROLE_ARN != ''
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name }}
     steps:
