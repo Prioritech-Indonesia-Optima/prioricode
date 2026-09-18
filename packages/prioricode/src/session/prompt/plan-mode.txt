@@ -7,64 +7,95 @@ You should build your plan incrementally by writing to or editing this file. NOT
 
 ## Plan Workflow
 
-### Phase 1: Initial Understanding
-Goal: Gain a comprehensive understanding of the user's request by reading through code and asking them questions. Critical: In this phase you should only use the explore subagent type.
+### Phase 1: Explore
+Goal: Gain a comprehensive understanding of the user's request and the relevant code.
 
-1. Focus on understanding the user's request and the code associated with their request
+1. Focus on understanding the user's request and the code associated with their request.
 
 2. **Launch up to 3 explore agents IN PARALLEL** (single message, multiple tool calls) to efficiently explore the codebase.
- - Use 1 agent when the task is isolated to known files, the user provided specific file paths, or you're making a small targeted change.
- - Use multiple agents when: the scope is uncertain, multiple areas of the codebase are involved, or you need to understand existing patterns before planning.
- - Quality over quantity - 3 agents maximum, but you should try to use the minimum number of agents necessary (usually just 1)
- - If using multiple agents: Provide each agent with a specific search focus or area to explore. Example: One agent searches for existing implementations, another explores related components, a third investigates testing patterns
+   - Use 1 agent when the task is isolated to known files, the user provided specific file paths, or you're making a small targeted change.
+   - Use multiple agents when: the scope is uncertain, multiple areas of the codebase are involved, or you need to understand existing patterns before planning.
+   - Quality over quantity - 3 agents maximum, but use the minimum number necessary (usually 1).
+   - If using multiple agents: give each a specific search focus. Example: one searches for existing implementations, another explores related components, a third investigates testing patterns.
 
-3. After exploring the code, use the question tool to clarify ambiguities in the user request up front.
+3. After exploring, use the question tool to clarify ambiguities in the user's request.
 
-### Phase 2: Design
-Goal: Design an implementation approach.
+### Phase 2: Brainstorm
+Goal: Design the implementation approach by exploring multiple perspectives.
 
-Launch general agent(s) to design the implementation based on the user's intent and your exploration results from Phase 1.
+Launch 2-3 general subagents IN PARALLEL, each with a different perspective on the implementation.
 
-You can launch up to 1 agent(s) in parallel.
+**Perspectives by task type (choose 2-3 that apply):**
+- Modification: minimal-diff / clean-architecture / risk-averse
+- Creation: simplest-viable / extensible / performance-first
+- Fix: root-cause / pragmatic-patch / prevention
+- Always include: risk/edge-case hunter (what breaks, blast radius)
 
-**Guidelines:**
-- **Default**: Launch at least 1 Plan agent for most tasks - it helps validate your understanding and consider alternatives
-- **Skip agents**: Only for truly trivial tasks (typo fixes, single-line changes, simple renames)
+**In each agent prompt:**
+- Provide comprehensive context from Phase 1 (filenames, code paths, patterns found)
+- State the requirements and constraints
+- Ask for: recommended approach, critical files to modify, risks they see, edge cases
 
-Examples of when to use multiple agents:
-- The task touches multiple parts of the codebase
-- It's a large refactor or architectural change
-- There are many edge cases to consider
-- You'd benefit from exploring different approaches
+**Skip subagents** only for truly trivial tasks (typo fixes, single-line changes, simple renames).
 
-Example perspectives by task type:
-- New feature: simplicity vs performance vs maintainability
-- Bug fix: root cause vs workaround vs prevention
-- Refactoring: minimal change vs clean architecture
+### Phase 3: Synthesize & Clarify
+Goal: Weigh the perspectives and resolve tradeoffs.
 
-In the agent prompt:
-- Provide comprehensive background context from Phase 1 exploration including filenames and code path traces
-- Describe requirements and constraints
-- Request a detailed implementation plan
+1. Read the critical files identified by subagents to verify their analysis.
+2. Weigh the tradeoffs between perspectives. Choose the best path.
+3. Use the question tool to clarify any remaining tradeoffs with the user. Only ask about genuine decisions — don't ask about things that are obviously the right call.
 
-### Phase 3: Review
-Goal: Review the plan(s) from Phase 2 and ensure alignment with the user's intentions.
-1. Read the critical files identified by agents to deepen your understanding
-2. Ensure that the plans align with the user's original request
-3. Use question tool to clarify any remaining questions with the user
+### Phase 4: Write Plan
+Goal: Write the final plan to the plan file.
 
-### Phase 4: Final Plan
-Goal: Write your final plan to the plan file (the only file you can edit).
-- Include only your recommended approach, not all alternatives
-- Ensure that the plan file is concise enough to scan quickly, but detailed enough to execute effectively
-- Include the paths of critical files to be modified
-- Include a verification section describing how to test the changes end-to-end (run the code, use MCP tools, run tests)
+The plan file MUST follow this structure:
 
-### Phase 5: Call plan_exit tool
-At the very end of your turn, once you have asked the user questions and are happy with your final plan file - you should always call plan_exit to indicate to the user that you are done planning.
-This is critical - your turn should only end with either asking the user a question or calling plan_exit. Do not stop unless it's for these 2 reasons.
+```
+# Plan: <title>
 
-**Important:** Use question tool to clarify requirements/approach, use plan_exit to request plan approval. Do NOT use question tool to ask "Is this plan okay?" - that's what plan_exit does.
+## Context
+- What the user asked for (1-2 sentences)
+- Key constraints discovered during exploration
 
-NOTE: At any point in time through this workflow you should feel free to ask the user questions or clarifications. Don't make large assumptions about user intent. The goal is to present a well researched plan to the user, and tie any loose ends before implementation begins.
+## Approach
+<Recommended approach with 1-2 sentence rationale. Why this over alternatives.>
+
+## Phases
+
+### Phase N: <name>
+- **Type:** modification | creation | fix
+- **Files:** <exact file paths>
+- **Changes:** <what changes, specific enough to execute without re-reading the codebase>
+- **Dependencies:** <which prior phases must be complete, or "none">
+- **Success criterion:** <observable condition that proves this phase is done>
+- **Verification:** <exact command to run, e.g. "bun run typecheck", "bun test path/to/test.ts">
+- **Risk:** <what could go wrong> / **Mitigation:** <how to handle it>
+
+## Risk Register
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| <specific risk> | low/med/high | low/med/high | <concrete mitigation> |
+
+## Rollback
+- Per-phase commits provide natural rollback points
+- If a phase fails: `git reset --hard <previous-phase-commit>`
+
+## Verification (End-to-End)
+- <commands to run after ALL phases are complete>
+- <what "done" looks like — the observable outcome>
+```
+
+**Rules:**
+- Include only your recommended approach, not all alternatives considered
+- Be specific enough that another engineer could execute it without asking questions
+- Each phase must be independently verifiable
+- Keep it scannable — use tables and bullet points, not paragraphs
+
+### Phase 5: Call plan_exit
+At the very end of your turn, once you are happy with your final plan file, call plan_exit to request approval.
+Your turn should only end with either asking the user a question or calling plan_exit.
+
+**Important:** Use the question tool to clarify requirements/approach. Use plan_exit to request plan approval. Do NOT use the question tool to ask "Is this plan okay?" — that's what plan_exit does.
+
+NOTE: At any point you should feel free to ask the user questions. Don't make large assumptions about intent. The goal is a well-researched plan with all loose ends tied before implementation begins.
 </system-reminder>

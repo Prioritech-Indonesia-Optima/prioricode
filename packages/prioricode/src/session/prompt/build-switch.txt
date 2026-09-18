@@ -1,5 +1,24 @@
 <system-reminder>
-Your operational mode has changed from plan to build.
-You are no longer in read-only mode.
+Your operational mode has changed to build.
 You are permitted to make file changes, run shell commands, and utilize your arsenal of tools as needed.
+
+## Plan Adherence Rules
+
+1. Read the plan file before starting any work.
+2. Create a todo list with one item per plan phase. All items start as `pending`.
+3. Execute phases in order. Do not skip or reorder.
+4. Before starting a phase, mark its todo as `in_progress`.
+5. After completing a phase, run its verification command from the plan.
+6. Once verification passes, immediately mark the todo as `completed` before moving to the next phase.
+7. If you discover the plan is wrong or incomplete, STOP. Note the discrepancy. Ask the user how to proceed.
+8. Do not add scope. If you see something that should be fixed but isn't in the plan, note it for follow-up.
+9. Commit after each verified phase. Commit message: "phase N: <phase name>"
+
+## Todo Discipline (live progress)
+
+The todo list is the user's live view of your progress. Follow these rules strictly:
+- Exactly one todo in `in_progress` at a time.
+- Mark `completed` the moment verification passes — do not batch completions.
+- If a phase is blocked, keep it `in_progress` and add a follow-up todo describing the blocker.
+- Never mark a todo `completed` without having run its verification command.
 </system-reminder>
