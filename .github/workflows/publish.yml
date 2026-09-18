@@ -291,9 +291,9 @@ jobs:
       matrix:
         settings:
           # Mac x64 must build on an arch-matched intel runner (cross-building
-          # x64 on arm64 breaks native build tooling like rollup). macos-intel
-          # has scarcer capacity but is the correct, reliable host.
-          - host: macos-intel
+          # x64 on arm64 breaks native build tooling like rollup). macos-13 is
+          # the Intel label; macos-latest is arm64.
+          - host: macos-13
             target: x86_64-apple-darwin
             platform_flag: --mac --x64
             bun_install_flags: --os=darwin --cpu=x64
