@@ -29,8 +29,7 @@
     border-radius: 4px;
     border: none;
     background:
-      linear-gradient(180deg, var(--pc-alpha-light-0) 0%, var(--pc-alpha-light-20) 100%),
-      var(--pc-bg-layer-04);
+      linear-gradient(180deg, var(--pc-alpha-light-0) 0%, var(--pc-alpha-light-20) 100%), var(--pc-bg-layer-04);
     box-shadow: var(--pc-elevation-switch-off);
     transition:
       background 90ms ease-out,
@@ -45,13 +44,7 @@
     transform: translateX(0);
     border-radius: 2px;
     border: 0.5px solid var(--pc-depth-top);
-    background:
-      linear-gradient(
-        180deg,
-        var(--pc-depth-top) 0%,
-        var(--pc-depth-bot) 100%
-      ),
-      var(--pc-grey-200);
+    background: linear-gradient(180deg, var(--pc-depth-top) 0%, var(--pc-depth-bot) 100%), var(--pc-grey-200);
     box-shadow: var(--pc-elevation-elements);
     transition:
       transform 90ms ease-out,
@@ -89,8 +82,7 @@
   &:hover:not([data-disabled], [data-readonly]) [data-slot="switch-control"] {
     background:
       linear-gradient(0deg, var(--pc-overlay-hover), var(--pc-overlay-hover)),
-      linear-gradient(180deg, var(--pc-alpha-light-0) 0%, var(--pc-alpha-light-20) 100%),
-      var(--pc-bg-layer-04);
+      linear-gradient(180deg, var(--pc-alpha-light-0) 0%, var(--pc-alpha-light-20) 100%), var(--pc-bg-layer-04);
   }
 
   &:hover:not([data-disabled], [data-readonly]) [data-slot="switch-thumb"] {
@@ -104,21 +96,14 @@
   }
 
   &[data-checked] [data-slot="switch-control"] {
-    background:
-      linear-gradient(180deg, var(--pc-alpha-light-0) 0%, var(--pc-alpha-light-10) 100%), var(--pc-bg-accent);
+    background: linear-gradient(180deg, var(--pc-alpha-light-0) 0%, var(--pc-alpha-light-10) 100%), var(--pc-bg-accent);
     box-shadow: var(--pc-elevation-switch-on);
   }
 
   &[data-checked] [data-slot="switch-thumb"] {
     transform: translateX(8px);
     border-radius: 2px;
-    background:
-      linear-gradient(
-        180deg,
-        var(--pc-depth-top) 0%,
-        var(--pc-depth-bot) 100%
-      ),
-      var(--pc-grey-300);
+    background: linear-gradient(180deg, var(--pc-depth-top) 0%, var(--pc-depth-bot) 100%), var(--pc-grey-300);
   }
 
   &:dir(rtl)[data-checked] [data-slot="switch-thumb"] {
@@ -127,11 +112,7 @@
 
   &[data-checked]:hover:not([data-disabled], [data-readonly]) [data-slot="switch-control"] {
     background:
-      linear-gradient(
-        0deg,
-        var(--pc-overlay-contrast-hover),
-        var(--pc-overlay-contrast-hover)
-      ),
+      linear-gradient(0deg, var(--pc-overlay-contrast-hover), var(--pc-overlay-contrast-hover)),
       linear-gradient(180deg, var(--pc-alpha-light-0) 0%, var(--pc-alpha-light-10) 100%), var(--pc-bg-accent);
   }
 

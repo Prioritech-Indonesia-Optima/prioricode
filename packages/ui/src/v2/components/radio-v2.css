@@ -89,8 +89,7 @@
     border: none;
     box-shadow: inset 0 0 0 0.5px var(--pc-border-strong);
 
-    background:
-      linear-gradient(180deg, var(--pc-alpha-light-6) 0%, var(--pc-alpha-light-0) 100%), var(--pc-bg-base);
+    background: linear-gradient(180deg, var(--pc-alpha-light-6) 0%, var(--pc-alpha-light-0) 100%), var(--pc-bg-base);
     transition:
       background 170ms ease-out,
       opacity 170ms ease-out,
@@ -117,18 +116,13 @@
   }
 
   &:where([data-checked]) [data-slot="radio-v2-item-control"] {
-    background:
-      linear-gradient(180deg, var(--pc-alpha-light-20) 0%, var(--pc-alpha-light-0) 100%), var(--pc-bg-accent);
+    background: linear-gradient(180deg, var(--pc-alpha-light-20) 0%, var(--pc-alpha-light-0) 100%), var(--pc-bg-accent);
   }
 
   &:where([data-checked]):where(:hover):where(:not([data-disabled], [data-readonly]))
     [data-slot="radio-v2-item-control"] {
     background:
-      linear-gradient(
-        0deg,
-        var(--pc-overlay-contrast-hover),
-        var(--pc-overlay-contrast-hover)
-      ),
+      linear-gradient(0deg, var(--pc-overlay-contrast-hover), var(--pc-overlay-contrast-hover)),
       linear-gradient(180deg, var(--pc-alpha-light-20) 0%, var(--pc-alpha-light-0) 100%), var(--pc-bg-accent);
   }
 

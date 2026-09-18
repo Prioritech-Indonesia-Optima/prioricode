@@ -936,7 +936,8 @@ export const dict = {
   "settings.general.row.appearance.title": "Изглед",
   "settings.general.row.appearance.description": "Приспособете како изгледа PrioriCode на вашиот уред",
   "settings.general.row.colorScheme.title": "Шема на бои",
-  "settings.general.row.colorScheme.description": "Изберете дали PrioriCode ја следи системската, светла или темна тема",
+  "settings.general.row.colorScheme.description":
+    "Изберете дали PrioriCode ја следи системската, светла или темна тема",
   "settings.general.row.theme.title": "Тема",
   "settings.general.row.theme.description": "Приспособете како PrioriCode е тематизирана.",
   "settings.general.row.font.title": "Фонт на код",
@@ -995,7 +996,8 @@ export const dict = {
   "settings.general.row.releaseNotes.title": "Белешки за ослободување",
   "settings.general.row.releaseNotes.description": "Прикажи скокачки прозорци „Што има ново“ по ажурирањата",
   "settings.updates.row.startup.title": "Проверете дали има ажурирања при стартување",
-  "settings.updates.row.startup.description": "Автоматски проверувајте дали има ажурирања кога ќе се стартува PrioriCode",
+  "settings.updates.row.startup.description":
+    "Автоматски проверувајте дали има ажурирања кога ќе се стартува PrioriCode",
   "settings.updates.row.check.title": "Проверете дали има ажурирања",
   "settings.updates.row.check.description": "Рачно проверете дали има ажурирања и инсталирајте ако е достапно",
   "settings.updates.action.checkNow": "Проверете сега",

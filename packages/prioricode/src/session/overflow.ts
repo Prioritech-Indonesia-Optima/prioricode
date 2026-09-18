@@ -33,7 +33,7 @@ export function triggerPoint(input: { cfg: ConfigV1.Info; model: Provider.Model;
 
   const context = effectiveContext(input.cfg, input.model)
   if (context === 0) return 0
-  return Math.max(0, Math.floor(context * Math.min(threshold, 100) / 100))
+  return Math.max(0, Math.floor((context * Math.min(threshold, 100)) / 100))
 }
 
 export function isOverflow(input: {

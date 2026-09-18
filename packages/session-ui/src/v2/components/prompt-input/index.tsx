@@ -637,10 +637,7 @@ export function PromptInputV2Popover(props: {
           </div>
         )}
       </Show>
-      <Show
-        when={props.items.length > 0}
-        fallback={<div class="px-2 py-1 text-pc-text-muted">{props.emptyLabel}</div>}
-      >
+      <Show when={props.items.length > 0} fallback={<div class="px-2 py-1 text-pc-text-muted">{props.emptyLabel}</div>}>
         <For each={props.items}>
           {(item) => (
             <button

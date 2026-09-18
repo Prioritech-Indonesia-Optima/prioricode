@@ -74,7 +74,7 @@ export const vesperTheme = vesperThemeJson as DesktopTheme
 export const zenburnTheme = zenburnThemeJson as DesktopTheme
 
 export const DEFAULT_THEMES: Record<string, DesktopTheme> = {
-  "prioricode": prioricodeTheme,
+  prioricode: prioricodeTheme,
   amoled: amoledTheme,
   aura: auraTheme,
   ayu: ayuTheme,

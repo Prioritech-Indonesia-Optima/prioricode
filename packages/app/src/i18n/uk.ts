@@ -1027,7 +1027,8 @@ export const dict = {
   "settings.general.row.appearance.title": "Зовнішній вигляд",
   "settings.general.row.appearance.description": "Налаштуйте вигляд PrioriCode на вашому пристрої",
   "settings.general.row.colorScheme.title": "Кольорова схема",
-  "settings.general.row.colorScheme.description": "Виберіть, чи PrioriCode використовує системну, світлу або темну тему",
+  "settings.general.row.colorScheme.description":
+    "Виберіть, чи PrioriCode використовує системну, світлу або темну тему",
   "settings.general.row.theme.title": "Тема",
   "settings.general.row.theme.description": "Налаштуйте тему PrioriCode.",
   "settings.general.row.font.title": "Шрифт коду",

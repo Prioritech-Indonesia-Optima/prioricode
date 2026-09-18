@@ -14,10 +14,8 @@ export function DialogModelSettings(props: { providerID: string; modelID: string
   const sync = useSync()
   const toast = useToast()
 
-  const model = createMemo(() =>
-    sync.data.provider
-      .find((provider) => provider.id === props.providerID)
-      ?.models[props.modelID],
+  const model = createMemo(
+    () => sync.data.provider.find((provider) => provider.id === props.providerID)?.models[props.modelID],
   )
 
   const title = createMemo(() => model()?.name ?? props.modelID)
@@ -59,7 +57,9 @@ export function DialogModelSettings(props: { providerID: string; modelID: string
           }
           void apply(write(parsed), label)
         }}
-        onCancel={() => dialog.replace(() => <DialogModelSettings providerID={props.providerID} modelID={props.modelID} />)}
+        onCancel={() =>
+          dialog.replace(() => <DialogModelSettings providerID={props.providerID} modelID={props.modelID} />)
+        }
       />
     ))
   }
@@ -103,12 +103,9 @@ export function DialogModelSettings(props: { providerID: string; modelID: string
             ? "not set"
             : `${sync.data.config.compaction.threshold}%`,
         onSelect: () =>
-          promptNumber(
-            "Compaction threshold (%)",
-            sync.data.config.compaction?.threshold,
-            "85",
-            (v) => ({ compaction: { ...sync.data.config.compaction, threshold: Math.min(v, 100) } }),
-          ),
+          promptNumber("Compaction threshold (%)", sync.data.config.compaction?.threshold, "85", (v) => ({
+            compaction: { ...sync.data.config.compaction, threshold: Math.min(v, 100) },
+          })),
       },
     ]
   })

@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # hoặc github:Prioritech-Indonesia-Optima
 
 PrioriCode cũng có sẵn dưới dạng ứng dụng desktop. Tải trực tiếp từ [trang releases](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) hoặc [prioritech.co.id/download](https://prioritech.co.id/download).
 
-| Nền tảng              | Tải xuống                          |
-| --------------------- | ---------------------------------- |
+| Nền tảng              | Tải xuống                            |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, hoặc AppImage      |
+| Linux                 | `.deb`, `.rpm`, hoặc AppImage        |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode là một fork của [OpenCode](https://github.com/anomalyco/opencode
 
 ### So sánh PrioriCode với OpenCode
 
-| Tính năng | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| Tác nhân lập trình AI mã nguồn mở (TUI + desktop) | ✓ | ✓ |
-| Nhiều nhà cung cấp LLM, plugin và MCP | ✓ | ✓ |
-| Tích hợp GitHub Actions | ✓ | ✓ |
-| Nén ngữ cảnh có thể điều chỉnh | ✓ | ✓ |
-| Phối hợp giữa các phiên (công cụ `sessions`) | — | ✓ |
+| Tính năng                                         | OpenCode | PrioriCode |
+| ------------------------------------------------- | :------: | :--------: |
+| Tác nhân lập trình AI mã nguồn mở (TUI + desktop) |    ✓     |     ✓      |
+| Nhiều nhà cung cấp LLM, plugin và MCP             |    ✓     |     ✓      |
+| Tích hợp GitHub Actions                           |    ✓     |     ✓      |
+| Nén ngữ cảnh có thể điều chỉnh                    |    ✓     |     ✓      |
+| Phối hợp giữa các phiên (công cụ `sessions`)      |    —     |     ✓      |
 
 **Phối hợp giữa các phiên.** Các phiên PrioriCode chạy đồng thời trên cùng một dự án có thể phối hợp thông qua công cụ `sessions` tích hợp: khám phá các phiên anh chị em, yêu cầu các tệp để tránh xung đột chỉnh sửa, gửi tin nhắn và đặt câu hỏi với thời gian chờ có giới hạn. Ghi chú là bền vững và được chuyển tự động — một watcher nền đánh thức một phiên nhàn rỗi để nó đọc ghi chú của một phiên khác mà không cần poll.
 
@@ -140,4 +140,3 @@ Nếu bạn muốn đóng góp cho PrioriCode, vui lòng đọc [tài liệu hư
 Nếu bạn đang làm việc trên một dự án liên quan đến PrioriCode và sử dụng "prioricode" như một phần của tên dự án, ví dụ "prioricode-dashboard" hoặc "prioricode-mobile", vui lòng thêm một ghi chú vào README của bạn để làm rõ rằng dự án đó không được xây dựng bởi đội ngũ PrioriCode và không liên kết với chúng tôi dưới bất kỳ hình thức nào.
 
 ---
-

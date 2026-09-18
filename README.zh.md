@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # 或用 github:Prioritech-Indonesia-Optima
 
 PrioriCode 也提供桌面版应用。可直接从 [发布页 (releases page)](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) 或 [prioritech.co.id/download](https://prioritech.co.id/download) 下载。
 
-| 平台                  | 下载文件                           |
-| --------------------- | ---------------------------------- |
+| 平台                  | 下载文件                             |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`、`.rpm` 或 AppImage         |
+| Linux                 | `.deb`、`.rpm` 或 AppImage           |
 
 ```bash
 # macOS (Homebrew Cask)
@@ -114,13 +114,13 @@ PrioriCode 是 [OpenCode](https://github.com/anomalyco/opencode)（开源 AI 编
 
 ### PrioriCode 与 OpenCode 的对比
 
-| 功能 | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| 开源 AI 编程代理（TUI + 桌面端） | ✓ | ✓ |
-| 多 LLM 提供商、插件与 MCP | ✓ | ✓ |
-| GitHub Actions 集成 | ✓ | ✓ |
-| 可调用的上下文压缩 | ✓ | ✓ |
-| 跨会话协作（`sessions` 工具） | — | ✓ |
+| 功能                             | OpenCode | PrioriCode |
+| -------------------------------- | :------: | :--------: |
+| 开源 AI 编程代理（TUI + 桌面端） |    ✓     |     ✓      |
+| 多 LLM 提供商、插件与 MCP        |    ✓     |     ✓      |
+| GitHub Actions 集成              |    ✓     |     ✓      |
+| 可调用的上下文压缩               |    ✓     |     ✓      |
+| 跨会话协作（`sessions` 工具）    |    —     |     ✓      |
 
 **跨会话协作.** 在同一项目上并行的多个 PrioriCode 会话可通过内置的 `sessions` 工具协作：发现同级会话、声明文件以避免编辑冲突、发送消息，以及带超时等待地提问。笔记是持久化的并自动投递——后台监视器会唤醒空闲会话，使其无需轮询即可读取来自其他会话的笔记。
 
@@ -139,4 +139,3 @@ PrioriCode 是 [OpenCode](https://github.com/anomalyco/opencode)（开源 AI 编
 如果你在项目名中使用了 “prioricode”（如 “prioricode-dashboard” 或 “prioricode-mobile”），请在 README 里注明该项目不是 PrioriCode 团队官方开发，且不存在隶属关系。
 
 ---
-

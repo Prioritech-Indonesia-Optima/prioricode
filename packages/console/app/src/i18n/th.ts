@@ -663,7 +663,8 @@ export const dict = {
   "workspace.black.subscription.useBalance": "ใช้ยอดเงินคงเหลือของคุณหลังจากถึงขีดจำกัดการใช้งานแล้ว",
   "workspace.black.waitlist.title": "รายชื่อรอ",
   "workspace.black.waitlist.joined": "คุณอยู่ในรายชื่อรอสำหรับแผน PrioriCode Black ราคา ${{plan}} ต่อเดือน",
-  "workspace.black.waitlist.ready": "เราพร้อมที่จะลงทะเบียนให้คุณเข้าสู่แผน PrioriCode Black ราคา ${{plan}} ต่อเดือนแล้ว",
+  "workspace.black.waitlist.ready":
+    "เราพร้อมที่จะลงทะเบียนให้คุณเข้าสู่แผน PrioriCode Black ราคา ${{plan}} ต่อเดือนแล้ว",
   "workspace.black.waitlist.leave": "ออกจากรายชื่อรอ",
   "workspace.black.waitlist.leaving": "กำลังออกจาก...",
   "workspace.black.waitlist.left": "ออกแล้ว",
@@ -772,7 +773,8 @@ export const dict = {
     "ไม่จำเป็นเสมอไป แต่อาจจะต้องมี คุณจะต้องมีการสมัครสมาชิก AI หากต้องการเชื่อมต่อ PrioriCode กับผู้ให้บริการที่มีค่าใช้จ่าย แม้ว่าคุณจะสามารถทำงานกับ",
   "download.faq.a3.localLink": "โมเดล Local",
   "download.faq.a3.afterLocal.beforeZen": "ได้ฟรี แม้ว่าเราจะแนะนำให้ผู้ใช้ใช้งาน",
-  "download.faq.a3.afterZen": ", PrioriCode ก็ทำงานร่วมกับผู้ให้บริการยอดนิยมทั้งหมด เช่น OpenAI, Anthropic, xAI เป็นต้น",
+  "download.faq.a3.afterZen":
+    ", PrioriCode ก็ทำงานร่วมกับผู้ให้บริการยอดนิยมทั้งหมด เช่น OpenAI, Anthropic, xAI เป็นต้น",
 
   "download.faq.a5.p1": "PrioriCode ใช้งานได้ฟรี 100%",
   "download.faq.a5.p2.beforeZen":

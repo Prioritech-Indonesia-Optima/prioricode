@@ -111,7 +111,9 @@ export const DialogSelectModelUnpaid: Component<{ model?: ModelState }> = (props
                     <ProviderIcon data-slot="list-item-extra-icon" id={i.id} />
                     <span>{i.name}</span>
                     <Show when={i.id === "prioricode"}>
-                      <div class="text-14-regular text-text-weak">{language.t("dialog.provider.prioricode.tagline")}</div>
+                      <div class="text-14-regular text-text-weak">
+                        {language.t("dialog.provider.prioricode.tagline")}
+                      </div>
                     </Show>
                     <Show when={i.id === "prioricode"}>
                       <Tag>{language.t("dialog.provider.tag.recommended")}</Tag>

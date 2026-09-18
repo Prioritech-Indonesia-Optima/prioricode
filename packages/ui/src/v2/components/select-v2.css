@@ -61,8 +61,7 @@
   border-radius: 6px;
   outline: 1px solid transparent;
   outline-offset: 0;
-  background:
-    linear-gradient(180deg, var(--pc-alpha-light-2) 0%, var(--pc-alpha-light-0) 100%), var(--pc-bg-base);
+  background: linear-gradient(180deg, var(--pc-alpha-light-2) 0%, var(--pc-alpha-light-0) 100%), var(--pc-bg-base);
   box-shadow: var(--pc-elevation-button-neutral);
   flex: none;
   align-self: stretch;

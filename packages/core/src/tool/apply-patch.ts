@@ -152,11 +152,7 @@ const layer = Layer.effectDiscard(
                       before,
                       after: update.content,
                     })
-                  }).pipe(
-                    Effect.mapError((error) =>
-                      error instanceof ToolFailure ? error : fail(hunk.path, error),
-                    ),
-                  )
+                  }).pipe(Effect.mapError((error) => (error instanceof ToolFailure ? error : fail(hunk.path, error))))
                 }
 
                 const patchFiles = prepared.map(patchFile)

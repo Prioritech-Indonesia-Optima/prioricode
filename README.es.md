@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # o github:Prioritech-Indonesia-Optima/prio
 
 PrioriCode también está disponible como aplicación de escritorio. Descárgala directamente desde la [página de releases](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) o desde [prioritech.co.id/download](https://prioritech.co.id/download).
 
-| Plataforma            | Descarga                           |
-| --------------------- | ---------------------------------- |
+| Plataforma            | Descarga                             |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, o AppImage         |
+| Linux                 | `.deb`, `.rpm`, o AppImage           |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode es un fork de [OpenCode](https://github.com/anomalyco/opencode), el a
 
 ### Cómo se compara PrioriCode con OpenCode
 
-| Capacidad | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| Agente de programación con IA de código abierto (TUI + escritorio) | ✓ | ✓ |
-| Múltiples proveedores de LLM, plugins y MCP | ✓ | ✓ |
-| Integración con GitHub Actions | ✓ | ✓ |
-| Compactación de contexto ajustable | ✓ | ✓ |
-| Coordinación entre sesiones (herramienta `sessions`) | — | ✓ |
+| Capacidad                                                          | OpenCode | PrioriCode |
+| ------------------------------------------------------------------ | :------: | :--------: |
+| Agente de programación con IA de código abierto (TUI + escritorio) |    ✓     |     ✓      |
+| Múltiples proveedores de LLM, plugins y MCP                        |    ✓     |     ✓      |
+| Integración con GitHub Actions                                     |    ✓     |     ✓      |
+| Compactación de contexto ajustable                                 |    ✓     |     ✓      |
+| Coordinación entre sesiones (herramienta `sessions`)               |    —     |     ✓      |
 
 **Coordinación entre sesiones.** Las sesiones de PrioriCode concurrentes en el mismo proyecto pueden coordinarse mediante una herramienta `sessions` integrada: descubrir sesiones hermanas, reclamar archivos para evitar colisiones de edición, enviar mensajes y hacer preguntas con espera acotada. Las notas son duraderas y se entregan automáticamente: un observador en segundo plano despierta a una sesión inactiva para que lea la nota de un par sin hacer polling.
 
@@ -140,4 +140,3 @@ Si te interesa contribuir a PrioriCode, lee nuestras [docs de contribución](./C
 Si estás trabajando en un proyecto basado en PrioriCode y usas "prioricode" como parte del nombre, por ejemplo, "prioricode-dashboard" u "prioricode-mobile", agrega una nota en tu README para aclarar que no está hecho por el equipo de PrioriCode y que no está afiliado con nosotros de ninguna manera.
 
 ---
-

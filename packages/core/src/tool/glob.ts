@@ -88,9 +88,7 @@ const layer = Layer.effectDiscard(
                     ),
                   ),
                 )
-            }).pipe(
-              Effect.mapError((error) => Tool.failure(`Unable to find files matching ${input.pattern}`, error)),
-            ),
+            }).pipe(Effect.mapError((error) => Tool.failure(`Unable to find files matching ${input.pattern}`, error))),
         }),
       })
       .pipe(Effect.orDie)

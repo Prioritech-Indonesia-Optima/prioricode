@@ -37,17 +37,17 @@ already-loaded config until then.
 
 ## Where files live
 
-| Scope                         | Path                                                                                                                      |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Scope                         | Path                                                                                                                                |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Project config                | `./prioricode.json`, `./prioricode.jsonc`, or `.prioricode/prioricode.json` (prioricode walks up from the cwd to the worktree root) |
 | Global config                 | `~/.config/prioricode/prioricode.json` or `~/.config/prioricode/prioricode.jsonc` (NOT `~/.prioricode/`)                            |
-| Project agents                | `.prioricode/agent/<name>.md` or `.prioricode/agents/<name>.md`                                                               |
-| Global agents                 | `~/.config/prioricode/agent(s)/<name>.md`                                                                                   |
-| Project commands              | `.prioricode/command/<name>.md` or `.prioricode/commands/<name>.md`                                                           |
-| Global commands               | `~/.config/prioricode/command(s)/<name>.md`                                                                                 |
-| Project skills                | `.prioricode/skill(s)/<name>/SKILL.md`                                                                                      |
-| Global skills                 | `~/.config/prioricode/skill(s)/<name>/SKILL.md`                                                                             |
-| External skills (auto-loaded) | `~/.claude/skills/<name>/SKILL.md`, `~/.agents/skills/<name>/SKILL.md`                                                    |
+| Project agents                | `.prioricode/agent/<name>.md` or `.prioricode/agents/<name>.md`                                                                     |
+| Global agents                 | `~/.config/prioricode/agent(s)/<name>.md`                                                                                           |
+| Project commands              | `.prioricode/command/<name>.md` or `.prioricode/commands/<name>.md`                                                                 |
+| Global commands               | `~/.config/prioricode/command(s)/<name>.md`                                                                                         |
+| Project skills                | `.prioricode/skill(s)/<name>/SKILL.md`                                                                                              |
+| Global skills                 | `~/.config/prioricode/skill(s)/<name>/SKILL.md`                                                                                     |
+| External skills (auto-loaded) | `~/.claude/skills/<name>/SKILL.md`, `~/.agents/skills/<name>/SKILL.md`                                                              |
 
 Configs from each scope are deep-merged. Project overrides global. Unknown
 top-level keys in `prioricode.json` are rejected with `ConfigInvalidError`.

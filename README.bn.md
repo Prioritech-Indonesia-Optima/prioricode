@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # or github:Prioritech-Indonesia-Optima/pri
 
 PrioriCode ডেস্কটপ অ্যাপ্লিকেশন হিসেবেও উপলব্ধ। সরাসরি [রিলিজ পেজ](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) অথবা [prioritech.co.id/download](https://prioritech.co.id/download) থেকে ডাউনলোড করুন।
 
-| প্ল্যাটফর্ম           | ডাউনলোড                            |
-| --------------------- | ---------------------------------- |
+| প্ল্যাটফর্ম           | ডাউনলোড                              |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, or `.AppImage`     |
+| Linux                 | `.deb`, `.rpm`, or `.AppImage`       |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode হলো [OpenCode](https://github.com/anomalyco/opencode)-এর �
 
 ### OpenCode-এর সাথে PrioriCode-এর তুলনা
 
-| ক্ষমতা | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| ওপেন সোর্স AI কোডিং এজেন্ট (TUI + ডেস্কটপ) | ✓ | ✓ |
-| একাধিক LLM প্রোভাইডার, প্লাগইন এবং MCP | ✓ | ✓ |
-| GitHub Actions ইন্টিগ্রেশন | ✓ | ✓ |
-| সামঞ্জস্যযোগ্য কনটেক্সট কম্প্যাকশন | ✓ | ✓ |
-| ক্রস-সেশন সমন্বয় (`sessions` টুল) | — | ✓ |
+| ক্ষমতা                                     | OpenCode | PrioriCode |
+| ------------------------------------------ | :------: | :--------: |
+| ওপেন সোর্স AI কোডিং এজেন্ট (TUI + ডেস্কটপ) |    ✓     |     ✓      |
+| একাধিক LLM প্রোভাইডার, প্লাগইন এবং MCP     |    ✓     |     ✓      |
+| GitHub Actions ইন্টিগ্রেশন                 |    ✓     |     ✓      |
+| সামঞ্জস্যযোগ্য কনটেক্সট কম্প্যাকশন         |    ✓     |     ✓      |
+| ক্রস-সেশন সমন্বয় (`sessions` টুল)         |    —     |     ✓      |
 
 **ক্রস-সেশন সমন্বয়.** একই প্রজেক্টে একসাথে চলা একাধিক PrioriCode সেশন একটি বিল্ট-ইন `sessions` টুলের মাধ্যমে সমন্বয় করতে পারে: ভাই-বোন সেশন আবিষ্কার, সম্পাদনা সংঘাত এড়াতে ফাইল দাবি করা, বার্তা পাঠানো এবং সীমিত অপেক্ষার সাথে প্রশ্ন করা। নোটগুলো স্থায়ী এবং স্বয়ংক্রিয়ভাবে ডেলিভার করা হয় — একটি ব্যাকগ্রাউন্ড ওয়াচার একটি অবসরপ্রাপ্ত সেশনকে জাগিয়ে তোলে যাতে তা polling ছাড়াই একজন সহপাঠীর নোট পড়ে।
 
@@ -140,4 +140,3 @@ PrioriCode হলো [OpenCode](https://github.com/anomalyco/opencode)-এর �
 আপনি যদি এমন প্রজেক্টে কাজ করেন যা PrioriCode এর সাথে সম্পর্কিত এবং প্রজেক্টের নামের অংশ হিসেবে "prioricode" ব্যবহার করেন, উদাহরণস্বরূপ "prioricode-dashboard" বা "prioricode-mobile", তবে দয়া করে আপনার README তে একটি নোট যোগ করে স্পষ্ট করুন যে এই প্রজেক্টটি PrioriCode দল দ্বারা তৈরি হয়নি এবং আমাদের সাথে এর কোনো সরাসরি সম্পর্ক নেই।
 
 ---
-

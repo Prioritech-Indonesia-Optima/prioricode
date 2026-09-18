@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # او github:Prioritech-Indonesia-Optima/p
 
 يتوفر PrioriCode ايضا كتطبيق سطح مكتب. قم بالتنزيل مباشرة من [صفحة الاصدارات](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) او من [prioritech.co.id/download](https://prioritech.co.id/download).
 
-| المنصة                | التنزيل                            |
-| --------------------- | ---------------------------------- |
+| المنصة                | التنزيل                              |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb` او `.rpm` او AppImage       |
+| Linux                 | `.deb` او `.rpm` او AppImage         |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode هو فرع من [OpenCode](https://github.com/anomalyco/opencode)، 
 
 ### كيف يقارن PrioriCode مع OpenCode
 
-| القدرة | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| وكيل برمجة بالذكاء الاصطناعي مفتوح المصدر (TUI + سطح المكتب) | ✓ | ✓ |
-| مزودو LLM متعددون، وإضافات، وMCP | ✓ | ✓ |
-| تكامل GitHub Actions | ✓ | ✓ |
-| ضغط سياق قابل للضبط | ✓ | ✓ |
-| تنسيق بين الجلسات (أداة `sessions`) | — | ✓ |
+| القدرة                                                       | OpenCode | PrioriCode |
+| ------------------------------------------------------------ | :------: | :--------: |
+| وكيل برمجة بالذكاء الاصطناعي مفتوح المصدر (TUI + سطح المكتب) |    ✓     |     ✓      |
+| مزودو LLM متعددون، وإضافات، وMCP                             |    ✓     |     ✓      |
+| تكامل GitHub Actions                                         |    ✓     |     ✓      |
+| ضغط سياق قابل للضبط                                          |    ✓     |     ✓      |
+| تنسيق بين الجلسات (أداة `sessions`)                          |    —     |     ✓      |
 
 **التنسيق بين الجلسات.** يمكن لجلسات PrioriCode المتزامنة في نفس المشروع التنسيق عبر أداة `sessions` مدمجة: اكتشاف الجلسات الشقيقة، واحتكار الملفات لتجنب تعارضات التحرير، وإرسال الرسائل، وطرح أسئلة مع انتظار محدود. الملاحظات دائمة وتُسلَّم تلقائيًا — يستيقظ مراقب في الخلفية الجلسة الخاملة لتقرأ ملاحظة نظيرها دون استطلاع.
 
@@ -140,4 +140,3 @@ PrioriCode هو فرع من [OpenCode](https://github.com/anomalyco/opencode)، 
 اذا كنت تعمل على مشروع مرتبط بـ PrioriCode ويستخدم "prioricode" كجزء من اسمه (مثل "prioricode-dashboard" او "prioricode-mobile")، يرجى اضافة ملاحظة في README توضح انه ليس مبنيا بواسطة فريق PrioriCode ولا يرتبط بنا بأي شكل.
 
 ---
-

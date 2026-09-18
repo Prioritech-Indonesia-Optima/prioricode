@@ -928,7 +928,8 @@ export const dict: Record<string, string> = {
   "settings.general.row.appearance.title": "පෙනුම",
   "settings.general.row.appearance.description": "ඔබගේ උපාංගයේ PrioriCode පෙනෙන ආකාරය අභිරුචිකරණය කරන්න",
   "settings.general.row.colorScheme.title": "වර්ණ පටිපාටිය",
-  "settings.general.row.colorScheme.description": "PrioriCode පද්ධතිය, ආලෝකය හෝ අඳුරු තේමාව අනුගමනය කරන්නේද යන්න තෝරන්න",
+  "settings.general.row.colorScheme.description":
+    "PrioriCode පද්ධතිය, ආලෝකය හෝ අඳුරු තේමාව අනුගමනය කරන්නේද යන්න තෝරන්න",
   "settings.general.row.theme.title": "තේමාව",
   "settings.general.row.theme.description": "PrioriCode තේමා කර ඇති ආකාරය අභිරුචිකරණය කරන්න.",
   "settings.general.row.font.title": "කේත අකුරු",

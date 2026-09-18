@@ -275,7 +275,10 @@ describe("WebFetchTool registration", () => {
       ).pipe(Effect.forkChild)
       yield* TestClock.adjust(Duration.seconds(1))
 
-      expect(yield* Fiber.join(fiber)).toEqual({ type: "error", value: expect.stringContaining("Unable to fetch https://1.1.1.1/slow") })
+      expect(yield* Fiber.join(fiber)).toEqual({
+        type: "error",
+        value: expect.stringContaining("Unable to fetch https://1.1.1.1/slow"),
+      })
     }),
   )
 })

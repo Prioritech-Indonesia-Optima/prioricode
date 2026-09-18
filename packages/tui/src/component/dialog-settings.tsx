@@ -176,7 +176,8 @@ export function DialogSettings() {
         title: "Compaction buffer",
         value: "compaction.reserved",
         category: "Model & Context",
-        description: "Tokens left out of the window to avoid overflow during compaction (ignored when threshold is set)",
+        description:
+          "Tokens left out of the window to avoid overflow during compaction (ignored when threshold is set)",
         footer: number(c?.reserved, "not set"),
         onSelect: () =>
           askNumber({
@@ -280,8 +281,7 @@ export function DialogSettings() {
         category: "Appearance",
         description: "Wrap long lines in diffs at word boundaries",
         footer: kv.get("diff_wrap_mode", "word") === "word" ? "on" : "off",
-        onSelect: () =>
-          kv.set("diff_wrap_mode", kv.get("diff_wrap_mode", "word") === "word" ? "none" : "word"),
+        onSelect: () => kv.set("diff_wrap_mode", kv.get("diff_wrap_mode", "word") === "word" ? "none" : "word"),
       },
       {
         title: "Cursor style",
@@ -300,7 +300,8 @@ export function DialogSettings() {
         category: "Appearance",
         description: "Whether the cursor blinks (ignored for 'default' style)",
         footer: bool(tuiConfig.cursor?.blinking, true),
-        onSelect: () => void saveTuiConfig({ cursor: { blinking: !(tuiConfig.cursor?.blinking ?? true) } }, "cursor blinking"),
+        onSelect: () =>
+          void saveTuiConfig({ cursor: { blinking: !(tuiConfig.cursor?.blinking ?? true) } }, "cursor blinking"),
       },
       {
         title: "Animations",
@@ -335,7 +336,10 @@ export function DialogSettings() {
         description: "macOS-style accelerated scrolling (overrides scroll speed)",
         footer: bool(tuiConfig.scroll_acceleration?.enabled, false),
         onSelect: () =>
-          void saveTuiConfig({ scroll_acceleration: { enabled: !(tuiConfig.scroll_acceleration?.enabled ?? false) } }, "scroll acceleration"),
+          void saveTuiConfig(
+            { scroll_acceleration: { enabled: !(tuiConfig.scroll_acceleration?.enabled ?? false) } },
+            "scroll acceleration",
+          ),
       },
       {
         title: "Scroll speed",
@@ -449,7 +453,8 @@ export function DialogSettings() {
         category: "Notifications",
         description: "Overall switch for terminal attention alerts",
         footer: bool(attention.enabled, false),
-        onSelect: () => void saveTuiConfig({ attention: { enabled: !(attention.enabled ?? false) } }, "attention notifications"),
+        onSelect: () =>
+          void saveTuiConfig({ attention: { enabled: !(attention.enabled ?? false) } }, "attention notifications"),
       },
       {
         title: "Desktop notifications",
@@ -458,7 +463,10 @@ export function DialogSettings() {
         description: "Send OS notifications when a response needs you",
         footer: bool(attention.notifications, true),
         onSelect: () =>
-          void saveTuiConfig({ attention: { notifications: !(attention.notifications ?? true) } }, "desktop notifications"),
+          void saveTuiConfig(
+            { attention: { notifications: !(attention.notifications ?? true) } },
+            "desktop notifications",
+          ),
       },
       {
         title: "Sounds",
@@ -501,10 +509,5 @@ export function DialogSettings() {
     return kv.get("terminal_title_enabled", true)
   }
 
-  return (
-    <DialogSelect
-      title="Settings"
-      options={options()}
-    />
-  )
+  return <DialogSelect title="Settings" options={options()} />
 }

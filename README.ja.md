@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # または github:Prioritech-Indonesia-Opt
 
 PrioriCode はデスクトップアプリとしても利用できます。[releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) から直接ダウンロードするか、[prioritech.co.id/download](https://prioritech.co.id/download) を利用してください。
 
-| プラットフォーム      | ダウンロード                       |
-| --------------------- | ---------------------------------- |
+| プラットフォーム      | ダウンロード                         |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`、`.rpm`、または AppImage    |
+| Linux                 | `.deb`、`.rpm`、または AppImage      |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode は、オープンソースの AI コーディングエージェン�
 
 ### PrioriCode と OpenCode の比較
 
-| 機能 | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| オープンソース AI コーディングエージェント (TUI + デスクトップ) | ✓ | ✓ |
-| 複数の LLM プロバイダー、プラグイン、MCP | ✓ | ✓ |
-| GitHub Actions 統合 | ✓ | ✓ |
-| 調整可能なコンテキスト圧縮 | ✓ | ✓ |
-| セッション間協調 (`sessions` ツール) | — | ✓ |
+| 機能                                                            | OpenCode | PrioriCode |
+| --------------------------------------------------------------- | :------: | :--------: |
+| オープンソース AI コーディングエージェント (TUI + デスクトップ) |    ✓     |     ✓      |
+| 複数の LLM プロバイダー、プラグイン、MCP                        |    ✓     |     ✓      |
+| GitHub Actions 統合                                             |    ✓     |     ✓      |
+| 調整可能なコンテキスト圧縮                                      |    ✓     |     ✓      |
+| セッション間協調 (`sessions` ツール)                            |    —     |     ✓      |
 
 **セッション間協調.** 同じプロジェクトで並行して動作する複数の PrioriCode セッションは、組み込みの `sessions` ツールで協調できます: 兄弟セッションの発見、ファイルの確保による編集競合の回避、メッセージの送信、制限付き待機での質問。ノートは永続的で自動的に配信されます — バックグラウンドのウォッチャーがアイドルのセッションを起動し、ポーリングせずにピアのノートを读取します。
 
@@ -140,4 +140,3 @@ PrioriCode に貢献したい場合は、Pull Request を送る前に [contribut
 PrioriCode に関連するプロジェクトで、名前に "prioricode"（例: "prioricode-dashboard" や "prioricode-mobile"）を含める場合は、そのプロジェクトが PrioriCode チームによって作られたものではなく、いかなる形でも関係がないことを README に明記してください。
 
 ---
-

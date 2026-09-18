@@ -1278,7 +1278,8 @@ const layer = Layer.effect(
             // Surface coordination notes from peer sessions once, at the turn boundary, and
             // mark them read so neither a concurrent wake poller nor a later turn re-delivers them.
             const coordinationNotes = yield* coordination.claimUnread(sessionID)
-            const coordinationBlock = coordinationNotes.length > 0 ? Coordination.formatNotes(coordinationNotes) : undefined
+            const coordinationBlock =
+              coordinationNotes.length > 0 ? Coordination.formatNotes(coordinationNotes) : undefined
             const system = [
               ...env,
               ...instructions,
@@ -1608,7 +1609,7 @@ export function createStructuredOutputTool(input: {
     },
   })
 }
-const bashRegex = /!`([^`]+)`/g// Match [Image N] as single token, quoted strings, or non-space sequences
+const bashRegex = /!`([^`]+)`/g // Match [Image N] as single token, quoted strings, or non-space sequences
 const argsRegex = /(?:\[Image\s+\d+\]|"[^"]*"|'[^']*'|[^\s"']+)/gi
 const placeholderRegex = /\$(\d+)/g
 const quoteTrimRegex = /^["']|["']$/g

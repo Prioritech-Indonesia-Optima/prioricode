@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # 或使用 github:Prioritech-Indonesia-Opt
 
 PrioriCode 也提供桌面版應用程式。您可以直接從 [發佈頁面 (releases page)](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) 或 [prioritech.co.id/download](https://prioritech.co.id/download) 下載。
 
-| 平台                  | 下載連結                           |
-| --------------------- | ---------------------------------- |
+| 平台                  | 下載連結                             |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, 或 AppImage        |
+| Linux                 | `.deb`, `.rpm`, 或 AppImage          |
 
 ```bash
 # macOS (Homebrew Cask)
@@ -114,13 +114,13 @@ PrioriCode 是 [OpenCode](https://github.com/anomalyco/opencode)（開源 AI 程
 
 ### PrioriCode 與 OpenCode 的對比
 
-| 功能 | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| 開源 AI 程式設計代理（TUI + 桌面端） | ✓ | ✓ |
-| 多 LLM 供應商、外掛與 MCP | ✓ | ✓ |
-| GitHub Actions 整合 | ✓ | ✓ |
-| 可調整的上下文壓縮 | ✓ | ✓ |
-| 跨工作階段協調（`sessions` 工具） | — | ✓ |
+| 功能                                 | OpenCode | PrioriCode |
+| ------------------------------------ | :------: | :--------: |
+| 開源 AI 程式設計代理（TUI + 桌面端） |    ✓     |     ✓      |
+| 多 LLM 供應商、外掛與 MCP            |    ✓     |     ✓      |
+| GitHub Actions 整合                  |    ✓     |     ✓      |
+| 可調整的上下文壓縮                   |    ✓     |     ✓      |
+| 跨工作階段協調（`sessions` 工具）    |    —     |     ✓      |
 
 **跨工作階段協調.** 在同一專案上並行的多個 PrioriCode 工作階段可透過內建的 `sessions` 工具協調：發現同級工作階段、聲明檔案以避免編輯衝突、傳送訊息，以及帶逾時等待地提問。筆記是持久的並自動投递——背景監視器會喚起閒置工作階段，使其無需輪詢即可讀取來自其他工作階段的筆記。
 
@@ -139,4 +139,3 @@ PrioriCode 是 [OpenCode](https://github.com/anomalyco/opencode)（開源 AI 程
 如果您正在開發與 PrioriCode 相關的專案，並在名稱中使用了 "prioricode"（例如 "prioricode-dashboard" 或 "prioricode-mobile"），請在您的 README 中加入聲明，說明該專案並非由 PrioriCode 團隊開發，且與我們沒有任何隸屬關係。
 
 ---
-

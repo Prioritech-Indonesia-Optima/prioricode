@@ -429,7 +429,8 @@ function sdk(
 ) {
   const client = new PrioricodeClient()
 
-  const subscribe: PrioricodeClient["event"]["subscribe"] = input.subscribe ?? (() => sse(input.stream ?? emptyStream()))
+  const subscribe: PrioricodeClient["event"]["subscribe"] =
+    input.subscribe ?? (() => sse(input.stream ?? emptyStream()))
   const globalEvent: PrioricodeClient["global"]["event"] =
     input.globalEvent ?? (() => globalSse(input.globalStream ?? wrapGlobalStream(input.stream ?? emptyStream())))
   const promptAsync: PrioricodeClient["session"]["promptAsync"] = input.promptAsync ?? (() => ok(undefined))

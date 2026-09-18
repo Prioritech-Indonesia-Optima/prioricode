@@ -78,13 +78,13 @@ prioricode attach http://10.20.30.40:4096
 
 #### Flag
 
-| Flag                                     | Kort | Beskrivelse                                                                       |
-| ---------------------------------------- | ---- | --------------------------------------------------------------------------------- |
-| <nobr><code>{"--dir"}</code></nobr>      |      | Arbejdsmappe til at starte TUI i                                                  |
-| <nobr><code>{"--continue"}</code></nobr> | `-c` | Fortsæt den seneste session                                                       |
-| <nobr><code>{"--session"}</code></nobr>  | `-s` | Sessions-id for at fortsætte                                                      |
-| <nobr><code>{"--fork"}</code></nobr>     |      | Forgren sessionen ved fortsættelse (brug med `--continue` eller `--session`)      |
-| <nobr><code>{"--password"}</code></nobr> | `-p` | Adgangskode til basic auth (standard: `PRIORICODE_SERVER_PASSWORD`)                 |
+| Flag                                     | Kort | Beskrivelse                                                                           |
+| ---------------------------------------- | ---- | ------------------------------------------------------------------------------------- |
+| <nobr><code>{"--dir"}</code></nobr>      |      | Arbejdsmappe til at starte TUI i                                                      |
+| <nobr><code>{"--continue"}</code></nobr> | `-c` | Fortsæt den seneste session                                                           |
+| <nobr><code>{"--session"}</code></nobr>  | `-s` | Sessions-id for at fortsætte                                                          |
+| <nobr><code>{"--fork"}</code></nobr>     |      | Forgren sessionen ved fortsættelse (brug med `--continue` eller `--session`)          |
+| <nobr><code>{"--password"}</code></nobr> | `-p` | Adgangskode til basic auth (standard: `PRIORICODE_SERVER_PASSWORD`)                   |
 | <nobr><code>{"--username"}</code></nobr> | `-u` | Brugernavn til basic auth (standard: `PRIORICODE_SERVER_USERNAME` eller `prioricode`) |
 
 ---
@@ -339,25 +339,25 @@ prioricode run --attach http://localhost:4096 "Explain async/await in JavaScript
 
 #### Flag
 
-| Flag                                     | Kort | Beskrivelse                                                                         |
-| ---------------------------------------- | ---- | ----------------------------------------------------------------------------------- |
-| <nobr><code>{"--command"}</code></nobr>  |      | Kommandoen til at køre, brug besked til args                                        |
-| <nobr><code>{"--continue"}</code></nobr> | `-c` | Fortsæt sidste session                                                              |
-| <nobr><code>{"--session"}</code></nobr>  | `-s` | Sessions-id for at fortsætte                                                        |
-| <nobr><code>{"--fork"}</code></nobr>     |      | Forgren sessionen ved fortsættelse (brug med `--continue` eller `--session`)        |
-| <nobr><code>{"--share"}</code></nobr>    |      | Del sessionen                                                                       |
-| <nobr><code>{"--model"}</code></nobr>    | `-m` | Model til brug i form af provider/model                                             |
-| <nobr><code>{"--agent"}</code></nobr>    |      | Agent til brug                                                                      |
-| <nobr><code>{"--file"}</code></nobr>     | `-f` | Fil(er), der skal vedhæftes til meddelelsen                                         |
-| <nobr><code>{"--format"}</code></nobr>   |      | Format: standard (formateret) eller json (rå JSON hændelser)                        |
-| <nobr><code>{"--title"}</code></nobr>    |      | Titel for sessionen (bruger trunkeret prompt, hvis der ikke er angivet nogen værdi) |
+| Flag                                     | Kort | Beskrivelse                                                                           |
+| ---------------------------------------- | ---- | ------------------------------------------------------------------------------------- |
+| <nobr><code>{"--command"}</code></nobr>  |      | Kommandoen til at køre, brug besked til args                                          |
+| <nobr><code>{"--continue"}</code></nobr> | `-c` | Fortsæt sidste session                                                                |
+| <nobr><code>{"--session"}</code></nobr>  | `-s` | Sessions-id for at fortsætte                                                          |
+| <nobr><code>{"--fork"}</code></nobr>     |      | Forgren sessionen ved fortsættelse (brug med `--continue` eller `--session`)          |
+| <nobr><code>{"--share"}</code></nobr>    |      | Del sessionen                                                                         |
+| <nobr><code>{"--model"}</code></nobr>    | `-m` | Model til brug i form af provider/model                                               |
+| <nobr><code>{"--agent"}</code></nobr>    |      | Agent til brug                                                                        |
+| <nobr><code>{"--file"}</code></nobr>     | `-f` | Fil(er), der skal vedhæftes til meddelelsen                                           |
+| <nobr><code>{"--format"}</code></nobr>   |      | Format: standard (formateret) eller json (rå JSON hændelser)                          |
+| <nobr><code>{"--title"}</code></nobr>    |      | Titel for sessionen (bruger trunkeret prompt, hvis der ikke er angivet nogen værdi)   |
 | <nobr><code>{"--attach"}</code></nobr>   |      | Tilslut til en kørende prioricode-server (f.eks. http://localhost:4096)               |
 | <nobr><code>{"--password"}</code></nobr> | `-p` | Adgangskode til basic auth (standard: `PRIORICODE_SERVER_PASSWORD`)                   |
-| <nobr><code>{"--username"}</code></nobr> | `-u` | Brugernavn til basic auth (standard: `PRIORICODE_SERVER_USERNAME` eller `prioricode`)   |
-| <nobr><code>{"--dir"}</code></nobr>      |      | Mappe at køre i, eller sti på fjernserveren ved tilkobling                          |
-| <nobr><code>{"--variant"}</code></nobr>  |      | Modelvariant (udbyder-specifik ræsonneringsindsats)                                 |
-| <nobr><code>{"--thinking"}</code></nobr> |      | Vis tænkeblokke                                                                     |
-| <nobr><code>{"--port"}</code></nobr>     |      | Port til den lokale server (standard til vilkårlig port)                            |
+| <nobr><code>{"--username"}</code></nobr> | `-u` | Brugernavn til basic auth (standard: `PRIORICODE_SERVER_USERNAME` eller `prioricode`) |
+| <nobr><code>{"--dir"}</code></nobr>      |      | Mappe at køre i, eller sti på fjernserveren ved tilkobling                            |
+| <nobr><code>{"--variant"}</code></nobr>  |      | Modelvariant (udbyder-specifik ræsonneringsindsats)                                   |
+| <nobr><code>{"--thinking"}</code></nobr> |      | Vis tænkeblokke                                                                       |
+| <nobr><code>{"--port"}</code></nobr>     |      | Port til den lokale server (standard til vilkårlig port)                              |
 
 ---
 
@@ -562,32 +562,32 @@ prioricode CLI tager følgende globale flag.
 
 PrioriCode kan konfigureres ved hjælp af miljøvariabler.
 
-| Variabel                              | Skriv   | Beskrivelse                                                           |
-| ------------------------------------- | ------- | --------------------------------------------------------------------- |
-| `PRIORICODE_AUTO_SHARE`                 | boolean | Del automatisk session                                                |
-| `PRIORICODE_GIT_BASH_PATH`              | string  | Sti til Git Bash eksekverbar på Windows                               |
-| `PRIORICODE_CONFIG`                     | string  | Sti til konfigurationsfil                                             |
-| `PRIORICODE_TUI_CONFIG`                 | string  | Sti til TUI-konfigurationsfil                                         |
-| `PRIORICODE_CONFIG_DIR`                 | string  | Sti til konfigurationsmappe                                           |
-| `PRIORICODE_CONFIG_CONTENT`             | string  | Indbygget json-konfigurationsindhold                                  |
-| `PRIORICODE_DISABLE_AUTOUPDATE`         | boolean | Deaktiver automatisk opdateringskontrol                               |
-| `PRIORICODE_DISABLE_PRUNE`              | boolean | Deaktiver beskæring af gamle data                                     |
-| `PRIORICODE_DISABLE_TERMINAL_TITLE`     | boolean | Deaktiver automatisk opdatering af terminaltitel                      |
-| `PRIORICODE_PERMISSION`                 | string  | Indbygget json-tilladelseskonfiguration                               |
-| `PRIORICODE_DISABLE_DEFAULT_PLUGINS`    | boolean | Deaktiver standard plugins                                            |
-| `PRIORICODE_DISABLE_LSP_DOWNLOAD`       | boolean | Deaktiver automatisk LSP-serverdownloads                              |
-| `PRIORICODE_ENABLE_EXPERIMENTAL_MODELS` | boolean | Aktive eksperimentelle modeller                                       |
-| `PRIORICODE_DISABLE_AUTOCOMPACT`        | boolean | Deaktiver automatisk kontekstkomprimering                             |
-| `PRIORICODE_DISABLE_CLAUDE_CODE`        | boolean | Deaktiver læsning fra `.claude` (prompt + færdigheder)                |
-| `PRIORICODE_DISABLE_CLAUDE_CODE_PROMPT` | boolean | Deaktiver læsning `~/.claude/CLAUDE.md`                               |
-| `PRIORICODE_DISABLE_CLAUDE_CODE_SKILLS` | boolean | Deaktiver indlæsning af `.claude/skills`                              |
-| `PRIORICODE_DISABLE_MODELS_FETCH`       | boolean | Deaktivering af modeller fra eksterne kilder                          |
-| `PRIORICODE_FAKE_VCS`                   | string  | Falsk VCS-udbyder til testformål                                      |
-| `PRIORICODE_CLIENT`                     | string  | Klient-id (standard til `cli`)                                        |
-| `PRIORICODE_ENABLE_EXA`                 | boolean | Aktiver Exa-websøgeværktøjer                                          |
-| `PRIORICODE_SERVER_PASSWORD`            | string  | Aktiver grundlæggende godkendelse for `serve`/`web`                   |
+| Variabel                                | Skriv   | Beskrivelse                                                             |
+| --------------------------------------- | ------- | ----------------------------------------------------------------------- |
+| `PRIORICODE_AUTO_SHARE`                 | boolean | Del automatisk session                                                  |
+| `PRIORICODE_GIT_BASH_PATH`              | string  | Sti til Git Bash eksekverbar på Windows                                 |
+| `PRIORICODE_CONFIG`                     | string  | Sti til konfigurationsfil                                               |
+| `PRIORICODE_TUI_CONFIG`                 | string  | Sti til TUI-konfigurationsfil                                           |
+| `PRIORICODE_CONFIG_DIR`                 | string  | Sti til konfigurationsmappe                                             |
+| `PRIORICODE_CONFIG_CONTENT`             | string  | Indbygget json-konfigurationsindhold                                    |
+| `PRIORICODE_DISABLE_AUTOUPDATE`         | boolean | Deaktiver automatisk opdateringskontrol                                 |
+| `PRIORICODE_DISABLE_PRUNE`              | boolean | Deaktiver beskæring af gamle data                                       |
+| `PRIORICODE_DISABLE_TERMINAL_TITLE`     | boolean | Deaktiver automatisk opdatering af terminaltitel                        |
+| `PRIORICODE_PERMISSION`                 | string  | Indbygget json-tilladelseskonfiguration                                 |
+| `PRIORICODE_DISABLE_DEFAULT_PLUGINS`    | boolean | Deaktiver standard plugins                                              |
+| `PRIORICODE_DISABLE_LSP_DOWNLOAD`       | boolean | Deaktiver automatisk LSP-serverdownloads                                |
+| `PRIORICODE_ENABLE_EXPERIMENTAL_MODELS` | boolean | Aktive eksperimentelle modeller                                         |
+| `PRIORICODE_DISABLE_AUTOCOMPACT`        | boolean | Deaktiver automatisk kontekstkomprimering                               |
+| `PRIORICODE_DISABLE_CLAUDE_CODE`        | boolean | Deaktiver læsning fra `.claude` (prompt + færdigheder)                  |
+| `PRIORICODE_DISABLE_CLAUDE_CODE_PROMPT` | boolean | Deaktiver læsning `~/.claude/CLAUDE.md`                                 |
+| `PRIORICODE_DISABLE_CLAUDE_CODE_SKILLS` | boolean | Deaktiver indlæsning af `.claude/skills`                                |
+| `PRIORICODE_DISABLE_MODELS_FETCH`       | boolean | Deaktivering af modeller fra eksterne kilder                            |
+| `PRIORICODE_FAKE_VCS`                   | string  | Falsk VCS-udbyder til testformål                                        |
+| `PRIORICODE_CLIENT`                     | string  | Klient-id (standard til `cli`)                                          |
+| `PRIORICODE_ENABLE_EXA`                 | boolean | Aktiver Exa-websøgeværktøjer                                            |
+| `PRIORICODE_SERVER_PASSWORD`            | string  | Aktiver grundlæggende godkendelse for `serve`/`web`                     |
 | `PRIORICODE_SERVER_USERNAME`            | string  | Tilsidesæt grundlæggende godkendelsesbrugernavn (standard `prioricode`) |
-| `PRIORICODE_MODELS_URL`                 | string  | Brugerdefineret URL til hentning af modelkonfiguration                |
+| `PRIORICODE_MODELS_URL`                 | string  | Brugerdefineret URL til hentning af modelkonfiguration                  |
 
 ---
 
@@ -595,8 +595,8 @@ PrioriCode kan konfigureres ved hjælp af miljøvariabler.
 
 Disse miljøvariabler muliggør eksperimentelle funktioner, der kan ændres eller fjernes.
 
-| Variabel                                        | Skriv   | Beskrivelse                                          |
-| ----------------------------------------------- | ------- | ---------------------------------------------------- |
+| Variabel                                          | Skriv   | Beskrivelse                                          |
+| ------------------------------------------------- | ------- | ---------------------------------------------------- |
 | `PRIORICODE_EXPERIMENTAL`                         | boolean | Aktiver eksperimentelle funktioner under samleflaget |
 | `PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY`          | boolean | Aktiver ikonopdagelse                                |
 | `PRIORICODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | boolean | Deaktiver kopi ved valg i TUI                        |

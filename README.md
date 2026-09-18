@@ -109,13 +109,13 @@ PrioriCode is a fork of [OpenCode](https://github.com/anomalyco/opencode), the o
 
 PrioriCode keeps the entire OpenCode core — the terminal UI, desktop app, agents, providers, plugins, MCP, and GitHub integration — and layers new capabilities on top.
 
-| Capability | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| Open source AI coding agent (TUI + desktop) | ✓ | ✓ |
-| Multiple LLM providers, plugins, and MCP | ✓ | ✓ |
-| GitHub Actions integration | ✓ | ✓ |
-| Tunable context compaction | ✓ | ✓ |
-| Cross-session coordination (`sessions` tool) | — | ✓ |
+| Capability                                   | OpenCode | PrioriCode |
+| -------------------------------------------- | :------: | :--------: |
+| Open source AI coding agent (TUI + desktop)  |    ✓     |     ✓      |
+| Multiple LLM providers, plugins, and MCP     |    ✓     |     ✓      |
+| GitHub Actions integration                   |    ✓     |     ✓      |
+| Tunable context compaction                   |    ✓     |     ✓      |
+| Cross-session coordination (`sessions` tool) |    —     |     ✓      |
 
 **Cross-session coordination.** Concurrent PrioriCode sessions working on the same project can coordinate through a built-in `sessions` tool: discover sibling sessions, claim files to avoid edit collisions, send messages, and ask questions with a bounded wait. Notes are durable and delivered automatically — a background watcher wakes an idle session so it reads a peer's note without polling.
 

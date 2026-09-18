@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # veya en güncel geliştirme dalı için g
 
 PrioriCode ayrıca masaüstü uygulaması olarak da mevcuttur. Doğrudan [sürüm sayfasından](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) veya [prioritech.co.id/download](https://prioritech.co.id/download) adresinden indirebilirsiniz.
 
-| Platform              | İndirme                            |
-| --------------------- | ---------------------------------- |
+| Platform              | İndirme                              |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm` veya AppImage       |
+| Linux                 | `.deb`, `.rpm` veya AppImage         |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode, açık kaynak yapay zekâ kodlama ajanı [OpenCode](https://github.c
 
 ### PrioriCode'un OpenCode ile Karşılaştırması
 
-| Özellik | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| Açık kaynak yapay zekâ kodlama ajanı (TUI + masaüstü) | ✓ | ✓ |
-| Birden fazla LLM sağlayıcısı, eklentiler ve MCP | ✓ | ✓ |
-| GitHub Actions entegrasyonu | ✓ | ✓ |
-| Ayarlanabilir bağlam sıkıştırma | ✓ | ✓ |
-| Oturumlar arası koordinasyon (`sessions` aracı) | — | ✓ |
+| Özellik                                               | OpenCode | PrioriCode |
+| ----------------------------------------------------- | :------: | :--------: |
+| Açık kaynak yapay zekâ kodlama ajanı (TUI + masaüstü) |    ✓     |     ✓      |
+| Birden fazla LLM sağlayıcısı, eklentiler ve MCP       |    ✓     |     ✓      |
+| GitHub Actions entegrasyonu                           |    ✓     |     ✓      |
+| Ayarlanabilir bağlam sıkıştırma                       |    ✓     |     ✓      |
+| Oturumlar arası koordinasyon (`sessions` aracı)       |    —     |     ✓      |
 
 **Oturumlar arası koordinasyon.** Aynı projede eşzamanlı çalışan birden çok PrioriCode oturumu, yerleşik `sessions` aracıyla koordine olabilir: kardeş oturumları keşfetme, düzenleme çakışmalarını önlemek için dosyaları talep etme, mesaj gönderme ve sınırlı beklemeyle soru sorma. Notlar kalıcıdır ve otomatik olarak teslim edilir — arka plan izleyicisi, bir oturumu uyandırır ki bir akranın notunu polling olmadan okusun.
 
@@ -140,4 +140,3 @@ PrioriCode'a katkıda bulunmak istiyorsanız, lütfen bir pull request gönderme
 PrioriCode ile ilgili bir proje üzerinde çalışıyorsanız ve projenizin adının bir parçası olarak "prioricode" kullanıyorsanız (örneğin, "prioricode-dashboard" veya "prioricode-mobile"), lütfen README dosyanıza projenin PrioriCode ekibi tarafından geliştirilmediğini ve bizimle hiçbir şekilde bağlantılı olmadığını belirten bir not ekleyin.
 
 ---
-

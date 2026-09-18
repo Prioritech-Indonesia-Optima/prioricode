@@ -122,9 +122,9 @@ describe("Coordination", () => {
       yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "for b" })
       // Claiming for `a` must not surface the note addressed to `b`, nor the claim row.
       expect(yield* coordination.claimUnread(a)).toHaveLength(0)
-      expect((yield* coordination.inbox({ sessionID: b, kinds: ["message"], unreadOnly: true })).map((i) => i.body)).toEqual([
-        "for b",
-      ])
+      expect(
+        (yield* coordination.inbox({ sessionID: b, kinds: ["message"], unreadOnly: true })).map((i) => i.body),
+      ).toEqual(["for b"])
     }),
   )
 

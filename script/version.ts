@@ -11,7 +11,9 @@ if (!Script.preview) {
   // either is missing, fall back to a plain commit list.
   await $`bun script/changelog.ts --to ${sha}`.cwd(process.cwd()).nothrow()
   const file = `${process.cwd()}/UPCOMING_CHANGELOG.md`
-  let body = await Bun.file(file).text().catch(() => "")
+  let body = await Bun.file(file)
+    .text()
+    .catch(() => "")
   if (!body.trim()) {
     const tag = (await $`git tag --list 'v*' --sort=-v:refname`.text())
       .split(/\r?\n/)

@@ -2668,7 +2668,9 @@ describe("cross-session coordination", () => {
         expect(woken).toBe(1)
 
         // Delivered exactly once: the recipient's unread inbox is drained.
-        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(0)
+        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(
+          0,
+        )
 
         // The target ran a turn triggered by the generic wake message, and the note
         // body reached the model via the turn's system context (the single delivery point).
@@ -2715,9 +2717,9 @@ describe("cross-session coordination", () => {
         const woken = yield* watcher.sweep()
         expect(woken).toBe(0)
         // The note stays queued for delivery at the next turn boundary.
-        expect(
-          yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true }),
-        ).toHaveLength(1)
+        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(
+          1,
+        )
 
         yield* Fiber.interrupt(busy)
       }),
@@ -2775,10 +2777,7 @@ describe("cross-session coordination", () => {
         const peer = yield* sessions.create({ title: "recent peer" })
         const def = yield* Tool.init(yield* SessionsTool)
 
-        const out = yield* def.execute(
-          { action: "send", target: peer.id, message: "COORD_SEND_1" },
-          toolCtx(caller.id),
-        )
+        const out = yield* def.execute({ action: "send", target: peer.id, message: "COORD_SEND_1" }, toolCtx(caller.id))
         expect(out.output).toContain("will wake within seconds")
         expect(out.output).toContain("tell the user")
         expect(out.output).not.toContain("WARNING")
@@ -2803,9 +2802,7 @@ describe("cross-session coordination", () => {
         const out = yield* def.execute({ action: "send", target: stale.id, message: "COORD_STALE" }, toolCtx(caller.id))
         expect(out.output).toContain("WARNING")
         expect(out.output).toContain("abandoned")
-        expect(
-          yield* coordination.inbox({ sessionID: stale.id, kinds: ["message"], unreadOnly: true }),
-        ).toHaveLength(1)
+        expect(yield* coordination.inbox({ sessionID: stale.id, kinds: ["message"], unreadOnly: true })).toHaveLength(1)
       }),
     15_000,
   )
@@ -2861,7 +2858,9 @@ describe("cross-session coordination stress", () => {
         const all = claims.flat()
         expect(all).toHaveLength(20)
         expect(new Set(all.map((item) => item.id)).size).toBe(20)
-        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(0)
+        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(
+          0,
+        )
       }),
     15_000,
   )
@@ -2913,8 +2912,8 @@ describe("cross-session coordination stress", () => {
         }
         // Each note reached the model's system context exactly once (single delivery point).
         const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
-        for (let t = 0; t < 5; t++) for (let i = 0; i < 3; i++)
-          expect(countOccurrences(requests, `S2_T${t}_N${i}`)).toBe(1)
+        for (let t = 0; t < 5; t++)
+          for (let i = 0; i < 3; i++) expect(countOccurrences(requests, `S2_T${t}_N${i}`)).toBe(1)
       }),
     30_000,
   )
@@ -2962,8 +2961,8 @@ describe("cross-session coordination stress", () => {
         }
         // Each note reached the model's system context exactly once despite 4 racing sweeps.
         const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
-        for (let t = 0; t < 4; t++) for (let i = 0; i < 3; i++)
-          expect(countOccurrences(requests, `P_T${t}_N${i}`)).toBe(1)
+        for (let t = 0; t < 4; t++)
+          for (let i = 0; i < 3; i++) expect(countOccurrences(requests, `P_T${t}_N${i}`)).toBe(1)
         expect(yield* llm.calls).toBeGreaterThanOrEqual(4)
       }),
     30_000,
@@ -3017,9 +3016,9 @@ describe("cross-session coordination stress", () => {
         expect(Exit.isSuccess(exit)).toBe(true)
         if (Exit.isSuccess(exit)) expect(exit.value).toBe(1)
 
-        expect(
-          yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true }),
-        ).toHaveLength(0)
+        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(
+          0,
+        )
         const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
         expect(countOccurrences(requests, "MIDTURN_A")).toBe(1)
         expect(countOccurrences(requests, "MIDTURN_B")).toBe(1)
@@ -3140,9 +3139,9 @@ describe("cross-session coordination stress", () => {
           "the periodic watcher never delivered the note to the model",
           "15 seconds",
         )
-        expect(
-          yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true }),
-        ).toHaveLength(0)
+        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(
+          0,
+        )
         const messages = yield* sessions.messages({ sessionID: target.id })
         const transcript = JSON.stringify(messages.map((message) => message.parts))
         expect(transcript).toContain(Coordination.wakePrompt)

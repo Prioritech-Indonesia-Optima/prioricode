@@ -191,7 +191,10 @@ async function configurePage(page: Page) {
           lastProject: { local: directory },
         }),
       )
-      localStorage.setItem("prioricode.window.browser.dat:tabs", JSON.stringify([{ type: "session", server, sessionId }]))
+      localStorage.setItem(
+        "prioricode.window.browser.dat:tabs",
+        JSON.stringify([{ type: "session", server, sessionId }]),
+      )
     },
     { directory, server, sessionId: parentID },
   )

@@ -625,7 +625,8 @@ export const dict = {
   "toast.session.listFailed.title": "Ngarkimi i seancave për {{project}} dështoi",
   "toast.project.reloadFailed.title": "Ringarkimi i {{project}} dështoi",
   "toast.update.title": "Ofrohet përditësim",
-  "toast.update.description": "Një version i ri i PrioriCode ({{version}}) është tani i disponueshëm për t'u instaluar.",
+  "toast.update.description":
+    "Një version i ri i PrioriCode ({{version}}) është tani i disponueshëm për t'u instaluar.",
   "toast.update.action.installRestart": "Instaloni dhe rinisni",
   "toast.update.action.notYet": "Ende jo",
   "error.page.title": "Diçka shkoi keq",

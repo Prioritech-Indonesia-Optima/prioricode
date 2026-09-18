@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # oder github:Prioritech-Indonesia-Optima/p
 
 PrioriCode ist auch als Desktop-Anwendung verfügbar. Lade sie direkt von der [Releases-Seite](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) oder [prioritech.co.id/download](https://prioritech.co.id/download) herunter.
 
-| Plattform             | Download                           |
-| --------------------- | ---------------------------------- |
+| Plattform             | Download                             |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm` oder AppImage       |
+| Linux                 | `.deb`, `.rpm` oder AppImage         |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode ist ein Fork von [OpenCode](https://github.com/anomalyco/opencode), d
 
 ### PrioriCode im Vergleich zu OpenCode
 
-| Funktion | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| Open-Source-KI-Coding-Agent (TUI + Desktop) | ✓ | ✓ |
-| Mehrere LLM-Anbieter, Plugins und MCP | ✓ | ✓ |
-| GitHub-Actions-Integration | ✓ | ✓ |
-| Anpassbare Kontext-Kompaktierung | ✓ | ✓ |
-| Sitzungsübergreifende Koordination (`sessions`-Tool) | — | ✓ |
+| Funktion                                             | OpenCode | PrioriCode |
+| ---------------------------------------------------- | :------: | :--------: |
+| Open-Source-KI-Coding-Agent (TUI + Desktop)          |    ✓     |     ✓      |
+| Mehrere LLM-Anbieter, Plugins und MCP                |    ✓     |     ✓      |
+| GitHub-Actions-Integration                           |    ✓     |     ✓      |
+| Anpassbare Kontext-Kompaktierung                     |    ✓     |     ✓      |
+| Sitzungsübergreifende Koordination (`sessions`-Tool) |    —     |     ✓      |
 
 **Sitzungsübergreifende Koordination.** Gleichzeitige PrioriCode-Sitzungen im selben Projekt können über ein eingebautes `sessions`-Tool koordinieren: Geschwistersitzungen entdecken, Dateien beanspruchen, um Editierkonflikte zu vermeiden, Nachrichten senden und Fragen mit begrenzter Wartezeit stellen. Notizen sind dauerhaft und werden automatisch zugestellt — ein Hintergrund-Watcher weckt eine idle Sitzung, damit sie die Notiz eines Peers ohne Polling liest.
 
@@ -140,4 +140,3 @@ Wenn du zu PrioriCode beitragen möchtest, lies bitte unsere [Contributing Docs]
 Wenn du an einem Projekt arbeitest, das mit PrioriCode zusammenhängt und "prioricode" als Teil seines Namens verwendet (z.B. "prioricode-dashboard" oder "prioricode-mobile"), füge bitte einen Hinweis in deine README ein, dass es nicht vom PrioriCode-Team gebaut wird und nicht in irgendeiner Weise mit uns verbunden ist.
 
 ---
-

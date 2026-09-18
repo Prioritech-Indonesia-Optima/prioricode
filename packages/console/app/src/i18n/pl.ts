@@ -419,7 +419,8 @@ export const dict = {
     "Bezpłatna promocja {{model}} dobiegła końca. Możesz dalej korzystać z modelu, subskrybując PrioriCode Go - {{link}}",
 
   "black.meta.title": "PrioriCode Black | Dostęp do najlepszych na świecie modeli kodujących",
-  "black.meta.description": "Uzyskaj dostęp do Claude, GPT, Gemini i innych dzięki planom subskrypcji PrioriCode Black.",
+  "black.meta.description":
+    "Uzyskaj dostęp do Claude, GPT, Gemini i innych dzięki planom subskrypcji PrioriCode Black.",
   "black.hero.title": "Dostęp do najlepszych na świecie modeli kodujących",
   "black.hero.subtitle": "W tym Claude, GPT, Gemini i inne",
   "black.title": "PrioriCode Black | Cennik",

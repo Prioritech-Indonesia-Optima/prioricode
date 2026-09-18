@@ -929,7 +929,8 @@ export const dict = {
   "settings.general.row.appearance.title": "ظاهر",
   "settings.general.row.appearance.description": "نحوه ظاهر PrioriCode را در دستگاه خود سفارشی کنید",
   "settings.general.row.colorScheme.title": "طرح رنگ",
-  "settings.general.row.colorScheme.description": "انتخاب کنید که آیا PrioriCode از تم سیستمی، روشن یا تیره پیروی می کند",
+  "settings.general.row.colorScheme.description":
+    "انتخاب کنید که آیا PrioriCode از تم سیستمی، روشن یا تیره پیروی می کند",
   "settings.general.row.theme.title": "موضوع",
   "settings.general.row.theme.description": "نحوه مضمون سازی PrioriCode را سفارشی کنید.",
   "settings.general.row.font.title": "فونت کد",

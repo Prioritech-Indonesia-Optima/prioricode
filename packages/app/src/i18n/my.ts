@@ -942,7 +942,8 @@ export const dict = {
   "settings.general.row.shell.autoDefault": "အလိုအလျောက် (ပုံသေ)",
   "settings.general.row.shell.terminalOnly": "terminal သာ",
   "settings.general.row.appearance.title": "အသွင်အပြင်",
-  "settings.general.row.appearance.description": "သင့်စက်ပေါ်တွင် PrioriCode ကို မည်သို့မြင်သည်ကို စိတ်ကြိုက်ပြင်ဆင်ပါ။",
+  "settings.general.row.appearance.description":
+    "သင့်စက်ပေါ်တွင် PrioriCode ကို မည်သို့မြင်သည်ကို စိတ်ကြိုက်ပြင်ဆင်ပါ။",
   "settings.general.row.colorScheme.title": "အရောင်အစီအစဉ်",
   "settings.general.row.colorScheme.description":
     "PrioriCode သည် စနစ်၊ အလင်း သို့မဟုတ် အမှောင် အပြင်အဆင်ကို လိုက်နာခြင်း ရှိ၊ မရှိကို ရွေးပါ။",

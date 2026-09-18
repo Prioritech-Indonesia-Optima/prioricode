@@ -21513,6 +21513,14 @@
               "prune": {
                 "type": "boolean"
               },
+              "threshold": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "default_context": {
+                "type": "integer",
+                "minimum": 0
+              },
               "tail_turns": {
                 "type": "integer",
                 "minimum": 0

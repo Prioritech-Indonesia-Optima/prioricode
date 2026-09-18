@@ -870,7 +870,8 @@ export const dict: Record<string, string> = {
   "sidebar.workspaces.enable": "कार्यस्थान सक्षम गर्नुहोस्",
   "sidebar.workspaces.disable": "कार्यस्थानहरू असक्षम गर्नुहोस्",
   "sidebar.gettingStarted.title": "सुरु गर्दै",
-  "sidebar.gettingStarted.line1": "PrioriCode मा नि:शुल्क मोडेलहरू समावेश छन् ताकि तपाईं तुरुन्तै सुरु गर्न सक्नुहुन्छ।",
+  "sidebar.gettingStarted.line1":
+    "PrioriCode मा नि:शुल्क मोडेलहरू समावेश छन् ताकि तपाईं तुरुन्तै सुरु गर्न सक्नुहुन्छ।",
   "sidebar.gettingStarted.line2": "मोडेलहरू, inc प्रयोग गर्न कुनै पनि प्रदायक जडान गर्नुहोस्। Claude, GPT, Gemini आदि।",
   "sidebar.project.recentSessions": "भर्खरका सत्रहरू",
   "sidebar.project.viewAllSessions": "सबै सत्रहरू हेर्नुहोस्",

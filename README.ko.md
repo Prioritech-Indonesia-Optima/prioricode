@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # 또는 github:Prioritech-Indonesia-Optima
 
 PrioriCode 는 데스크톱 앱으로도 제공됩니다. [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) 에서 직접 다운로드하거나 [prioritech.co.id/download](https://prioritech.co.id/download) 를 이용하세요.
 
-| 플랫폼                | 다운로드                           |
-| --------------------- | ---------------------------------- |
+| 플랫폼                | 다운로드                             |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, 또는 AppImage      |
+| Linux                 | `.deb`, `.rpm`, 또는 AppImage        |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode는 오픈소스 AI 코딩 에이전트인 [OpenCode](https://github.c
 
 ### PrioriCode와 OpenCode 비교
 
-| 기능 | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| 오픈소스 AI 코딩 에이전트 (TUI + 데스크톱) | ✓ | ✓ |
-| 다중 LLM 프로바이더, 플러그인, MCP | ✓ | ✓ |
-| GitHub Actions 통합 | ✓ | ✓ |
-| 조정 가능한 컨텍스트 압축 | ✓ | ✓ |
-| 세션 간 조정 (`sessions` 도구) | — | ✓ |
+| 기능                                       | OpenCode | PrioriCode |
+| ------------------------------------------ | :------: | :--------: |
+| 오픈소스 AI 코딩 에이전트 (TUI + 데스크톱) |    ✓     |     ✓      |
+| 다중 LLM 프로바이더, 플러그인, MCP         |    ✓     |     ✓      |
+| GitHub Actions 통합                        |    ✓     |     ✓      |
+| 조정 가능한 컨텍스트 압축                  |    ✓     |     ✓      |
+| 세션 간 조정 (`sessions` 도구)             |    —     |     ✓      |
 
 **세션 간 조정.** 같은 프로젝트에서 동시에 실행되는 여러 PrioriCode 세션은 내장 `sessions` 도구를 통해 조정할 수 있습니다: 형제 세션 발견, 파일 점유를 통한 편집 충돌 방지, 메시지 전송, 제한된 대기 시간의 질문. 노트는 영구적이며 자동으로 전달됩니다 — 백그라운드 워처가 유휴 세션을 깨워 폴링 없이 동료 세션의 노트를 읽게 합니다.
 
@@ -140,4 +140,3 @@ PrioriCode 에 기여하고 싶다면, Pull Request 를 제출하기 전에 [con
 PrioriCode 와 관련된 프로젝트를 진행하면서 이름에 "prioricode"(예: "prioricode-dashboard" 또는 "prioricode-mobile") 를 포함한다면, README 에 해당 프로젝트가 PrioriCode 팀이 만든 것이 아니며 어떤 방식으로도 우리와 제휴되어 있지 않다는 점을 명시해 주세요.
 
 ---
-

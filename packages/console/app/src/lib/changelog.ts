@@ -39,17 +39,20 @@ export type ChangelogData = {
 }
 
 export async function loadChangelog(): Promise<ChangelogData> {
-  const response = await fetch("https://api.github.com/repos/Prioritech-Indonesia-Optima/prioricode/releases?per_page=20", {
-    headers: {
-      Accept: "application/vnd.github.v3+json",
-      "User-Agent": "PrioriCode-Console",
-    },
-    cf: {
-      // best-effort edge caching (ignored outside Cloudflare)
-      cacheTtl: 60 * 5,
-      cacheEverything: true,
-    },
-  } as RequestInit).catch(() => undefined)
+  const response = await fetch(
+    "https://api.github.com/repos/Prioritech-Indonesia-Optima/prioricode/releases?per_page=20",
+    {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "PrioriCode-Console",
+      },
+      cf: {
+        // best-effort edge caching (ignored outside Cloudflare)
+        cacheTtl: 60 * 5,
+        cacheEverything: true,
+      },
+    } as RequestInit,
+  ).catch(() => undefined)
 
   if (!response?.ok) return { ok: false, releases: [] }
 

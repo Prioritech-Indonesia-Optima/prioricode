@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # ή github:Prioritech-Indonesia-Optima/pri
 
 Το PrioriCode είναι επίσης διαθέσιμο ως εφαρμογή. Κατέβασε το απευθείας από τη [σελίδα εκδόσεων](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) ή το [prioritech.co.id/download](https://prioritech.co.id/download).
 
-| Πλατφόρμα             | Λήψη                               |
-| --------------------- | ---------------------------------- |
+| Πλατφόρμα             | Λήψη                                 |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, ή AppImage         |
+| Linux                 | `.deb`, `.rpm`, ή AppImage           |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ curl -fsSL https://prioritech.co.id/install | XDG_BIN_DIR=$HOME/.local/bin bash
 
 ### Σύγκριση του PrioriCode με το OpenCode
 
-| Δυνατότητα | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| Open source AI coding agent (TUI + desktop) | ✓ | ✓ |
-| Πολλαπλοί πάροχοι LLM, plugins και MCP | ✓ | ✓ |
-| Ενσωμάτωση GitHub Actions | ✓ | ✓ |
-| Ρυθμιζόμενη συμπίεση του context | ✓ | ✓ |
-| Συντονισμός μεταξύ συνεδριών (εργαλείο `sessions`) | — | ✓ |
+| Δυνατότητα                                         | OpenCode | PrioriCode |
+| -------------------------------------------------- | :------: | :--------: |
+| Open source AI coding agent (TUI + desktop)        |    ✓     |     ✓      |
+| Πολλαπλοί πάροχοι LLM, plugins και MCP             |    ✓     |     ✓      |
+| Ενσωμάτωση GitHub Actions                          |    ✓     |     ✓      |
+| Ρυθμιζόμενη συμπίεση του context                   |    ✓     |     ✓      |
+| Συντονισμός μεταξύ συνεδριών (εργαλείο `sessions`) |    —     |     ✓      |
 
 **Συντονισμός μεταξύ συνεδριών.** Παράλληλες συνεδρίες PrioriCode στο ίδιο έργο μπορούν να συντονιστούν μέσω ενός ενσωματωμένου εργαλείου `sessions`: ανίχνευση αδελφών συνεδριών, επιφύλαξη αρχείων για αποφυγή συγκρούσεων επεξεργασίας, αποστολή μηνυμάτων και ερωτήματα με περιορισμένο χρόνο αναμονής. Οι σημειώσεις είναι διαρκείς και παραδίδονται αυτόματα — ένας παρατηρητής στο παρασκήνιο ξυπνά μια αδρανή συνεδρία ώστε να διαβάσει τη σημείωση ενός ομότιμου χωρίς polling.
 
@@ -140,4 +140,3 @@ curl -fsSL https://prioritech.co.id/install | XDG_BIN_DIR=$HOME/.local/bin bash
 Εάν εργάζεσαι σε ένα έργο σχετικό με το PrioriCode και χρησιμοποιείτε το "prioricode" ως μέρος του ονόματός του, για παράδειγμα "prioricode-dashboard" ή "prioricode-mobile", πρόσθεσε μια σημείωση στο README σας για να διευκρινίσεις ότι δεν είναι κατασκευασμένο από την ομάδα του PrioriCode και δεν έχει καμία σχέση με εμάς.
 
 ---
-

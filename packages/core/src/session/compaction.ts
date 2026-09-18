@@ -240,10 +240,15 @@ export const make = (dependencies: Dependencies) => {
     const context = rawContext && rawContext > 0 ? rawContext : config.defaultContext
     if (context <= 0) return false
     const output = input.request.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
-    const estimated = estimate({ system: input.request.system, messages: input.request.messages, tools: input.request.tools })
-    const limit = config.threshold !== undefined
-      ? Math.floor(context * Math.min(config.threshold, 100) / 100)
-      : context - Math.max(output, config.buffer)
+    const estimated = estimate({
+      system: input.request.system,
+      messages: input.request.messages,
+      tools: input.request.tools,
+    })
+    const limit =
+      config.threshold !== undefined
+        ? Math.floor((context * Math.min(config.threshold, 100)) / 100)
+        : context - Math.max(output, config.buffer)
     if (estimated <= limit) return false
     return yield* compactAfterOverflow(input)
   })

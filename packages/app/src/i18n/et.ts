@@ -488,7 +488,8 @@ export const dict = {
   "wsl.onboarding.wslUnavailable.title": "WSL pole saadaval",
   "wsl.onboarding.wslUnavailable.description": "PrioriCode ei saanud selles masinas kontrollida WSL.",
   "wsl.onboarding.installWsl": "Installige WSL",
-  "wsl.onboarding.windowsRestartRequired": "Taaskäivitage Windows, et installida WSL, seejärel avage uuesti PrioriCode.",
+  "wsl.onboarding.windowsRestartRequired":
+    "Taaskäivitage Windows, et installida WSL, seejärel avage uuesti PrioriCode.",
   "wsl.onboarding.next": "Edasi",
   "wsl.onboarding.refresh": "Värskenda",
   "wsl.onboarding.allDistrosAdded": "Kõik installitud distrood on juba lisatud.",

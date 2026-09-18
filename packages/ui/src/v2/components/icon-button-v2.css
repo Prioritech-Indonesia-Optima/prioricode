@@ -81,22 +81,14 @@
 
 [data-component="icon-button-v2"][data-variant="contrast"]:is(:hover, [data-state="hover"]):not(:disabled) {
   background-image:
-    linear-gradient(
-      90deg,
-      var(--pc-overlay-contrast-hover) 0%,
-      var(--pc-overlay-contrast-hover) 100%
-    ),
+    linear-gradient(90deg, var(--pc-overlay-contrast-hover) 0%, var(--pc-overlay-contrast-hover) 100%),
     linear-gradient(180deg, var(--pc-alpha-light-20) 0%, var(--pc-alpha-light-0) 100%),
     linear-gradient(90deg, var(--pc-bg-contrast) 0%, var(--pc-bg-contrast) 100%);
 }
 
 [data-component="icon-button-v2"][data-variant="contrast"]:is(:active, [data-state="pressed"]):not(:disabled) {
   background-image:
-    linear-gradient(
-      90deg,
-      var(--pc-overlay-contrast-pressed) 0%,
-      var(--pc-overlay-contrast-pressed) 100%
-    ),
+    linear-gradient(90deg, var(--pc-overlay-contrast-pressed) 0%, var(--pc-overlay-contrast-pressed) 100%),
     linear-gradient(180deg, var(--pc-alpha-light-20) 0%, var(--pc-alpha-light-0) 100%),
     linear-gradient(90deg, var(--pc-bg-contrast) 0%, var(--pc-bg-contrast) 100%);
 }

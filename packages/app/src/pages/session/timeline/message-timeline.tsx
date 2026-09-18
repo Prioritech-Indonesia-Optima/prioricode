@@ -1372,8 +1372,7 @@ export function MessageTimeline(props: {
             data-session-title
             classList={{
               "sticky top-0 z-30": true,
-              "bg-[linear-gradient(to_bottom,var(--pc-bg-base)_48px,transparent)]":
-                settings.general.newLayoutDesigns(),
+              "bg-[linear-gradient(to_bottom,var(--pc-bg-base)_48px,transparent)]": settings.general.newLayoutDesigns(),
               "bg-[linear-gradient(to_bottom,var(--background-stronger)_48px,transparent)]":
                 !settings.general.newLayoutDesigns(),
               "w-full": true,

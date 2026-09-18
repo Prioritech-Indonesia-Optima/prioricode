@@ -930,7 +930,8 @@ export const dict: Record<string, string> = {
   "settings.general.row.appearance.title": "চেহারা",
   "settings.general.row.appearance.description": "আপনার ডিভাইসে PrioriCode কেমন দেখায় তা কাস্টমাইজ করুন",
   "settings.general.row.colorScheme.title": "রঙের স্কিম",
-  "settings.general.row.colorScheme.description": "PrioriCode সিস্টেম, হালকা বা অন্ধকার থিম অনুসরণ করে কিনা তা বেছে নিন",
+  "settings.general.row.colorScheme.description":
+    "PrioriCode সিস্টেম, হালকা বা অন্ধকার থিম অনুসরণ করে কিনা তা বেছে নিন",
   "settings.general.row.theme.title": "থিম",
   "settings.general.row.theme.description": "কিভাবে PrioriCode থিম করা হয় তা কাস্টমাইজ করুন।",
   "settings.general.row.font.title": "কোড ফন্ট",

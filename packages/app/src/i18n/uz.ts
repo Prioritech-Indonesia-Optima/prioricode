@@ -999,7 +999,8 @@ export const dict = {
   "settings.general.row.releaseNotes.description":
     "Yangilanishlardan so'ng nimalar yangi qalqib chiquvchi oynalarni ko'rsating",
   "settings.updates.row.startup.title": "Ishga tushganda yangilanishlarni tekshiring",
-  "settings.updates.row.startup.description": "PrioriCode ishga tushganda avtomatik ravishda yangilanishlarni tekshiring",
+  "settings.updates.row.startup.description":
+    "PrioriCode ishga tushganda avtomatik ravishda yangilanishlarni tekshiring",
   "settings.updates.row.check.title": "Yangilanishlarni tekshiring",
   "settings.updates.row.check.description": "Yangilanishlarni qo'lda tekshiring va mavjud bo'lsa o'rnating",
   "settings.updates.action.checkNow": "Hozir tekshiring",

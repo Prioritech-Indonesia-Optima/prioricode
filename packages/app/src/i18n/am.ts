@@ -239,7 +239,8 @@ export const dict = {
   "provider.connect.oauth.code.invalid": "ልክ ያልሆነ የፈቀዳ ኮድ",
   "provider.connect.oauth.auto.visit.prefix": "ጎብኝ ",
   "provider.connect.oauth.auto.visit.link": "ይህ ሊንክ",
-  "provider.connect.oauth.auto.visit.suffix": " እና መለያዎን ለማገናኘት ከታች ያለውን ኮድ ያስገቡ እና {{provider}} ሞዴሎችን በPrioriCode ይጠቀሙ።",
+  "provider.connect.oauth.auto.visit.suffix":
+    " እና መለያዎን ለማገናኘት ከታች ያለውን ኮድ ያስገቡ እና {{provider}} ሞዴሎችን በPrioriCode ይጠቀሙ።",
   "provider.connect.oauth.auto.confirmationCode": "የማረጋገጫ ኮድ",
   "provider.connect.toast.connected.title": "{{provider}}ተገናኝቷል",
   "provider.connect.toast.connected.description": "{{provider}} ሞዴሎች አሁን ለመጠቀም ይገኛሉ።",

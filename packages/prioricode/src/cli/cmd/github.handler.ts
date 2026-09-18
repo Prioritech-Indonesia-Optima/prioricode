@@ -322,7 +322,9 @@ export const githubInstall = Effect.fn("Cli.github.install")(function* () {
         s.stop("Installed GitHub app")
 
         async function getInstallation() {
-          return await fetch(`https://api.prioricode.ai/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`)
+          return await fetch(
+            `https://api.prioricode.ai/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`,
+          )
             .then((res) => res.json())
             .then((data) => data.installation)
         }

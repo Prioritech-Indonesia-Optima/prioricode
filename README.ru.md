@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # или github:Prioritech-Indonesia-Optima
 
 PrioriCode также доступен как десктопное приложение. Скачайте его со [страницы релизов](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) или с [prioritech.co.id/download](https://prioritech.co.id/download).
 
-| Платформа             | Загрузка                           |
-| --------------------- | ---------------------------------- |
+| Платформа             | Загрузка                             |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm` или AppImage        |
+| Linux                 | `.deb`, `.rpm` или AppImage          |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode — это форк [OpenCode](https://github.com/anomalyco/opencode)
 
 ### Сравнение PrioriCode и OpenCode
 
-| Возможность | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| Открытый AI-агент для программирования (TUI + desktop) | ✓ | ✓ |
-| Множество LLM-провайдеров, плагины и MCP | ✓ | ✓ |
-| Интеграция с GitHub Actions | ✓ | ✓ |
-| Настраиваемая компакция контекста | ✓ | ✓ |
-| Межсессионная координация (инструмент `sessions`) | — | ✓ |
+| Возможность                                            | OpenCode | PrioriCode |
+| ------------------------------------------------------ | :------: | :--------: |
+| Открытый AI-агент для программирования (TUI + desktop) |    ✓     |     ✓      |
+| Множество LLM-провайдеров, плагины и MCP               |    ✓     |     ✓      |
+| Интеграция с GitHub Actions                            |    ✓     |     ✓      |
+| Настраиваемая компакция контекста                      |    ✓     |     ✓      |
+| Межсессионная координация (инструмент `sessions`)      |    —     |     ✓      |
 
 **Межсессионная координация.** Одновременные сессии PrioriCode в одном проекте могут координироваться через встроенный инструмент `sessions`: обнаружение сестринских сессий, резервирование файлов для избежания конфликтов редактирования, отправка сообщений и вопросы с ограниченным ожиданием. Заметки долговечны и доставляются автоматически — фоновый наблюдатель будит бездействующую сессию, чтобы она прочитала заметку сверстника без опроса.
 
@@ -140,4 +140,3 @@ PrioriCode — это форк [OpenCode](https://github.com/anomalyco/opencode)
 Если вы делаете проект, связанный с PrioriCode, и используете "prioricode" как часть имени (например, "prioricode-dashboard" или "prioricode-mobile"), добавьте примечание в README, чтобы уточнить, что проект не создан командой PrioriCode и не аффилирован с нами.
 
 ---
-

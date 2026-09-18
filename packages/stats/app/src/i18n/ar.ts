@@ -160,7 +160,8 @@ export const dict = {
   "model.noDataDescription": "جرّب فتح نموذج من لوحة الترتيب.",
   "model.noMatched": "لم تطابق أي حقائق نموذج أو صفوف استخدام {{id}}.",
   "model.fallback": "نموذج",
-  "model.catalogFallback": "حقائق النموذج من فهرس النماذج المشترك. يظهر استخدام PrioriCode عندما يصبح لهذا النموذج نشاط.",
+  "model.catalogFallback":
+    "حقائق النموذج من فهرس النماذج المشترك. يظهر استخدام PrioriCode عندما يصبح لهذا النموذج نشاط.",
   "model.unranked": "غير مصنف ضمن استخدام PrioriCode للأسبوع الماضي",
   "model.ranked": "مصنف رقم {{rank}} ضمن استخدام PrioriCode للأسبوع الماضي",
   "model.observedVolume": "مع {{share}} من حجم 2M المرصود.",

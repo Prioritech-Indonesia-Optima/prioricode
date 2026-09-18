@@ -234,7 +234,8 @@ export const dict = {
   "provider.connect.apiKey.required": "API कुंजी आवश्यक है",
   "provider.connect.prioricodeZen.line1":
     "PrioriCode Zen आपको कोडिंग एजेंटों के लिए चुने गए विश्वसनीय, अनुकूलित मॉडलों तक पहुँच देता है।",
-  "provider.connect.prioricodeZen.line2": "एक API कुंजी से आपको Claude, GPT, Gemini, GLM जैसे कई मॉडलों तक पहुँच मिलेगी।",
+  "provider.connect.prioricodeZen.line2":
+    "एक API कुंजी से आपको Claude, GPT, Gemini, GLM जैसे कई मॉडलों तक पहुँच मिलेगी।",
   "provider.connect.prioricodeZen.visit.prefix": "यहाँ जाएँ: ",
   "provider.connect.prioricodeZen.visit.link": "prioricode.ai/zen",
   "provider.connect.prioricodeZen.visit.suffix": " अपनी API कुंजी प्राप्त करने के लिए।",
@@ -940,7 +941,8 @@ export const dict = {
   "settings.general.row.appearance.title": "उपस्थिति",
   "settings.general.row.appearance.description": "अनुकूलित करें कि PrioriCode आपके डिवाइस पर कैसा दिखता है",
   "settings.general.row.colorScheme.title": "रंग योजना",
-  "settings.general.row.colorScheme.description": "चुनें कि PrioriCode सिस्टम, हल्की या गहरी थीम में से किसका उपयोग करे",
+  "settings.general.row.colorScheme.description":
+    "चुनें कि PrioriCode सिस्टम, हल्की या गहरी थीम में से किसका उपयोग करे",
   "settings.general.row.theme.title": "थीम",
   "settings.general.row.theme.description": "अनुकूलित करें कि PrioriCode की थीम कैसी है।",
   "settings.general.row.font.title": "कोड फ़ॉन्ट",

@@ -78,13 +78,13 @@ prioricode attach http://10.20.30.40:4096
 
 #### Options
 
-| Option                                   | Court | Description                                                                                        |
-| ---------------------------------------- | ----- | -------------------------------------------------------------------------------------------------- |
-| <nobr><code>{"--dir"}</code></nobr>      |       | Répertoire de travail dans lequel démarrer TUI                                                     |
-| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Continuer la dernière session                                                                      |
-| <nobr><code>{"--session"}</code></nobr>  | `-s`  | ID de session pour continuer                                                                       |
-| <nobr><code>{"--fork"}</code></nobr>     |       | Dupliquer la session lors de la reprise (à utiliser avec `--continue` ou `--session`)              |
-| <nobr><code>{"--password"}</code></nobr> | `-p`  | Mot de passe d'authentification de base (par défaut `PRIORICODE_SERVER_PASSWORD`)                    |
+| Option                                   | Court | Description                                                                                            |
+| ---------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------ |
+| <nobr><code>{"--dir"}</code></nobr>      |       | Répertoire de travail dans lequel démarrer TUI                                                         |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Continuer la dernière session                                                                          |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`  | ID de session pour continuer                                                                           |
+| <nobr><code>{"--fork"}</code></nobr>     |       | Dupliquer la session lors de la reprise (à utiliser avec `--continue` ou `--session`)                  |
+| <nobr><code>{"--password"}</code></nobr> | `-p`  | Mot de passe d'authentification de base (par défaut `PRIORICODE_SERVER_PASSWORD`)                      |
 | <nobr><code>{"--username"}</code></nobr> | `-u`  | Nom d'utilisateur d'authentification de base (par défaut `PRIORICODE_SERVER_USERNAME` ou `prioricode`) |
 
 ---
@@ -339,25 +339,25 @@ prioricode run --attach http://localhost:4096 "Explain async/await in JavaScript
 
 #### Options
 
-| Option                                   | Court | Description                                                                                        |
-| ---------------------------------------- | ----- | -------------------------------------------------------------------------------------------------- |
-| <nobr><code>{"--command"}</code></nobr>  |       | La commande à exécuter, utilisez le message pour les arguments                                     |
-| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Continuer la dernière session                                                                      |
-| <nobr><code>{"--session"}</code></nobr>  | `-s`  | ID de session pour continuer                                                                       |
-| <nobr><code>{"--fork"}</code></nobr>     |       | Forker la session en continuant (à utiliser avec `--continue` ou `--session`)                      |
-| <nobr><code>{"--share"}</code></nobr>    |       | Partager la session                                                                                |
-| <nobr><code>{"--model"}</code></nobr>    | `-m`  | Modèle à utiliser sous forme de fournisseur/modèle                                                 |
-| <nobr><code>{"--agent"}</code></nobr>    |       | Agent à utiliser                                                                                   |
-| <nobr><code>{"--file"}</code></nobr>     | `-f`  | Fichier(s) à joindre au message                                                                    |
-| <nobr><code>{"--format"}</code></nobr>   |       | Format : par défaut (formaté) ou json (événements JSON bruts)                                      |
-| <nobr><code>{"--title"}</code></nobr>    |       | Titre de la session (utilise un prompt tronqué si aucune valeur n'est fournie)                     |
-| <nobr><code>{"--attach"}</code></nobr>   |       | Connectez-vous à un serveur prioricode en cours d'exécution (par exemple, http://localhost:4096)     |
-| <nobr><code>{"--password"}</code></nobr> | `-p`  | Mot de passe d'authentification de base (par défaut `PRIORICODE_SERVER_PASSWORD`)                    |
+| Option                                   | Court | Description                                                                                            |
+| ---------------------------------------- | ----- | ------------------------------------------------------------------------------------------------------ |
+| <nobr><code>{"--command"}</code></nobr>  |       | La commande à exécuter, utilisez le message pour les arguments                                         |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Continuer la dernière session                                                                          |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`  | ID de session pour continuer                                                                           |
+| <nobr><code>{"--fork"}</code></nobr>     |       | Forker la session en continuant (à utiliser avec `--continue` ou `--session`)                          |
+| <nobr><code>{"--share"}</code></nobr>    |       | Partager la session                                                                                    |
+| <nobr><code>{"--model"}</code></nobr>    | `-m`  | Modèle à utiliser sous forme de fournisseur/modèle                                                     |
+| <nobr><code>{"--agent"}</code></nobr>    |       | Agent à utiliser                                                                                       |
+| <nobr><code>{"--file"}</code></nobr>     | `-f`  | Fichier(s) à joindre au message                                                                        |
+| <nobr><code>{"--format"}</code></nobr>   |       | Format : par défaut (formaté) ou json (événements JSON bruts)                                          |
+| <nobr><code>{"--title"}</code></nobr>    |       | Titre de la session (utilise un prompt tronqué si aucune valeur n'est fournie)                         |
+| <nobr><code>{"--attach"}</code></nobr>   |       | Connectez-vous à un serveur prioricode en cours d'exécution (par exemple, http://localhost:4096)       |
+| <nobr><code>{"--password"}</code></nobr> | `-p`  | Mot de passe d'authentification de base (par défaut `PRIORICODE_SERVER_PASSWORD`)                      |
 | <nobr><code>{"--username"}</code></nobr> | `-u`  | Nom d'utilisateur d'authentification de base (par défaut `PRIORICODE_SERVER_USERNAME` ou `prioricode`) |
-| <nobr><code>{"--dir"}</code></nobr>      |       | Répertoire d'exécution, ou chemin sur le serveur distant lors de l'attachement                     |
-| <nobr><code>{"--variant"}</code></nobr>  |       | Variante du modèle (effort de raisonnement spécifique au fournisseur)                              |
-| <nobr><code>{"--thinking"}</code></nobr> |       | Afficher les blocs de réflexion                                                                    |
-| <nobr><code>{"--port"}</code></nobr>     |       | Port du serveur local (port aléatoire par défaut)                                                  |
+| <nobr><code>{"--dir"}</code></nobr>      |       | Répertoire d'exécution, ou chemin sur le serveur distant lors de l'attachement                         |
+| <nobr><code>{"--variant"}</code></nobr>  |       | Variante du modèle (effort de raisonnement spécifique au fournisseur)                                  |
+| <nobr><code>{"--thinking"}</code></nobr> |       | Afficher les blocs de réflexion                                                                        |
+| <nobr><code>{"--port"}</code></nobr>     |       | Port du serveur local (port aléatoire par défaut)                                                      |
 
 ---
 
@@ -562,32 +562,32 @@ La CLI prioricode prend les flags globaux suivants.
 
 PrioriCode peut être configuré à l'aide de variables d'environnement.
 
-| Variables                             | Type    | Description                                                                       |
-| ------------------------------------- | ------- | --------------------------------------------------------------------------------- |
-| `PRIORICODE_AUTO_SHARE`                 | booléen | Partager automatiquement des sessions                                             |
-| `PRIORICODE_GIT_BASH_PATH`              | chaîne  | Chemin vers l'exécutable Git Bash sur Windows                                     |
-| `PRIORICODE_CONFIG`                     | chaîne  | Chemin d'accès au fichier de configuration                                        |
-| `PRIORICODE_TUI_CONFIG`                 | chaîne  | Chemin d'accès au fichier de configuration TUI                                    |
-| `PRIORICODE_CONFIG_DIR`                 | chaîne  | Chemin d'accès au répertoire de configuration                                     |
-| `PRIORICODE_CONFIG_CONTENT`             | chaîne  | Contenu de configuration JSON en ligne                                            |
-| `PRIORICODE_DISABLE_AUTOUPDATE`         | booléen | Désactiver les vérifications automatiques des mises à jour                        |
-| `PRIORICODE_DISABLE_PRUNE`              | booléen | Désactiver le nettoyage des anciennes données                                     |
-| `PRIORICODE_DISABLE_TERMINAL_TITLE`     | booléen | Désactiver les mises à jour automatiques des titres du terminal                   |
-| `PRIORICODE_PERMISSION`                 | chaîne  | Configuration des autorisations JSON intégrées                                    |
-| `PRIORICODE_DISABLE_DEFAULT_PLUGINS`    | booléen | Désactiver les plugins par défaut                                                 |
-| `PRIORICODE_DISABLE_LSP_DOWNLOAD`       | booléen | Désactiver les téléchargements automatiques du serveur LSP                        |
-| `PRIORICODE_ENABLE_EXPERIMENTAL_MODELS` | booléen | Activer les modèles expérimentaux                                                 |
-| `PRIORICODE_DISABLE_AUTOCOMPACT`        | booléen | Désactiver le compactage automatique du contexte                                  |
-| `PRIORICODE_DISABLE_CLAUDE_CODE`        | booléen | Désactiver la lecture de `.claude` (prompt + compétences)                         |
-| `PRIORICODE_DISABLE_CLAUDE_CODE_PROMPT` | booléen | Désactiver la lecture `~/.claude/CLAUDE.md`                                       |
-| `PRIORICODE_DISABLE_CLAUDE_CODE_SKILLS` | booléen | Désactiver le chargement de `.claude/skills`                                      |
-| `PRIORICODE_DISABLE_MODELS_FETCH`       | booléen | Désactiver la récupération de modèles à partir de sources distantes               |
-| `PRIORICODE_FAKE_VCS`                   | chaîne  | Faux fournisseur VCS à des fins de test                                           |
-| `PRIORICODE_CLIENT`                     | chaîne  | Identifiant du client (par défaut `cli`)                                          |
-| `PRIORICODE_ENABLE_EXA`                 | booléen | Activer les outils de recherche Web Exa                                           |
-| `PRIORICODE_SERVER_PASSWORD`            | chaîne  | Activer l'authentification de base pour `serve`/`web`                             |
+| Variables                               | Type    | Description                                                                         |
+| --------------------------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `PRIORICODE_AUTO_SHARE`                 | booléen | Partager automatiquement des sessions                                               |
+| `PRIORICODE_GIT_BASH_PATH`              | chaîne  | Chemin vers l'exécutable Git Bash sur Windows                                       |
+| `PRIORICODE_CONFIG`                     | chaîne  | Chemin d'accès au fichier de configuration                                          |
+| `PRIORICODE_TUI_CONFIG`                 | chaîne  | Chemin d'accès au fichier de configuration TUI                                      |
+| `PRIORICODE_CONFIG_DIR`                 | chaîne  | Chemin d'accès au répertoire de configuration                                       |
+| `PRIORICODE_CONFIG_CONTENT`             | chaîne  | Contenu de configuration JSON en ligne                                              |
+| `PRIORICODE_DISABLE_AUTOUPDATE`         | booléen | Désactiver les vérifications automatiques des mises à jour                          |
+| `PRIORICODE_DISABLE_PRUNE`              | booléen | Désactiver le nettoyage des anciennes données                                       |
+| `PRIORICODE_DISABLE_TERMINAL_TITLE`     | booléen | Désactiver les mises à jour automatiques des titres du terminal                     |
+| `PRIORICODE_PERMISSION`                 | chaîne  | Configuration des autorisations JSON intégrées                                      |
+| `PRIORICODE_DISABLE_DEFAULT_PLUGINS`    | booléen | Désactiver les plugins par défaut                                                   |
+| `PRIORICODE_DISABLE_LSP_DOWNLOAD`       | booléen | Désactiver les téléchargements automatiques du serveur LSP                          |
+| `PRIORICODE_ENABLE_EXPERIMENTAL_MODELS` | booléen | Activer les modèles expérimentaux                                                   |
+| `PRIORICODE_DISABLE_AUTOCOMPACT`        | booléen | Désactiver le compactage automatique du contexte                                    |
+| `PRIORICODE_DISABLE_CLAUDE_CODE`        | booléen | Désactiver la lecture de `.claude` (prompt + compétences)                           |
+| `PRIORICODE_DISABLE_CLAUDE_CODE_PROMPT` | booléen | Désactiver la lecture `~/.claude/CLAUDE.md`                                         |
+| `PRIORICODE_DISABLE_CLAUDE_CODE_SKILLS` | booléen | Désactiver le chargement de `.claude/skills`                                        |
+| `PRIORICODE_DISABLE_MODELS_FETCH`       | booléen | Désactiver la récupération de modèles à partir de sources distantes                 |
+| `PRIORICODE_FAKE_VCS`                   | chaîne  | Faux fournisseur VCS à des fins de test                                             |
+| `PRIORICODE_CLIENT`                     | chaîne  | Identifiant du client (par défaut `cli`)                                            |
+| `PRIORICODE_ENABLE_EXA`                 | booléen | Activer les outils de recherche Web Exa                                             |
+| `PRIORICODE_SERVER_PASSWORD`            | chaîne  | Activer l'authentification de base pour `serve`/`web`                               |
 | `PRIORICODE_SERVER_USERNAME`            | chaîne  | Remplacer le nom d'utilisateur d'authentification de base (par défaut `prioricode`) |
-| `PRIORICODE_MODELS_URL`                 | chaîne  | URL personnalisé pour récupérer la configuration des modèles                      |
+| `PRIORICODE_MODELS_URL`                 | chaîne  | URL personnalisé pour récupérer la configuration des modèles                        |
 
 ---
 
@@ -595,8 +595,8 @@ PrioriCode peut être configuré à l'aide de variables d'environnement.
 
 Ces variables d'environnement activent des fonctionnalités expérimentales qui peuvent être modifiées ou supprimées.
 
-| Variables                                       | Type    | Description                                                     |
-| ----------------------------------------------- | ------- | --------------------------------------------------------------- |
+| Variables                                         | Type    | Description                                                     |
+| ------------------------------------------------- | ------- | --------------------------------------------------------------- |
 | `PRIORICODE_EXPERIMENTAL`                         | booléen | Activer les fonctionnalités expérimentales du drapeau global    |
 | `PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY`          | booléen | Activer la découverte d'icônes                                  |
 | `PRIORICODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | booléen | Désactiver la copie lors de la sélection dans TUI               |

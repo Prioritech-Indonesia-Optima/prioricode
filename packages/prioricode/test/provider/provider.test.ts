@@ -2102,7 +2102,9 @@ it.effect("prioricode loader keeps paid models when auth exists", () =>
     const original = yield* Effect.promise(() => Filesystem.readText(authPath).catch(() => undefined))
 
     yield* Effect.acquireRelease(
-      Effect.promise(() => Filesystem.write(authPath, JSON.stringify({ prioricode: { type: "api", key: "test-key" } }))),
+      Effect.promise(() =>
+        Filesystem.write(authPath, JSON.stringify({ prioricode: { type: "api", key: "test-key" } })),
+      ),
       () =>
         Effect.promise(async () => {
           if (original !== undefined) await Filesystem.write(authPath, original)

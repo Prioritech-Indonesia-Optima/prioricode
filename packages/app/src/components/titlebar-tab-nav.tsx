@@ -234,9 +234,7 @@ export function TabNavItem(props: {
           <Show
             when={props.session()}
             keyed
-            fallback={
-              <span class="block size-4 rounded-[3px] border border-pc-border-muted" aria-hidden="true" />
-            }
+            fallback={<span class="block size-4 rounded-[3px] border border-pc-border-muted" aria-hidden="true" />}
           >
             {(session) => (
               <SessionTabAvatar

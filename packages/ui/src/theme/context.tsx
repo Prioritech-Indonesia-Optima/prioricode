@@ -183,7 +183,7 @@ export const { use: useTheme, provider: ThemeProvider } = createSimpleContext({
     const mode = colorScheme === "system" ? getSystemMode() : colorScheme
     const [store, setStore] = createStore({
       themes: {
-        "prioricode": prioricodeTheme,
+        prioricode: prioricodeTheme,
       } as Record<string, DesktopTheme>,
       themeId,
       colorScheme,

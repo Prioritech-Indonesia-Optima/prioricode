@@ -35,7 +35,9 @@ describe("prioricode acp initialize/auth subprocess", () => {
 
         expect(initialized.authMethods?.[0]?.id).toBe("prioricode-login")
         expect(initialized.authMethods?.[0]?._meta?.["terminal-auth"]).toBeDefined()
-        expect(yield* acp.request<AuthenticateResponse>("authenticate", { methodId: "prioricode-login" })).toMatchObject({
+        expect(
+          yield* acp.request<AuthenticateResponse>("authenticate", { methodId: "prioricode-login" }),
+        ).toMatchObject({
           result: {},
         })
 

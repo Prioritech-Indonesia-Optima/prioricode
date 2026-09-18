@@ -115,14 +115,14 @@ Or you can set it up manually.
 
 PrioriCode can be triggered by the following GitHub events:
 
-| Event Type                    | Triggered By                           | Details                                                                                                           |
-| ----------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| Event Type                    | Triggered By                           | Details                                                                                                               |
+| ----------------------------- | -------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
 | `issue_comment`               | Comment on an issue or PR              | Mention `/prioricode` or `/pc` in your comment. PrioriCode reads context and can create branches, open PRs, or reply. |
 | `pull_request_review_comment` | Comment on specific code lines in a PR | Mention `/prioricode` or `/pc` while reviewing code. PrioriCode receives file path, line numbers, and diff context.   |
-| `issues`                      | Issue opened or edited                 | Automatically trigger PrioriCode when issues are created or modified. Requires `prompt` input.                      |
-| `pull_request`                | PR opened or updated                   | Automatically trigger PrioriCode when PRs are opened, synchronized, or reopened. Useful for automated reviews.      |
-| `schedule`                    | Cron-based schedule                    | Run PrioriCode on a schedule. Requires `prompt` input. Output goes to logs and PRs (no issue to comment on).        |
-| `workflow_dispatch`           | Manual trigger from GitHub UI          | Trigger PrioriCode on demand via Actions tab. Requires `prompt` input. Output goes to logs and PRs.                 |
+| `issues`                      | Issue opened or edited                 | Automatically trigger PrioriCode when issues are created or modified. Requires `prompt` input.                        |
+| `pull_request`                | PR opened or updated                   | Automatically trigger PrioriCode when PRs are opened, synchronized, or reopened. Useful for automated reviews.        |
+| `schedule`                    | Cron-based schedule                    | Run PrioriCode on a schedule. Requires `prompt` input. Output goes to logs and PRs (no issue to comment on).          |
+| `workflow_dispatch`           | Manual trigger from GitHub UI          | Trigger PrioriCode on demand via Actions tab. Requires `prompt` input. Output goes to logs and PRs.                   |
 
 ### Schedule Example
 

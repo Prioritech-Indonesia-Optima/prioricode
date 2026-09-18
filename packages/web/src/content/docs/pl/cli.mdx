@@ -78,13 +78,13 @@ prioricode attach http://10.20.30.40:4096
 
 #### Flagi
 
-| Flaga                                    | Skrót | Opis                                                                                                  |
-| ---------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------- |
-| <nobr><code>{"--dir"}</code></nobr>      |       | Katalog roboczy, w którym uruchomić TUI                                                               |
-| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Kontynuuj ostatnią sesję                                                                              |
-| <nobr><code>{"--session"}</code></nobr>  | `-s`  | Identyfikator sesji do kontynuowania                                                                  |
-| <nobr><code>{"--fork"}</code></nobr>     |       | Rozgałęź sesję podczas kontynuowania (użyj z `--continue` lub `--session`)                            |
-| <nobr><code>{"--password"}</code></nobr> | `-p`  | Hasło uwierzytelniania podstawowego (domyślnie `PRIORICODE_SERVER_PASSWORD`)                            |
+| Flaga                                    | Skrót | Opis                                                                                                      |
+| ---------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------- |
+| <nobr><code>{"--dir"}</code></nobr>      |       | Katalog roboczy, w którym uruchomić TUI                                                                   |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Kontynuuj ostatnią sesję                                                                                  |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`  | Identyfikator sesji do kontynuowania                                                                      |
+| <nobr><code>{"--fork"}</code></nobr>     |       | Rozgałęź sesję podczas kontynuowania (użyj z `--continue` lub `--session`)                                |
+| <nobr><code>{"--password"}</code></nobr> | `-p`  | Hasło uwierzytelniania podstawowego (domyślnie `PRIORICODE_SERVER_PASSWORD`)                              |
 | <nobr><code>{"--username"}</code></nobr> | `-u`  | Nazwa użytkownika uwierzytelniania podstawowego (domyślnie `PRIORICODE_SERVER_USERNAME` lub `prioricode`) |
 
 ---
@@ -339,25 +339,25 @@ prioricode run --attach http://localhost:4096 "Explain async/await in JavaScript
 
 #### Flagi
 
-| Flaga                                    | Skrót | Opis                                                                                                  |
-| ---------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------- |
-| <nobr><code>{"--command"}</code></nobr>  |       | Polecenie do uruchomienia, reszta to argumenty                                                        |
-| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Kontynuuj ostatnią sesję                                                                              |
-| <nobr><code>{"--session"}</code></nobr>  | `-s`  | Identyfikator sesji do kontynuowania                                                                  |
-| <nobr><code>{"--fork"}</code></nobr>     |       | Sklonuj sesję podczas kontynuacji (użyj z `--continue` lub `--session`)                               |
-| <nobr><code>{"--share"}</code></nobr>    |       | Udostępnij sesję po zakończeniu                                                                       |
-| <nobr><code>{"--model"}</code></nobr>    | `-m`  | Model do użycia w formacie dostawca/model                                                             |
-| <nobr><code>{"--agent"}</code></nobr>    |       | Agent do użycia                                                                                       |
-| <nobr><code>{"--file"}</code></nobr>     | `-f`  | Pliki do załączenia do wiadomości                                                                     |
-| <nobr><code>{"--format"}</code></nobr>   |       | Format wyjściowy: `default` (sformatowany) lub `json` (surowy JSON)                                   |
-| <nobr><code>{"--title"}</code></nobr>    |       | Tytuł sesji (jeśli nie podano, zostanie wygenerowany z promptu)                                       |
-| <nobr><code>{"--attach"}</code></nobr>   |       | Dołącz do działającego serwera PrioriCode (np. http://localhost:4096)                                   |
-| <nobr><code>{"--password"}</code></nobr> | `-p`  | Hasło uwierzytelniania podstawowego (domyślnie `PRIORICODE_SERVER_PASSWORD`)                            |
+| Flaga                                    | Skrót | Opis                                                                                                      |
+| ---------------------------------------- | ----- | --------------------------------------------------------------------------------------------------------- |
+| <nobr><code>{"--command"}</code></nobr>  |       | Polecenie do uruchomienia, reszta to argumenty                                                            |
+| <nobr><code>{"--continue"}</code></nobr> | `-c`  | Kontynuuj ostatnią sesję                                                                                  |
+| <nobr><code>{"--session"}</code></nobr>  | `-s`  | Identyfikator sesji do kontynuowania                                                                      |
+| <nobr><code>{"--fork"}</code></nobr>     |       | Sklonuj sesję podczas kontynuacji (użyj z `--continue` lub `--session`)                                   |
+| <nobr><code>{"--share"}</code></nobr>    |       | Udostępnij sesję po zakończeniu                                                                           |
+| <nobr><code>{"--model"}</code></nobr>    | `-m`  | Model do użycia w formacie dostawca/model                                                                 |
+| <nobr><code>{"--agent"}</code></nobr>    |       | Agent do użycia                                                                                           |
+| <nobr><code>{"--file"}</code></nobr>     | `-f`  | Pliki do załączenia do wiadomości                                                                         |
+| <nobr><code>{"--format"}</code></nobr>   |       | Format wyjściowy: `default` (sformatowany) lub `json` (surowy JSON)                                       |
+| <nobr><code>{"--title"}</code></nobr>    |       | Tytuł sesji (jeśli nie podano, zostanie wygenerowany z promptu)                                           |
+| <nobr><code>{"--attach"}</code></nobr>   |       | Dołącz do działającego serwera PrioriCode (np. http://localhost:4096)                                     |
+| <nobr><code>{"--password"}</code></nobr> | `-p`  | Hasło uwierzytelniania podstawowego (domyślnie `PRIORICODE_SERVER_PASSWORD`)                              |
 | <nobr><code>{"--username"}</code></nobr> | `-u`  | Nazwa użytkownika uwierzytelniania podstawowego (domyślnie `PRIORICODE_SERVER_USERNAME` lub `prioricode`) |
-| <nobr><code>{"--dir"}</code></nobr>      |       | Katalog do uruchomienia lub ścieżka na zdalnym serwerze podczas dołączania                            |
-| <nobr><code>{"--variant"}</code></nobr>  |       | Wariant modelu (poziom wnioskowania specyficzny dla dostawcy)                                         |
-| <nobr><code>{"--thinking"}</code></nobr> |       | Pokaż bloki myślenia                                                                                  |
-| <nobr><code>{"--port"}</code></nobr>     |       | Port dla serwera lokalnego (domyślnie losowy)                                                         |
+| <nobr><code>{"--dir"}</code></nobr>      |       | Katalog do uruchomienia lub ścieżka na zdalnym serwerze podczas dołączania                                |
+| <nobr><code>{"--variant"}</code></nobr>  |       | Wariant modelu (poziom wnioskowania specyficzny dla dostawcy)                                             |
+| <nobr><code>{"--thinking"}</code></nobr> |       | Pokaż bloki myślenia                                                                                      |
+| <nobr><code>{"--port"}</code></nobr>     |       | Port dla serwera lokalnego (domyślnie losowy)                                                             |
 
 ---
 
@@ -562,8 +562,8 @@ Interfejs CLI PrioriCode przyjmuje następujące flagi globalne dla każdego pol
 
 PrioriCode można skonfigurować za pomocą zmiennych środowiskowych.
 
-| Zmienna                               | Typ     | Opis                                                       |
-| ------------------------------------- | ------- | ---------------------------------------------------------- |
+| Zmienna                                 | Typ     | Opis                                                       |
+| --------------------------------------- | ------- | ---------------------------------------------------------- |
 | `PRIORICODE_AUTO_SHARE`                 | boolean | Automatycznie udostępniaj sesje                            |
 | `PRIORICODE_GIT_BASH_PATH`              | string  | Ścieżka do pliku wykonywalnego Git Bash w systemie Windows |
 | `PRIORICODE_CONFIG`                     | string  | Ścieżka do pliku konfiguracyjnego                          |
@@ -586,7 +586,7 @@ PrioriCode można skonfigurować za pomocą zmiennych środowiskowych.
 | `PRIORICODE_CLIENT`                     | string  | Identyfikator klienta (domyślnie `cli`)                    |
 | `PRIORICODE_ENABLE_EXA`                 | boolean | Włącz narzędzie wyszukiwania internetowego Exa             |
 | `PRIORICODE_SERVER_PASSWORD`            | string  | Włącz uwierzytelnianie podstawowe dla `serve`/`web`        |
-| `PRIORICODE_SERVER_USERNAME`            | string  | Nazwa użytkownika do autoryzacji (domyślnie `prioricode`)    |
+| `PRIORICODE_SERVER_USERNAME`            | string  | Nazwa użytkownika do autoryzacji (domyślnie `prioricode`)  |
 | `PRIORICODE_MODELS_URL`                 | string  | Niestandardowy adres URL do pobierania konfiguracji modeli |
 
 ---
@@ -595,8 +595,8 @@ PrioriCode można skonfigurować za pomocą zmiennych środowiskowych.
 
 Te zmienne włączają funkcje eksperymentalne, które mogą ulec zmianie lub zostać usunięte.
 
-| Zmienna                                         | Typ     | Opis                                                |
-| ----------------------------------------------- | ------- | --------------------------------------------------- |
+| Zmienna                                           | Typ     | Opis                                                |
+| ------------------------------------------------- | ------- | --------------------------------------------------- |
 | `PRIORICODE_EXPERIMENTAL`                         | boolean | Włącz funkcje eksperymentalne objęte flagą zbiorczą |
 | `PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY`          | boolean | Włącz wykrywanie ikon                               |
 | `PRIORICODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`  | boolean | Wyłącz kopiowanie przy zaznaczaniu w TUI            |

@@ -33,11 +33,7 @@ export interface Interface {
    * observed. Returns model-facing notice text when the file changed (or was
    * deleted) since then, or undefined when unchanged or never observed.
    */
-  readonly check: (
-    filepath: string,
-    sessionID: SessionID,
-    projectID: ProjectV2.ID,
-  ) => Effect.Effect<string | undefined>
+  readonly check: (filepath: string, sessionID: SessionID, projectID: ProjectV2.ID) => Effect.Effect<string | undefined>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/FileCollision") {}
@@ -120,8 +116,7 @@ function claimMatches(body: string, filepath: string, rel: string): boolean {
 }
 
 function buildNotice(kind: "modified" | "deleted", claimers: SessionID[]): string {
-  const who =
-    claimers.length > 0 ? ` Another PrioriCode session (${claimers.join(", ")}) has this file claimed.` : ""
+  const who = claimers.length > 0 ? ` Another PrioriCode session (${claimers.join(", ")}) has this file claimed.` : ""
   if (kind === "deleted") {
     return `This file no longer exists; it was deleted after you last read it.${who} Re-read or recreate it before continuing.`
   }

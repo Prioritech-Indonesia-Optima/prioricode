@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # หรือ github:Prioritech-Indonesia-
 
 PrioriCode มีให้ใช้งานเป็นแอปพลิเคชันเดสก์ท็อป ดาวน์โหลดโดยตรงจาก [หน้ารุ่น](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) หรือ [prioritech.co.id/download](https://prioritech.co.id/download)
 
-| แพลตฟอร์ม             | ดาวน์โหลด                          |
-| --------------------- | ---------------------------------- |
+| แพลตฟอร์ม             | ดาวน์โหลด                            |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, หรือ AppImage      |
+| Linux                 | `.deb`, `.rpm`, หรือ AppImage        |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode เป็น fork ของ [OpenCode](https://github.com/anomalyco/o
 
 ### เปรียบเทียบ PrioriCode กับ OpenCode
 
-| ความสามารถ | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| AI coding agent แบบ open source (TUI + desktop) | ✓ | ✓ |
-| LLM providers หลายเจ้า, plugins และ MCP | ✓ | ✓ |
-| การบูรณาการ GitHub Actions | ✓ | ✓ |
-| การย่อ context ที่ปรับได้ | ✓ | ✓ |
-| การประสานงานข้าม session (เครื่องมือ `sessions`) | — | ✓ |
+| ความสามารถ                                       | OpenCode | PrioriCode |
+| ------------------------------------------------ | :------: | :--------: |
+| AI coding agent แบบ open source (TUI + desktop)  |    ✓     |     ✓      |
+| LLM providers หลายเจ้า, plugins และ MCP          |    ✓     |     ✓      |
+| การบูรณาการ GitHub Actions                       |    ✓     |     ✓      |
+| การย่อ context ที่ปรับได้                        |    ✓     |     ✓      |
+| การประสานงานข้าม session (เครื่องมือ `sessions`) |    —     |     ✓      |
 
 **การประสานงานข้าม session.** PrioriCode sessions ที่ทำงานพร้อมกันในโปรเจกต์เดียวกันสามารถประสานงานผ่านเครื่องมือ `sessions` ที่ฝังอยู่: ค้นพบ session พี่น้อง, อ้างสิทธิ์ไฟล์เพื่อเลี่ยงการชนกันของแก้ไข, ส่งข้อความ, และตั้งคำถามด้วยการรอที่จำกัด บันทึกนั้นถาวรและจัดส่งอัตโนมัติ — watcher ในพื้นหลังจะปลุก session ที่ว่างเพื่อให้อ่านบันทึกจากเพื่อนร่วมโดยไม่ต้อง poll
 
@@ -140,4 +140,3 @@ PrioriCode เป็น fork ของ [OpenCode](https://github.com/anomalyco/o
 หากคุณทำงานในโปรเจกต์ที่เกี่ยวข้องกับ PrioriCode และใช้ "prioricode" เป็นส่วนหนึ่งของชื่อ เช่น "prioricode-dashboard" หรือ "prioricode-mobile" โปรดเพิ่มหมายเหตุใน README ของคุณเพื่อชี้แจงว่าไม่ได้สร้างโดยทีม PrioriCode และไม่ได้เกี่ยวข้องกับเราในทางใด
 
 ---
-

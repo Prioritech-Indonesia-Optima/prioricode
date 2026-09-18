@@ -588,10 +588,7 @@ EOF`
       const target = path.join(test.directory, "quiet.txt")
       yield* writeText(target, "one\ntwo\nthree\n")
 
-      yield* execute(
-        { patchText: "*** Begin Patch\n*** Update File: quiet.txt\n@@\n-two\n+twoX\n*** End Patch" },
-        ctx,
-      )
+      yield* execute({ patchText: "*** Begin Patch\n*** Update File: quiet.txt\n@@\n-two\n+twoX\n*** End Patch" }, ctx)
       // This session's own follow-up patch should not warn about itself.
       const result = yield* execute(
         { patchText: "*** Begin Patch\n*** Update File: quiet.txt\n@@\n-three\n+threeX\n*** End Patch" },

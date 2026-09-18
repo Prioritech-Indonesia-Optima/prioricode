@@ -278,7 +278,9 @@ describe("PrioricodePlugin", () => {
         })
         yield* addPlugin()
         expect(required(yield* catalog.provider.get(ProviderV2.ID.prioricode)).request.body.apiKey).toBe("public")
-        expect(required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("paid"))).enabled).toBe(false)
+        expect(required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("paid"))).enabled).toBe(
+          false,
+        )
       }),
     ),
   )
@@ -330,9 +332,9 @@ describe("PrioricodePlugin", () => {
         })
         yield* addPlugin()
         expect(required(yield* catalog.provider.get(ProviderV2.ID.prioricode)).request.body.apiKey).toBe("public")
-        expect(required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("output-only"))).enabled).toBe(
-          true,
-        )
+        expect(
+          required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("output-only"))).enabled,
+        ).toBe(true)
       }),
     ),
   )

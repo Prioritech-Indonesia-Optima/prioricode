@@ -161,7 +161,8 @@ export const dict = {
   "model.noDataDescription": "Prøv at åbne en model fra ranglisten.",
   "model.noMatched": "Ingen modelfakta eller brugsrækker matchede {{id}}.",
   "model.fallback": "Model",
-  "model.catalogFallback": "Modelfakta fra det fælles modelindeks. PrioriCode-brug vises, når denne model har aktivitet.",
+  "model.catalogFallback":
+    "Modelfakta fra det fælles modelindeks. PrioriCode-brug vises, når denne model har aktivitet.",
   "model.unranked": "Ikke rangeret i sidste uges PrioriCode-brug",
   "model.ranked": "Rangeret #{{rank}} i sidste uges PrioriCode-brug",
   "model.observedVolume": "med {{share}} af observeret 2M-volumen.",

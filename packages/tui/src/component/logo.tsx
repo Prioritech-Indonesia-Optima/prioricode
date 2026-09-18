@@ -67,7 +67,7 @@ export function Logo() {
 
   const renderLine = (line: Cell[], rowIndex: number, base: () => RGBA, bold: boolean): JSX.Element[] =>
     line.map((cell) => {
-      if (cell.char === " ") return <text>{" "}</text>
+      if (cell.char === " ") return <text> </text>
       const art = glyph(cell.char)
       const attrs = bold ? TextAttributes.BOLD : undefined
       const shadow = createMemo(() => tint(theme.background, base(), 0.25))

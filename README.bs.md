@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # ili github:Prioritech-Indonesia-Optima/pr
 
 PrioriCode je dostupan i kao desktop aplikacija. Preuzmi je direktno sa [stranice izdanja](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) ili sa [prioritech.co.id/download](https://prioritech.co.id/download).
 
-| Platforma             | Preuzimanje                        |
-| --------------------- | ---------------------------------- |
+| Platforma             | Preuzimanje                          |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, ili AppImage       |
+| Linux                 | `.deb`, `.rpm`, ili AppImage         |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode je fork od [OpenCode](https://github.com/anomalyco/opencode), open so
 
 ### PrioriCode u poređenju sa OpenCode
 
-| Mogućnost | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| Open source AI agent za programiranje (TUI + desktop) | ✓ | ✓ |
-| Više LLM provajdera, pluginovi i MCP | ✓ | ✓ |
-| GitHub Actions integracija | ✓ | ✓ |
-| Podesivo sabijanje konteksta | ✓ | ✓ |
-| Koordinacija između sesija (alat `sessions`) | — | ✓ |
+| Mogućnost                                             | OpenCode | PrioriCode |
+| ----------------------------------------------------- | :------: | :--------: |
+| Open source AI agent za programiranje (TUI + desktop) |    ✓     |     ✓      |
+| Više LLM provajdera, pluginovi i MCP                  |    ✓     |     ✓      |
+| GitHub Actions integracija                            |    ✓     |     ✓      |
+| Podesivo sabijanje konteksta                          |    ✓     |     ✓      |
+| Koordinacija između sesija (alat `sessions`)          |    —     |     ✓      |
 
 **Koordinacija između sesija.** Konkurentne PrioriCode sesije u istom projektu mogu se koordinirati kroz ugrađeni `sessions` alat: otkrivanje sestrinskih sesija, rezervisanje datoteka da se izbjegnu sudari uređivanja, slanje poruka i postavljanje pitanja sa ograničenim čekanjem. Bilješke su trajne i isporučuju se automatski — pozadinski promatrajar budi neaktivnu sesiju da pročitaju bilješku vršnjaka bez pollinga.
 
@@ -140,4 +140,3 @@ Ako želiš doprinositi PrioriCode-u, pročitaj [upute za doprinošenje](./CONTR
 Ako radiš na projektu koji je povezan s PrioriCode-om i koristi "prioricode" kao dio naziva, npr. "prioricode-dashboard" ili "prioricode-mobile", dodaj napomenu u svoj README da projekat nije napravio PrioriCode tim i da nije povezan s nama.
 
 ---
-

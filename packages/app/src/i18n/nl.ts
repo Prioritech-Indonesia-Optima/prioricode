@@ -669,7 +669,8 @@ export const dict = {
   "error.chain.didYouMean": "Bedoelde je: {{suggestions}}",
   "error.chain.modelNotFound": "Model niet gevonden: {{provider}}/{{model}}",
   "error.chain.checkConfig": "Controleer de provider- en modelnamen in je configuratie (prioricode.json)",
-  "error.chain.mcpFailed": 'MCP-server "{{name}}" is mislukt. Let op: PrioriCode ondersteunt nog geen MCP-authenticatie.',
+  "error.chain.mcpFailed":
+    'MCP-server "{{name}}" is mislukt. Let op: PrioriCode ondersteunt nog geen MCP-authenticatie.',
   "error.chain.providerAuthFailed": "Authenticatie bij aanbieder mislukt ({{provider}}): {{message}}",
   "error.chain.providerInitFailed":
     'Kan provider "{{provider}}" niet initialiseren. Controleer de inloggegevens en configuratie.',

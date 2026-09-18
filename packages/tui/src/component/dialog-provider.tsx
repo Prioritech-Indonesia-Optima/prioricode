@@ -135,9 +135,7 @@ export function createDialogProviderOptions() {
     const npmValue = await DialogPrompt.show(dialog, "SDK package", {
       placeholder: "@ai-sdk/openai-compatible",
       value: "@ai-sdk/openai-compatible",
-      description: () => (
-        <text fg={theme.textMuted}>The AI SDK npm package used to talk to this provider.</text>
-      ),
+      description: () => <text fg={theme.textMuted}>The AI SDK npm package used to talk to this provider.</text>,
     })
     if (npmValue === null) return
     const npm = npmValue.trim() || "@ai-sdk/openai-compatible"
@@ -154,10 +152,15 @@ export function createDialogProviderOptions() {
     const output = await promptNumber("Max output (tokens)", 8_192)
     if (output === undefined) return
 
-    const supportsImage = await DialogSelect.show(dialog, "Image input", [
-      { value: true, title: "Yes", description: "Model can see images" },
-      { value: false, title: "No", description: "Text only" },
-    ], { default: true })
+    const supportsImage = await DialogSelect.show(
+      dialog,
+      "Image input",
+      [
+        { value: true, title: "Yes", description: "Model can see images" },
+        { value: false, title: "No", description: "Text only" },
+      ],
+      { default: true },
+    )
     if (supportsImage === null) return
 
     try {
@@ -459,8 +462,8 @@ function ApiMethod(props: ApiMethodProps) {
           "prioricode-go": (
             <box gap={1}>
               <text fg={theme.textMuted}>
-                PrioriCode Go is a $10 per month subscription that provides reliable access to popular open coding models
-                with generous usage limits.
+                PrioriCode Go is a $10 per month subscription that provides reliable access to popular open coding
+                models with generous usage limits.
               </text>
               <text fg={theme.text}>
                 Go to <span style={{ fg: theme.primary }}>https://prioricode.ai/go</span> and enable PrioriCode Go

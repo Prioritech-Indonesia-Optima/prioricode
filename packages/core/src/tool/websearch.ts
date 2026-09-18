@@ -75,7 +75,8 @@ export const defaultConfigLayer = Layer.sync(ConfigService, () =>
       process.env.PRIORICODE_WEBSEARCH_PROVIDER === "exa" || process.env.PRIORICODE_WEBSEARCH_PROVIDER === "parallel"
         ? process.env.PRIORICODE_WEBSEARCH_PROVIDER
         : undefined,
-    enableExa: truthy("PRIORICODE_EXPERIMENTAL") || truthy("PRIORICODE_ENABLE_EXA") || truthy("PRIORICODE_EXPERIMENTAL_EXA"),
+    enableExa:
+      truthy("PRIORICODE_EXPERIMENTAL") || truthy("PRIORICODE_ENABLE_EXA") || truthy("PRIORICODE_EXPERIMENTAL_EXA"),
     enableParallel: truthy("PRIORICODE_ENABLE_PARALLEL") || truthy("PRIORICODE_EXPERIMENTAL_PARALLEL"),
     exaApiKey: process.env.EXA_API_KEY,
     parallelApiKey: process.env.PARALLEL_API_KEY,

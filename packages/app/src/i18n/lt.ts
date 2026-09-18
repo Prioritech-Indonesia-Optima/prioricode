@@ -1000,7 +1000,8 @@ export const dict = {
   "settings.general.row.releaseNotes.title": "Išleidimo pastabos",
   "settings.general.row.releaseNotes.description": "Po atnaujinimų rodyti iššokančius langus „Kas naujo“.",
   "settings.updates.row.startup.title": "Patikrinkite, ar nėra naujinimų paleidžiant",
-  "settings.updates.row.startup.description": "Automatiškai patikrinkite, ar nėra naujinimų, kai paleidžiamas PrioriCode",
+  "settings.updates.row.startup.description":
+    "Automatiškai patikrinkite, ar nėra naujinimų, kai paleidžiamas PrioriCode",
   "settings.updates.row.check.title": "Patikrinkite, ar nėra atnaujinimų",
   "settings.updates.row.check.description": "Rankiniu būdu patikrinkite, ar nėra naujinimų, ir įdiekite, jei yra",
   "settings.updates.action.checkNow": "Patikrinkite dabar",

@@ -168,7 +168,8 @@ describe("installation", () => {
       testLayer(
         () => jsonResponse({}), // HTTP not used for tap formula
         (cmd, args) => {
-          if (cmd === "brew" && args.includes("anomalyco/tap/prioricode") && args.includes("--formula")) return "prioricode"
+          if (cmd === "brew" && args.includes("anomalyco/tap/prioricode") && args.includes("--formula"))
+            return "prioricode"
           if (cmd === "brew" && args.includes("--json=v2")) return brewInfoJson
           return ""
         },

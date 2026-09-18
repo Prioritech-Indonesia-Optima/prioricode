@@ -189,7 +189,9 @@ describe("RuntimeFlags", () => {
 
   it.effect("experimentalIconDiscovery reads PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY", () =>
     Effect.gen(function* () {
-      const flags = yield* readFlags.pipe(Effect.provide(fromConfig({ PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY: "true" })))
+      const flags = yield* readFlags.pipe(
+        Effect.provide(fromConfig({ PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY: "true" })),
+      )
 
       expect(flags.experimentalIconDiscovery).toBe(true)
     }),

@@ -23,14 +23,12 @@ const peer = SessionID.make("ses_fc_peer")
 
 // Ensure the instance's project row exists so claim FKs hold, without failing if
 // the instance store already created it.
-const ensureProject = Effect.fn("FileCollisionTest.ensureProject")(function* (projectID: ProjectV2.ID, directory: string) {
+const ensureProject = Effect.fn("FileCollisionTest.ensureProject")(function* (
+  projectID: ProjectV2.ID,
+  directory: string,
+) {
   const { db } = yield* Database.Service
-  const existing = yield* db
-    .select()
-    .from(ProjectTable)
-    .where(eq(ProjectTable.id, projectID))
-    .get()
-    .pipe(Effect.orDie)
+  const existing = yield* db.select().from(ProjectTable).where(eq(ProjectTable.id, projectID)).get().pipe(Effect.orDie)
   if (existing) return
   yield* db
     .insert(ProjectTable)

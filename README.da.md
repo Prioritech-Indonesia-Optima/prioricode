@@ -65,12 +65,12 @@ nix run nixpkgs#prioricode           # eller github:Prioritech-Indonesia-Optima/
 
 PrioriCode findes også som desktop-app. Download direkte fra [releases-siden](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) eller [prioritech.co.id/download](https://prioritech.co.id/download).
 
-| Platform              | Download                           |
-| --------------------- | ---------------------------------- |
+| Platform              | Download                             |
+| --------------------- | ------------------------------------ |
 | macOS (Apple Silicon) | `prioricode-desktop-mac-arm64.dmg`   |
 | macOS (Intel)         | `prioricode-desktop-mac-x64.dmg`     |
 | Windows               | `prioricode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, eller AppImage     |
+| Linux                 | `.deb`, `.rpm`, eller AppImage       |
 
 ```bash
 # macOS (Homebrew)
@@ -115,13 +115,13 @@ PrioriCode er en fork af [OpenCode](https://github.com/anomalyco/opencode), den 
 
 ### PrioriCode sammenlignet med OpenCode
 
-| Funktion | OpenCode | PrioriCode |
-| --- | :---: | :---: |
-| Open source AI-kodingagent (TUI + desktop) | ✓ | ✓ |
-| Flere LLM-udbydere, plugins og MCP | ✓ | ✓ |
-| GitHub Actions-integration | ✓ | ✓ |
-| Justerbart kontekstkompakt | ✓ | ✓ |
-| Tværsession-koordination (`sessions`-værktøj) | — | ✓ |
+| Funktion                                      | OpenCode | PrioriCode |
+| --------------------------------------------- | :------: | :--------: |
+| Open source AI-kodingagent (TUI + desktop)    |    ✓     |     ✓      |
+| Flere LLM-udbydere, plugins og MCP            |    ✓     |     ✓      |
+| GitHub Actions-integration                    |    ✓     |     ✓      |
+| Justerbart kontekstkompakt                    |    ✓     |     ✓      |
+| Tværsession-koordination (`sessions`-værktøj) |    —     |     ✓      |
 
 **Tværsession-koordination.** Samtidige PrioriCode-sessioner i samme projekt kan koordineres via et indbygget `sessions`-værktøj: opdag søstersessioner, reserver filer for at undgå redigeringskollisioner, send beskeder og still spørgsmål med begrænset ventetid. Noter er varige og leveres automatisk — en baggrunds-watcher vækker en inaktiv session, så den læser en peers note uden polling.
 
@@ -140,4 +140,3 @@ Hvis du vil bidrage til PrioriCode, så læs vores [contributing docs](./CONTRIB
 Hvis du arbejder på et projekt der er relateret til PrioriCode og bruger "prioricode" som en del af navnet; f.eks. "prioricode-dashboard" eller "prioricode-mobile", så tilføj en note i din README, der tydeliggør at projektet ikke er bygget af PrioriCode-teamet og ikke er tilknyttet os på nogen måde.
 
 ---
-

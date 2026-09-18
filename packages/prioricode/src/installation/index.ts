@@ -145,14 +145,27 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
 
     const upgradeCurl = Effect.fnUntraced(
       function* (target: string) {
-        const installEnv: Record<string, string> = { VERSION: target, PRIORICODE_INSTALL_DIR: path.dirname(process.execPath) }
+        const installEnv: Record<string, string> = {
+          VERSION: target,
+          PRIORICODE_INSTALL_DIR: path.dirname(process.execPath),
+        }
 
         if (process.platform === "win32") {
           const result = yield* appProcess.run(
-            ChildProcess.make("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://code.prioritech.co.id/install.ps1 | iex"], {
-              env: installEnv,
-              extendEnv: true,
-            }),
+            ChildProcess.make(
+              "powershell.exe",
+              [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-Command",
+                "irm https://code.prioritech.co.id/install.ps1 | iex",
+              ],
+              {
+                env: installEnv,
+                extendEnv: true,
+              },
+            ),
           )
           return {
             code: result.exitCode,
@@ -273,9 +286,9 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
         }
 
         const response = yield* httpOk.execute(
-          HttpClientRequest.get("https://api.github.com/repos/Prioritech-Indonesia-Optima/prioricode/releases/latest").pipe(
-            HttpClientRequest.acceptJson,
-          ),
+          HttpClientRequest.get(
+            "https://api.github.com/repos/Prioritech-Indonesia-Optima/prioricode/releases/latest",
+          ).pipe(HttpClientRequest.acceptJson),
         )
         const data = yield* HttpClientResponse.schemaBodyJson(GitHubRelease)(response)
         return data.tag_name.replace(/^v/, "")
