@@ -37,6 +37,7 @@ type Metadata = {
 const DEFAULT_TIMEOUT_SECONDS = 60
 const MAX_TIMEOUT_SECONDS = 300
 const STALE_AFTER_MS = 1000 * 60 * 60 * 72
+const RECENT_DELIVERED_MS = 1000 * 60 * 30
 
 const agoLabel = (ms: number) => {
   const minutes = Math.floor(ms / 60_000)
@@ -68,12 +69,17 @@ export const SessionsTool = Tool.define(
       })
 
       const discover = Effect.fn("SessionsTool.discover")(function* (self: Session.Info) {
-        const [siblings, statusMap, otherClaims, mine] = yield* Effect.all(
+        const [siblings, statusMap, otherClaims, unread, delivered] = yield* Effect.all(
           [
             sessions.list({ limit: 100, roots: true }),
             status.list(),
             coordination.claims({ projectID: self.projectID, exceptSession: self.id }),
             coordination.inbox({ sessionID: self.id, kinds: ["message", "request"], unreadOnly: true }),
+            coordination.deliveredWithin({
+              sessionID: self.id,
+              kinds: ["message", "request"],
+              withinMs: RECENT_DELIVERED_MS,
+            }),
           ],
           { concurrency: "unbounded" },
         )
@@ -88,15 +94,26 @@ export const SessionsTool = Tool.define(
         const lines = [
           `Project ${self.projectID}. ${peers.length} sibling session(s), most recently active first. ` +
             "Coordinate only with recently active sessions; STALE ones are likely abandoned and should not be woken unless the user explicitly names one.",
-          mine.length > 0
-            ? `You have ${mine.length} unread coordination item(s):\n  ` +
-              mine
+          `Presence is ambient: a read-only roster of your peers is injected into your context every turn, so you do not need to call discover just to know who is here. Use discover to re-read details (claims, note bodies) or to act on a peer.`,
+          unread.length > 0
+            ? `You have ${unread.length} UNREAD coordination item(s) waiting to be delivered next turn:\n  ` +
+              unread
                 .map(
                   (item) =>
                     `[${item.kind}${item.kind === "request" ? ` id=${item.id}` : ""}] from ${item.fromSession}: ${item.body}`,
                 )
                 .join("\n  ")
-            : "No unread coordination items.",
+            : `No unread coordination items.`,
+          delivered.length > 0
+            ? `\nAlready delivered into your context within the last ${Math.round(RECENT_DELIVERED_MS / 60_000)}m ` +
+              `(read them above in your system context; do NOT re-run discover expecting them to be "unread" — delivery consumes them):\n  ` +
+              delivered
+                .map(
+                  (item) =>
+                    `[delivered ${item.kind}${item.kind === "request" ? ` id=${item.id}` : ""}] from ${item.fromSession}: ${item.body}`,
+                )
+                .join("\n  ")
+            : "",
         ]
         for (const peer of peers) {
           const busy = statusMap.get(peer.id)?.type === "busy"

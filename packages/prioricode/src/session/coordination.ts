@@ -1,6 +1,6 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Effect, Layer, Context } from "effect"
-import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm"
+import { and, asc, desc, eq, gte, inArray, isNull } from "drizzle-orm"
 import { Database } from "@prioricode/core/database/database"
 import { CoordinationTable, type CoordinationKind } from "@prioricode/core/session/coordination.sql"
 import { Identifier } from "@prioricode/core/id/id"
@@ -37,9 +37,31 @@ export interface InboxInput {
   readonly unreadOnly?: boolean
 }
 
+export interface DeliveredInput {
+  readonly sessionID: SessionID
+  readonly kinds?: ReadonlyArray<CoordinationKind>
+  readonly withinMs: number
+}
+
+export interface PresencePeer {
+  readonly id: SessionID
+  readonly title: string
+  readonly agent?: string
+  readonly busy: boolean
+  readonly lastActiveMs: number
+  readonly claims: ReadonlyArray<string>
+}
+
 export interface Interface {
   readonly post: (input: PostInput) => Effect.Effect<Info>
   readonly inbox: (input: InboxInput) => Effect.Effect<Info[]>
+  /**
+   * Notes already delivered into the session's context (marked read by a turn
+   * boundary claim), within a recency window. Lets a session that was just poked
+   * by a wake turn re-read what it was poked about instead of seeing an empty
+   * unread inbox.
+   */
+  readonly deliveredWithin: (input: DeliveredInput) => Effect.Effect<Info[]>
   readonly markRead: (ids: ReadonlyArray<string>) => Effect.Effect<void>
   /**
    * Atomically mark a session's unread message/request rows as read and return
@@ -94,6 +116,35 @@ export function formatNotes(items: ReadonlyArray<Info>) {
     "",
     "Incoming from peer sessions:",
     ...lines,
+  ].join("\n")
+}
+
+/**
+ * Render an ambient peer-presence block injected into the model context on every
+ * turn. This is the "aware of one another without interrupting" channel: it is a
+ * read-only snapshot of which sibling sessions exist and whether they are busy,
+ * so a session does not need to poll `sessions discover` or be woken to know who
+ * it is sharing the project with. Returns undefined when there are no peers so
+ * solo sessions pay no token cost.
+ */
+export function formatPresence(peers: ReadonlyArray<PresencePeer>) {
+  if (peers.length === 0) return undefined
+  const ago = (ms: number) => {
+    const minutes = Math.floor(ms / 60_000)
+    if (minutes < 1) return "just now"
+    if (minutes < 60) return `${minutes}m ago`
+    const hours = Math.floor(minutes / 60)
+    return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`
+  }
+  const lines = peers.map((peer) => {
+    const claims = peer.claims.length > 0 ? ` — editing: ${peer.claims.join(", ")}` : ""
+    return `- ${peer.id} "${peer.title}" (${peer.agent ?? "build"}) · ${peer.busy ? "working now" : `idle, last active ${ago(peer.lastActiveMs)}`}${claims}`
+  })
+  return [
+    "<cross-session-presence>",
+    "You are running alongside the sibling PrioriCode sessions below — the same user, same machine, same project. This block is ambient awareness only: do NOT message or wake a peer just to say hello, and do not poll `sessions discover` to check on them. Read the peer file lists as a live warning: coordinate before editing a file a peer already claims. When a peer genuinely needs something from you, a coordination note will be delivered into your context automatically.",
+    ...lines,
+    "</cross-session-presence>",
   ].join("\n")
 }
 
@@ -156,6 +207,22 @@ const layer = Layer.effect(
         .all()
         .pipe(Effect.orDie)
       return rows.map(fromRow)
+    })
+
+    const deliveredWithin = Effect.fn("Coordination.deliveredWithin")(function* (input: DeliveredInput) {
+      const conditions = [
+        eq(CoordinationTable.to_session, input.sessionID),
+        inArray(CoordinationTable.kind, [...(input.kinds ?? ["message", "request"])]),
+        gte(CoordinationTable.time_read, Date.now() - input.withinMs),
+      ]
+      const rows = yield* db
+        .select()
+        .from(CoordinationTable)
+        .where(and(...conditions))
+        .orderBy(asc(CoordinationTable.time_read))
+        .all()
+        .pipe(Effect.orDie)
+      return rows.map(fromRow).filter((item) => item.timeRead !== undefined)
     })
 
     const markRead = Effect.fn("Coordination.markRead")(function* (ids: ReadonlyArray<string>) {
@@ -265,6 +332,7 @@ const layer = Layer.effect(
     return Service.of({
       post,
       inbox,
+      deliveredWithin,
       markRead,
       claimUnread,
       responsesTo,

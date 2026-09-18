@@ -1087,6 +1087,7 @@ const layer = Layer.effect(
         const ctx = yield* InstanceState.context
         let structured: unknown
         let step = 0
+        let presenceBlock: string | undefined
         const session = yield* sessions.get(sessionID).pipe(Effect.orDie)
 
         while (true) {
@@ -1280,10 +1281,41 @@ const layer = Layer.effect(
             const coordinationNotes = yield* coordination.claimUnread(sessionID)
             const coordinationBlock =
               coordinationNotes.length > 0 ? Coordination.formatNotes(coordinationNotes) : undefined
+            // Ambient peer presence: refreshed once per turn, not per step, so a
+            // session always sees who it shares the project with without polling
+            // `sessions discover` or being woken. Read-only; marks nothing.
+            if (step === 1) {
+              const [siblings, statusMap, otherClaims] = yield* Effect.all([
+                sessions.list({ limit: 50, roots: true }),
+                status.list(),
+                coordination.claims({ projectID: session.projectID, exceptSession: sessionID }),
+              ])
+              const now = Date.now()
+              const claimsBySession = new Map<string, string[]>()
+              for (const claim of otherClaims) {
+                const list = claimsBySession.get(claim.fromSession) ?? []
+                list.push(claim.body)
+                claimsBySession.set(claim.fromSession, list)
+              }
+              const peers: Coordination.PresencePeer[] = siblings
+                .filter((s) => s.id !== sessionID && s.projectID === session.projectID && !s.time.archived)
+                .sort((a, b) => b.time.updated - a.time.updated)
+                .slice(0, 10)
+                .map((s) => ({
+                  id: s.id,
+                  title: s.title,
+                  ...(s.agent ? { agent: s.agent } : {}),
+                  busy: statusMap.get(s.id)?.type === "busy",
+                  lastActiveMs: now - s.time.updated,
+                  claims: claimsBySession.get(s.id) ?? [],
+                }))
+              presenceBlock = Coordination.formatPresence(peers)
+            }
             const system = [
               ...env,
               ...instructions,
               ...(mcpInstructions ? [mcpInstructions] : []),
+              ...(presenceBlock ? [presenceBlock] : []),
               ...(coordinationBlock ? [coordinationBlock] : []),
               ...(skills ? [skills] : []),
             ]

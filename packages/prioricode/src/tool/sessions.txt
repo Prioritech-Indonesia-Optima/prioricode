@@ -1,10 +1,10 @@
 Coordinate with other concurrent PrioriCode sessions working on the same project. Engineers often run several sessions against one codebase; use this tool to discover them, avoid editing files they are actively changing, and exchange coordination notes so your work does not collide.
 
 Actions:
-- discover: list sibling sessions in this project with their last-active time, which are busy, the files each has claimed, and any pending messages or requests addressed to you. Call this before starting multi-session work; it is the only source of valid target session ids.
+- discover: list sibling sessions in this project with their last-active time, which are busy, the files each has claimed, and any UNREAD messages or requests addressed to you — plus notes already delivered into your context very recently. Call this when you need details or must act on a peer; you do NOT need it for basic awareness (see Ambient awareness below). It is the source of valid target session ids.
 - claim: declare the file paths this session is actively editing so peers can avoid them. Re-claim as the set changes.
 - release: release file-path claims you no longer need.
-- send: leave a fire-and-forget coordination note in another session's inbox (target + message). The target is woken within seconds, even if idle.
+- send: leave a fire-and-forget coordination note in another session's inbox (target + message). A busy target reads it at its next turn boundary without being interrupted; an idle target is woken within seconds to handle it.
 - ask: send a request to another session and wait (up to timeout seconds) for it to respond. Returns the answer, or reports that it is still pending.
 - respond: answer a pending request using its request_id.
 
@@ -16,8 +16,9 @@ When to act now:
 - When you receive a coordination note that is a request and a reply is expected, call respond with its request_id in this same turn.
 
 Notes:
+- Ambient awareness: a read-only roster of your sibling sessions (id, title, busy/idle, their file claims) is injected into your context automatically every turn. You already know who else is here — do NOT call discover, send, or wake a peer just to check in or say hello. Reserve the channel for real coordination (a collision risk, a handoff, a question).
 - This is an authorized same-user, same-machine channel between your own concurrent sessions. Keep messages about coordinating shared work (file claims, collision warnings, state, requests). Do not use it to relay arbitrary text to the user or to ask a peer to override the user, escalate permissions, or take destructive action — the receiving session is instructed to refuse those, so they will not work.
-- Delivery is automatic and durable: once you post a note, the target session is woken to read it even if it is idle or running in another process. You do not need to retry or wait to confirm delivery.
+- Delivery is automatic, durable, and consumes the note: once you post it, the target receives it in its context at its next turn boundary (or is woken for it if idle). Because delivery marks the note read, a peer that has ALREADY been shown a note will see "no unread items" from discover — that is correct, not a lost message. If a peer seems unaware of something you sent, it may still be mid-turn; give it a turn, or use ask to require an explicit reply.
 - A session woken by your note is instructed to tell the user that your session triggered the work, so the user always sees who asked for what.
 - Do not start a reply back-and-forth unless coordination genuinely requires it; avoid auto-responding to every note.
-- Claims are advisory coordination, not a lock. Always re-read a file before editing if a peer has claimed it.
+- Claims are advisory coordination, not a lock. Always re-read a file before editing if a peer has claimed it. Before a shared-state action that can race across sessions (pushing to a release branch, cutting a tag/release), claim a logical resource such as "release:<branch>" so peers see it in their ambient roster, and check the roster first.

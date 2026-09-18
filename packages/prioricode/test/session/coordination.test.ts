@@ -163,4 +163,59 @@ describe("Coordination", () => {
     expect(text).toContain("peer-triggered")
     return Effect.sync(() => {})
   })
+
+  it.effect("deliveredWithin surfaces notes already consumed by a turn (no gaslighting)", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      const note = yield* coordination.post({
+        projectID,
+        kind: "message",
+        fromSession: a,
+        toSession: b,
+        body: "you were poked",
+      })
+      // Unread inbox right after a turn boundary claim drains it: the note is gone
+      // from unread, which is exactly what confused the woken peer.
+      yield* coordination.claimUnread(b)
+      expect(yield* coordination.inbox({ sessionID: b, kinds: ["message"], unreadOnly: true })).toHaveLength(0)
+      // deliveredWithin recovers it so discover can tell the truth.
+      const delivered = yield* coordination.deliveredWithin({
+        sessionID: b,
+        kinds: ["message"],
+        withinMs: 60_000,
+      })
+      expect(delivered.map((item) => item.body)).toEqual(["you were poked"])
+      expect(delivered[0]?.id).toBe(note.id)
+      // Still nothing for the sender's own inbox, and nothing outside the window.
+      expect(yield* coordination.deliveredWithin({ sessionID: a, kinds: ["message"], withinMs: 60_000 })).toHaveLength(
+        0,
+      )
+      expect(
+        yield* coordination.deliveredWithin({
+          sessionID: b,
+          kinds: ["message"],
+          withinMs: -1,
+        }),
+      ).toHaveLength(0)
+    }),
+  )
+
+  it.effect("formatPresence is a read-only ambient roster and empty for solo sessions", () =>
+    Effect.sync(() => {
+      const solo = Coordination.formatPresence([])
+      expect(solo).toBeUndefined()
+      const text = Coordination.formatPresence([
+        { id: b, title: "Fix release pipeline", agent: "build", busy: true, lastActiveMs: 1_000, claims: ["x.ts"] },
+        { id: a, title: "Upgrade failure", busy: false, lastActiveMs: 5 * 60_000, claims: [] },
+      ])
+      expect(text).toContain("cross-session-presence")
+      expect(text).toContain("ambient awareness")
+      expect(text).toContain("working now")
+      expect(text).toContain("editing: x.ts")
+      expect(text).toContain(b)
+      expect(text).toContain(a)
+      expect(text).toContain("do NOT message or wake a peer just to say hello")
+    }),
+  )
 })
