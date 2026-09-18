@@ -290,7 +290,9 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          - host: macos-intel
+          # Both mac architectures build on arm64 macs (electron-builder
+          # cross-packages x64); macos-intel runners have scarce capacity.
+          - host: macos-latest
             target: x86_64-apple-darwin
             platform_flag: --mac --x64
             bun_install_flags: --os=darwin --cpu=x64
