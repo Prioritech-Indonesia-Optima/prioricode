@@ -181,7 +181,8 @@ const layer = Layer.effect(
           },
           auto: {
             name: "auto",
-            description: "Automation mode. Explores, plans, and executes without user interaction. Auto-commits per verified phase.",
+            description:
+              "Automation mode. Explores, plans, and executes without user interaction. Auto-commits per verified phase.",
             options: {},
             permission: Permission.merge(defaults, user),
             mode: "primary",
