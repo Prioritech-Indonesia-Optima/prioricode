@@ -22,6 +22,7 @@ Skip when:
 - `cancelled` - no longer needed
 
 ## Rules
+- The todo list is the user's live view of your progress. Update it in real time.
 - Update status in real time; don't batch completions
 - Mark `completed` only after the required work is actually done, including any required verification. Never based on intent.
 - Keep exactly one `in_progress` while work remains
