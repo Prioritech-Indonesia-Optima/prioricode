@@ -66,9 +66,9 @@ jobs:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           AUR_KEY: ${{ secrets.AUR_KEY }}
         run: |
-          [ -n "$AZURE_CLIENT_ID" ] && echo "azure=true" >> "$GITHUB_OUTPUT"
-          [ -n "$APPLE_CERTIFICATE" ] && echo "apple=true" >> "$GITHUB_OUTPUT"
-          [ -n "$AUR_KEY" ] && echo "aur=true" >> "$GITHUB_OUTPUT"
+          if [ -n "$AZURE_CLIENT_ID" ]; then echo "azure=true" >> "$GITHUB_OUTPUT"; fi
+          if [ -n "$APPLE_CERTIFICATE" ]; then echo "apple=true" >> "$GITHUB_OUTPUT"; fi
+          if [ -n "$AUR_KEY" ]; then echo "aur=true" >> "$GITHUB_OUTPUT"; fi
     outputs:
       azure: ${{ steps.check.outputs.azure }}
       apple: ${{ steps.check.outputs.apple }}
@@ -91,6 +91,7 @@ jobs:
         with:
           prioricode-app-id: ${{ vars.PRIORICODE_APP_ID }}
           prioricode-app-secret: ${{ secrets.PRIORICODE_APP_SECRET }}
+          fallback-token: ${{ secrets.GITHUB_TOKEN }}
 
       - id: version
         run: |
@@ -123,6 +124,7 @@ jobs:
         with:
           prioricode-app-id: ${{ vars.PRIORICODE_APP_ID }}
           prioricode-app-secret: ${{ secrets.PRIORICODE_APP_SECRET }}
+          fallback-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build
         id: build
@@ -198,6 +200,7 @@ jobs:
         with:
           prioricode-app-id: ${{ vars.PRIORICODE_APP_ID }}
           prioricode-app-secret: ${{ secrets.PRIORICODE_APP_SECRET }}
+          fallback-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Azure login
         uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5 # v2.3.0
@@ -358,6 +361,7 @@ jobs:
         with:
           prioricode-app-id: ${{ vars.PRIORICODE_APP_ID }}
           prioricode-app-secret: ${{ secrets.PRIORICODE_APP_SECRET }}
+          fallback-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Prepare
         run: bun ./scripts/prepare.ts
@@ -524,6 +528,7 @@ jobs:
         with:
           prioricode-app-id: ${{ vars.PRIORICODE_APP_ID }}
           prioricode-app-secret: ${{ secrets.PRIORICODE_APP_SECRET }}
+          fallback-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Cache apt packages (AUR)
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0

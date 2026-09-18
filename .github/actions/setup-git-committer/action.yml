@@ -7,6 +7,9 @@ inputs:
   prioricode-app-secret:
     description: "PrioriCode GitHub App private key (optional)"
     required: false
+  fallback-token:
+    description: "Token used when no GitHub App is configured (pass secrets.GITHUB_TOKEN)"
+    required: false
 outputs:
   token:
     description: "GitHub token with write access"
@@ -40,7 +43,7 @@ runs:
     - name: Resolve token
       id: resolve
       run: |
-        token="${{ steps.apptoken.outputs.token || secrets.GITHUB_TOKEN }}"
+        token="${{ steps.apptoken.outputs.token || inputs.fallback-token }}"
         echo "token=${token}" >> "$GITHUB_OUTPUT"
       shell: bash
 
@@ -51,6 +54,6 @@ runs:
 
     - name: Configure git remote
       run: |
-        token="${{ steps.apptoken.outputs.token || secrets.GITHUB_TOKEN }}"
+        token="${{ steps.apptoken.outputs.token || inputs.fallback-token }}"
         git remote set-url origin "https://x-access-token:${token}@github.com/${{ github.repository }}"
       shell: bash

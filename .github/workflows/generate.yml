@@ -24,6 +24,7 @@ jobs:
         with:
           prioricode-app-id: ${{ vars.PRIORICODE_APP_ID }}
           prioricode-app-secret: ${{ secrets.PRIORICODE_APP_SECRET }}
+          fallback-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate
         run: ./script/generate.ts
