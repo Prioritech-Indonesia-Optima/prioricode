@@ -25,7 +25,14 @@ if (!Script.preview) {
   const dir = process.env.RUNNER_TEMP ?? "/tmp"
   const notesFile = `${dir}/prioricode-release-notes.txt`
   await Bun.write(notesFile, body)
-  await $`gh release create v${Script.version} -d --target ${sha} --title "v${Script.version}" --notes-file ${notesFile}`
+  // Idempotent: a draft from an earlier attempt of the same version is
+  // re-targeted instead of failing the run.
+  const exists = (await $`gh release view v${Script.version} --json tagName`.nothrow()).exitCode === 0
+  if (exists) {
+    await $`gh release edit v${Script.version} --target ${sha} --title "v${Script.version}" --notes-file ${notesFile}`
+  } else {
+    await $`gh release create v${Script.version} -d --target ${sha} --title "v${Script.version}" --notes-file ${notesFile}`
+  }
   const release = await $`gh release view v${Script.version} --json tagName,databaseId`.json()
   output.push(`release=${release.databaseId}`)
   output.push(`tag=${release.tagName}`)
