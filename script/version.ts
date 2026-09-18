@@ -20,7 +20,7 @@ if (!Script.preview) {
       .map((x: string) => x.trim())
       .find((x: string) => /^v\d+\.\d+\.\d+$/.test(x))
     const range = tag ? `${tag}..HEAD` : "HEAD~20..HEAD"
-    body = (await $`git log ${range} --pretty=format:- %s`.text()).trim() || "No notable changes"
+    body = (await $`git log ${range} --pretty=format:'- %s'`.text()).trim() || "No notable changes"
   }
   const dir = process.env.RUNNER_TEMP ?? "/tmp"
   const notesFile = `${dir}/prioricode-release-notes.txt`
