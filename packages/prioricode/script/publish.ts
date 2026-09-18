@@ -12,6 +12,10 @@ async function published(name: string, version: string) {
 }
 
 async function publish(dir: string, name: string, version: string) {
+  if (!process.env.NPM_TOKEN && !process.env.NODE_AUTH_TOKEN) {
+    console.log(`no npm token; skipping ${name}@${version}`)
+    return
+  }
   // GitHub artifact downloads can drop the executable bit, and Docker uses the
   // unpacked dist binaries directly rather than the published tarball.
   if (process.platform !== "win32") await $`chmod -R 755 .`.cwd(dir)

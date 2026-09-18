@@ -1,24 +1,25 @@
 name: "Setup Git Committer"
-description: "Create app token and configure git user"
+description: "Create app token (or fall back to GITHUB_TOKEN) and configure git user"
 inputs:
   prioricode-app-id:
-    description: "PrioriCode GitHub App ID"
-    required: true
+    description: "PrioriCode GitHub App ID (optional; falls back to GITHUB_TOKEN)"
+    required: false
   prioricode-app-secret:
-    description: "PrioriCode GitHub App private key"
-    required: true
+    description: "PrioriCode GitHub App private key (optional)"
+    required: false
 outputs:
   token:
-    description: "GitHub App token"
-    value: ${{ steps.apptoken.outputs.token }}
+    description: "GitHub token with write access"
+    value: ${{ steps.resolve.outputs.token }}
   app-slug:
-    description: "GitHub App slug"
+    description: "GitHub App slug (empty when falling back to GITHUB_TOKEN)"
     value: ${{ steps.apptoken.outputs.app-slug }}
 runs:
   using: "composite"
   steps:
     - name: Create app token
       id: apptoken
+      if: ${{ inputs.prioricode-app-id != '' }}
       uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2.2.2
       with:
         app-id: ${{ inputs.prioricode-app-id }}
@@ -27,9 +28,20 @@ runs:
 
     - name: Configure git user
       run: |
-        slug="${{ steps.apptoken.outputs.app-slug }}"
-        git config --global user.name "${slug}[bot]"
-        git config --global user.email "${slug}[bot]@users.noreply.github.com"
+        if [ -n "${{ steps.apptoken.outputs.app-slug }}" ]; then
+          git config --global user.name "${{ steps.apptoken.outputs.app-slug }}[bot]"
+          git config --global user.email "${{ steps.apptoken.outputs.app-slug }}[bot]@users.noreply.github.com"
+        else
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        fi
+      shell: bash
+
+    - name: Resolve token
+      id: resolve
+      run: |
+        token="${{ steps.apptoken.outputs.token || secrets.GITHUB_TOKEN }}"
+        echo "token=${token}" >> "$GITHUB_OUTPUT"
       shell: bash
 
     - name: Clear checkout auth
@@ -39,5 +51,6 @@ runs:
 
     - name: Configure git remote
       run: |
-        git remote set-url origin https://x-access-token:${{ steps.apptoken.outputs.token }}@github.com/${{ github.repository }}
+        token="${{ steps.apptoken.outputs.token || secrets.GITHUB_TOKEN }}"
+        git remote set-url origin "https://x-access-token:${token}@github.com/${{ github.repository }}"
       shell: bash

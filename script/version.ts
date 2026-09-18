@@ -7,11 +7,19 @@ const output = [`version=${Script.version}`]
 const sha = process.env.GITHUB_SHA ?? (await $`git rev-parse HEAD`.text()).trim()
 
 if (!Script.preview) {
-  await $`bun script/changelog.ts --to ${sha}`.cwd(process.cwd())
+  // Best effort: the generated changelog needs the CLI + an API key. When
+  // either is missing, fall back to a plain commit list.
+  await $`bun script/changelog.ts --to ${sha}`.cwd(process.cwd()).nothrow()
   const file = `${process.cwd()}/UPCOMING_CHANGELOG.md`
-  const body = await Bun.file(file)
-    .text()
-    .catch(() => "No notable changes")
+  let body = await Bun.file(file).text().catch(() => "")
+  if (!body.trim()) {
+    const tag = (await $`git tag --list 'v*' --sort=-v:refname`.text())
+      .split(/\r?\n/)
+      .map((x: string) => x.trim())
+      .find((x: string) => /^v\d+\.\d+\.\d+$/.test(x))
+    const range = tag ? `${tag}..HEAD` : "HEAD~20..HEAD"
+    body = (await $`git log ${range} --pretty=format:- %s`.text()).trim() || "No notable changes"
+  }
   const dir = process.env.RUNNER_TEMP ?? "/tmp"
   const notesFile = `${dir}/prioricode-release-notes.txt`
   await Bun.write(notesFile, body)

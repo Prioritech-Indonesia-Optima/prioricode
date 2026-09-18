@@ -34,16 +34,26 @@ const IS_PREVIEW = CHANNEL !== "latest"
 const VERSION = await (async () => {
   if (env.PRIORICODE_VERSION) return env.PRIORICODE_VERSION
   if (IS_PREVIEW) {
-    const hash = await $`git rev-parse --short HEAD`.text().then((x) => x.trim())
+    const hash = await $`git rev-parse --short HEAD`.text().then((x: string) => x.trim())
     return hash
   }
-  const version = await fetch("https://registry.npmjs.org/prioricode-ai/latest")
-    .then((res) => {
-      if (!res.ok) throw new Error(res.statusText)
-      return res.json()
-    })
-    .then((data: any) => data.version)
-  const [major, minor, patch] = version.split(".").map((x: string) => Number(x) || 0)
+  // Source of truth is the latest vX.Y.Z git tag; npm is only a fallback.
+  let base: string
+  const tag = (await $`git tag --list 'v*' --sort=-v:refname`.text())
+    .split(/\r?\n/)
+    .map((x: string) => x.trim())
+    .find((x: string) => /^v\d+\.\d+\.\d+$/.test(x))
+  if (tag) {
+    base = tag.slice(1)
+  } else {
+    base = await fetch("https://registry.npmjs.org/prioricode-ai/latest")
+      .then((res) => {
+        if (!res.ok) throw new Error(res.statusText)
+        return res.json()
+      })
+      .then((data: any) => data.version)
+  }
+  const [major, minor, patch] = base.split(".").map((x: string) => Number(x) || 0)
   const t = env.PRIORICODE_BUMP?.toLowerCase()
   if (t === "major") return `${major + 1}.0.0`
   if (t === "minor") return `${major}.${minor + 1}.0`
