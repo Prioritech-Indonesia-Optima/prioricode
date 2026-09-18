@@ -179,6 +179,14 @@ const layer = Layer.effect(
             mode: "primary",
             native: true,
           },
+          auto: {
+            name: "auto",
+            description: "Automation mode. Explores, plans, and executes without user interaction. Auto-commits per verified phase.",
+            options: {},
+            permission: Permission.merge(defaults, user),
+            mode: "primary",
+            native: true,
+          },
           general: {
             name: "general",
             description: `General-purpose agent for researching complex questions and executing multi-step tasks. Use this agent to execute multiple units of work in parallel.`,
