@@ -27,7 +27,7 @@ Primary agents are the main assistants you interact with directly. You can cycle
 You can use the **Tab** key to switch between primary agents during a session.
 :::
 
-PrioriCode comes with two built-in primary agents, **Build** and **Plan**. We'll
+PrioriCode comes with three built-in primary agents, **Build**, **Plan**, and **Auto**. We'll
 look at these below.
 
 ---
@@ -42,7 +42,7 @@ PrioriCode comes with three built-in subagents, **General**, **Explore**, and **
 
 ## Built-in
 
-PrioriCode comes with two built-in primary agents and three built-in subagents.
+PrioriCode comes with three built-in primary agents and three built-in subagents.
 
 ---
 
@@ -65,6 +65,22 @@ By default, all of the following are set to `ask`:
 - `bash`: All bash commands
 
 This agent is useful when you want the LLM to analyze code, suggest changes, or create plans without making any actual modifications to your codebase.
+
+---
+
+### Use auto
+
+_Mode_: `primary`
+
+A fully autonomous agent for hands-off work. It runs the entire cycle on its own — explore, brainstorm, plan, execute, verify, and report — without pausing to ask you questions. The `question` tool is denied, so it makes decisions autonomously and picks the safest, most reversible option when uncertain.
+
+It writes a plan to a plan file before executing, then works through it phase by phase, running each phase's verification command and **auto-committing** after every verified phase (commit message `auto: <phase name>`). This gives you per-phase rollback points to inspect later.
+
+Use it when you want to kick off a task and step away — it is designed for AFK use.
+
+```bash frame="none" title="Start a session in Auto mode"
+prioricode --agent auto "add rate limiting to the /api/login endpoint"
+```
 
 ---
 

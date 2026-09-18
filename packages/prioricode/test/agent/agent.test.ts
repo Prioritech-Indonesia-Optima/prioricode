@@ -50,6 +50,7 @@ it.instance("returns default native agents when no config", () =>
     const names = agents.map((a) => a.name)
     expect(names).toContain("build")
     expect(names).toContain("plan")
+    expect(names).toContain("auto")
     expect(names).toContain("general")
     expect(names).toContain("explore")
     expect(names).toContain("compaction")
@@ -107,6 +108,22 @@ it.instance(
       },
     },
   },
+)
+
+it.instance("auto agent denies question and plan tools but allows edit and task", () =>
+  Effect.gen(function* () {
+    const auto = yield* load((svc) => svc.get("auto"))
+    expect(auto).toBeDefined()
+    expect(auto?.mode).toBe("primary")
+    expect(auto?.native).toBe(true)
+    expect(evalPerm(auto, "question")).toBe("deny")
+    expect(evalPerm(auto, "plan_enter")).toBe("deny")
+    expect(evalPerm(auto, "plan_exit")).toBe("deny")
+    expect(evalPerm(auto, "edit")).toBe("allow")
+    expect(evalPerm(auto, "bash")).toBe("allow")
+    expect(Permission.evaluate("task", "general", auto!.permission).action).toBe("allow")
+    expect(Permission.evaluate("task", "explore", auto!.permission).action).toBe("allow")
+  }),
 )
 
 it.instance("explore agent denies edit and write", () =>
@@ -749,6 +766,7 @@ it.instance(
       agent: {
         build: { disable: true },
         plan: { disable: true },
+        auto: { disable: true },
       },
     },
   },
