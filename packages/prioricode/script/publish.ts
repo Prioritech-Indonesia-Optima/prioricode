@@ -128,23 +128,29 @@ if (!Script.preview) {
     "",
   ].join("\n")
 
-  for (const [pkg, pkgbuild] of [["prioricode-bin", binaryPkgbuild]]) {
-    for (let i = 0; i < 30; i++) {
-      try {
-        await $`rm -rf ./dist/aur-${pkg}`
-        await $`git clone ssh://aur@aur.archlinux.org/${pkg}.git ./dist/aur-${pkg}`
-        await $`cd ./dist/aur-${pkg} && git checkout master`
-        await Bun.file(`./dist/aur-${pkg}/PKGBUILD`).write(pkgbuild)
-        await $`cd ./dist/aur-${pkg} && makepkg --printsrcinfo > .SRCINFO`
-        await $`cd ./dist/aur-${pkg} && git add PKGBUILD .SRCINFO`
-        if ((await $`cd ./dist/aur-${pkg} && git diff --cached --quiet`.nothrow()).exitCode === 0) break
-        await $`cd ./dist/aur-${pkg} && git commit -m "Update to v${Script.version}"`
-        await $`cd ./dist/aur-${pkg} && git push`
-        break
-      } catch {
-        continue
+  // AUR is best-effort: only attempt it when a key is configured, and never
+  // let it fail the release.
+  if (process.env.AUR_KEY) {
+    for (const [pkg, pkgbuild] of [["prioricode-bin", binaryPkgbuild]]) {
+      for (let i = 0; i < 30; i++) {
+        try {
+          await $`rm -rf ./dist/aur-${pkg}`
+          await $`git clone ssh://aur@aur.archlinux.org/${pkg}.git ./dist/aur-${pkg}`
+          await $`cd ./dist/aur-${pkg} && git checkout master`
+          await Bun.file(`./dist/aur-${pkg}/PKGBUILD`).write(pkgbuild)
+          await $`cd ./dist/aur-${pkg} && makepkg --printsrcinfo > .SRCINFO`
+          await $`cd ./dist/aur-${pkg} && git add PKGBUILD .SRCINFO`
+          if ((await $`cd ./dist/aur-${pkg} && git diff --cached --quiet`.nothrow()).exitCode === 0) break
+          await $`cd ./dist/aur-${pkg} && git commit -m "Update to v${Script.version}"`
+          await $`cd ./dist/aur-${pkg} && git push`
+          break
+        } catch {
+          continue
+        }
       }
     }
+  } else {
+    console.log("no AUR_KEY; skipping AUR update")
   }
 
   // Homebrew formula
@@ -202,16 +208,22 @@ if (!Script.preview) {
 
   const token = process.env.GITHUB_TOKEN
   if (!token) {
-    console.error("GITHUB_TOKEN is required to update homebrew tap")
-    process.exit(1)
-  }
-  const tap = `https://x-access-token:${token}@github.com/anomalyco/homebrew-tap.git`
-  await $`rm -rf ./dist/homebrew-tap`
-  await $`git clone ${tap} ./dist/homebrew-tap`
-  await Bun.file("./dist/homebrew-tap/prioricode.rb").write(homebrewFormula)
-  await $`cd ./dist/homebrew-tap && git add prioricode.rb`
-  if ((await $`cd ./dist/homebrew-tap && git diff --cached --quiet`.nothrow()).exitCode !== 0) {
-    await $`cd ./dist/homebrew-tap && git commit -m "Update to v${Script.version}"`
-    await $`cd ./dist/homebrew-tap && git push`
+    console.log("no GITHUB_TOKEN; skipping homebrew tap update")
+  } else {
+    // Homebrew is a secondary install path; a tap failure must not block the
+    // release (the GitHub release + install script are the primary paths).
+    try {
+      const tap = `https://x-access-token:${token}@github.com/Prioritech-Indonesia-Optima/homebrew-tap.git`
+      await $`rm -rf ./dist/homebrew-tap`
+      await $`git clone ${tap} ./dist/homebrew-tap`
+      await Bun.file("./dist/homebrew-tap/prioricode.rb").write(homebrewFormula)
+      await $`cd ./dist/homebrew-tap && git add prioricode.rb`
+      if ((await $`cd ./dist/homebrew-tap && git diff --cached --quiet`.nothrow()).exitCode !== 0) {
+        await $`cd ./dist/homebrew-tap && git commit -m "Update to v${Script.version}"`
+        await $`cd ./dist/homebrew-tap && git push`
+      }
+    } catch (e) {
+      console.warn("homebrew tap update failed (non-fatal):", e)
+    }
   }
 }
