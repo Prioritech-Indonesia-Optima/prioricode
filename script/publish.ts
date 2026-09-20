@@ -47,7 +47,9 @@ await $`bun ./packages/plugin/script/publish.ts`
 console.log("\n=== ui ===\n")
 await $`bun ./packages/ui/script/publish.ts`
 
-if (Script.release) {
+// Desktop updater finalization runs in the publish-desktop job (which has the
+// desktop latest.yml artifacts). Skip it on the CLI-only publish path.
+if (Script.release && process.env.LATEST_YML_DIR) {
   await $`bun ./packages/desktop/scripts/finalize-latest-json.ts`
   await $`bun ./packages/desktop/scripts/finalize-latest-yml.ts`
 }

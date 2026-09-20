@@ -458,12 +458,13 @@ jobs:
           name: latest-yml-${{ matrix.settings.target }}
           path: packages/desktop/dist/latest*.yml
 
+  # The CLI is the primary install/upgrade path and ships independently of the
+  # desktop matrix, so a scarce runner (e.g. macos-13) can't hold the release.
   publish:
     needs:
       - version
       - build-cli
       - sign-cli-windows
-      - build-electron
       - secrets-check
     if: always() && !cancelled() && needs.version.result == 'success' && needs.build-cli.result == 'success'
     runs-on: ubuntu-latest
@@ -511,20 +512,6 @@ jobs:
           name: prioricode-preview-cli
           path: packages/cli/dist
 
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        if: needs.version.outputs.release
-        continue-on-error: true
-        with:
-          pattern: latest-yml-*
-          path: /tmp/latest-yml
-
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
-        if: needs.version.outputs.release && needs.build-electron.result == 'success'
-        with:
-          pattern: prioricode-desktop-*
-          path: /tmp/desktop
-          merge-multiple: true
-
       - name: Setup git committer
         id: committer
         uses: ./.github/actions/setup-git-committer
@@ -553,8 +540,53 @@ jobs:
           git config --global user.name "prioricode"
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
 
+      - run: ./script/publish.ts
+        env:
+          PRIORICODE_VERSION: ${{ needs.version.outputs.version }}
+          PRIORICODE_RELEASE: ${{ needs.version.outputs.release }}
+          AUR_KEY: ${{ secrets.AUR_KEY }}
+          GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_REPO: ${{ needs.version.outputs.repo }}
+          NPM_CONFIG_PROVENANCE: false
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+  # Desktop ships on its own track and waits for the full matrix (including the
+  # scarce macos-13 runner). It never blocks the CLI release above.
+  publish-desktop:
+    needs:
+      - version
+      - build-electron
+      - secrets-check
+    if: always() && !cancelled() && needs.version.result == 'success' && needs.build-electron.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
+
+      - uses: ./.github/actions/setup-bun
+
+      - name: Setup git committer
+        id: committer
+        uses: ./.github/actions/setup-git-committer
+        with:
+          prioricode-app-id: ${{ vars.PRIORICODE_APP_ID }}
+          prioricode-app-secret: ${{ secrets.PRIORICODE_APP_SECRET }}
+          fallback-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: prioricode-desktop-*
+          path: /tmp/desktop
+          merge-multiple: true
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: latest-yml-*
+          path: /tmp/latest-yml
+
       - name: Upload desktop release assets
-        if: needs.version.outputs.release && needs.build-electron.result == 'success'
+        if: needs.version.outputs.release
         env:
           GH_TOKEN: ${{ steps.committer.outputs.token }}
         run: |
@@ -566,15 +598,16 @@ jobs:
           fi
           gh release upload "v${{ needs.version.outputs.version }}" "${files[@]}" --clobber --repo "${{ needs.version.outputs.repo }}"
 
-      - run: ./script/publish.ts
+      - name: Finalize desktop updater
+        if: needs.version.outputs.release
         env:
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
+          GH_REPO: ${{ needs.version.outputs.repo }}
           PRIORICODE_VERSION: ${{ needs.version.outputs.version }}
           PRIORICODE_RELEASE: ${{ needs.version.outputs.release }}
-          AUR_KEY: ${{ secrets.AUR_KEY }}
-          GITHUB_TOKEN: ${{ steps.committer.outputs.token }}
-          GH_REPO: ${{ needs.version.outputs.repo }}
-          NPM_CONFIG_PROVENANCE: false
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           LATEST_YML_DIR: /tmp/latest-yml
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          bun ./packages/desktop/scripts/finalize-latest-json.ts
+          bun ./packages/desktop/scripts/finalize-latest-yml.ts
