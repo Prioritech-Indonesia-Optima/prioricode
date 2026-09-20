@@ -38,14 +38,21 @@ await prepareReleaseFiles()
 console.log("\n=== cli ===\n")
 await $`bun ./packages/prioricode/script/publish.ts`
 
-console.log("\n=== sdk ===\n")
-await $`bun ./packages/sdk/js/script/publish.ts`
+// npm publishing (sdk/plugin/ui) only happens when a token is configured; the
+// CLI publish above still runs for docker/AUR/homebrew regardless.
+const hasNpmToken = Boolean(process.env.NPM_TOKEN || process.env.NODE_AUTH_TOKEN)
+if (hasNpmToken) {
+  console.log("\n=== sdk ===\n")
+  await $`bun ./packages/sdk/js/script/publish.ts`
 
-console.log("\n=== plugin ===\n")
-await $`bun ./packages/plugin/script/publish.ts`
+  console.log("\n=== plugin ===\n")
+  await $`bun ./packages/plugin/script/publish.ts`
 
-console.log("\n=== ui ===\n")
-await $`bun ./packages/ui/script/publish.ts`
+  console.log("\n=== ui ===\n")
+  await $`bun ./packages/ui/script/publish.ts`
+} else {
+  console.log("\nno npm token; skipping sdk/plugin/ui npm publish\n")
+}
 
 // Desktop updater finalization runs in the publish-desktop job (which has the
 // desktop latest.yml artifacts). Skip it on the CLI-only publish path.
