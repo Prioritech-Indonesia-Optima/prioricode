@@ -29,6 +29,7 @@ import { Session } from "@/session/session"
 import { Coordination } from "@/session/coordination"
 import { CoordinationWatcher } from "@/session/coordination-watcher"
 import { SessionMessageTable, SessionTable } from "@prioricode/core/session/sql"
+import { CoordinationTable } from "@prioricode/core/session/coordination.sql"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { FSUtil } from "@prioricode/core/fs-util"
@@ -2568,6 +2569,24 @@ const setLastActive = Effect.fn("test.setLastActive")(function* (sessionID: Sess
     .pipe(Effect.orDie)
 })
 
+// Age coordination rows directly so grace/recovery thresholds can be exercised
+// without wall-clock sleeps (per test/AGENTS.md: synchronize on signals, not time).
+const setCoordinationTimes = Effect.fn("test.setCoordinationTimes")(function* (
+  id: string,
+  times: { timeCreated?: number; timeRead?: number },
+) {
+  const { db } = yield* Database.Service
+  yield* db
+    .update(CoordinationTable)
+    .set({
+      ...(times.timeCreated === undefined ? {} : { time_created: times.timeCreated }),
+      ...(times.timeRead === undefined ? {} : { time_read: times.timeRead }),
+    })
+    .where(eq(CoordinationTable.id, id))
+    .run()
+    .pipe(Effect.orDie)
+})
+
 describe("cross-session coordination", () => {
   coordinationIt.instance(
     "injects pending coordination notes into the model system context at the turn boundary",
@@ -3147,5 +3166,75 @@ describe("cross-session coordination stress", () => {
         expect(transcript).toContain(Coordination.wakePrompt)
       }),
     30_000,
+  )
+
+  coordinationIt.instance(
+    "a note consumed by a clean model step is acked in the ledger",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const chat = yield* sessions.create({
+          title: "receiver",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+        const note = yield* coordination.post({
+          projectID: chat.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: chat.id,
+          body: "ACK_LEDGER_OK",
+        })
+        yield* llm.text("noted")
+        yield* user(chat.id, "hello")
+        yield* prompt.loop({ sessionID: chat.id })
+
+        const row = yield* coordination.get(note.id)
+        expect(row?.timeRead).toBeNumber()
+        expect(row?.timeAck).toBeNumber()
+        // The claim token is the step's assistant message id, recorded for audit.
+        expect(row?.claimedBy).toBeString()
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "a claim whose model request never completed stays read-but-unacked (recovery fuel)",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const chat = yield* sessions.create({
+          title: "receiver",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+        const note = yield* coordination.post({
+          projectID: chat.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: chat.id,
+          body: "ACK_LEDGER_LOST",
+        })
+
+        // The turn claims the note into its request and hangs at the provider.
+        yield* llm.hang
+        yield* user(chat.id, "hello")
+        const fiber = yield* prompt.loop({ sessionID: chat.id }).pipe(Effect.forkChild)
+        yield* awaitWithTimeout(llm.wait(1), "the turn never reached the model", "10 seconds")
+
+        const row = yield* coordination.get(note.id)
+        expect(row?.timeRead).toBeNumber()
+        expect(row?.timeAck).toBeUndefined()
+        yield* Fiber.interrupt(fiber)
+        // Interrupting does not retro-ack either.
+        expect((yield* coordination.get(note.id))?.timeAck).toBeUndefined()
+      }),
+    20_000,
   )
 })

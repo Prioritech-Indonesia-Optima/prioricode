@@ -1277,9 +1277,16 @@ const layer = Layer.effect(
               sys.mcp(agent, session.permission),
               MessageV2.toModelMessagesEffect(msgs, model),
             ])
-            // Surface coordination notes from peer sessions once, at the turn boundary, and
-            // mark them read so neither a concurrent wake poller nor a later turn re-delivers them.
-            const coordinationNotes = yield* coordination.claimUnread(sessionID)
+            // Surface coordination notes from peer sessions once, at the step boundary. The
+            // atomic claim marks them read (injected) and stamps this step's assistant
+            // message as the claimer; the markAck below settles the ledger only when the
+            // model request carrying them completes without error. A claim that never
+            // acks (crash, compaction rejection, provider failure) is re-queued by the
+            // watcher's recovery pass, so notes cannot be silently lost between injection
+            // and consumption.
+            const coordinationNotes = yield* coordination.claimUnread(sessionID, undefined, {
+              claimToken: msg.id,
+            })
             const coordinationBlock =
               coordinationNotes.length > 0 ? Coordination.formatNotes(coordinationNotes) : undefined
             // Ambient peer presence: refreshed once per turn, not per step, so a
@@ -1337,6 +1344,16 @@ const layer = Layer.effect(
               model,
               toolChoice: format.type === "json_schema" ? "required" : undefined,
             })
+            // Ack the notes this step injected, scoped to this step's claim token.
+            // Skipped when the request was rejected before reaching the model
+            // ("compact" overflow) or errored (provider failure / interrupt) — those
+            // claims stay unacked so the recovery pass re-delivers them. A clean
+            // permission-block stop still acks: the model did see the notes.
+            if (coordinationNotes.length > 0 && result !== "compact" && !handle.message.error)
+              yield* coordination.markAck(
+                coordinationNotes.map((note) => note.id),
+                msg.id,
+              )
 
             if (structured !== undefined) {
               handle.message.structured = structured
