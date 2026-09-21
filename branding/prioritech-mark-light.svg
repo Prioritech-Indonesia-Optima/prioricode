@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <path id="swoosh" d="M16 18C38 29 54 42 56 60L56 90L70 90L70 60C70 40 50 26 21 11Z"/>
+    <path id="star" d="M13 4Q13 16 25 16Q13 16 13 28Q13 16 1 16Q13 16 13 4Z" transform="rotate(15 13 16)"/>
+    <mask id="gap">
+      <rect width="100" height="100" fill="#fff"/>
+      <use href="#swoosh" fill="#000" stroke="#000" stroke-width="5" stroke-linejoin="round"/>
+      <use href="#star" fill="#000" stroke="#000" stroke-width="4" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <path mask="url(#gap)" fill="#FAF9F6" fill-rule="evenodd" d="M24 14H62C77 14 88 24 88 36C88 48 77 58 62 58H39V82H24ZM39 27H60C68 27 74 31 74 36C74 41 68 45 60 45H39Z"/>
+  <use href="#swoosh" fill="#F9B110"/>
+  <use href="#star" fill="#F9B110"/>
+</svg>
