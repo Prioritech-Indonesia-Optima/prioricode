@@ -1,5 +1,5 @@
 import { OptimizedBuffer, RGBA, TextAttributes } from "@opentui/core"
-import { go } from "../logo"
+import { go, tone } from "../logo"
 
 const PERIOD = 4600
 const RINGS = 3
@@ -17,53 +17,46 @@ const LOGO_LEFT_WIDTH = go.left[0]?.length ?? 0
 const LOGO_LINES = go.left.map((line, index) => line + " ".repeat(LOGO_GAP) + go.right[index])
 const LOGO_WIDTH = LOGO_LINES[0]?.length ?? 0
 const LOGO_HEIGHT = LOGO_LINES.length
+const LOGO_REACH = Math.hypot(LOGO_WIDTH, LOGO_HEIGHT) + 3
 const SPACE = " ".codePointAt(0)!
-const TOP_HALF = "▀".codePointAt(0)!
-const FULL_BLOCK = "█".codePointAt(0)!
 const RING_SCALE = 1 / RINGS
 const TAIL_SCALE = 1 / TAIL
-const LOGO_REACH = Math.hypot(LOGO_WIDTH, LOGO_HEIGHT * 2) + 3
 
-const enum LogoCellKind {
-  Background,
-  Top,
-  ShadowTop,
-  Solid,
-  Char,
+const enum LogoTone {
+  Light,
+  Base,
+  Accent,
+  Text,
 }
 
 type LogoTemplateCell = {
   x: number
   y: number
-  kind: LogoCellKind
+  tone: LogoTone
   charCode: number
   attributes: number
-  topDist: number
-  bottomDist: number
+  dist: number
 }
 
 const LOGO_TEMPLATE: LogoTemplateCell[] = LOGO_LINES.flatMap((line, y) =>
   Array.from(line)
     .map((char, x) => {
       if (char === " ") return
-      const kind =
-        char === "_"
-          ? LogoCellKind.Background
-          : char === "^"
-            ? LogoCellKind.Top
-            : char === "~"
-              ? LogoCellKind.ShadowTop
-              : char === "█"
-                ? LogoCellKind.Solid
-                : LogoCellKind.Char
+      const kind = tone(char)
       return {
         x,
         y,
-        kind,
+        tone:
+          kind === "light"
+            ? LogoTone.Light
+            : kind === "accent"
+              ? LogoTone.Accent
+              : kind === "text"
+                ? LogoTone.Text
+                : LogoTone.Base,
         charCode: char.codePointAt(0) ?? SPACE,
         attributes: x > LOGO_LEFT_WIDTH ? TextAttributes.BOLD : 0,
-        topDist: Math.hypot(x + 0.5 - LOGO_WIDTH / 2, y * 2 - LOGO_HEIGHT),
-        bottomDist: Math.hypot(x + 0.5 - LOGO_WIDTH / 2, y * 2 + 1 - LOGO_HEIGHT),
+        dist: Math.hypot(x + 0.5 - LOGO_WIDTH / 2, y - LOGO_HEIGHT / 2),
       }
     })
     .filter((cell): cell is LogoTemplateCell => !!cell),
@@ -274,16 +267,7 @@ export class GoUpsellArtPainter {
       const index = (this.logoY + cell.y) * this.geometryWidth + this.logoX + cell.x
       this.logoIndexes[i] = index
       buffers.attributes[index] = cell.attributes
-      buffers.char[index] =
-        cell.kind === LogoCellKind.Background
-          ? SPACE
-          : cell.kind === LogoCellKind.Top || cell.kind === LogoCellKind.ShadowTop
-            ? TOP_HALF
-            : cell.kind === LogoCellKind.Solid
-              ? rgb
-                ? TOP_HALF
-                : FULL_BLOCK
-              : cell.charCode
+      buffers.char[index] = cell.charCode
     }
   }
 
@@ -370,17 +354,12 @@ export class GoUpsellArtPainter {
     this.pulsePrimary = primary > 1 ? 1 : primary
   }
 
-  private drawLogo(frameBuffer: OptimizedBuffer, t: number, rgb: boolean) {
+  private drawLogo(frameBuffer: OptimizedBuffer, t: number, _rgb: boolean) {
     if (this.logoIndexes.length === 0) return
 
     const buffers = frameBuffer.buffers
     const fg = buffers.fg
     const bg = buffers.bg
-    const shadow: Rgb = [
-      mixChannel(this.panelRgb[0], this.logoBaseRgb[0], 0.25),
-      mixChannel(this.panelRgb[1], this.logoBaseRgb[1], 0.25),
-      mixChannel(this.panelRgb[2], this.logoBaseRgb[2], 0.25),
-    ]
     const phase0 = (t / PERIOD) % 1
     const phase1 = (t / PERIOD + 0.5) % 1
     const envelope0 = Math.sin(phase0 * Math.PI)
@@ -394,43 +373,18 @@ export class GoUpsellArtPainter {
       const cell = LOGO_TEMPLATE[i]!
       const index = this.logoIndexes[i]!
       const offset = index * 4
-      this.setLogoPulse(cell.topDist, head0, eased0, head1, eased1)
-      const topPeak = this.pulsePeak
-      const topPrimary = this.pulsePrimary
-      this.setLogoPulse(cell.bottomDist, head0, eased0, head1, eased1)
-      const bottomPeak = this.pulsePeak
-      const bottomPrimary = this.pulsePrimary
+      this.setLogoPulse(cell.dist, head0, eased0, head1, eased1)
+      const peak = this.pulsePeak
+      const primary = this.pulsePrimary
 
-      if (cell.kind === LogoCellKind.Background) {
-        writeLogoTint(bg, offset, shadow, this.primaryRgb, 0, Math.max(topPeak, bottomPeak) * 0.18)
-        continue
+      if (cell.tone === LogoTone.Accent) {
+        writeLogoTint(fg, offset, this.primaryRgb, this.primaryRgb, 1, peak * 0.8)
+      } else if (cell.tone === LogoTone.Light) {
+        writeLogoTint(fg, offset, this.logoBaseRgb, this.primaryRgb, primary * 0.3, peak * 0.5)
+      } else {
+        writeLogoTint(fg, offset, this.logoBaseRgb, this.primaryRgb, primary, peak)
       }
-
-      if (cell.kind === LogoCellKind.Top) {
-        writeLogoTint(fg, offset, this.logoBaseRgb, this.primaryRgb, topPrimary, topPeak)
-        writeLogoTint(bg, offset, shadow, this.primaryRgb, 0, bottomPeak * 0.18)
-        continue
-      }
-
-      if (cell.kind === LogoCellKind.ShadowTop) {
-        writeLogoTint(fg, offset, shadow, this.primaryRgb, 0, topPeak * 0.18)
-        continue
-      }
-
-      if (cell.kind === LogoCellKind.Solid && rgb) {
-        writeLogoTint(fg, offset, this.logoBaseRgb, this.primaryRgb, topPrimary, topPeak)
-        writeLogoTint(bg, offset, this.logoBaseRgb, this.primaryRgb, bottomPrimary, bottomPeak)
-        continue
-      }
-
-      writeLogoTint(
-        fg,
-        offset,
-        this.logoBaseRgb,
-        this.primaryRgb,
-        (topPrimary + bottomPrimary) / 2,
-        (topPeak + bottomPeak) / 2,
-      )
+      writeRgb(bg, offset, this.panelRgb[0], this.panelRgb[1], this.panelRgb[2])
     }
   }
 }

@@ -4,10 +4,9 @@
 // session metadata and the resume command. These are scrollback snapshots, so
 // they become immutable terminal history once committed.
 //
-// Both variants use a cell-based renderer. cells() classifies each character
-// in the source template as text, full-block, half-block-mix, or
-// half-block-top, and draw() renders it with foreground/background shadow
-// colors from the theme.
+// Both variants use a tone-based renderer: each character of the grainy
+// ASCII mark is classified by logo.ts `tone()` and drawn with the matching
+// theme color (stipple, stroke, or brand accent).
 import {
   BoxRenderable,
   type ColorInput,
@@ -18,7 +17,7 @@ import {
   type ScrollbackWriter,
 } from "@opentui/core"
 import * as Locale from "@/util/locale"
-import { go } from "@/cli/logo"
+import { go, tone } from "@/cli/logo"
 import type { RunSplashTheme } from "./theme"
 
 export const SPLASH_TITLE_LIMIT = 50
@@ -38,35 +37,6 @@ type SplashWriterInput = SplashInput & {
 export type SplashMeta = {
   title: string
   session_id: string
-}
-
-type Cell = {
-  char: string
-  mark: "text" | "full" | "mix" | "top"
-}
-
-function cells(line: string): Cell[] {
-  const list: Cell[] = []
-  for (const char of line) {
-    if (char === "_") {
-      list.push({ char: " ", mark: "full" })
-      continue
-    }
-
-    if (char === "^") {
-      list.push({ char: "▀", mark: "mix" })
-      continue
-    }
-
-    if (char === "~") {
-      list.push({ char: "▀", mark: "top" })
-      continue
-    }
-
-    list.push({ char, mark: "text" })
-  }
-
-  return list
 }
 
 function title(text: string | undefined): string {
@@ -148,27 +118,34 @@ function draw(
     left: number
     top: number
     fg: ColorInput
-    shadow: ColorInput
+    light: ColorInput
+    accent: ColorInput
     attrs?: number
   },
 ) {
   let x = input.left
-  for (const cell of cells(row)) {
-    if (cell.mark === "full" || cell.mark === "mix") {
-      push(lines, x, input.top, cell.char, input.fg, input.shadow, input.attrs)
+  let run: { start: number; text: string; fg: ColorInput } | undefined
+  const flush = () => {
+    if (run) push(lines, input.left + run.start, input.top, run.text, run.fg, undefined, input.attrs)
+    run = undefined
+  }
+  for (const char of row) {
+    const kind = tone(char)
+    const fg = kind === "light" ? input.light : kind === "accent" ? input.accent : input.fg
+    if (kind === "space") {
+      flush()
       x += 1
       continue
     }
-
-    if (cell.mark === "top") {
-      push(lines, x, input.top, cell.char, input.shadow, undefined, input.attrs)
-      x += 1
-      continue
+    if (run && run.fg === fg) {
+      run.text += char
+    } else {
+      flush()
+      run = { start: x - input.left, text: char, fg }
     }
-
-    push(lines, x, input.top, cell.char, input.fg, undefined, input.attrs)
     x += 1
   }
+  flush()
 }
 
 function build(input: SplashWriterInput, kind: "entry" | "exit", ctx: ScrollbackRenderContext): ScrollbackSnapshot {
@@ -190,7 +167,8 @@ function build(input: SplashWriterInput, kind: "entry" | "exit", ctx: Scrollback
         left: 0,
         top: top + i,
         fg: left,
-        shadow: leftShadow,
+        light: leftShadow,
+        accent: right,
       })
     }
 
@@ -220,7 +198,8 @@ function build(input: SplashWriterInput, kind: "entry" | "exit", ctx: Scrollback
         left: 0,
         top: top + i,
         fg: left,
-        shadow: leftShadow,
+        light: leftShadow,
+        accent: right,
       })
     }
 

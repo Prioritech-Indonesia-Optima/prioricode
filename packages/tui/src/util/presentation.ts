@@ -1,33 +1,42 @@
-import { logo } from "../logo"
+import { go, tone, type Tone } from "../logo"
 
 const reset = "\x1b[0m"
 const bold = "\x1b[1m"
 const dim = "\x1b[90m"
+const colors: Record<Tone, string> = {
+  space: "",
+  light: dim,
+  base: reset,
+  accent: "\x1b[38;5;214m",
+  text: bold,
+}
 
-function wordmark(pad = "") {
-  const draw = (line: string, fg: string, shadow: string, bg: string) =>
-    [...line]
-      .map((char) => {
-        if (char === "_") return `${bg} ${reset}`
-        if (char === "^") return `${fg}${bg}▀${reset}`
-        if (char === "~") return `${shadow}▀${reset}`
-        if (char === ",") return `${shadow}▄${reset}`
-        if (char === " ") return " "
-        return `${fg}${char}${reset}`
-      })
-      .join("")
-
-  return logo.left.map((line, index) => {
-    const left = draw(line, dim, "\x1b[38;5;235m", "\x1b[48;5;235m")
-    const right = draw(logo.right[index] ?? "", reset, "\x1b[38;5;238m", "\x1b[48;5;238m")
-    return `${pad}${left} ${right}`
+function mark(pad: string) {
+  return go.right.map((line) => {
+    const parts = [pad]
+    let current: Tone | undefined
+    for (const char of line) {
+      const kind = tone(char)
+      if (kind === "space") {
+        current = undefined
+        parts.push(" ")
+        continue
+      }
+      if (kind !== current) {
+        parts.push(colors[kind])
+        current = kind
+      }
+      parts.push(char)
+    }
+    parts.push(reset)
+    return parts.join("")
   })
 }
 
 export function sessionEpilogue(input: { title: string; sessionID?: string }) {
   const weak = (text: string) => `${dim}${text.padEnd(10, " ")}${reset}`
   return [
-    ...wordmark("  "),
+    ...mark("  "),
     "",
     `  ${weak("Session")}${bold}${input.title}${reset}`,
     `  ${weak("Continue")}${bold}prioricode -s ${input.sessionID}${reset}`,
