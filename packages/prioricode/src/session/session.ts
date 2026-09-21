@@ -1,5 +1,6 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { PermissionV1 } from "@prioricode/core/v1/permission"
+import { Permission } from "@prioricode/schema/permission"
 import { Slug } from "@prioricode/core/util/slug"
 import { SessionV1 } from "@prioricode/core/v1/session"
 import { serviceUse } from "@prioricode/core/effect/service-use"
@@ -108,6 +109,7 @@ export function fromRow(row: SessionRow): Info {
     metadata: row.metadata ?? undefined,
     revert,
     permission: row.permission ? [...row.permission] : undefined,
+    permissionMode: row.permission_mode ?? undefined,
     time: {
       created: row.time_created,
       updated: row.time_updated,
@@ -151,6 +153,7 @@ export function toRow(info: Info) {
         }
       : null,
     permission: info.permission,
+    permission_mode: info.permissionMode,
     time_created: info.time.created,
     time_updated: info.time.updated,
     time_compacting: info.time.compacting,
@@ -240,6 +243,7 @@ export const Info = Schema.Struct({
   metadata: optional(Metadata),
   time: Time,
   permission: optional(PermissionV1.Ruleset),
+  permissionMode: optional(Permission.Mode),
   revert: optional(Revert),
 }).annotate({ identifier: "Session" })
 export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
@@ -435,6 +439,7 @@ export interface Interface {
     time: number
   }) => Effect.Effect<void>
   readonly setPermission: (input: { sessionID: SessionID; permission: PermissionV1.Ruleset }) => Effect.Effect<void>
+  readonly setPermissionMode: (input: { sessionID: SessionID; mode: Permission.Mode }) => Effect.Effect<void>
   readonly setRevert: (input: {
     sessionID: SessionID
     revert: Info["revert"]
@@ -784,6 +789,13 @@ const layer: Layer.Layer<
       )
     })
 
+    const setPermissionMode = Effect.fn("Session.setPermissionMode")(function* (input: {
+      sessionID: SessionID
+      mode: Permission.Mode
+    }) {
+      yield* patch(input.sessionID, { permissionMode: input.mode, time: { updated: Date.now() } }).pipe(Effect.orDie)
+    })
+
     const setRevert = Effect.fn("Session.setRevert")(function* (input: {
       sessionID: SessionID
       revert: Info["revert"]
@@ -915,6 +927,7 @@ const layer: Layer.Layer<
       setMetadata,
       setAgentModel,
       setPermission,
+      setPermissionMode,
       setRevert,
       clearRevert,
       setSummary,

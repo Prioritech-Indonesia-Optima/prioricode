@@ -1,41 +1,58 @@
-import { createEffect } from "solid-js"
-import { createStore } from "solid-js/store"
-import { useArgs } from "./args"
-import { useKV } from "./kv"
+import { createEffect, createMemo } from "solid-js"
 import { createSimpleContext } from "./helper"
+import { useSync } from "./sync"
+import { useSDK } from "./sdk"
+import { useArgs } from "./args"
+import { useRoute } from "./route"
 
-export type PermissionMode = "auto" | "normal"
+export type PermissionMode = "default" | "ask-first" | "always-allow"
+
+const ORDER: PermissionMode[] = ["default", "ask-first", "always-allow"]
 
 export const { use: usePermission, provider: PermissionProvider } = createSimpleContext({
   name: "Permission",
   init: () => {
+    const sync = useSync()
+    const sdk = useSDK()
     const args = useArgs()
-    const kv = useKV()
-    const [store, setStore] = createStore<{ mode: PermissionMode; touched: boolean }>({
-      mode: "normal",
-      touched: false,
+    const route = useRoute()
+
+    const currentSessionID = createMemo(() =>
+      route.data.type === "session" ? route.data.sessionID : undefined,
+    )
+
+    const current = createMemo<PermissionMode>(() => {
+      const id = currentSessionID()
+      if (!id) return "default"
+      return sync.data.session.find((session) => session.id === id)?.permissionMode ?? "default"
     })
 
-    createEffect(() => {
-      if (store.touched || !kv.ready) return
-      const persisted: PermissionMode = args.auto ? "auto" : kv.get("permission_mode") === "auto" ? "auto" : "normal"
-      setStore("mode", persisted)
-    })
+    function set(mode: PermissionMode) {
+      const id = currentSessionID()
+      if (!id) return
+      void sdk.client.session.update({ sessionID: id, permissionMode: mode })
+    }
 
-    function commit(mode: PermissionMode) {
-      setStore({ mode, touched: true })
-      kv.set("permission_mode", mode)
+    if (args.auto) {
+      const applied = new Set<string>()
+      createEffect(() => {
+        const id = currentSessionID()
+        if (!id || applied.has(id)) return
+        const session = sync.data.session.find((item) => item.id === id)
+        if (!session) return
+        if (session.permissionMode !== undefined && session.permissionMode !== null) return
+        applied.add(id)
+        set("always-allow")
+      })
     }
 
     return {
       get mode() {
-        return store.mode
+        return current()
       },
-      set(mode: PermissionMode) {
-        commit(mode)
-      },
-      toggle() {
-        commit(store.mode === "auto" ? "normal" : "auto")
+      set,
+      cycle() {
+        set(ORDER[(ORDER.indexOf(current()) + 1) % ORDER.length])
       },
     }
   },

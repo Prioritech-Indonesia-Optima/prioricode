@@ -1,4 +1,5 @@
 import { PermissionV1 } from "@prioricode/core/v1/permission"
+import { Permission as PermissionSchema } from "@prioricode/schema/permission"
 import { Permission } from "@/permission"
 import { SessionV1 } from "@prioricode/core/v1/session"
 
@@ -50,6 +51,7 @@ export const UpdatePayload = Schema.Struct({
   title: Schema.optional(Schema.String),
   metadata: Schema.optional(Session.Metadata),
   permission: Schema.optional(PermissionV1.Ruleset),
+  permissionMode: Schema.optional(PermissionSchema.Mode),
   time: Schema.optional(
     Schema.Struct({
       archived: Schema.optional(Session.ArchivedTimestamp),

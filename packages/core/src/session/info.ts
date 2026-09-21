@@ -41,6 +41,7 @@ export function fromRow(row: typeof SessionTable.$inferSelect): SessionSchema.In
     }),
     subpath: row.path ? RelativePath.make(row.path) : undefined,
     revert: row.revert ? { ...row.revert, messageID: SessionMessage.ID.make(row.revert.messageID) } : undefined,
+    permissionMode: row.permission_mode ?? undefined,
     time: {
       created: DateTime.makeUnsafe(row.time_created),
       updated: DateTime.makeUnsafe(row.time_updated),

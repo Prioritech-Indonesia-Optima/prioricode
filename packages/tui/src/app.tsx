@@ -306,9 +306,9 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                           headers={input.headers}
                                           events={input.events}
                                         >
-                                          <PermissionProvider>
-                                            <ProjectProvider>
-                                              <SyncProvider>
+                                          <ProjectProvider>
+                                            <SyncProvider>
+                                              <PermissionProvider>
                                                 <DataProvider>
                                                   <ThemeProvider mode={mode}>
                                                     <LocalProvider>
@@ -333,9 +333,9 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                     </LocalProvider>
                                                   </ThemeProvider>
                                                 </DataProvider>
-                                              </SyncProvider>
-                                            </ProjectProvider>
-                                          </PermissionProvider>
+                                              </PermissionProvider>
+                                            </SyncProvider>
+                                          </ProjectProvider>
                                         </SDKProvider>
                                       </PluginRuntimeProvider>
                                     </TuiConfigProvider>
@@ -965,11 +965,10 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "permission.mode",
-        title:
-          local.permission.mode === "auto" ? "Disable auto-approve permissions" : "Enable auto-approve permissions",
+        title: `Permission mode: ${local.permission.mode} (cycle)`,
         category: "System",
         run: () => {
-          local.permission.toggle()
+          local.permission.cycle()
           dialog.clear()
         },
       },

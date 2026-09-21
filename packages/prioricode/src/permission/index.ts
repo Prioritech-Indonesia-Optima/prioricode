@@ -5,14 +5,44 @@ import { Wildcard } from "@prioricode/core/util/wildcard"
 import { Deferred, Effect, Layer, Context } from "effect"
 import os from "os"
 import { PermissionV1 } from "@prioricode/core/v1/permission"
+import { Permission } from "@prioricode/schema/permission"
+import { DestructiveCommand } from "@prioricode/core/permission/destructive"
 import { EventV2Bridge } from "@/event-v2-bridge"
 
 export const Event = PermissionV1.Event
 
+export interface AskInput extends PermissionV1.AskInput {
+  /** Per-session permission mode applied on top of the configured ruleset. */
+  mode?: Permission.Mode
+}
+
 export interface Interface {
-  readonly ask: (input: PermissionV1.AskInput) => Effect.Effect<void, PermissionV1.Error>
+  readonly ask: (input: AskInput) => Effect.Effect<void, PermissionV1.Error>
   readonly reply: (input: PermissionV1.ReplyInput) => Effect.Effect<void, PermissionV1.NotFoundError>
   readonly list: () => Effect.Effect<ReadonlyArray<PermissionV1.Request>>
+}
+
+export function permissionModeRules(mode: Permission.Mode | undefined): PermissionV1.Ruleset {
+  switch (mode) {
+    case "ask-first":
+      return [
+        { permission: "edit", pattern: "*", action: "ask" },
+        { permission: "bash", pattern: "*", action: "ask" },
+      ]
+    case "always-allow":
+      return [{ permission: "*", pattern: "*", action: "allow" }]
+    default:
+      return []
+  }
+}
+
+/** Under "always-allow", destructive bash commands still require explicit approval. */
+export function destructiveBashForcesAsk(
+  mode: Permission.Mode | undefined,
+  permission: string,
+  pattern: string,
+): boolean {
+  return mode === "always-allow" && permission === "bash" && DestructiveCommand.isDestructive(pattern)
 }
 
 interface PendingEntry {
@@ -64,9 +94,10 @@ const layer = Layer.effect(
       }),
     )
 
-    const ask = Effect.fn("Permission.ask")(function* (input: PermissionV1.AskInput) {
+    const ask = Effect.fn("Permission.ask")(function* (input: AskInput) {
       const { approved, pending } = yield* InstanceState.get(state)
-      const { ruleset, ...request } = input
+      const { ruleset: configured, mode, ...request } = input
+      const ruleset = [...configured, ...permissionModeRules(mode)]
       let needsAsk = false
 
       for (const pattern of request.patterns) {
@@ -76,6 +107,10 @@ const layer = Layer.effect(
           return yield* new PermissionV1.DeniedError({
             ruleset: ruleset.filter((rule) => Wildcard.match(request.permission, rule.permission)),
           })
+        }
+        if (destructiveBashForcesAsk(mode, request.permission, pattern)) {
+          needsAsk = true
+          continue
         }
         if (rule.action === "allow") continue
         needsAsk = true

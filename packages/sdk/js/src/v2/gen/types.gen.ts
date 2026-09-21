@@ -212,6 +212,7 @@ export type Session = {
     archived?: number
   }
   permission?: PermissionRuleset
+  permissionMode?: PermissionV2Mode
   revert?: {
     messageID: string
     partID?: string
@@ -2242,6 +2243,7 @@ export type GlobalSession = {
     archived?: number
   }
   permission?: PermissionRuleset
+  permissionMode?: PermissionV2Mode
   revert?: {
     messageID: string
     partID?: string
@@ -3039,6 +3041,8 @@ export type SkillV2Source = SkillV2DirectorySource | SkillV2UrlSource | SkillV2E
 export type MoveSessionDestination = {
   directory: string
 }
+
+export type PermissionV2Mode = "default" | "ask-first" | "always-allow"
 
 export type ModelRef = {
   id: string
@@ -3932,6 +3936,7 @@ export type SessionV2Info = {
   location: LocationRef
   subpath?: string
   revert?: RevertState
+  permissionMode?: PermissionV2Mode
 }
 
 export type PromptInputFileAttachment = {
@@ -9622,6 +9627,7 @@ export type SessionUpdateData = {
       [key: string]: unknown
     }
     permission?: PermissionRuleset
+    permissionMode?: PermissionV2Mode
     time?: {
       archived?: number
     }

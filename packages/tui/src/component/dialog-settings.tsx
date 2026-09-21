@@ -495,12 +495,12 @@ export function DialogSettings() {
 
       // -------------------------------------------------------------------- Behavior
       {
-        title: "Auto-approve permissions",
-        value: "behavior.auto_approve",
+        title: "Permission mode",
+        value: "behavior.permission_mode",
         category: "Behavior",
-        description: "Automatically approve tool permissions (yolo mode, remembered across restarts)",
-        footer: permission.mode === "auto" ? "on" : "off",
-        onSelect: () => permission.toggle(),
+        description: "Per-session permission behavior (default / ask-first / always-allow)",
+        footer: permission.mode,
+        onSelect: () => permission.cycle(),
       },
     ]
   })

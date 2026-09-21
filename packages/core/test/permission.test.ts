@@ -75,6 +75,18 @@ function setRules(rules: PermissionV2.Ruleset) {
   })
 }
 
+function setMode(mode: "default" | "ask-first" | "always-allow" | null) {
+  return Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    yield* db
+      .update(SessionTable)
+      .set({ permission_mode: mode })
+      .where(eq(SessionTable.id, SessionV2.ID.make("ses_test")))
+      .run()
+      .pipe(Effect.orDie)
+  })
+}
+
 function assertion(input: Partial<PermissionV2.AssertInput> = {}) {
   return {
     id: PermissionV2.ID.create("per_test"),
@@ -310,6 +322,61 @@ describe("PermissionV2", () => {
       yield* service.assert(assertion({ id: PermissionV2.ID.create("per_next"), resources: ["src/next.ts"] }))
       yield* saved.remove(id)
       expect(yield* saved.list()).toEqual([])
+    }),
+  )
+
+  it.effect("ask-first mode prompts for modifying actions but not reads", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "*", resource: "*", effect: "allow" }])
+      yield* setMode("ask-first")
+      const service = yield* PermissionV2.Service
+
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "read", resources: ["src/index.ts"] })),
+      ).toMatchObject({ effect: "allow" })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "edit", resources: ["src/index.ts"] })),
+      ).toMatchObject({ effect: "ask" })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["pwd"] })),
+      ).toMatchObject({ effect: "ask" })
+    }),
+  )
+
+  it.effect("always-allow mode auto-allows tools but still guards destructive bash", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "*", resource: "*", effect: "deny" }])
+      yield* setMode("always-allow")
+      const service = yield* PermissionV2.Service
+
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "edit", resources: ["src/index.ts"] })),
+      ).toMatchObject({ effect: "allow" })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["pwd"] })),
+      ).toMatchObject({ effect: "allow" })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["rm -rf /"] })),
+      ).toMatchObject({ effect: "ask" })
+      expect(
+        yield* service.ask(
+          assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["mkfs.ext4 /dev/sda1"] }),
+        ),
+      ).toMatchObject({ effect: "ask" })
+    }),
+  )
+
+  it.effect("default mode ignores the destructive guard", () =>
+    Effect.gen(function* () {
+      yield* setup([])
+      yield* setMode(null)
+      const service = yield* PermissionV2.Service
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["rm -rf /"] })),
+      ).toMatchObject({ effect: "ask" })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["pwd"] })),
+      ).toMatchObject({ effect: "ask" })
     }),
   )
 })

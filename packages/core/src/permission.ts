@@ -10,6 +10,7 @@ import { SessionV2 } from "./session"
 import { SessionStore } from "./session/store"
 import { Wildcard } from "./util/wildcard"
 import { PermissionSaved } from "./permission/saved"
+import { DestructiveCommand } from "./permission/destructive"
 
 export { Effect, Rule, Ruleset } from "@prioricode/schema/permission"
 const missingAgentPermissions: Permission.Ruleset = [{ action: "*", resource: "*", effect: "deny" }]
@@ -89,6 +90,20 @@ export function merge(...rulesets: Permission.Ruleset[]): Permission.Ruleset {
   return rulesets.flat()
 }
 
+function modeRulesFor(mode: Permission.Mode | undefined): Permission.Ruleset {
+  switch (mode) {
+    case "ask-first":
+      return [
+        { action: "edit", resource: "*", effect: "ask" },
+        { action: "bash", resource: "*", effect: "ask" },
+      ]
+    case "always-allow":
+      return [{ action: "*", resource: "*", effect: "allow" }]
+    default:
+      return []
+  }
+}
+
 export interface Interface {
   readonly ask: (input: AssertInput) => EffectRuntime.Effect<AskResult, SessionV2.NotFoundError>
   readonly assert: (input: AssertInput) => EffectRuntime.Effect<void, Error | SessionV2.NotFoundError>
@@ -141,7 +156,9 @@ const layer = Layer.effect(
       const session = yield* sessions.get(sessionID)
       if (!session) return yield* new SessionV2.NotFoundError({ sessionID })
       const agent = yield* agents.resolve(agentID ?? session.agent)
-      return agent?.permissions ?? missingAgentPermissions
+      const base = agent?.permissions ?? missingAgentPermissions
+      const mode = session.permissionMode
+      return { rules: [...base, ...modeRulesFor(mode)], mode }
     })
 
     function denied(input: AssertInput, rules: Permission.Ruleset) {
@@ -153,10 +170,15 @@ const layer = Layer.effect(
     }
 
     const evaluateInput = EffectRuntime.fnUntraced(function* (input: AssertInput) {
-      const rules = yield* configured(input.sessionID, input.agent)
+      const { rules, mode } = yield* configured(input.sessionID, input.agent)
       if (denied(input, rules)) return { effect: "deny" as const, rules }
       const all = [...rules, ...(yield* savedRules())]
-      const effects = input.resources.map((resource) => evaluate(input.action, resource, all).effect)
+      const effects = input.resources.map((resource) => {
+        const effect = evaluate(input.action, resource, all).effect
+        if (mode === "always-allow" && input.action === "bash" && DestructiveCommand.isDestructive(resource))
+          return "ask" as const
+        return effect
+      })
       const effect: Permission.Effect = effects.includes("deny") ? "deny" : effects.includes("ask") ? "ask" : "allow"
       return { effect, rules: all }
     })
@@ -261,12 +283,12 @@ const layer = Layer.effect(
           const rememberedRules = yield* savedRules()
           for (const [id, item] of pending) {
             const input = { ...item.request }
-            const rules = yield* configured(item.request.sessionID, item.agent).pipe(
+            const result = yield* configured(item.request.sessionID, item.agent).pipe(
               EffectRuntime.catchTag("Session.NotFoundError", () => EffectRuntime.succeed(undefined)),
             )
-            if (!rules) continue
-            if (denied(input, rules)) continue
-            const effective = [...rules, ...rememberedRules]
+            if (!result) continue
+            if (denied(input, result.rules)) continue
+            const effective = [...result.rules, ...rememberedRules]
             if (
               !item.request.resources.every(
                 (resource) => evaluate(item.request.action, resource, effective).effect === "allow",

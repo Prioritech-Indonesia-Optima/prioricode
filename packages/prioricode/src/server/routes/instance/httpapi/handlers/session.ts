@@ -197,6 +197,9 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
           permission: Permission.merge(current.permission ?? [], ctx.payload.permission),
         })
       }
+      if (ctx.payload.permissionMode !== undefined) {
+        yield* session.setPermissionMode({ sessionID: ctx.params.sessionID, mode: ctx.payload.permissionMode })
+      }
       if (ctx.payload.time?.archived !== undefined) {
         yield* session.setArchived({ sessionID: ctx.params.sessionID, time: ctx.payload.time.archived })
       }

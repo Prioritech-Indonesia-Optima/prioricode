@@ -1455,8 +1455,8 @@ export function Prompt(props: PromptProps) {
                       <text fg={fadeColor(highlight(), agentMetaAlpha())}>
                         {store.mode === "shell" ? "Shell" : Locale.titlecase(agent().name)}
                       </text>
-                      <Show when={store.mode === "normal" && local.permission.mode === "auto"}>
-                        <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>auto</text>
+                      <Show when={store.mode === "normal" && local.permission.mode !== "default"}>
+                        <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>{local.permission.mode}</text>
                       </Show>
                       <Show when={store.mode === "normal"}>
                         <box flexDirection="row" gap={1}>
