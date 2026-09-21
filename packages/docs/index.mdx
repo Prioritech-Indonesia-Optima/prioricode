@@ -1,56 +1,43 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "PrioriCode"
+description: "The open source AI coding agent by Prioritech."
 ---
 
-## Setting up
+<div className="flex items-center gap-3 mb-2">
+  <img src="/favicon.svg" alt="Prioritech mark" width="40" height="40" />
+  <span className="text-2xl font-bold">PrioriCode</span>
+</div>
 
-Get your documentation site up and running in minutes.
+PrioriCode is the open source AI coding agent built by [Prioritech Indonesia Optima](https://prioritech.co.id). It lives in your terminal, reads your codebase, runs your tools, and ships your code — one conversation at a time.
 
-<Card title="Start here" icon="rocket" href="/quickstart" horizontal>
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card title="Edit locally" icon="pen-to-square" href="/development">
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="Terminal-native" icon="terminal" href="/quickstart">
+    No IDE lock-in, no context switch. Run `prioricode` anywhere you already work.
   </Card>
-  <Card title="Customize your site" icon="palette" href="/essentials/settings">
-    Customize the design and colors of your site to match your brand.
+  <Card title="Model-agnostic" icon="microchip" href="/quickstart#connect-a-provider">
+    Anthropic, OpenAI, Google, local models — switch per session, bring your own keys.
   </Card>
-  <Card title="Set up navigation" icon="map" href="/essentials/navigation">
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Open source" icon="github" href="https://github.com/Prioritech-Indonesia-Optima/prioricode">
+    The full agent, tools, and context engine. Read it, fork it, ship it.
   </Card>
-  <Card title="API documentation" icon="terminal" href="/api-reference/introduction">
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="TypeScript SDK" icon="code" href="/sdk">
+    Drive the agent programmatically from your apps, scripts, and CI.
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Install
 
-Everything you need to create world-class documentation.
+<Tabs>
+  <Tab title="macOS & Linux">
+    ```bash
+    curl -fsSL https://code.prioritech.co.id/install | bash
+    ```
+  </Tab>
+  <Tab title="Windows">
+    ```powershell
+    irm https://code.prioritech.co.id/install.ps1 | iex
+    ```
+  </Tab>
+</Tabs>
 
-<Columns cols={2}>
-  <Card title="Write with MDX" icon="pen-fancy" href="/essentials/markdown">
-    Use MDX to style your docs pages.
-  </Card>
-  <Card title="Code samples" icon="code" href="/essentials/code">
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card title="Images" icon="image" href="/essentials/images">
-    Display images and other media.
-  </Card>
-  <Card title="Reusable snippets" icon="recycle" href="/essentials/reusable-snippets">
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card title="See complete examples" icon="stars" href="https://mintlify.com/customers">
-  Browse our showcase of exceptional documentation sites.
-</Card>
+Or grab a binary from the [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases). Ready to go? Head to the [quickstart](/quickstart).
