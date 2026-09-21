@@ -35,6 +35,8 @@ export default {
           \`time_created\` integer NOT NULL,
           \`time_updated\` integer NOT NULL,
           \`time_read\` integer,
+          \`time_ack\` integer,
+          \`claimed_by\` text,
           CONSTRAINT \`fk_session_coordination_project_id_project_id_fk\` FOREIGN KEY (\`project_id\`) REFERENCES \`project\`(\`id\`) ON DELETE CASCADE
         );
       `)
