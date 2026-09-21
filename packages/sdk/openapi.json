@@ -5819,6 +5819,9 @@
                   "permission": {
                     "$ref": "#/components/schemas/PermissionRuleset"
                   },
+                  "permissionMode": {
+                    "$ref": "#/components/schemas/PermissionV2Mode"
+                  },
                   "time": {
                     "type": "object",
                     "properties": {
@@ -15887,6 +15890,9 @@
           "permission": {
             "$ref": "#/components/schemas/PermissionRuleset"
           },
+          "permissionMode": {
+            "$ref": "#/components/schemas/PermissionV2Mode"
+          },
           "revert": {
             "type": "object",
             "properties": {
@@ -22181,6 +22187,9 @@
           "permission": {
             "$ref": "#/components/schemas/PermissionRuleset"
           },
+          "permissionMode": {
+            "$ref": "#/components/schemas/PermissionV2Mode"
+          },
           "revert": {
             "type": "object",
             "properties": {
@@ -24544,6 +24553,10 @@
         },
         "required": ["directory"],
         "additionalProperties": false
+      },
+      "PermissionV2Mode": {
+        "type": "string",
+        "enum": ["default", "ask-first", "always-allow"]
       },
       "ModelRef": {
         "type": "object",
@@ -27331,6 +27344,9 @@
           },
           "revert": {
             "$ref": "#/components/schemas/RevertState"
+          },
+          "permissionMode": {
+            "$ref": "#/components/schemas/PermissionV2Mode"
           }
         },
         "required": ["id", "projectID", "cost", "tokens", "time", "title", "location"],

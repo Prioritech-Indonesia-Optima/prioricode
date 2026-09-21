@@ -77,7 +77,7 @@ export interface Interface {
   readonly info: () => Effect.Effect<Info>
   readonly method: () => Effect.Effect<Method>
   readonly latest: (method?: Method) => Effect.Effect<string>
-  readonly       upgrade: (method: Method, target: string) => Effect.Effect<void, UpgradeFailedError>
+  readonly upgrade: (method: Method, target: string) => Effect.Effect<void, UpgradeFailedError>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/Installation") {}

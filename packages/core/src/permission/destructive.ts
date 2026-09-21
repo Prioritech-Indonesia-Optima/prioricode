@@ -11,8 +11,7 @@ const SEPARATORS = /&&|\|\||;|\||\n/
 
 const WRAPPERS = new Set(["sudo", "env", "nohup", "time", "command", "exec"])
 
-const BLOCK_DEVICE =
-  /\/dev\/(sd[a-z]+\d*|nvme\d+n\d+(p\d+)?|disk\d+|hd[a-z]+\d*|mmcblk\d+|xvd[a-z]+|dasd[a-z]+|dm-\d+)/
+const BLOCK_DEVICE = /\/dev\/(sd[a-z]+\d*|nvme\d+n\d+(p\d+)?|disk\d+|hd[a-z]+\d*|mmcblk\d+|xvd[a-z]+|dasd[a-z]+|dm-\d+)/
 
 const REDIRECT_TO_BLOCK =
   />+\s*\/dev\/(sd[a-z]+\d*|nvme\d+n\d+(p\d+)?|disk\d+|hd[a-z]+\d*|mmcblk\d+|xvd[a-z]+|dasd[a-z]+|dm-\d+)/

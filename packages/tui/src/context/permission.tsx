@@ -17,9 +17,7 @@ export const { use: usePermission, provider: PermissionProvider } = createSimple
     const args = useArgs()
     const route = useRoute()
 
-    const currentSessionID = createMemo(() =>
-      route.data.type === "session" ? route.data.sessionID : undefined,
-    )
+    const currentSessionID = createMemo(() => (route.data.type === "session" ? route.data.sessionID : undefined))
 
     const current = createMemo<PermissionMode>(() => {
       const id = currentSessionID()

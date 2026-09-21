@@ -24,20 +24,7 @@ export const logo = {
     "               +****",
     "               .***+",
   ].map((row) => row.padEnd(25)),
-  right: [
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "PrioriCode",
-    "",
-    "",
-    "",
-    "",
-    "",
-  ],
+  right: ["", "", "", "", "", "", "PrioriCode", "", "", "", "", ""],
 }
 
 // Compact mark used by the run-mode splash badge and the pulsing upsell

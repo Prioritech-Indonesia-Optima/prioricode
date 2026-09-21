@@ -182,7 +182,11 @@ export function App() {
             <a href={`${GITHUB}/releases`}>Releases</a>
             <a href={GITHUB}>GitHub</a>
             <a href="https://prioritech.co.id">Prioritech</a>
-            <button className="toggle" onClick={flip} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>
+            <button
+              className="toggle"
+              onClick={flip}
+              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}
+            >
               {theme === "dark" ? (
                 <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                   <circle cx="8" cy="8" r="3.4" />
@@ -215,9 +219,9 @@ export function App() {
                 of a <span className="stroke">shooting star.</span>
               </h1>
               <p className="lede">
-                PrioriCode is the open source AI coding agent by{" "}
-                <a href="https://prioritech.co.id">Prioritech</a>. One command installs it into your terminal, and it
-                reads your codebase, runs your tools, and ships your code.
+                PrioriCode is the open source AI coding agent by <a href="https://prioritech.co.id">Prioritech</a>. One
+                command installs it into your terminal, and it reads your codebase, runs your tools, and ships your
+                code.
               </p>
               <Install />
               <div className="cta">

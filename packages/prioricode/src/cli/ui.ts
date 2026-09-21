@@ -42,7 +42,10 @@ export function logo(pad?: string) {
   const rows = glyphs.left.map((row, index) => `${row} ${glyphs.right[index] ?? ""}`)
 
   if (!process.stdout.isTTY && !process.stderr.isTTY) {
-    return rows.map((row) => `${pad ?? ""}${row}`).join(EOL).trimEnd()
+    return rows
+      .map((row) => `${pad ?? ""}${row}`)
+      .join(EOL)
+      .trimEnd()
   }
 
   const colors: Record<Tone, string> = {
