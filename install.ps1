@@ -83,10 +83,13 @@ if ($Version) {
 $url = "https://github.com/$repo/releases/download/$tag/$filename"
 
 # --- already installed? ---
-$existing = Get-Command $app -ErrorAction SilentlyContinue
-if ($existing) {
+# Compare against the binary in the *target install directory* (what this run
+# would overwrite), not whatever `prioricode` resolves to on PATH — a second
+# copy elsewhere must not make an upgrade silently no-op.
+$installedBin = Join-Path $installDir "$app.exe"
+if (Test-Path $installedBin) {
     try {
-        $installed = (& $existing.Source --version 2>$null | Select-Object -First 1)
+        $installed = (& $installedBin --version 2>$null | Select-Object -First 1)
         if ($installed -and "$installed".Trim() -eq $specificVersion) {
             Write-Muted "Version $specificVersion already installed"
             exit 0
@@ -97,22 +100,62 @@ if ($existing) {
     } catch {}
 }
 
+function Get-RemoteFile {
+    param([string]$Url, [string]$Out)
+    $curlCmd = Get-Command curl.exe -ErrorAction SilentlyContinue
+    if ($curlCmd) {
+        & $curlCmd.Source -sSL --fail --retry 10 --retry-delay 2 --retry-all-errors --continue-at - -o $Out $Url
+        if ($LASTEXITCODE -ne 0) { throw "download failed with exit code $LASTEXITCODE" }
+        return
+    }
+    for ($i = 1; $i -le 5; $i++) {
+        try {
+            Invoke-WebRequest -Uri $Url -OutFile $Out -UseBasicParsing
+            return
+        } catch {
+            if ($i -eq 5) { throw }
+            Start-Sleep -Seconds 2
+        }
+    }
+}
+
 Write-Host ""
 Write-MutedN "Installing $app "
 Write-MutedN "version: "
 Write-Host $specificVersion
 
-# --- download + extract ---
+# --- download + verify + extract ---
 $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) "prioricode_install_$([guid]::NewGuid().ToString('N'))"
 New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
 try {
     $archive = Join-Path $tmpDir $filename
-    $curl = Get-Command curl.exe -ErrorAction SilentlyContinue
-    if ($curl) {
-        & $curl.Source -sSL --fail -o $archive $url
-        if ($LASTEXITCODE -ne 0) { throw "download failed with exit code $LASTEXITCODE" }
+    Get-RemoteFile -Url $url -Out $archive
+
+    # Verify against the release's SHA256SUMS.txt when one is published. A
+    # missing entry is fatal (tampered/partial release); a missing sums file
+    # only happens on pre-checksum releases, so warn and continue.
+    $sumsPath = Join-Path $tmpDir "SHA256SUMS.txt"
+    $sumsAvailable = $true
+    try {
+        Get-RemoteFile -Url "https://github.com/$repo/releases/download/$tag/SHA256SUMS.txt" -Out $sumsPath
+    } catch {
+        $sumsAvailable = $false
+    }
+    if ($sumsAvailable) {
+        $line = Get-Content $sumsPath | Where-Object { (($_ -split "\s+")[-1]) -eq $filename } | Select-Object -First 1
+        if (-not $line) {
+            Write-Host "Error: SHA256SUMS.txt for $tag does not list $filename — refusing to install it." -ForegroundColor Red
+            exit 1
+        }
+        $expected = ($line -split "\s+")[0]
+        $actual = (Get-FileHash -Algorithm SHA256 -Path $archive).Hash.ToLower()
+        if ($actual -ne $expected.ToLower()) {
+            Write-Host "Error: checksum mismatch for $filename (expected $expected, got $actual) — download is corrupt." -ForegroundColor Red
+            exit 1
+        }
+        Write-Muted "Checksum verified for $filename."
     } else {
-        Invoke-WebRequest -Uri $url -OutFile $archive -UseBasicParsing
+        Write-Muted "No SHA256SUMS.txt published for $tag; skipping integrity check."
     }
 
     Expand-Archive -Path $archive -DestinationPath $tmpDir -Force
