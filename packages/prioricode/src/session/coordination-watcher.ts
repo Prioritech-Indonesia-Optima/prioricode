@@ -1,6 +1,8 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { Cause, Duration, Effect, Layer, Schedule, Context } from "effect"
+import { Cause, Duration, Effect, Layer, Schedule, Scope, Context } from "effect"
 import { InstanceState } from "@/effect/instance-state"
+import { RuntimeFlags } from "@/effect/runtime-flags"
+import { SessionV1 } from "@prioricode/core/v1/session"
 import { Session } from "./session"
 import { SessionID } from "./schema"
 import { SessionStatus } from "./status"
@@ -23,6 +25,16 @@ const WAKE_COOLDOWN_MS = 10_000
 const RESPONDER_GRACE_MS = 20_000
 const RESPONDER_BATCH_LIMIT = 10
 const RESPONDERS_PER_SWEEP = 2
+const RESPONDER_SNAPSHOT_MESSAGES = 10
+// Requests from a session that has not been touched this long come from an
+// abandoned terminal; answering them spends model turns for nobody. Matches the
+// sessions tool's STALE heuristic.
+const RESPONDER_REQUESTER_STALE_MS = 72 * 60 * 60_000
+// After a responder turn dies (e.g. provider down), its requests are fast-
+// requeued but the parent backs off before another responder is attempted —
+// otherwise every 2s sweep would respawn, clone sessions, and burn tokens
+// against a broken provider.
+const RESPONDER_BACKOFF_MS = 5 * 60_000
 
 export interface Interface {
   /**
@@ -47,12 +59,111 @@ const layer = Layer.effect(
     const status = yield* SessionStatus.Service
     const coordination = yield* Coordination.Service
     const prompt = yield* SessionPrompt.Service
+    const flags = yield* RuntimeFlags.Service
+    const scope = yield* Scope.Scope
 
     // Per-process throttle for response-triggered wakes. Replies to a timed-out
     // ask now wake the asker; without a cooldown two chatty sessions could ping-
     // pong full model turns at each other. Message/request wakes keep the
     // historical always-wake behavior.
     const lastWakeAt = new Map<SessionID, number>()
+    // Parents with a responder child currently running (one at a time per
+    // parent; cross-process duplicates are prevented by the atomic stale-claim).
+    const runningResponders = new Set<SessionID>()
+    // Parents whose last responder turn died; skipped until the backoff passes.
+    const responderFailures = new Map<SessionID, number>()
+
+    // Recent visible (non-synthetic) conversation of the busy parent, plus its
+    // file claims — everything a responder is allowed to answer from.
+    const responderSnapshot = Effect.fnUntraced(function* (parent: Session.Info) {
+      const messages = yield* sessions
+        .messages({ sessionID: parent.id, limit: RESPONDER_SNAPSHOT_MESSAGES * 3 })
+        .pipe(Effect.orDie)
+      const lines: string[] = []
+      for (const message of messages) {
+        if (message.info.role !== "user" && message.info.role !== "assistant") continue
+        const text = message.parts
+          .filter((part): part is SessionV1.TextPart => part.type === "text" && !part.synthetic && !part.ignored)
+          .map((part) => part.text.trim())
+          .filter((value) => value.length > 0)
+          .join("\n")
+        if (!text) continue
+        lines.push(`${message.info.role}: ${text.slice(0, 2_000)}`)
+      }
+      const claims = (yield* coordination.myClaims(parent.id)).map((claim) => claim.body)
+      return (
+        (lines.length > 0 ? lines.slice(-RESPONDER_SNAPSHOT_MESSAGES).join("\n\n") : "(no visible conversation yet)") +
+        "\n\nCurrent file claims: " +
+        (claims.length > 0 ? claims.join(", ") : "(none)")
+      )
+    })
+
+    // Hand a busy session's aged unanswered requests to a hidden responder
+    // child session. The stale-claim above already gave this process exclusive
+    // ownership of `requests` (exactly-once via SQL), so it doubles as the
+    // cross-process spawn lease. The child runs on its own runner, fully
+    // concurrent with the busy parent's turn — the parent is never interrupted.
+    const spawnResponder = Effect.fnUntraced(function* (parent: Session.Info, requests: Coordination.Info[]) {
+      runningResponders.add(parent.id)
+      const snapshot = yield* responderSnapshot(parent)
+      const child = yield* sessions.create({
+        parentID: parent.id,
+        title: `coordination responder (${parent.title})`,
+        agent: "responder",
+      })
+      yield* Effect.logInfo("spawning coordination responder", {
+        "session.id": parent.id,
+        "responder.id": child.id,
+        requests: requests.length,
+      })
+      const ids = requests.map((request) => request.id)
+      yield* prompt
+        .prompt({
+          sessionID: child.id,
+          agent: "responder",
+          parts: [
+            {
+              type: "text",
+              synthetic: true,
+              text: Coordination.responderPrompt({ parent: { id: parent.id, title: parent.title }, requests, snapshot }),
+            },
+          ],
+        })
+        .pipe(
+          Effect.tap((result) =>
+            // The child's turn died before replying: fast re-queue instead of
+            // waiting out the 15-minute recovery grace, then back this parent
+            // off so a broken provider cannot turn every sweep into a new
+            // responder spawn. Rows the responder already answered are acked
+            // and stay settled.
+            result.info.role === "assistant" && !result.info.error
+              ? Effect.sync(() => responderFailures.delete(parent.id)).pipe(
+                  Effect.andThen(
+                    Effect.logInfo("coordination responder finished", { "responder.id": child.id }),
+                  ),
+                )
+              : Effect.sync(() => void responderFailures.set(parent.id, Date.now())).pipe(
+                  Effect.andThen(coordination.unclaimUnacked(ids)),
+                  Effect.asVoid,
+                ),
+          ),
+          Effect.catchCause((cause) =>
+            Effect.sync(() => void responderFailures.set(parent.id, Date.now())).pipe(
+              Effect.andThen(
+                Effect.logWarning("coordination responder failed", {
+                  "session.id": parent.id,
+                  cause: Cause.pretty(cause),
+                }),
+              ),
+              Effect.andThen(coordination.unclaimUnacked(ids)),
+              Effect.asVoid,
+            ),
+          ),
+          Effect.ensuring(Effect.sync(() => void runningResponders.delete(parent.id))),
+          Effect.ignore,
+          Effect.forkIn(scope, { startImmediately: true }),
+        )
+    })
 
     const sweep = Effect.fn("CoordinationWatcher.sweep")(function* () {
       const ctx = yield* InstanceState.context
@@ -113,6 +224,48 @@ const layer = Layer.effect(
           pending = yield* unread(session.id)
         }
       }
+      // Busy pass: a session mid-turn (busy or provider-retry) with requests
+      // that have aged past the grace answers nobody — its next step boundary
+      // may be minutes away (one long tool call, one hung stream). Hand the
+      // aged requests to a responder child so peers waiting in `ask` get a
+      // reply out-of-band. Fresh requests are deliberately left for the main
+      // agent's own next boundary.
+      if (!flags.disableCoordinationResponder) {
+        let launches = 0
+        const now = Date.now()
+        for (const session of roots) {
+          if (launches >= RESPONDERS_PER_SWEEP) break
+          const info = busy.get(session.id)
+          if (!info) continue
+          if (runningResponders.has(session.id)) continue
+          const failedAt = responderFailures.get(session.id)
+          if (failedAt !== undefined && now - failedAt < RESPONDER_BACKOFF_MS) continue
+          const leased = yield* coordination.claimStale({
+            sessionID: session.id,
+            kinds: Coordination.REQUEST_KINDS,
+            olderThanMs: RESPONDER_GRACE_MS,
+            limit: RESPONDER_BATCH_LIMIT,
+            claimToken: `responder-lease:${session.id}`,
+          })
+          if (leased.length === 0) continue
+          const worthAnswering: Coordination.Info[] = []
+          for (const request of leased) {
+            const requester = yield* sessions
+              .get(request.fromSession)
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
+            if (requester && !requester.time.archived && now - requester.time.updated < RESPONDER_REQUESTER_STALE_MS) {
+              worthAnswering.push(request)
+              continue
+            }
+            // Ghost traffic from a deleted or long-abandoned session: settle the
+            // ledger without spending model turns on it.
+            yield* coordination.markAck([request.id])
+          }
+          if (worthAnswering.length === 0) continue
+          launches++
+          yield* spawnResponder(session, worthAnswering)
+        }
+      }
       return woken
     })
 
@@ -140,7 +293,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [Session.node, SessionStatus.node, Coordination.node, SessionPrompt.node],
+  deps: [Session.node, SessionStatus.node, Coordination.node, SessionPrompt.node, RuntimeFlags.node],
 })
 
 export * as CoordinationWatcher from "./coordination-watcher"

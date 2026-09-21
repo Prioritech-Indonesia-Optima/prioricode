@@ -129,6 +129,12 @@ export interface Interface {
     sessionIDs: ReadonlyArray<SessionID>
     cutoffMs: number
   }) => Effect.Effect<number>
+  /**
+   * Fast-path recovery for a bounded set of rows: unclaim the ones that are
+   * read but still unacked (e.g. a responder child whose turn died before it
+   * could reply), leaving acked rows — consumed replies included — alone.
+   */
+  readonly unclaimUnacked: (ids: ReadonlyArray<string>) => Effect.Effect<number>
   /** Rows this session sent (message/request) within a recency window, for the sender-side receipt ledger. */
   readonly sentBy: (input: {
     sessionID: SessionID
@@ -443,6 +449,24 @@ const layer = Layer.effect(
       return rows.length
     })
 
+    const unclaimUnacked = Effect.fn("Coordination.unclaimUnacked")(function* (ids: ReadonlyArray<string>) {
+      if (ids.length === 0) return 0
+      const rows = yield* db
+        .update(CoordinationTable)
+        .set({ time_read: null, claimed_by: null, time_updated: Date.now() })
+        .where(
+          and(
+            inArray(CoordinationTable.id, [...ids]),
+            isNotNull(CoordinationTable.time_read),
+            isNull(CoordinationTable.time_ack),
+          ),
+        )
+        .returning({ id: CoordinationTable.id })
+        .all()
+        .pipe(Effect.orDie)
+      return rows.length
+    })
+
     const sentBy = Effect.fn("Coordination.sentBy")(function* (input: {
       sessionID: SessionID
       withinMs: number
@@ -559,6 +583,7 @@ const layer = Layer.effect(
       claimStale,
       markAck,
       unclaimStaleUnacked,
+      unclaimUnacked,
       sentBy,
       responsesFor,
       responsesTo,

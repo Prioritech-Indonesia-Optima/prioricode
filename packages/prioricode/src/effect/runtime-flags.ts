@@ -48,6 +48,7 @@ export class Service extends ConfigService.Service<Service>()("@prioricode/Runti
   experimentalCodeMode: enabledByExperimental("PRIORICODE_EXPERIMENTAL_CODE_MODE"),
   experimentalEventSystem: enabledByExperimental("PRIORICODE_EXPERIMENTAL_EVENT_SYSTEM"),
   experimentalWorkspaces: enabledByExperimental("PRIORICODE_EXPERIMENTAL_WORKSPACES"),
+  disableCoordinationResponder: bool("PRIORICODE_DISABLE_COORDINATION_RESPONDER"),
   experimentalIconDiscovery: enabledByExperimental("PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY"),
   outputTokenMax: positiveInteger("PRIORICODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX"),
   bashDefaultTimeoutMs: positiveInteger("PRIORICODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS"),

@@ -12,6 +12,7 @@ import { ProviderTransform } from "@/provider/transform"
 import PROMPT_GENERATE from "./generate.txt"
 import PROMPT_COMPACTION from "./prompt/compaction.txt"
 import PROMPT_EXPLORE from "./prompt/explore.txt"
+import PROMPT_RESPONDER from "./prompt/responder.txt"
 import PROMPT_SUMMARY from "./prompt/summary.txt"
 import PROMPT_TITLE from "./prompt/title.txt"
 import { Permission } from "@/permission"
@@ -270,6 +271,36 @@ const layer = Layer.effect(
               user,
             ),
             prompt: PROMPT_SUMMARY,
+          },
+          // Answers peer coordination requests on behalf of a session whose
+          // main agent is mid-turn. Hidden + primary like title/summary so it
+          // never appears in task-agent listings; only the coordination
+          // watcher spawns it. Permissions are deliberately minimal: it can
+          // look (read-only) and reply (sessions:respond) and nothing else —
+          // notably no ask/send/claim, so it cannot start conversations or
+          // touch claims, and its answers are scoped to a snapshot it was
+          // handed, not live work.
+          responder: {
+            name: "responder",
+            description: "Replies to peer coordination requests on behalf of a busy session.",
+            mode: "primary",
+            options: {},
+            native: true,
+            hidden: true,
+            steps: 8,
+            permission: Permission.merge(
+              defaults,
+              Permission.fromConfig({
+                "*": "deny",
+                sessions: { respond: "allow" },
+                read: "allow",
+                grep: "allow",
+                glob: "allow",
+                list: "allow",
+              }),
+              user,
+            ),
+            prompt: PROMPT_RESPONDER,
           },
         }
 
