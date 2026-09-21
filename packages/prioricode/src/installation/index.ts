@@ -77,7 +77,7 @@ export interface Interface {
   readonly info: () => Effect.Effect<Info>
   readonly method: () => Effect.Effect<Method>
   readonly latest: (method?: Method) => Effect.Effect<string>
-  readonly upgrade: (method: Method, target: string) => Effect.Effect<void, UpgradeFailedError>
+  readonly       upgrade: (method: Method, target: string) => Effect.Effect<void, UpgradeFailedError>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/Installation") {}
@@ -342,13 +342,33 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
         if (!upgradeResult || upgradeResult.code !== 0) {
           return yield* new UpgradeFailedError({ stderr: upgradeFailure(m, upgradeResult) })
         }
+        // The installer exits 0 when the target binary already "looks" right,
+        // so confirm the binary at this exact path really reports the target
+        // version. Without this a no-op install (e.g. a stale PATH copy) is
+        // reported to the user as a successful upgrade. Skipped for dev runs
+        // where execPath is bun itself rather than an installed prioricode.
+        if (m === "curl" && path.basename(process.execPath).toLowerCase().startsWith("prioricode")) {
+          const installed = yield* run([process.execPath, "--version"])
+          const version = installed.stdout.trim()
+          if (installed.code !== 0) {
+            return yield* new UpgradeFailedError({
+              stderr: `Upgrade did not produce a runnable binary: ${
+                installed.stderr.trim().split("\n").pop() || `exit ${installed.code}`
+              }`,
+            })
+          }
+          if (version !== target) {
+            return yield* new UpgradeFailedError({
+              stderr: `Upgrade reported success but ${process.execPath} still runs ${version || "an unknown version"} instead of ${target}.`,
+            })
+          }
+        }
         yield* Effect.logInfo("upgraded", {
           method: m,
           target,
           stdout: upgradeResult.stdout,
           stderr: upgradeResult.stderr,
         })
-        yield* text([process.execPath, "--version"])
       }),
     }
 
