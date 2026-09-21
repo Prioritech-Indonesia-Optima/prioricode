@@ -240,6 +240,9 @@ if (Script.release) {
       await $`zip -r ../../${key}.zip *`.cwd(`dist/${key}/bin`)
     }
   }
+  // Fail fast (before anything touches the draft release) if the baseline and
+  // AVX2 builds came out byte-identical — a known bun artifact-download flake.
+  await $`bun ../../../script/cli-release-check.ts --local ./dist`
   await $`gh release upload v${Script.version} ./dist/*.zip ./dist/*.tar.gz --clobber --repo ${process.env.GH_REPO}`
 }
 

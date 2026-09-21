@@ -540,6 +540,13 @@ jobs:
           git config --global user.name "prioricode"
           ssh-keyscan -H aur.archlinux.org >> ~/.ssh/known_hosts || true
 
+      - name: Verify CLI release assets and publish checksums
+        if: needs.version.outputs.release != ''
+        env:
+          GH_REPO: ${{ needs.version.outputs.repo }}
+          GH_TOKEN: ${{ steps.committer.outputs.token }}
+        run: bun ./script/cli-release-check.ts --release "v${{ needs.version.outputs.version }}"
+
       - run: ./script/publish.ts
         env:
           PRIORICODE_VERSION: ${{ needs.version.outputs.version }}
