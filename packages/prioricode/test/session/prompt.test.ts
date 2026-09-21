@@ -3238,3 +3238,182 @@ describe("cross-session coordination stress", () => {
     20_000,
   )
 })
+
+describe("coordination ack-ledger recovery", () => {
+  const allowAll = [{ permission: "*", pattern: "*", action: "allow" }] as const
+  const AGED_MS = 16 * 60_000 // past the watcher's 15-minute recovery grace
+
+  coordinationIt.instance(
+    "recovery re-queues an injected-but-never-acked claim and the note is re-delivered and acked",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const target = yield* sessions.create({ title: "zombie", permission: [...allowAll] })
+        const note = yield* coordination.post({
+          projectID: target.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: target.id,
+          body: "RECOVER_ME_1",
+        })
+        // Simulate a turn that claimed the note into its request and then died
+        // before the model step completed: read, never acked.
+        const claimed = yield* coordination.claimUnread(target.id, undefined, { claimToken: "msg_crashed" })
+        expect(claimed.map((item) => item.id)).toEqual([note.id])
+        yield* setCoordinationTimes(note.id, { timeRead: Date.now() - AGED_MS })
+
+        yield* llm.text("recovered")
+        const woken = yield* watcher.sweep()
+        expect(woken).toBe(1)
+
+        const row = yield* coordination.get(note.id)
+        expect(row?.timeRead).toBeNumber()
+        expect(row?.timeAck).toBeNumber()
+        expect(row?.claimedBy).not.toBe("msg_crashed")
+        const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
+        expect(requests).toContain("RECOVER_ME_1")
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "recovery leaves fresh unacked claims and acked rows alone",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const sender = yield* sessions.create({ title: "sender" })
+        const target = yield* sessions.create({ title: "steady", permission: [...allowAll] })
+        const fresh = yield* coordination.post({
+          projectID: target.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: target.id,
+          body: "LIVE_STEP_CLAIM",
+        })
+        const settled = yield* coordination.post({
+          projectID: target.projectID,
+          kind: "message",
+          fromSession: sender.id,
+          toSession: target.id,
+          body: "ALREADY_ACKED",
+        })
+        // fresh: claimed moments ago (a live step may still ack it).
+        // settled: claimed long ago but properly acked.
+        const claimed = yield* coordination.claimUnread(target.id, undefined, { claimToken: "msg_live" })
+        expect(claimed).toHaveLength(2)
+        yield* coordination.markAck([settled.id], "msg_live")
+        yield* setCoordinationTimes(settled.id, { timeRead: Date.now() - AGED_MS })
+
+        const woken = yield* watcher.sweep()
+        expect(woken).toBe(0)
+        expect((yield* coordination.get(fresh.id))?.claimedBy).toBe("msg_live")
+        expect((yield* coordination.get(settled.id))?.timeRead).toBeNumber()
+        expect((yield* coordination.get(settled.id))?.timeAck).toBeNumber()
+        expect(yield* llm.calls).toBe(0)
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "child sessions are never wake targets — notes addressed to them stay queued",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const parent = yield* sessions.create({ title: "parent" })
+        const child = yield* sessions.create({ title: "task child", parentID: parent.id })
+        yield* coordination.post({
+          projectID: child.projectID,
+          kind: "message",
+          fromSession: parent.id,
+          toSession: child.id,
+          body: "FOR_CHILD_ONLY",
+        })
+        const woken = yield* watcher.sweep()
+        expect(woken).toBe(0)
+        expect(
+          yield* coordination.inbox({ sessionID: child.id, kinds: ["message"], unreadOnly: true }),
+        ).toHaveLength(1)
+        expect(yield* llm.calls).toBe(0)
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "a late reply to a timed-out ask wakes the asker and renders as informational",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const asker = yield* sessions.create({ title: "asker", permission: [...allowAll] })
+        const answerer = yield* sessions.create({ title: "answerer" })
+        yield* coordination.post({
+          projectID: asker.projectID,
+          kind: "response",
+          fromSession: answerer.id,
+          toSession: asker.id,
+          body: "LATE_REPLY_X",
+          replyTo: "coo_old_request",
+        })
+
+        yield* llm.text("ok")
+        const woken = yield* watcher.sweep()
+        expect(woken).toBe(1)
+        const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
+        expect(requests).toContain("LATE_REPLY_X")
+        expect(requests).toContain("do not reply to this note")
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "response-only wakes respect the cooldown so replies cannot ping-pong turns",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const asker = yield* sessions.create({ title: "asker", permission: [...allowAll] })
+        const answerer = yield* sessions.create({ title: "answerer" })
+        const first = yield* coordination.post({
+          projectID: asker.projectID,
+          kind: "response",
+          fromSession: answerer.id,
+          toSession: asker.id,
+          body: "REPLY_ONE",
+          replyTo: "coo_r1",
+        })
+        yield* llm.text("ok")
+        yield* llm.text("ok")
+        expect(yield* watcher.sweep()).toBe(1)
+
+        // A second reply lands immediately after the wake turn: response-only,
+        // inside the cooldown window — it must wait, not burn another turn.
+        const second = yield* coordination.post({
+          projectID: asker.projectID,
+          kind: "response",
+          fromSession: answerer.id,
+          toSession: asker.id,
+          body: "REPLY_TWO",
+          replyTo: "coo_r2",
+        })
+        expect(yield* watcher.sweep()).toBe(0)
+        expect((yield* coordination.get(second.id))?.timeRead).toBeUndefined()
+        // The consumed first reply is untouched by the skipped sweep.
+        expect((yield* coordination.get(first.id))?.timeRead).toBeNumber()
+      }),
+    20_000,
+  )
+})
