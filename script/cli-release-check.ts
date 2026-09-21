@@ -121,7 +121,12 @@ if (releaseIdx >= 0) {
     for (const name of expected) {
       let ok = false
       for (let attempt = 1; attempt <= 5 && !ok; attempt++) {
-        ok = (await $`gh release download ${tag} --repo ${repo} --clobber --dir ${dir} --pattern ${name}`.nothrow().quiet()).exitCode === 0
+        ok =
+          (
+            await $`gh release download ${tag} --repo ${repo} --clobber --dir ${dir} --pattern ${name}`
+              .nothrow()
+              .quiet()
+          ).exitCode === 0
         if (!ok) {
           console.log(`download ${name} failed (attempt ${attempt}/5), retrying...`)
           await Bun.sleep(attempt * 3000)
