@@ -129,6 +129,16 @@ jobs:
       - name: Build
         id: build
         run: |
+          # Compile with the AVX2 host bun, not the baseline host setup-bun
+          # installs. A baseline host silently embeds its own runtime when
+          # cross-compiling --target=bun-*-x64 (no AVX2 download), so the AVX2
+          # and baseline archives ship identical bytes and cli-release-check
+          # refuses the release. An AVX2 host builds the native target and
+          # correctly downloads the baseline runtime for the baseline target.
+          BUN_V=$(node -p "require('./package.json').packageManager.split('@')[1]")
+          curl -fsSL -o /tmp/bun-avx2.zip "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_V}/bun-linux-x64.zip"
+          unzip -q /tmp/bun-avx2.zip -d /tmp/bun-avx2
+          export PATH="/tmp/bun-avx2/bun-linux-x64:$PATH"
           ./packages/prioricode/script/build.ts
           ./packages/cli/script/build.ts
         env:
