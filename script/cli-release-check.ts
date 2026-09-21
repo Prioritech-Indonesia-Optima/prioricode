@@ -110,19 +110,24 @@ if (releaseIdx >= 0) {
   const tag = process.argv[releaseIdx + 1]
   if (!tag) die("usage: cli-release-check.ts --release <tag>")
   const info = await $`gh release view ${tag} --repo ${repo} --json assets`.json()
-  const assets: { name: string; url: string }[] = (info.assets || []).map((asset: { name: string; url: string }) => ({
-    name: asset.name,
-    url: asset.url,
-  }))
-  const missing = expected.filter((name) => !assets.some((asset) => asset.name === name))
+  const names: string[] = (info.assets || []).map((asset: { name: string }) => asset.name)
+  const missing = expected.filter((name) => !names.includes(name))
   if (missing.length) die(`release ${tag} is missing CLI assets: ${missing.join(", ")}`)
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), "prioricode-cli-assets-"))
   try {
-    // Per-asset curl with aggressive retries: release-asset CDN connections
-    // reset routinely on flaky networks and a partial download must never
-    // make this check itself flaky.
-    for (const asset of assets.filter((a) => expected.includes(a.name))) {
-      await $`curl -fsSL --retry 10 --retry-delay 2 --retry-all-errors --continue-at - -o ${path.join(dir, asset.name)} ${asset.url}`.quiet()
+    // Per-asset download with retries via gh (authenticated). Must use gh and
+    // not plain curl against the browser URL: this check runs while the
+    // release is still a DRAFT, and draft asset URLs 404 without auth.
+    for (const name of expected) {
+      let ok = false
+      for (let attempt = 1; attempt <= 5 && !ok; attempt++) {
+        ok = (await $`gh release download ${tag} --repo ${repo} --clobber --dir ${dir} --pattern ${name}`.nothrow().quiet()).exitCode === 0
+        if (!ok) {
+          console.log(`download ${name} failed (attempt ${attempt}/5), retrying...`)
+          await Bun.sleep(attempt * 3000)
+        }
+      }
+      if (!ok) die(`could not download release asset ${name} after 5 attempts`)
     }
     await checkVariants(dir)
     const sums = await writeSums(dir)
