@@ -3343,9 +3343,7 @@ describe("coordination ack-ledger recovery", () => {
         })
         const woken = yield* watcher.sweep()
         expect(woken).toBe(0)
-        expect(
-          yield* coordination.inbox({ sessionID: child.id, kinds: ["message"], unreadOnly: true }),
-        ).toHaveLength(1)
+        expect(yield* coordination.inbox({ sessionID: child.id, kinds: ["message"], unreadOnly: true })).toHaveLength(1)
         expect(yield* llm.calls).toBe(0)
       }),
     20_000,

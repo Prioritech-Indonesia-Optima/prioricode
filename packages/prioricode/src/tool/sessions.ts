@@ -66,7 +66,7 @@ export const SessionsTool = Tool.define(
       // level) as well as in its permission ruleset, because the child inherits
       // its busy parent's — possibly permissive — session ruleset.
       if (self.agent === "responder" && params.action !== "respond")
-        return failure("a coordination responder may only call action \"respond\"")
+        return failure('a coordination responder may only call action "respond"')
 
       yield* ctx.ask({
         permission: "sessions",
@@ -300,7 +300,9 @@ export const SessionsTool = Tool.define(
             `Request ${requestID} is addressed to ${request.toSession}, not to your session — only the asked session (or its coordination responder) may answer it.`,
           )
         if (delegate && (yield* coordination.responsesTo(requestID)).length > 0)
-          return failure(`Request ${requestID} was already answered — the main agent may correct it directly if needed.`)
+          return failure(
+            `Request ${requestID} was already answered — the main agent may correct it directly if needed.`,
+          )
 
         const body = delegate
           ? `[answered by ${request.toSession}'s coordination responder while its main agent was mid-turn; treat as best-effort] ${answer}`
@@ -330,10 +332,14 @@ export const SessionsTool = Tool.define(
               `Your responder replied: """${answer}""". ` +
               `That reply was generated from a snapshot of your session and may be incomplete or wrong — if so, send a corrected answer with the sessions tool: action "respond", request_id "${requestID}" (you may always correct your own responder). Otherwise ignore this record; no action is needed.`,
           })
-        return result("respond", `Response delivered to ${requester}${delegate ? " (delegated by your responder)" : ""}.`, {
-          target: requester,
-          requestID,
-        })
+        return result(
+          "respond",
+          `Response delivered to ${requester}${delegate ? " (delegated by your responder)" : ""}.`,
+          {
+            target: requester,
+            requestID,
+          },
+        )
       })
 
       switch (params.action) {

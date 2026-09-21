@@ -125,7 +125,11 @@ const layer = Layer.effect(
             {
               type: "text",
               synthetic: true,
-              text: Coordination.responderPrompt({ parent: { id: parent.id, title: parent.title }, requests, snapshot }),
+              text: Coordination.responderPrompt({
+                parent: { id: parent.id, title: parent.title },
+                requests,
+                snapshot,
+              }),
             },
           ],
         })
@@ -138,9 +142,7 @@ const layer = Layer.effect(
             // and stay settled.
             result.info.role === "assistant" && !result.info.error
               ? Effect.sync(() => responderFailures.delete(parent.id)).pipe(
-                  Effect.andThen(
-                    Effect.logInfo("coordination responder finished", { "responder.id": child.id }),
-                  ),
+                  Effect.andThen(Effect.logInfo("coordination responder finished", { "responder.id": child.id })),
                 )
               : Effect.sync(() => void responderFailures.set(parent.id, Date.now())).pipe(
                   Effect.andThen(coordination.unclaimUnacked(ids)),

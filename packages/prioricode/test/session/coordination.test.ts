@@ -181,12 +181,30 @@ describe("Coordination", () => {
     Effect.gen(function* () {
       yield* setup
       const coordination = yield* Coordination.Service
-      const crash = yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "claim then crash" })
-      const healed = yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "consumed fine" })
+      const crash = yield* coordination.post({
+        projectID,
+        kind: "message",
+        fromSession: a,
+        toSession: b,
+        body: "claim then crash",
+      })
+      const healed = yield* coordination.post({
+        projectID,
+        kind: "message",
+        fromSession: a,
+        toSession: b,
+        body: "consumed fine",
+      })
       yield* coordination.claimUnread(b, ["message"], { claimToken: "msg_x" })
       yield* coordination.markAck([healed.id], "msg_x")
       // Posted after the claim: never injected, so recovery must leave it alone.
-      const fresh = yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "still unread" })
+      const fresh = yield* coordination.post({
+        projectID,
+        kind: "message",
+        fromSession: a,
+        toSession: b,
+        body: "still unread",
+      })
 
       // A cutoff in the future ages every row; only read+unacked qualify.
       const unclaimed = yield* coordination.unclaimStaleUnacked({ sessionIDs: [b], cutoffMs: Date.now() + 1_000 })
@@ -232,7 +250,13 @@ describe("Coordination", () => {
       yield* setup
       const coordination = yield* Coordination.Service
       const note = yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "fyi" })
-      const request = yield* coordination.post({ projectID, kind: "request", fromSession: a, toSession: b, body: "status?" })
+      const request = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "status?",
+      })
       // Claim-side rows addressed to b are not part of a's sent ledger, and vice versa.
       expect((yield* coordination.sentBy({ sessionID: a, withinMs: 60_000 })).map((item) => item.id).sort()).toEqual(
         [note.id, request.id].sort(),
@@ -257,7 +281,13 @@ describe("Coordination", () => {
     Effect.gen(function* () {
       yield* setup
       const coordination = yield* Coordination.Service
-      const request = yield* coordination.post({ projectID, kind: "request", fromSession: a, toSession: b, body: "status?" })
+      const request = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "status?",
+      })
       yield* coordination.claimUnread(b, undefined, { claimToken: "msg_1" })
       yield* coordination.markAck([request.id], "msg_1")
       yield* coordination.post({
