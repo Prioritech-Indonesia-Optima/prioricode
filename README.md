@@ -50,10 +50,10 @@
 
 ```bash
 # macOS / Linux (bash)
-curl -fsSL https://code.prioritech.co.id/install | bash
+curl -fsSL https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install | bash
 
 # Windows (PowerShell)
-irm https://code.prioritech.co.id/install.ps1 | iex
+irm https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install.ps1 | iex
 
 # Or download a binary directly from GitHub Releases
 # https://github.com/Prioritech-Indonesia-Optima/prioricode/releases
@@ -80,8 +80,8 @@ The install script respects the following priority order for the installation pa
 
 ```bash
 # Examples
-curl -fsSL https://code.prioritech.co.id/install | PRIORICODE_INSTALL_DIR=/usr/local/bin bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://code.prioritech.co.id/install | bash
+curl -fsSL https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install | PRIORICODE_INSTALL_DIR=/usr/local/bin bash
+XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install | bash
 ```
 
 On Windows, `install.ps1` uses `$env:PRIORICODE_INSTALL_DIR`, falling back to `%USERPROFILE%\.prioricode\bin`.

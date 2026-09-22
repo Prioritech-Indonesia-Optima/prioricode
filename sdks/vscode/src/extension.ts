@@ -59,8 +59,8 @@ export function activate(context: vscode.ExtensionContext) {
         terminal.show()
         terminal.sendText(
           process.platform === "win32"
-            ? "irm https://code.prioritech.co.id/install.ps1 | iex"
-            : "curl -fsSL https://code.prioritech.co.id/install | bash",
+            ? "irm https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install.ps1 | iex"
+            : "curl -fsSL https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install | bash",
         )
       }
       return

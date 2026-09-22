@@ -46,8 +46,8 @@ function Install() {
   )
   const [copied, setCopied] = useState(false)
   const commands = {
-    sh: "curl -fsSL https://code.prioritech.co.id/install | bash",
-    ps: "irm https://code.prioritech.co.id/install.ps1 | iex",
+    sh: "curl -fsSL https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install | bash",
+    ps: "irm https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install.ps1 | iex",
   }
   return (
     <div className="install" id="install">
