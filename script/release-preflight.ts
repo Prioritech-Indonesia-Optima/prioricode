@@ -65,7 +65,9 @@ if (lildax.exitCode !== 0) {
 // documented curl/irm one-liners are the ones that get a stale script.
 const drift = await $`bun run script/installer-drift-check.ts`.cwd(root).env(process.env).nothrow()
 if (drift.exitCode !== 0) {
-  console.warn(`WARN: installer drift check failed (exit ${drift.exitCode}) — the static host may be serving a stale install/install.ps1`)
+  console.warn(
+    `WARN: installer drift check failed (exit ${drift.exitCode}) — the static host may be serving a stale install/install.ps1`,
+  )
 }
 
 clean()

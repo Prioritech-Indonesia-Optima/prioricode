@@ -16,8 +16,9 @@
 
 const repo = "Prioritech-Indonesia-Optima/prioricode"
 
-const version = (await Bun.spawn(["git", "tag", "--list", "v*", "--sort=-v:refname"], { cwd: import.meta.dir + "/.." })
-  .stdout.text())
+const version = (
+  await Bun.spawn(["git", "tag", "--list", "v*", "--sort=-v:refname"], { cwd: import.meta.dir + "/.." }).stdout.text()
+)
   .split("\n")
   .map((line) => line.trim())
   .find((line) => /^v\d+\.\d+\.\d+$/.test(line))
