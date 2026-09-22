@@ -1199,6 +1199,13 @@ export function UserMessageDisplay(props: {
     () => props.parts?.find((p) => p.type === "text" && !(p as TextPart).synthetic) as TextPart | undefined,
   )
 
+  const systemNotes = createMemo(
+    () =>
+      (props.parts ?? []).filter(
+        (p): p is TextPart => p.type === "text" && (p as TextPart).display === "system" && !(p as TextPart).ignored,
+      ),
+  )
+
   const text = createMemo(() => textPart()?.text || "")
 
   const files = createMemo(() => (props.parts?.filter((p) => p.type === "file") as FilePart[]) ?? [])
@@ -1334,6 +1341,24 @@ export function UserMessageDisplay(props: {
               <UserMessageComments comments={messageComments()} bounded />
             </Show>
           </div>
+        </div>
+      </Show>
+      <Show when={systemNotes().length > 0}>
+        <div data-slot="user-message-system-notes" class="flex flex-col gap-1.5">
+          <For each={systemNotes()}>
+            {(note) => (
+              <div
+                data-slot="user-message-system-note"
+                dir="auto"
+                class="rounded-md border border-border-base bg-background-base px-3 py-2 text-12-regular text-text-weak"
+              >
+                <span class="mr-2 rounded bg-background-secondary px-1.5 py-0.5 text-11-regular uppercase text-text-base">
+                  System
+                </span>
+                {note.text}
+              </div>
+            )}
+          </For>
         </div>
       </Show>
       <Show when={props.useV2Actions}>{renderAttachments()}</Show>

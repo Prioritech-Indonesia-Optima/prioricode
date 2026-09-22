@@ -1,4 +1,4 @@
-import { Effect, Stream } from "effect"
+import { Effect, Fiber, Scope, Stream } from "effect"
 import os from "os"
 import { createWriteStream } from "node:fs"
 import * as Tool from "./tool"
@@ -17,6 +17,8 @@ import { ShellID } from "./shell/id"
 
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
+import { BackgroundJob } from "@/background/job"
+import type { TaskPromptOps } from "./task"
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
 import { ShellPrompt, type Parameters } from "./shell/prompt"
@@ -344,6 +346,8 @@ export const ShellTool = Tool.define(
     const trunc = yield* Truncate.Service
     const plugin = yield* Plugin.Service
     const flags = yield* RuntimeFlags.Service
+    const background = yield* BackgroundJob.Service
+    const scope = yield* Scope.Scope
     const defaultTimeoutMs = flags.bashDefaultTimeoutMs ?? 2 * 60 * 1000
 
     const cygpath = Effect.fn("ShellTool.cygpath")(function* (shell: string, text: string) {
@@ -561,7 +565,7 @@ export const ShellTool = Tool.define(
       const meta: string[] = []
       if (expired) {
         meta.push(
-          `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds.`,
+          `shell tool terminated command after exceeding timeout ${input.timeout} ms. If this command is expected to take longer and is not waiting for interactive input, retry with a larger timeout value in milliseconds, or re-run it with background: true and manage it through the jobs tool.`,
         )
       }
       if (aborted) meta.push("User aborted the command")
@@ -591,6 +595,127 @@ export const ShellTool = Tool.define(
           ...(cut && file ? { outputPath: file } : {}),
         },
         output,
+      }
+    })
+
+    const startBackground = Effect.fn("ShellTool.startBackground")(function* (
+      input: { shell: string; command: string; cwd: string; env: NodeJS.ProcessEnv },
+      ctx: Tool.Context,
+    ) {
+      const limits = yield* trunc.limits()
+      const keep = limits.maxBytes * 2
+      const outputPath = yield* trunc.write("")
+
+      const info = yield* background.start({
+        type: "bash",
+        title: input.command,
+        metadata: { command: input.command, cwd: input.cwd, outputPath, background: true },
+        run: Effect.scoped(
+          Effect.gen(function* () {
+            const sink = createWriteStream(outputPath, { flags: "w" })
+            const list: Chunk[] = []
+            let used = 0
+            yield* Effect.addFinalizer(() =>
+              Effect.promise(
+                () =>
+                  new Promise<void>((resolve) => {
+                    if (sink.destroyed || sink.closed) return resolve()
+                    sink.end(resolve)
+                    sink.on("error", () => resolve())
+                  }),
+              ).pipe(Effect.ignore),
+            )
+            const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
+            yield* Effect.addFinalizer(() => handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.ignore))
+            const reader = yield* Effect.forkScoped(
+              Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
+                Effect.sync(() => {
+                  sink.write(chunk)
+                  const size = Buffer.byteLength(chunk, "utf-8")
+                  list.push({ text: chunk, size })
+                  used += size
+                  while (used > keep && list.length > 1) {
+                    const item = list.shift()
+                    if (!item) break
+                    used -= item.size
+                  }
+                }),
+              ),
+            )
+            const code = yield* handle.exitCode
+            yield* Fiber.join(reader).pipe(
+              Effect.timeout("5 seconds"),
+              Effect.catch(() => Effect.void),
+            )
+            const raw = list.map((item) => item.text).join("")
+            const end = tail(raw, limits.maxLines, limits.maxBytes)
+            return [`Command exited with code ${code}.`, end.text ? `Recent output:\n${end.text}` : ""]
+              .filter(Boolean)
+              .join("\n")
+          }),
+        ),
+      })
+
+      const ops = ctx.extra?.promptOps as TaskPromptOps | undefined
+      if (ops) {
+        // Announce completion back into the session like a chat message: the
+        // synthetic + display:"system" part renders as a system entry in the
+        // transcript and wakes an idle session to react to it (same mechanism
+        // background subagents and coordination notes use).
+        yield* background.wait({ id: info.id }).pipe(
+          Effect.flatMap((result) => {
+            const job = result.info
+            if (!job || job.status === "running") return Effect.void
+            const summary =
+              job.status === "completed"
+                ? "finished"
+                : job.status === "error"
+                  ? `failed: ${job.error ?? "unknown error"}`
+                  : "was cancelled"
+            return ops
+              .prompt({
+                sessionID: ctx.sessionID,
+                agent: ctx.agent,
+                parts: [
+                  {
+                    type: "text",
+                    synthetic: true,
+                    display: "system",
+                    text: [
+                      `Background command ${summary} (job ${job.id}).`,
+                      `Command: ${input.command}`,
+                      job.output ? `Result:\n${job.output}` : "",
+                      `Full output file: ${outputPath}`,
+                      "Act on this result if your current work depends on it; otherwise acknowledge briefly or continue what you were doing.",
+                    ]
+                      .filter(Boolean)
+                      .join("\n"),
+                  },
+                ],
+              })
+              .pipe(Effect.ignore)
+          }),
+          Effect.forkIn(scope, { startImmediately: true }),
+        )
+      }
+
+      return {
+        title: input.command,
+        metadata: {
+          output: "",
+          exit: null,
+          truncated: false,
+          background: true as const,
+          jobId: info.id,
+          outputPath,
+          command: input.command,
+        },
+        output: [
+          `Started in background (job ${info.id}).`,
+          `Output is being appended to ${outputPath} — Read/Grep that file for full history.`,
+          "You will be notified automatically when it finishes. Do not sleep or poll for it — continue with other work or end your response.",
+          `If you need progress before completion, use the jobs tool: { "action": "output", "id": "${info.id}", "cursor": <offset> }.`,
+        ].join("\n"),
       }
     })
 
@@ -628,12 +753,17 @@ export const ShellTool = Tool.define(
                 }),
               )
 
+              const env = yield* shellEnv(ctx, cwd)
+              if (params.background === true) {
+                return yield* startBackground({ shell, command: params.command, cwd, env }, ctx)
+              }
+
               return yield* run(
                 {
                   shell,
                   command: params.command,
                   cwd,
-                  env: yield* shellEnv(ctx, cwd),
+                  env,
                   timeout,
                 },
                 ctx,

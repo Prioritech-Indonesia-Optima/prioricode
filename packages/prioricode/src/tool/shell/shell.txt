@@ -10,6 +10,11 @@ IMPORTANT: This tool is for terminal operations like git, npm, docker, etc. DO N
 
 ${commandSection}
 
+# Background execution
+- Long-running commands (dev servers, watchers, builds, `tail -f`) should be started with `background: true` instead of raising large timeouts.
+- The call returns a job id immediately; all output is appended to a file you can Read or Grep, and the `jobs` tool supports incremental output (`action: "output"` with a `cursor`), `wait`, `kill`, and `list`.
+- You will be notified automatically when a background job finishes. NEVER sleep, poll in a loop, or repeatedly check on it; do not kill it via taskkill/Stop-Process, use the jobs tool instead.
+
 # Git and GitHub
 - Only commit, amend, push, or create PRs when explicitly requested.
 - Before committing, inspect `git status`, `git diff`, and `git log --oneline -10`; stage only intended files and never commit secrets.

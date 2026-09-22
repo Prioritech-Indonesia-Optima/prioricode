@@ -384,6 +384,7 @@ export type TextPart = {
   text: string
   synthetic?: boolean
   ignored?: boolean
+  display?: "system"
   time?: {
     start: number
     end?: number
@@ -2560,6 +2561,7 @@ export type TextPartInput = {
   text: string
   synthetic?: boolean
   ignored?: boolean
+  display?: "system"
   time?: {
     start: number
     end?: number

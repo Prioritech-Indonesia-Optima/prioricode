@@ -391,7 +391,9 @@ export function Session() {
         const parts = sync.data.part[message.id]
         if (!parts || !Array.isArray(parts)) return false
 
-        return parts.some((part) => part && part.type === "text" && !part.synthetic && !part.ignored)
+        return parts.some(
+          (part) => part && part.type === "text" && !part.ignored && (!part.synthetic || part.display === "system"),
+        )
       })
       .sort((a, b) => a.y - b.y)
 
@@ -1382,6 +1384,11 @@ function UserMessage(props: {
     return texts.join("\n\n")
   })
   const files = createMemo(() => props.parts.flatMap((x) => (x.type === "file" ? [x] : [])))
+  const notifications = createMemo(() =>
+    props.parts.flatMap((x) =>
+      x.type === "text" && x.synthetic && x.display === "system" && !x.ignored ? [x.text] : [],
+    ),
+  )
   const { theme } = useTheme()
   const [hover, setHover] = createSignal(false)
   const queued = createMemo(() => props.pending !== undefined && props.index > props.pending)
@@ -1393,12 +1400,12 @@ function UserMessage(props: {
 
   return (
     <>
-      <Show when={text()}>
+      <Show when={text() || notifications().length > 0}>
         <box
           id={props.message.id}
           ref={(el: BoxRenderable) => alwaysSeparate.add(el)}
           border={["left"]}
-          borderColor={color()}
+          borderColor={text() ? color() : theme.textMuted}
           customBorderChars={SplitBorder.customBorderChars}
           marginTop={props.index === 0 ? 0 : 1}
         >
@@ -1416,7 +1423,16 @@ function UserMessage(props: {
             backgroundColor={hover() ? theme.backgroundElement : theme.backgroundPanel}
             flexShrink={0}
           >
-            <text fg={theme.text}>{text()}</text>
+            <Show when={text()}>
+              <text fg={theme.text}>{text()}</text>
+            </Show>
+            <For each={notifications()}>
+              {(note, i) => (
+                <text fg={theme.textMuted} marginTop={text() || i() > 0 ? 1 : 0}>
+                  <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> SYSTEM </span> {note}
+                </text>
+              )}
+            </For>
             <Show when={files().length}>
               <box flexDirection="row" paddingBottom={metadataVisible() ? 1 : 0} paddingTop={1} gap={1} flexWrap="wrap">
                 <For each={files()}>

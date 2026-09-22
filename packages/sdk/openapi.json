@@ -16424,6 +16424,10 @@
           "ignored": {
             "type": "boolean"
           },
+          "display": {
+            "type": "string",
+            "enum": ["system"]
+          },
           "time": {
             "type": "object",
             "properties": {
@@ -23128,6 +23132,10 @@
           },
           "ignored": {
             "type": "boolean"
+          },
+          "display": {
+            "type": "string",
+            "enum": ["system"]
           },
           "time": {
             "type": "object",

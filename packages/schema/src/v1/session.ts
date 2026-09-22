@@ -106,6 +106,7 @@ export const TextPart = Schema.Struct({
   text: Schema.String,
   synthetic: Schema.optional(Schema.Boolean),
   ignored: Schema.optional(Schema.Boolean),
+  display: Schema.optional(Schema.Literals(["system"])),
   time: Schema.optional(
     Schema.Struct({
       start: NonNegativeInt,
@@ -401,6 +402,7 @@ export const TextPartInput = Schema.Struct({
   text: Schema.String,
   synthetic: Schema.optional(Schema.Boolean),
   ignored: Schema.optional(Schema.Boolean),
+  display: Schema.optional(Schema.Literals(["system"])),
   time: Schema.optional(
     Schema.Struct({
       start: NonNegativeInt,

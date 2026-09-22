@@ -17,10 +17,12 @@ import { SessionID, MessageID } from "../../src/session/schema"
 import { CrossSpawnSpawner } from "@prioricode/core/cross-spawn-spawner"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Plugin } from "../../src/plugin"
-import { testEffect } from "../lib/effect"
+import { testEffect, pollWithTimeout } from "../lib/effect"
 import { Tool } from "@/tool/tool"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceStore } from "@/project/instance-store"
+import { BackgroundJob } from "@/background/job"
+import { JobsTool } from "../../src/tool/jobs"
 
 const shellLayer = Layer.mergeAll(
   LayerNode.compile(
@@ -32,6 +34,7 @@ const shellLayer = Layer.mergeAll(
       Config.node,
       Agent.node,
       RuntimeFlags.node,
+      BackgroundJob.node,
     ]),
   ),
   testInstanceStoreLayer,
@@ -1188,11 +1191,118 @@ describe("tool.shell truncation", () => {
         const filepath = (result.metadata as { outputPath?: string }).outputPath
         expect(filepath).toBeTruthy()
 
-        const saved = yield* (yield* FSUtil.Service).readFileString(filepath!)
+          const saved = yield* (yield* FSUtil.Service).readFileString(filepath!)
         const lines = saved.trim().split(/\r?\n/)
         expect(lines.length).toBe(lineCount)
         expect(lines[0]).toBe("1")
         expect(lines[lineCount - 1]).toBe(String(lineCount))
+      }),
+    ),
+  )
+})
+
+describe("tool.shell background", () => {
+  const initJobs = Effect.fn("JobsToolTest.init")(function* () {
+    const info = yield* JobsTool
+    return yield* info.init()
+  })
+
+  const meta = (r: { metadata: unknown }) => r.metadata as Record<string, unknown>
+
+  const promptOps = (prompts: Array<{ parts?: Array<{ text?: string; synthetic?: boolean; display?: string }> }>) => ({
+    cancel: () => Effect.void,
+    resolvePromptParts: (text: string) => Effect.succeed([{ type: "text", text }] as never),
+    prompt: (input: { parts?: Array<{ text?: string; synthetic?: boolean; display?: string }> }) =>
+      Effect.sync(() => {
+        prompts.push(input)
+      }).pipe(Effect.as(undefined as never)),
+  })
+
+  it.live("starts a job, streams output to a file, completes, and notifies the session", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const prompts: Array<{ parts?: Array<{ text?: string; synthetic?: boolean; display?: string }> }> = []
+        const bgCtx = { ...ctx, extra: { promptOps: promptOps(prompts) } }
+        const bash = yield* initShell()
+        const result = yield* bash.execute(
+          { command: `echo bg-hello && exit 3`, background: true },
+          bgCtx,
+        )
+        expect(typeof meta(result).jobId).toBe("string")
+        expect(result.output).toContain(String(meta(result).jobId))
+        expect(String(meta(result).outputPath)).toBeTruthy()
+
+        const jobs = yield* initJobs()
+        const listed = yield* jobs.execute({ action: "list" }, bgCtx)
+        expect(listed.output).toContain(String(meta(result).jobId))
+
+        const finished = yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const waited = yield* jobs.execute({ action: "output", id: String(meta(result).jobId) }, bgCtx)
+            return waited.metadata.jobStatus === "completed" ? waited : undefined
+          }),
+          "background job never completed",
+          15_000,
+        )
+        expect(finished!.output).toContain("bg-hello")
+        expect(finished!.output).toContain("Command exited with code 3.")
+
+        const saved = yield* (yield* FSUtil.Service).readFileString(String(meta(result).outputPath))
+        expect(saved).toContain("bg-hello")
+
+        yield* pollWithTimeout(
+          Effect.sync(() => (prompts.length > 0 ? prompts[0] : undefined)),
+          "completion was never announced to the session",
+          10_000,
+        )
+        expect(prompts[0]?.parts?.[0]?.display).toBe("system")
+        expect(prompts[0]?.parts?.[0]?.synthetic).toBe(true)
+        expect(prompts[0]?.parts?.[0]?.text).toContain("Background command finished")
+      }),
+    ),
+  )
+
+  it.live("waits with a cursor and only returns new output", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const bash = yield* initShell()
+        const result = yield* bash.execute({ command: `printf one && sleep 0.3 && printf two`, background: true }, ctx)
+        const jobs = yield* initJobs()
+        const first = yield* jobs.execute({ action: "wait", id: String(meta(result).jobId), timeout: 15_000 }, ctx)
+        expect(first.metadata.jobStatus).toBe("completed")
+        expect(first.output).toContain("onetwo")
+        const cursor = Number(first.metadata.jobCursor)
+        expect(Number.isFinite(cursor)).toBe(true)
+        const second = yield* jobs.execute({ action: "output", id: String(meta(result).jobId), cursor }, ctx)
+        expect(second.output).not.toContain("one")
+      }),
+    ),
+  )
+
+  it.live("kills a running background job", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const bash = yield* initShell()
+        const result = yield* bash.execute({ command: `sleep 30`, background: true }, ctx)
+        const jobs = yield* initJobs()
+        const killed = yield* jobs.execute({ action: "kill", id: String(meta(result).jobId) }, ctx)
+        expect(killed.output).toContain("Killed background job")
+        const after = yield* jobs.execute({ action: "output", id: String(meta(result).jobId) }, ctx)
+        expect(after.metadata.jobStatus).toBe("cancelled")
+      }),
+    ),
+  )
+
+  it.live("errors on unknown job ids", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const jobs = yield* initJobs()
+        const exit = yield* jobs.execute({ action: "output", id: "job_missing" }, ctx).pipe(Effect.exit)
+        expect(Exit.isFailure(exit)).toBe(true)
       }),
     ),
   )

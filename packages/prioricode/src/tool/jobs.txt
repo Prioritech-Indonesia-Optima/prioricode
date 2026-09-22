@@ -1,0 +1,12 @@
+Inspect and control background jobs. Launch background shell commands with the bash tool's `background: true` parameter (and background subagent tasks via the task tool). Use this tool to read progress, wait for completion, or stop a job.
+
+Actions:
+  - "list": every job with id, type, status, and title. Use it to discover job ids.
+  - "output": read output for one job. For shell jobs this returns everything written since `cursor` (a byte offset), so repeated calls never re-send the same bytes. When the job has finished, the status and exit result are included.
+  - "wait": block until the job finishes or `timeout` (ms) elapses; returns the latest status plus any output written since `cursor`. Prefer this over chaining "output" calls when you need the result.
+  - "kill": terminate a running shell job. The process is force-killed and the job becomes "cancelled"; completed jobs cannot be killed.
+
+Rules:
+  - NEVER sleep or poll in a loop waiting for a job: finished background commands are announced automatically, so just end your response or do other work and the result will arrive.
+  - Background jobs survive between turns; they end when they exit, when you kill them, or when the session is torn down.
+  - Output is also always available as a plain file (see the `outputPath` reported at start time) if you need to Grep or Read the whole history instead of the incremental cursor.

@@ -212,7 +212,7 @@ const layer = Layer.effect(
           yield* prompt
             .prompt({
               sessionID: session.id,
-              parts: [{ type: "text", synthetic: true, text: Coordination.wakePrompt }],
+              parts: [{ type: "text", synthetic: true, display: "system", text: Coordination.wakePrompt }],
             })
             .pipe(
               Effect.ignore,

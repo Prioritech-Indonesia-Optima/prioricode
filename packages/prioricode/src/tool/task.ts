@@ -238,6 +238,7 @@ export const TaskTool = Tool.define(
               {
                 type: "text",
                 synthetic: true,
+                display: "system",
                 text: renderOutput({
                   sessionID: nextSession.id,
                   state,
