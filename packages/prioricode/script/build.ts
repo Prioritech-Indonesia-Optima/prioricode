@@ -22,6 +22,7 @@ const skipInstall = process.argv.includes("--skip-install")
 const sourcemapsFlag = process.argv.includes("--sourcemaps")
 const plugin = createSolidTransformPlugin()
 const skipEmbedWebUi = process.argv.includes("--skip-embed-web-ui")
+const noUploadFlag = process.argv.includes("--no-upload")
 
 const createEmbeddedWebUIBundle = async () => {
   console.log(`Building Web UI to embed in the binary`)
@@ -245,7 +246,11 @@ if (Script.release) {
   // Paths are anchored to this file, not the caller's cwd (CI runs the script
   // from the repo root; `bun run build` runs it from packages/prioricode).
   await $`bun ${path.join(import.meta.dirname, "../../../script/cli-release-check.ts")} --local ${path.join(import.meta.dirname, "../dist")}`
-  await $`gh release upload v${Script.version} ./dist/*.zip ./dist/*.tar.gz --clobber --repo ${process.env.GH_REPO}`
+  if (noUploadFlag) {
+    console.log(`--no-upload: skipping gh release upload (local preflight)`)
+  } else {
+    await $`gh release upload v${Script.version} ./dist/*.zip ./dist/*.tar.gz --clobber --repo ${process.env.GH_REPO}`
+  }
 }
 
 export { binaries }

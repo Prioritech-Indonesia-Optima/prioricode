@@ -236,8 +236,8 @@ nav a:hover {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  gap: 3rem;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 2.5rem;
   align-items: center;
   padding: 4rem 0 4rem;
 }
@@ -517,7 +517,7 @@ h1 .stroke {
   position: relative;
   margin: 0;
   font-family: var(--mono);
-  font-size: clamp(0.62rem, 1.4vw, 0.86rem);
+  font-size: clamp(0.5rem, 1.15vw, 0.72rem);
   line-height: 1.25;
   user-select: none;
   animation: float 7s ease-in-out infinite;
@@ -532,7 +532,7 @@ h1 .stroke {
 }
 
 .ascii .c-base {
-  color: var(--ink-muted);
+  color: var(--ink);
 }
 
 .ascii .c-accent {

@@ -61,9 +61,8 @@ export function Logo() {
 
   const base = (kind: Tone): RGBA => {
     if (kind === "accent") return theme.primary
-    if (kind === "light") return tint(theme.background, theme.textMuted, 0.6)
-    if (kind === "text") return theme.text
-    return theme.textMuted
+    if (kind === "light") return tint(theme.background, theme.textMuted, 0.55)
+    return theme.text
   }
 
   const renderLine = (line: Cell[], rowIndex: number, bold: boolean): JSX.Element[] =>
