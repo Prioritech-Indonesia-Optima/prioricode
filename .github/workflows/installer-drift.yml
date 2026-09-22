@@ -1,0 +1,36 @@
+name: installer-drift
+
+# Guards the manually-synced static copies on code.prioritech.co.id. The
+# install/upgrade one-liners users run (curl .../install | bash, irm
+# .../install.ps1 | iex) hit that host, NOT GitHub — when it drifts behind the
+# release tag, users experience "already shipped" installer fixes as
+# still-broken (September 2026 Windows upgrade incident).
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+  push:
+    paths:
+      - install
+      - install.ps1
+      - script/installer-drift-check.ts
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: installer drift vs latest release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+
+      - name: Compare served installers with the latest release tag
+        run: bun run script/installer-drift-check.ts
