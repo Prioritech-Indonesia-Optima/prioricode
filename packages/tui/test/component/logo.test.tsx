@@ -22,7 +22,7 @@ const WORDMARK = [
   "                          .****+",
   "                           ****+",
   "                           ****+",
-  "                           ****+"
+  "                           ****+",
 ]
 
 test("home logo renders the full wordmark once the reveal animation completes", async () => {

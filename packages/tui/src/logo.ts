@@ -30,24 +30,7 @@ export const logo = {
     "                           ****+          ",
     "                           ****+          ",
   ],
-  right: [
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "PrioriCode",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-    "",
-  ],
+  right: ["", "", "", "", "", "", "", "", "PrioriCode", "", "", "", "", "", "", ""],
 }
 
 // Compact mark used by the run-mode splash badge and the pulsing upsell

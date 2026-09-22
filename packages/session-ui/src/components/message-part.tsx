@@ -1199,11 +1199,10 @@ export function UserMessageDisplay(props: {
     () => props.parts?.find((p) => p.type === "text" && !(p as TextPart).synthetic) as TextPart | undefined,
   )
 
-  const systemNotes = createMemo(
-    () =>
-      (props.parts ?? []).filter(
-        (p): p is TextPart => p.type === "text" && (p as TextPart).display === "system" && !(p as TextPart).ignored,
-      ),
+  const systemNotes = createMemo(() =>
+    (props.parts ?? []).filter(
+      (p): p is TextPart => p.type === "text" && (p as TextPart).display === "system" && !(p as TextPart).ignored,
+    ),
   )
 
   const text = createMemo(() => textPart()?.text || "")

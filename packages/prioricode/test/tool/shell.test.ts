@@ -1191,7 +1191,7 @@ describe("tool.shell truncation", () => {
         const filepath = (result.metadata as { outputPath?: string }).outputPath
         expect(filepath).toBeTruthy()
 
-          const saved = yield* (yield* FSUtil.Service).readFileString(filepath!)
+        const saved = yield* (yield* FSUtil.Service).readFileString(filepath!)
         const lines = saved.trim().split(/\r?\n/)
         expect(lines.length).toBe(lineCount)
         expect(lines[0]).toBe("1")
@@ -1225,10 +1225,7 @@ describe("tool.shell background", () => {
         const prompts: Array<{ parts?: Array<{ text?: string; synthetic?: boolean; display?: string }> }> = []
         const bgCtx = { ...ctx, extra: { promptOps: promptOps(prompts) } }
         const bash = yield* initShell()
-        const result = yield* bash.execute(
-          { command: `echo bg-hello && exit 3`, background: true },
-          bgCtx,
-        )
+        const result = yield* bash.execute({ command: `echo bg-hello && exit 3`, background: true }, bgCtx)
         expect(typeof meta(result).jobId).toBe("string")
         expect(result.output).toContain(String(meta(result).jobId))
         expect(String(meta(result).outputPath)).toBeTruthy()

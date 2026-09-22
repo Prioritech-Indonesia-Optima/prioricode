@@ -20,7 +20,7 @@ export const ascii = [
   "                          .****+",
   "                           ****+",
   "                           ****+",
-  "                           ****+"
+  "                           ****+",
 ]
 
 export type Tone = "light" | "base" | "accent"

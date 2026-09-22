@@ -40,10 +40,11 @@ const version = (await $`git tag --list "v*" --sort=-v:refname`.cwd(root).text()
 const preflightVersion = version ? `${version}-preflight` : "0.0.0-preflight"
 console.log(`release preflight as version ${preflightVersion}`)
 
-const cli = await $`PRIORICODE_VERSION=${preflightVersion} PRIORICODE_RELEASE=1 ./packages/prioricode/script/build.ts --no-upload`
-  .cwd(root)
-  .env(process.env)
-  .nothrow()
+const cli =
+  await $`PRIORICODE_VERSION=${preflightVersion} PRIORICODE_RELEASE=1 ./packages/prioricode/script/build.ts --no-upload`
+    .cwd(root)
+    .env(process.env)
+    .nothrow()
 if (cli.exitCode !== 0) {
   console.error("CLI build failed — dist trees kept for debugging")
   process.exit(cli.exitCode)
