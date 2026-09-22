@@ -265,29 +265,56 @@ describe("installation", () => {
       ),
     )
 
-    const installerUrls: string[] = []
+    const posixPrimaryUrls: string[] = []
     testEffect(
       testLayer(
         (request) => {
-          installerUrls.push(request.url)
+          posixPrimaryUrls.push(request.url)
           return request.url.includes("raw.githubusercontent.com")
             ? new Response("pinned installer", { status: 200 })
-            : new Response("blocked by ssl-inspecting proxy", { status: 403 })
+            : new Response("stale domain copy must never win", { status: 403 })
         },
         (cmd, args) => {
           if (cmd === "bash" && args[0] === "--version") return "GNU bash"
           return ""
         },
       ),
-    ).effect("falls back to the tag-pinned GitHub installer when the custom domain is blocked", () =>
+    ).effect("curl upgrade fetches the tag-pinned installer, not the manually-synced domain copy", () =>
       withPlatform(
         "linux",
         Effect.gen(function* () {
           yield* Installation.use.upgrade("curl", "9.9.9")
-          expect(installerUrls).toContain("https://code.prioritech.co.id/install")
-          expect(installerUrls).toContain(
+          expect(posixPrimaryUrls).toContain(
             "https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v9.9.9/install",
           )
+          expect(posixPrimaryUrls.some((url) => url.includes("code.prioritech.co.id"))).toBe(false)
+        }),
+      ),
+    )
+
+    const posixFallbackUrls: string[] = []
+    testEffect(
+      testLayer(
+        (request) => {
+          posixFallbackUrls.push(request.url)
+          return request.url.includes("raw.githubusercontent.com")
+            ? new Response("blocked", { status: 403 })
+            : new Response("domain installer", { status: 200 })
+        },
+        (cmd, args) => {
+          if (cmd === "bash" && args[0] === "--version") return "GNU bash"
+          return ""
+        },
+      ),
+    ).effect("falls back to the custom domain when GitHub is blocked", () =>
+      withPlatform(
+        "linux",
+        Effect.gen(function* () {
+          yield* Installation.use.upgrade("curl", "9.9.9")
+          expect(posixFallbackUrls).toContain(
+            "https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v9.9.9/install",
+          )
+          expect(posixFallbackUrls).toContain("https://code.prioritech.co.id/install")
         }),
       ),
     )
@@ -312,7 +339,9 @@ describe("installation", () => {
         "win32",
         Effect.gen(function* () {
           yield* Installation.use.upgrade("curl", "9.9.9")
-          expect(winUrls).toContain("https://code.prioritech.co.id/install.ps1")
+          expect(winUrls).toContain(
+            "https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v9.9.9/install.ps1",
+          )
           const powershell = winSpawns.find(([cmd]) => cmd === "powershell.exe")
           expect(powershell).toBeDefined()
           const args = powershell![1]
@@ -364,7 +393,9 @@ describe("installation", () => {
         "win32",
         Effect.gen(function* () {
           yield* Installation.use.upgrade("curl", "9.9.9")
-          expect(winUrls).toContain("https://code.prioritech.co.id/install.ps1")
+          expect(winUrls).toContain(
+            "https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v9.9.9/install.ps1",
+          )
           expect(winUrls).toContain(
             "https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v9.9.9/install.ps1",
           )

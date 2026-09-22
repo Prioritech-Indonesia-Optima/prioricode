@@ -145,27 +145,30 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
         return "sh"
       })
 
-      // Fetches the installer script for a curl upgrade. Corporate firewalls
-      // frequently SSL-inspect or outright block the custom domain
-      // code.prioritech.co.id (Fortinet 403 pages, untrusted issuer certs) while
-      // allowing github.com, so fall back to the installer pinned to the target
-      // release's own tag — which is also the integrity-correct choice: it
-      // matches the version being installed rather than whatever main happens
-      // to serve.
+      // Fetches the installer script for a curl upgrade. The copy served from
+      // code.prioritech.co.id/install(.ps1) is a manually-synced static file
+      // (it was observed still serving the pre-September installer while main
+      // had moved on) — running it would silently undo the very fixes this
+      // upgrade ships. Fetch the installer pinned to the target release's own
+      // tag first: that source is authoritative, version-matched, and updated
+      // by every release automatically. The custom domain stays as a fallback
+      // for networks that block github/raw.githubusercontent entirely.
       const fetchInstaller = Effect.fnUntraced(function* (file: string, target: string) {
-        return yield* httpOk.execute(HttpClientRequest.get(`https://code.prioritech.co.id/${file}`)).pipe(
-          Effect.flatMap((response) => response.text),
-          Effect.catch(() =>
-            Effect.gen(function* () {
-              const response = yield* httpOk.execute(
-                HttpClientRequest.get(
-                  `https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v${target}/${file}`,
-                ),
-              )
-              return yield* response.text
-            }),
-          ),
-        )
+        return yield* httpOk
+          .execute(
+            HttpClientRequest.get(
+              `https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v${target}/${file}`,
+            ),
+          )
+          .pipe(
+            Effect.flatMap((response) => response.text),
+            Effect.catch(() =>
+              Effect.gen(function* () {
+                const response = yield* httpOk.execute(HttpClientRequest.get(`https://code.prioritech.co.id/${file}`))
+                return yield* response.text
+              }),
+            ),
+          )
       })
 
       const upgradeCurl = Effect.fnUntraced(
