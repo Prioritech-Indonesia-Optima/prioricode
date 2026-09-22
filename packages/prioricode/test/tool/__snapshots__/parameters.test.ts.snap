@@ -20,6 +20,10 @@ exports[`tool parameters JSON Schema (wire shape) bash 1`] = `
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
+    "background": {
+      "description": "Set true to launch the command in the background: the call returns immediately with a job id, the command keeps running, and you are notified automatically when it finishes. Use for servers, watchers, and long builds instead of large timeouts. Manage it with the jobs tool",
+      "type": "boolean",
+    },
     "command": {
       "description": "The command to execute",
       "type": "string",
@@ -131,6 +135,46 @@ exports[`tool parameters JSON Schema (wire shape) invalid 1`] = `
   "required": [
     "tool",
     "error",
+  ],
+  "type": "object",
+}
+`;
+
+exports[`tool parameters JSON Schema (wire shape) jobs 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "properties": {
+    "action": {
+      "description": "What to do: "list" all jobs, read one job's "output", "wait" for it to finish, or "kill" a running shell job",
+      "enum": [
+        "list",
+        "output",
+        "wait",
+        "kill",
+      ],
+      "type": "string",
+    },
+    "cursor": {
+      "description": "Byte offset returned by the previous "output"/"wait" call for this job; only output after this offset is sent. Omit to read from the start",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "minimum": -9007199254740991,
+      "type": "integer",
+    },
+    "id": {
+      "description": "Job id (from the bash tool output when background: true, or from "list"). Required for output/wait/kill",
+      "type": "string",
+    },
+    "timeout": {
+      "description": "Milliseconds to block for action "wait" (default 5000, capped at 600000). Returns early with status "running" if the job is still going",
+      "exclusiveMinimum": 0,
+      "maximum": 9007199254740991,
+      "minimum": -9007199254740991,
+      "type": "integer",
+    },
+  },
+  "required": [
+    "action",
   ],
   "type": "object",
 }
