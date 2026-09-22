@@ -73,6 +73,20 @@ function testLayer(
   ])
 }
 
+const withPlatform = <A, E, R>(platform: typeof process.platform, self: Effect.Effect<A, E, R>) =>
+  Effect.acquireUseRelease(
+    Effect.sync(() => {
+      const original = Object.getOwnPropertyDescriptor(process, "platform")
+      Object.defineProperty(process, "platform", { ...original, value: platform })
+      return original
+    }),
+    () => self,
+    (original: PropertyDescriptor | undefined) =>
+      Effect.sync(() => {
+        if (original) Object.defineProperty(process, "platform", original)
+      }),
+  )
+
 describe("installation", () => {
   describe("latest", () => {
     testEffect(testLayer(() => jsonResponse({ tag_name: "v1.2.3" }))).effect(
@@ -219,14 +233,17 @@ describe("installation", () => {
         },
       ),
     ).effect("returns sanitized typed errors when the curl install script fails", () =>
-      Effect.gen(function* () {
-        const error = yield* Effect.flip(Installation.use.upgrade("curl", "9.9.9"))
-        expect(error).toBeInstanceOf(Installation.UpgradeFailedError)
-        expect(error.stderr).toBe("Upgrade failed for curl (exit code 1).")
-        expect(error.message).toBe(error.stderr)
-        expect(error.stderr).not.toContain("secret")
-        expect(error.stderr).not.toContain("script output")
-      }),
+      withPlatform(
+        "linux",
+        Effect.gen(function* () {
+          const error = yield* Effect.flip(Installation.use.upgrade("curl", "9.9.9"))
+          expect(error).toBeInstanceOf(Installation.UpgradeFailedError)
+          expect(error.stderr).toBe("Upgrade failed for curl (exit code 1).")
+          expect(error.message).toBe(error.stderr)
+          expect(error.stderr).not.toContain("secret")
+          expect(error.stderr).not.toContain("script output")
+        }),
+      ),
     )
 
     testEffect(
@@ -240,9 +257,12 @@ describe("installation", () => {
         },
       ),
     ).effect("falls back to sh when bash is unavailable during curl upgrade", () =>
-      Effect.gen(function* () {
-        yield* Installation.use.upgrade("curl", "9.9.9")
-      }),
+      withPlatform(
+        "linux",
+        Effect.gen(function* () {
+          yield* Installation.use.upgrade("curl", "9.9.9")
+        }),
+      ),
     )
 
     const installerUrls: string[] = []
@@ -260,31 +280,20 @@ describe("installation", () => {
         },
       ),
     ).effect("falls back to the tag-pinned GitHub installer when the custom domain is blocked", () =>
-      Effect.gen(function* () {
-        yield* Installation.use.upgrade("curl", "9.9.9")
-        expect(installerUrls).toContain("https://code.prioritech.co.id/install")
-        expect(installerUrls).toContain(
-          "https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v9.9.9/install",
-        )
-      }),
+      withPlatform(
+        "linux",
+        Effect.gen(function* () {
+          yield* Installation.use.upgrade("curl", "9.9.9")
+          expect(installerUrls).toContain("https://code.prioritech.co.id/install")
+          expect(installerUrls).toContain(
+            "https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v9.9.9/install",
+          )
+        }),
+      ),
     )
   })
 
   describe("upgrade on windows", () => {
-    const withPlatform = <A, E, R>(platform: typeof process.platform, self: Effect.Effect<A, E, R>) =>
-      Effect.acquireUseRelease(
-        Effect.sync(() => {
-          const original = Object.getOwnPropertyDescriptor(process, "platform")
-          Object.defineProperty(process, "platform", { ...original, value: platform })
-          return original
-        }),
-        () => self,
-        (original: PropertyDescriptor | undefined) =>
-          Effect.sync(() => {
-            if (original) Object.defineProperty(process, "platform", original)
-          }),
-      )
-
     const winUrls: string[] = []
     const winSpawns: Array<[string, readonly string[]]> = []
     testEffect(

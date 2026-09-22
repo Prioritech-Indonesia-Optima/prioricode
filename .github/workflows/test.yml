@@ -70,7 +70,7 @@ jobs:
           PRIORICODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
 
       - name: Test Windows installer binary swap
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && !cancelled()
         shell: pwsh
         run: ./script/install-swap.Tests.ps1
 
