@@ -1,8 +1,9 @@
 import { describe, expect } from "bun:test"
 import { makeGlobalNode } from "@prioricode/core/effect/app-node"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { httpClient } from "@prioricode/core/effect/app-node-platform"
-import { Effect, Layer, Stream } from "effect"
+import { filesystem, httpClient } from "@prioricode/core/effect/app-node-platform"
+import { Effect, FileSystem, Layer, Stream } from "effect"
+import { NodeFileSystem } from "@effect/platform-node"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { Installation } from "../../src/installation"
@@ -60,9 +61,15 @@ function testLayer(
     layer: mockSpawner(spawnHandler),
     deps: [],
   })
+  const fsNode = makeGlobalNode({
+    service: FileSystem.FileSystem,
+    layer: NodeFileSystem.layer,
+    deps: [],
+  })
   return LayerNode.compile(Installation.node, [
     [httpClient, mockHttpClient(httpHandler)],
     [CrossSpawnSpawner.node, spawnerNode],
+    [filesystem, fsNode],
   ])
 }
 
@@ -236,6 +243,124 @@ describe("installation", () => {
       Effect.gen(function* () {
         yield* Installation.use.upgrade("curl", "9.9.9")
       }),
+    )
+
+    const installerUrls: string[] = []
+    testEffect(
+      testLayer(
+        (request) => {
+          installerUrls.push(request.url)
+          return request.url.includes("raw.githubusercontent.com")
+            ? new Response("pinned installer", { status: 200 })
+            : new Response("blocked by ssl-inspecting proxy", { status: 403 })
+        },
+        (cmd, args) => {
+          if (cmd === "bash" && args[0] === "--version") return "GNU bash"
+          return ""
+        },
+      ),
+    ).effect("falls back to the tag-pinned GitHub installer when the custom domain is blocked", () =>
+      Effect.gen(function* () {
+        yield* Installation.use.upgrade("curl", "9.9.9")
+        expect(installerUrls).toContain("https://code.prioritech.co.id/install")
+        expect(installerUrls).toContain(
+          "https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v9.9.9/install",
+        )
+      }),
+    )
+  })
+
+  describe("upgrade on windows", () => {
+    const withPlatform = <A, E, R>(platform: typeof process.platform, self: Effect.Effect<A, E, R>) =>
+      Effect.acquireUseRelease(
+        Effect.sync(() => {
+          const original = Object.getOwnPropertyDescriptor(process, "platform")
+          Object.defineProperty(process, "platform", { ...original, value: platform })
+          return original
+        }),
+        () => self,
+        (original: PropertyDescriptor | undefined) =>
+          Effect.sync(() => {
+            if (original) Object.defineProperty(process, "platform", original)
+          }),
+      )
+
+    const winUrls: string[] = []
+    const winSpawns: Array<[string, readonly string[]]> = []
+    testEffect(
+      testLayer(
+        (request) => {
+          winUrls.push(request.url)
+          return new Response("installer body", { status: 200 })
+        },
+        (cmd, args) => {
+          winSpawns.push([cmd, args])
+          return ""
+        },
+      ),
+    ).effect("runs a local pinned installer copy instead of a remote irm | iex", () =>
+      withPlatform(
+        "win32",
+        Effect.gen(function* () {
+          yield* Installation.use.upgrade("curl", "9.9.9")
+          expect(winUrls).toContain("https://code.prioritech.co.id/install.ps1")
+          const powershell = winSpawns.find(([cmd]) => cmd === "powershell.exe")
+          expect(powershell).toBeDefined()
+          const args = powershell![1]
+          expect(args).toContain("-File")
+          const script = args[args.indexOf("-File") + 1]
+          expect(script.endsWith(".ps1")).toBe(true)
+          // no remote one-liner must remain: the installer itself has to be able
+          // to swap the locked, currently-running prioricode.exe
+          expect(args.some((a) => a.includes("irm "))).toBe(false)
+        }),
+      ),
+    )
+
+    testEffect(
+      testLayer(
+        () => new Response("installer body", { status: 200 }),
+        (cmd) => {
+          if (cmd === "powershell.exe") return { code: 1, stderr: "prioricode.exe in use token=secret" }
+          return ""
+        },
+      ),
+    ).effect("surfaces sanitized typed errors when the windows installer fails", () =>
+      withPlatform(
+        "win32",
+        Effect.gen(function* () {
+          const error = yield* Effect.flip(Installation.use.upgrade("curl", "9.9.9"))
+          expect(error).toBeInstanceOf(Installation.UpgradeFailedError)
+          expect(error.stderr).toBe("Upgrade failed for curl (exit code 1).")
+          expect(error.stderr).not.toContain("secret")
+        }),
+      ),
+    )
+
+    testEffect(
+      testLayer(
+        (request) => {
+          winUrls.push(request.url)
+          return request.url.includes("raw.githubusercontent.com")
+            ? new Response("pinned installer", { status: 200 })
+            : new Response("blocked", { status: 403 })
+        },
+        (cmd, args) => {
+          winSpawns.push([cmd, args])
+          return ""
+        },
+      ),
+    ).effect("falls back to the tag-pinned GitHub install.ps1 when the custom domain is blocked", () =>
+      withPlatform(
+        "win32",
+        Effect.gen(function* () {
+          yield* Installation.use.upgrade("curl", "9.9.9")
+          expect(winUrls).toContain("https://code.prioritech.co.id/install.ps1")
+          expect(winUrls).toContain(
+            "https://raw.githubusercontent.com/Prioritech-Indonesia-Optima/prioricode/v9.9.9/install.ps1",
+          )
+        }),
+      ),
     )
   })
 })

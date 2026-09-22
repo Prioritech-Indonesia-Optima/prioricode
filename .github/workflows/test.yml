@@ -69,6 +69,11 @@ jobs:
         env:
           PRIORICODE_EXPERIMENTAL_DISABLE_FILEWATCHER: ${{ runner.os == 'Windows' && 'true' || 'false' }}
 
+      - name: Test Windows installer binary swap
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./script/install-swap.Tests.ps1
+
       - name: Check generated client
         if: runner.os == 'Linux'
         working-directory: packages/client

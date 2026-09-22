@@ -40,6 +40,12 @@ try {
     exit 1
 }
 
+# --- clean up binaries parked by earlier in-place upgrades ---
+# (see the swap logic below: a running exe is renamed to .old / .old.<guid>,
+# and can only be deleted once the process that held it has exited)
+Get-ChildItem -Path $installDir -Filter "$app.exe.old*" -Force -ErrorAction SilentlyContinue |
+    Remove-Item -Force -ErrorAction SilentlyContinue
+
 # --- arch + baseline (AVX2) detection ---
 $arch = if ($env:PROCESSOR_ARCHITECTURE -eq "ARM64") { "arm64" } else { "x64" }
 
@@ -119,6 +125,48 @@ function Get-RemoteFile {
     }
 }
 
+# Replaces the installed binary even when it is the image of a currently
+# running process. Windows locks a running executable against overwrite and
+# delete, but the image section is opened with FILE_SHARE_DELETE, so renaming
+# the running file IS allowed: park the old copy under a .old name, move the
+# new one into place, then best-effort delete the parked copy (it only
+# disappears once the old process exits; the sweep at the top of the next run
+# catches stragglers). This is what makes `prioricode upgrade` work on
+# Windows at all: the installer always runs from inside the old binary.
+function Install-Executable {
+    param([string]$Source, [string]$Target)
+    if (-not (Test-Path $Target)) {
+        Move-Item -Path $Source -Destination $Target
+        return
+    }
+    try {
+        Move-Item -Force -Path $Source -Destination $Target
+        return
+    } catch {
+        # expected while the target is the running image: fall through
+    }
+    $leaf = Split-Path -Leaf $Target
+    $dir = Split-Path -Parent $Target
+    $parkedName = "$leaf.old"
+    try {
+        Rename-Item -Path $Target -NewName $parkedName -Force
+    } catch {
+        # A parked copy from an earlier upgrade can sit in Windows'
+        # delete-pending state (its name stays reserved until the process that
+        # ran it exits), so a second self-upgrade must not collide with it.
+        $parkedName = "$leaf.old.$([guid]::NewGuid().ToString('N'))"
+        Rename-Item -Path $Target -NewName $parkedName
+    }
+    $parked = Join-Path $dir $parkedName
+    try {
+        Move-Item -Path $Source -Destination $Target
+    } catch {
+        Move-Item -Force -Path $parked -Destination $Target -ErrorAction SilentlyContinue
+        throw
+    }
+    Remove-Item -Force -Path $parked -ErrorAction SilentlyContinue
+}
+
 Write-Host ""
 Write-MutedN "Installing $app "
 Write-MutedN "version: "
@@ -165,7 +213,14 @@ try {
         Write-Host "Error: archive did not contain $app.exe" -ForegroundColor Red
         exit 1
     }
-    Move-Item -Force -Path $binary -Destination (Join-Path $installDir "$app.exe")
+    $final = Join-Path $installDir "$app.exe"
+    try {
+        Install-Executable -Source $binary -Target $final
+    } catch {
+        Write-Host "Error: cannot replace $final : $($_.Exception.Message)" -ForegroundColor Red
+        Write-Muted "Close any running PrioriCode terminals, then run this installer again."
+        exit 1
+    }
 } finally {
     Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue
 }
