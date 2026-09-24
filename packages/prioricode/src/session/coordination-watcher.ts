@@ -8,6 +8,7 @@ import { SessionID } from "./schema"
 import { SessionStatus } from "./status"
 import { SessionPrompt } from "./prompt"
 import { Coordination } from "./coordination"
+import { Todo } from "./todo"
 
 // A claimed-but-unacked note older than this is treated as lost to a crash or
 // an errored/compaction-rejected request and is re-queued. Must exceed the
@@ -17,15 +18,16 @@ const ACK_RECOVERY_GRACE_MS = 15 * 60_000
 // Throttle for wakes triggered ONLY by reply rows, to keep two LLM sessions
 // from ping-ponging turn on turn over answered requests.
 const WAKE_COOLDOWN_MS = 10_000
-// Busy-session responder (see the busy pass): a request younger than this is
-// left for the main agent to see at its own next step boundary; only aged
-// requests are handed to an out-of-band responder. Kept below the sessions
-// tool's default ask timeout (60s) so delegated answers arrive while the
-// asker is still waiting.
+// Standing-representative grace (see the unanswered pass): a request younger
+// than this is left for the main agent to answer itself at its own next step
+// boundary; only requests that have aged unanswered are handed to the
+// responder child. Kept below the sessions tool's default ask timeout (60s)
+// so delegated answers arrive while the asker is still waiting.
 const RESPONDER_GRACE_MS = 20_000
 const RESPONDER_BATCH_LIMIT = 10
 const RESPONDERS_PER_SWEEP = 2
 const RESPONDER_SNAPSHOT_MESSAGES = 10
+const RESPONDER_SNAPSHOT_TODOS = 12
 // Requests from a session that has not been touched this long come from an
 // abandoned terminal; answering them spends model turns for nobody. Matches the
 // sessions tool's STALE heuristic.
@@ -59,6 +61,7 @@ const layer = Layer.effect(
     const status = yield* SessionStatus.Service
     const coordination = yield* Coordination.Service
     const prompt = yield* SessionPrompt.Service
+    const todo = yield* Todo.Service
     const flags = yield* RuntimeFlags.Service
     const scope = yield* Scope.Scope
 
@@ -73,8 +76,10 @@ const layer = Layer.effect(
     // Parents whose last responder turn died; skipped until the backoff passes.
     const responderFailures = new Map<SessionID, number>()
 
-    // Recent visible (non-synthetic) conversation of the busy parent, plus its
-    // file claims — everything a responder is allowed to answer from.
+    // Recent visible (non-synthetic) conversation of the parent, its todo
+    // list, and its file claims — everything a responder is allowed to answer
+    // from. The todo list is what keeps the representative's picture aligned
+    // with the main agent's own plan of record.
     const responderSnapshot = Effect.fnUntraced(function* (parent: Session.Info) {
       const messages = yield* sessions
         .messages({ sessionID: parent.id, limit: RESPONDER_SNAPSHOT_MESSAGES * 3 })
@@ -91,10 +96,13 @@ const layer = Layer.effect(
         lines.push(`${message.info.role}: ${text.slice(0, 2_000)}`)
       }
       const claims = (yield* coordination.myClaims(parent.id)).map((claim) => claim.body)
+      const todos = (yield* todo.get(parent.id)).slice(0, RESPONDER_SNAPSHOT_TODOS)
       return (
         (lines.length > 0 ? lines.slice(-RESPONDER_SNAPSHOT_MESSAGES).join("\n\n") : "(no visible conversation yet)") +
         "\n\nCurrent file claims: " +
-        (claims.length > 0 ? claims.join(", ") : "(none)")
+        (claims.length > 0 ? claims.join(", ") : "(none)") +
+        "\n\nCurrent todo list: " +
+        (todos.length > 0 ? todos.map((item) => `${item.status} — ${item.content}`).join("; ") : "(none)")
       )
     })
 
@@ -226,28 +234,27 @@ const layer = Layer.effect(
           pending = yield* unread(session.id)
         }
       }
-      // Busy pass: a session mid-turn (busy or provider-retry) with requests
-      // that have aged past the grace answers nobody — its next step boundary
-      // may be minutes away (one long tool call, one hung stream). Hand the
-      // aged requests to a responder child so peers waiting in `ask` get a
-      // reply out-of-band. Fresh requests are deliberately left for the main
-      // agent's own next boundary.
+      // Unanswered pass: a request that has aged past the grace with nobody
+      // answering it gets a reply from the session's standing responder child,
+      // regardless of whether the main agent is busy or idle. The main agent
+      // may still answer (or correct) at its own boundary — the atomic claim
+      // plus the already-answered guard make double replies impossible from
+      // the responder side, and a parent's later answer arrives as a
+      // correction. Fresh requests are deliberately left for the main agent's
+      // own next boundary.
       if (!flags.disableCoordinationResponder) {
         let launches = 0
         const now = Date.now()
         for (const session of roots) {
           if (launches >= RESPONDERS_PER_SWEEP) break
-          const info = busy.get(session.id)
-          if (!info) continue
           if (runningResponders.has(session.id)) continue
           const failedAt = responderFailures.get(session.id)
           if (failedAt !== undefined && now - failedAt < RESPONDER_BACKOFF_MS) continue
-          const leased = yield* coordination.claimStale({
+          const leased = yield* coordination.claimUnanswered({
             sessionID: session.id,
-            kinds: Coordination.REQUEST_KINDS,
             olderThanMs: RESPONDER_GRACE_MS,
             limit: RESPONDER_BATCH_LIMIT,
-            claimToken: `responder-lease:${session.id}`,
+            claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}${session.id}`,
           })
           if (leased.length === 0) continue
           const worthAnswering: Coordination.Info[] = []
@@ -295,7 +302,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [Session.node, SessionStatus.node, Coordination.node, SessionPrompt.node, RuntimeFlags.node],
+  deps: [Session.node, SessionStatus.node, Coordination.node, SessionPrompt.node, Todo.node, RuntimeFlags.node],
 })
 
 export * as CoordinationWatcher from "./coordination-watcher"

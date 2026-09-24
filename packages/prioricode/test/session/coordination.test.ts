@@ -1,5 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
+import { eq } from "drizzle-orm"
 import { Database } from "@prioricode/core/database/database"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Project } from "@prioricode/core/project"
@@ -7,6 +8,7 @@ import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { SessionV2 } from "@prioricode/core/session"
 import { Coordination } from "@/session/coordination"
+import { CoordinationTable } from "@prioricode/core/session/coordination.sql"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(LayerNode.compile(LayerNode.group([Database.node, Coordination.node])))
@@ -245,6 +247,110 @@ describe("Coordination", () => {
     }),
   )
 
+  it.effect("claimUnanswered leases aged requests but never live injections or answered rows", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const { db } = yield* Database.Service
+      const coordination = yield* Coordination.Service
+      const age = (id: string, ms: number) =>
+        db
+          .update(CoordinationTable)
+          .set({ time_created: Date.now() - ms, time_updated: Date.now() - ms })
+          .where(eq(CoordinationTable.id, id))
+          .run()
+          .pipe(Effect.orDie)
+
+      const fresh = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "req_fresh",
+      })
+      const aged = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "req_aged",
+      })
+      const answered = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "req_answered",
+      })
+      const injected = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "req_mid_injection",
+      })
+      const ackedSilent = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "req_seen_but_unanswered",
+      })
+      yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "not_a_request" })
+
+      // answered: the main agent replied itself -> nobody may re-answer it
+      yield* coordination.post({
+        projectID,
+        kind: "response",
+        fromSession: b,
+        toSession: a,
+        body: "main agent answered",
+        replyTo: answered.id,
+      })
+      const now = Date.now()
+      // mid-injection: a live turn claimed it but has not acked -> leave alone
+      yield* db
+        .update(CoordinationTable)
+        .set({ time_read: now, claimed_by: "msg_live" })
+        .where(eq(CoordinationTable.id, injected.id))
+        .run()
+        .pipe(Effect.orDie)
+      // seen-but-unanswered: parent consumed it and moved on -> eligible once aged
+      yield* db
+        .update(CoordinationTable)
+        .set({ time_read: now, time_ack: now, claimed_by: "msg_silent" })
+        .where(eq(CoordinationTable.id, ackedSilent.id))
+        .run()
+        .pipe(Effect.orDie)
+      for (const id of [aged.id, answered.id, injected.id, ackedSilent.id]) yield* age(id, 30_000)
+
+      const leased = yield* coordination.claimUnanswered({
+        sessionID: b,
+        olderThanMs: 10_000,
+        claimToken: "responder-lease:t",
+      })
+      expect(leased.map((item) => item.body).sort()).toEqual(["req_aged", "req_seen_but_unanswered"])
+      // exactly-once: a second claim (same or other process) gets nothing
+      expect(
+        yield* coordination.claimUnanswered({ sessionID: b, olderThanMs: 10_000, claimToken: "responder-lease:u" }),
+      ).toHaveLength(0)
+      // leased rows are stamped read+claimed with the lease token
+      const row = yield* coordination.get(leased[0]!.id)
+      expect(row?.claimedBy).toBe("responder-lease:t")
+      expect(row?.timeRead).toBeNumber()
+
+      // a dead responder's lease re-ages and can be retried
+      yield* age(leased[0]!.id, 30_000)
+      const retried = yield* coordination.claimUnanswered({
+        sessionID: b,
+        olderThanMs: 10_000,
+        claimToken: "responder-lease:v",
+      })
+      expect(retried.map((item) => item.id)).toEqual([leased[0]!.id])
+      // fresh request untouched by any of this
+      expect((yield* coordination.get(fresh.id))?.claimedBy).toBeUndefined()
+    }),
+  )
+
   it.effect("sentBy and responsesFor expose the sender-side receipt ledger", () =>
     Effect.gen(function* () {
       yield* setup
@@ -374,7 +480,7 @@ describe("Coordination", () => {
     expect(text).toContain("do not reply to this note")
     // A reply must never look like it needs a respond call.
     expect(text).not.toContain('respond", request_id "coo_resp')
-    expect(text).toContain("handled for you while you were busy")
+    expect(text).toContain("handled for you")
     expect(text).toContain("Your session answered a request from ses_x")
     // A record must never look like an inbound peer note.
     expect(text).not.toContain(`[record from your session ${b}`)

@@ -5,8 +5,8 @@ Actions:
 - claim: declare the file paths this session is actively editing so peers can avoid them. Re-claim as the set changes.
 - release: release file-path claims you no longer need.
 - send: leave a fire-and-forget coordination note in another session's inbox (target + message). A busy target reads it at its next turn boundary without being interrupted; an idle target is woken within seconds to handle it.
-- ask: send a request to another session and wait (up to timeout seconds) for it to respond. Returns the answer, or — on timeout — exactly how far delivery got (never seen / seen but unanswered), and the answer still arrives later.
-- respond: answer a request using its request_id. Only the asked session may respond to requests addressed to it (its coordination responder may answer on its behalf while it is mid-turn).
+- ask: send a request to another session and wait (up to timeout seconds) for it to respond. The target's standing coordination representative guarantees an answer even if the main agent never reaches a boundary; if the main agent later answers itself, that arrives as a correction. Returns the answer, or — on timeout — exactly how far delivery got (never seen / seen but unanswered), and the answer still arrives later.
+- respond: answer a request using its request_id. Only the asked session may respond to requests addressed to it (its standing coordination responder may answer on its behalf when it has not).
 
 Delivery and receipts (how to stop guessing):
 - Every note moves through a ledger: queued -> seen (injected into the peer's context) -> received (the peer's model step consumed it cleanly). If a delivery dies mid-flight, the note is automatically re-queued and re-delivered — notes are not silently lost.
@@ -14,7 +14,7 @@ Delivery and receipts (how to stop guessing):
 - Never send social acknowledgements ("noted", "thanks") back over this channel — silence means noted. Only answer when coordination genuinely needs it.
 
 When a peer answers through its responder:
-- If a busy session cannot reach its own turn boundary, its aged unanswered requests are answered out-of-band by a hidden coordination responder child that quotes a snapshot of that session. Such replies are prefixed "[answered by ... coordination responder ...]" and are best-effort: verify anything critical, or send a fresh request when the session is idle. The busy main agent is informed of every delegated exchange at its own next turn (a "[handled for you]" note) and may post a corrected answer — you will receive the correction as a follow-up reply.
+- Every request is eventually answered: if the main agent has not replied by the time the request ages, a hidden coordination responder child — the session's standing reply representative, quoting a snapshot of that session's recent conversation, todo list, and file claims — answers out-of-band. Such replies are prefixed "[answered by ... coordination responder ...]" and are best-effort: verify anything critical. The main agent is informed of every delegated exchange at its own next turn (a "[handled for you]" note) and may post a corrected answer — you will receive the correction as a follow-up reply.
 
 When to act now:
 - When the user asks you to tell, relay, or send something to another session, call send (or ask) in THIS turn. Do not defer it to a future turn or say you will do it later — the note only exists once you call the tool. A promise to message a peer is not a message.

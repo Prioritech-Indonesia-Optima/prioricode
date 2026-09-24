@@ -305,7 +305,7 @@ export const SessionsTool = Tool.define(
           )
 
         const body = delegate
-          ? `[answered by ${request.toSession}'s coordination responder while its main agent was mid-turn; treat as best-effort] ${answer}`
+          ? `[answered by ${request.toSession}'s standing coordination responder; treat as best-effort — the main agent may correct it] ${answer}`
           : answer
         yield* coordination.post({
           projectID: request.projectID,
@@ -327,7 +327,7 @@ export const SessionsTool = Tool.define(
             fromSession: request.toSession,
             toSession: request.toSession,
             body:
-              `Your coordination responder answered a peer request on your behalf while you were mid-turn. ` +
+              `Your coordination responder answered a peer request on your behalf because you had not answered it at your own boundary. ` +
               `Request ${requestID} from session ${requester} asked: """${request.body}""". ` +
               `Your responder replied: """${answer}""". ` +
               `That reply was generated from a snapshot of your session and may be incomplete or wrong — if so, send a corrected answer with the sessions tool: action "respond", request_id "${requestID}" (you may always correct your own responder). Otherwise ignore this record; no action is needed.`,

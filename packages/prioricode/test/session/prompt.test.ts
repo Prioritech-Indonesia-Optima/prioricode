@@ -2581,7 +2581,7 @@ const setCoordinationTimes = Effect.fn("test.setCoordinationTimes")(function* (
   yield* db
     .update(CoordinationTable)
     .set({
-      ...(times.timeCreated === undefined ? {} : { time_created: times.timeCreated }),
+      ...(times.timeCreated === undefined ? {} : { time_created: times.timeCreated, time_updated: times.timeCreated }),
       ...(times.timeRead === undefined ? {} : { time_read: times.timeRead }),
     })
     .where(eq(CoordinationTable.id, id))
@@ -3419,7 +3419,7 @@ describe("coordination ack-ledger recovery", () => {
   )
 })
 
-describe("busy-session responder", () => {
+describe("standing coordination responder", () => {
   const responderAllow = [{ permission: "*", pattern: "*", action: "allow" }] as const
 
   coordinationIt.instance(
@@ -3503,6 +3503,48 @@ describe("busy-session responder", () => {
         yield* status.set(target.id, { type: "idle" })
       }),
     20_000,
+  )
+
+  coordinationIt.instance(
+    "aged requests on an IDLE session are also leased to a responder child, not to a wake turn",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const sender = yield* sessions.create({ title: "asker session" })
+        const target = yield* sessions.create({ title: "idle sleeper", permission: [...responderAllow] })
+        const request = yield* coordination.post({
+          projectID: target.projectID,
+          kind: "request",
+          fromSession: sender.id,
+          toSession: target.id,
+          body: "IDLE_DELEGATE_504",
+        })
+        yield* setCoordinationTimes(request.id, { timeCreated: Date.now() - 30_000 })
+        // No status.set: the target is strictly idle. The standing-representative
+        // pass must delegate anyway — peers never wait on an idle session's
+        // own boundary for a reply.
+        expect(yield* watcher.sweep()).toBe(0)
+        const kids = yield* sessions.children(target.id)
+        expect(kids).toHaveLength(1)
+        expect(kids[0]?.agent).toBe("responder")
+        const row = yield* coordination.get(request.id)
+        expect(row?.claimedBy?.startsWith("responder-lease")).toBe(true)
+        yield* pollWithTimeout(
+          Effect.gen(function* () {
+            const messages = yield* sessions.messages({ sessionID: kids[0]!.id })
+            const transcript = JSON.stringify(messages.map((message) => message.parts))
+            return transcript.includes("IDLE_DELEGATE_504") ? (true as const) : undefined
+          }),
+          "the idle-delegated responder never received the request",
+          "10 seconds",
+        )
+        yield* llm.text("answered")
+        yield* awaitWithTimeout(llm.wait(1), "the responder child never called the model", "10 seconds")
+      }),
+    30_000,
   )
 
   coordinationIt.instance(
@@ -3615,7 +3657,7 @@ describe("sessions tool receipts and delegation", () => {
           "30 seconds",
         )
         expect(out.output).toContain(`Response from ${target.id} (request ${requestID}`)
-        expect(out.output).toContain(`[answered by ${target.id}'s coordination responder`)
+        expect(out.output).toContain(`[answered by ${target.id}'s standing coordination responder`)
         expect(out.output).toContain("part one is done")
 
         // Ledger settled: the request is read AND acked.
@@ -3637,7 +3679,7 @@ describe("sessions tool receipts and delegation", () => {
         yield* user(target.id, "anything from peers?")
         yield* prompt.loop({ sessionID: target.id })
         const lastBody = JSON.stringify((yield* llm.hits).at(-1)?.body)
-        expect(lastBody).toContain("handled for you while you were busy")
+        expect(lastBody).toContain("handled for you")
         expect(lastBody).toContain("STATUS_ASK_9")
       }),
     60_000,
