@@ -48,6 +48,7 @@ import { DialogThemeList } from "./component/dialog-theme-list"
 import { DialogSettings } from "./component/dialog-settings"
 import { DialogHelp } from "./ui/dialog-help"
 import { DialogAgent } from "./component/dialog-agent"
+import { DialogPermission } from "./component/dialog-permission"
 import { DialogSessionList } from "./component/dialog-session-list"
 import { DialogWorkspaceList } from "./component/dialog-workspace-list"
 import { DialogConsoleOrg } from "./component/dialog-console-org"
@@ -692,6 +693,16 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashName: "agents",
         run: () => {
           dialog.replace(() => <DialogAgent />)
+        },
+      },
+      {
+        name: "permission.list",
+        title: "Set permission mode",
+        category: "Agent",
+        slashName: "permission",
+        slashAliases: ["permissions"],
+        run: () => {
+          dialog.replace(() => <DialogPermission />)
         },
       },
       {
