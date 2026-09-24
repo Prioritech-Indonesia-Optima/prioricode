@@ -19,7 +19,9 @@ export function DialogCoordination() {
   const { theme } = useTheme()
   const dialog = useDialog()
 
-  const view = createMemo(() => (route.data.type === "session" ? sync.data.coordination[route.data.sessionID] : undefined))
+  const view = createMemo(() =>
+    route.data.type === "session" ? sync.data.coordination[route.data.sessionID] : undefined,
+  )
 
   return (
     <box paddingLeft={2} paddingRight={2} gap={1} paddingBottom={1}>
@@ -40,7 +42,9 @@ export function DialogCoordination() {
                 <For each={data().incoming}>
                   {(row) => (
                     <text fg={theme.text} wrapMode="word">
-                      <span style={{ fg: theme.textMuted }}>[{row.state}, {ago(row.ageMs)}] from {row.fromSession}: </span>
+                      <span style={{ fg: theme.textMuted }}>
+                        [{row.state}, {ago(row.ageMs)}] from {row.fromSession}:{" "}
+                      </span>
                       {row.body}
                     </text>
                   )}
@@ -53,7 +57,9 @@ export function DialogCoordination() {
                 <For each={data().outgoing}>
                   {(row) => (
                     <text fg={theme.text} wrapMode="word">
-                      <span style={{ fg: theme.textMuted }}>[{row.state}, {ago(row.ageMs)}] to {row.toSession}: </span>
+                      <span style={{ fg: theme.textMuted }}>
+                        [{row.state}, {ago(row.ageMs)}] to {row.toSession}:{" "}
+                      </span>
                       {row.body}
                     </text>
                   )}

@@ -6,9 +6,7 @@ export default {
   up(tx) {
     return Effect.gen(function* () {
       // Idempotent column additions (guarded by PRAGMA table_info)
-      const columns = yield* tx.all<{ name: string }>(
-        `PRAGMA table_info(\`session_coordination\`)`,
-      )
+      const columns = yield* tx.all<{ name: string }>(`PRAGMA table_info(\`session_coordination\`)`)
       const names = new Set(columns.map((c) => c.name))
 
       if (!names.has("deadline")) {
@@ -25,7 +23,9 @@ export default {
       }
 
       // Idempotent index creation
-      yield* tx.run(`CREATE INDEX IF NOT EXISTS \`coordination_thread_idx\` ON \`session_coordination\` (\`thread_id\`);`)
+      yield* tx.run(
+        `CREATE INDEX IF NOT EXISTS \`coordination_thread_idx\` ON \`session_coordination\` (\`thread_id\`);`,
+      )
 
       // Dedupe existing duplicate response rows before creating the unique index.
       // Keep the lowest id (earliest) response per request; delete the rest.

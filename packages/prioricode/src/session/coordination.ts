@@ -656,12 +656,7 @@ const layer = Layer.effect(
           time_updated: now,
           claimed_by: input.claimToken ?? null,
         })
-        .where(
-          and(
-            inArray(CoordinationTable.id, ids),
-            eq(CoordinationTable.to_session, input.sessionID),
-          ),
-        )
+        .where(and(inArray(CoordinationTable.id, ids), eq(CoordinationTable.to_session, input.sessionID)))
         .returning()
         .all()
         .pipe(Effect.orDie)) as (typeof CoordinationTable.$inferSelect)[]
@@ -761,11 +756,7 @@ const layer = Layer.effect(
         .update(CoordinationTable)
         .set({ time_read: Date.now(), time_updated: Date.now() })
         .where(
-          and(
-            eq(CoordinationTable.id, id),
-            eq(CoordinationTable.kind, "notify"),
-            isNull(CoordinationTable.time_read),
-          ),
+          and(eq(CoordinationTable.id, id), eq(CoordinationTable.kind, "notify"), isNull(CoordinationTable.time_read)),
         )
         .returning({ id: CoordinationTable.id })
         .all()

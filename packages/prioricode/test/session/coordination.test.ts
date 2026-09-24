@@ -345,13 +345,14 @@ describe("Coordination", () => {
       expect(Coordination.requestState({ ...base, timeRead: 2 }, false)).toBe("injected")
       expect(Coordination.requestState({ ...base, timeRead: 2, timeAck: 3 }, false)).toBe("acked")
       expect(
-        Coordination.requestState({ ...base, timeRead: 2, claimedBy: `${Coordination.RESPONDER_LEASE_PREFIX}b:1` }, false),
+        Coordination.requestState(
+          { ...base, timeRead: 2, claimedBy: `${Coordination.RESPONDER_LEASE_PREFIX}b:1` },
+          false,
+        ),
       ).toBe("leased")
       expect(Coordination.requestState({ ...base, timeExpired: 4 }, false)).toBe("expired")
       // answered wins over everything else
-      expect(
-        Coordination.requestState({ ...base, timeRead: 2, timeAck: 3, timeExpired: 4 }, true),
-      ).toBe("answered")
+      expect(Coordination.requestState({ ...base, timeRead: 2, timeAck: 3, timeExpired: 4 }, true)).toBe("answered")
     }),
   )
 

@@ -398,7 +398,15 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [Session.node, SessionStatus.node, SessionPresence.node, Coordination.node, SessionPrompt.node, Todo.node, RuntimeFlags.node],
+  deps: [
+    Session.node,
+    SessionStatus.node,
+    SessionPresence.node,
+    Coordination.node,
+    SessionPrompt.node,
+    Todo.node,
+    RuntimeFlags.node,
+  ],
 })
 
 export * as CoordinationWatcher from "./coordination-watcher"

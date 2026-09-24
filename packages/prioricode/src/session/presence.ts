@@ -69,9 +69,7 @@ const layer = Layer.effect(
         .pipe(Effect.orDie)
     })
 
-    const idleSince = Effect.fn("SessionPresence.idleSince")(function* (
-      sessionIDs: ReadonlyArray<SessionID>,
-    ) {
+    const idleSince = Effect.fn("SessionPresence.idleSince")(function* (sessionIDs: ReadonlyArray<SessionID>) {
       const result = new Map<SessionID, number>()
       // No presence row = never ran = idle since the epoch.
       for (const id of sessionIDs) result.set(id, 0)
