@@ -129,3 +129,17 @@ Use `Effect.cached` when multiple concurrent callers should share a single in-fl
 Use `EffectBridge` for native or external callbacks (`@parcel/watcher`, `node-pty`, native `fs.watch`, plugin callbacks, etc.) that need to re-enter Effect services with instance/workspace context.
 
 Plain async code should pass explicit context or stay inside an Effect fiber; do not add ambient instance context shims.
+
+## Cross-session coordination (the `sessions` tool)
+
+Concurrent sessions on one project coordinate through a durable, cross-process channel: the `session_coordination` table (shared SQLite, WAL). The model-facing contract is `src/tool/sessions.txt`; the mechanism is `src/session/{coordination,coordination-watcher,presence}.ts`. Invariants that must hold:
+
+- **One response per request.** A unique partial index on `reply_to WHERE kind='response'` enforces it. A session's standing responder may answer on its behalf; the owner corrects via `send`, never a second `respond`.
+- **A lease is a spawn permit.** The atomic `claimUnanswered` / `claimOrphanedInjected` claim doubles as the cross-process lock that lets exactly one watcher spawn a responder child. Lease tokens carry a spawn timestamp and are only re-aged past `RESPONDER_LEASE_TTL`.
+- **Records and lifecycle notices never wake.** Only `message` / `response` rows justify a wake turn — this is the loop breaker.
+- **Presence is the cross-process truth for busy/idle.** `SessionStatus` (in-memory, per-process) mirrors every transition into `session_presence`; a crashed owner reads as idle once its heartbeat goes stale.
+- **`notify` is the completion primitive.** Waiting for a peer to finish work uses a one-shot `notify` subscription (then keep working), not a long blocking `ask`.
+
+Schema changes go through `bun run script/migration.ts` from `packages/core` and must be idempotent (cross-process migration race). After changing any HttpApi route, regenerate the SDK: `bun run build` from `packages/sdk/js`.
+
+Tests: `bun test test/session/coordination.test.ts test/session/presence.test.ts test/session/prompt.test.ts`. The full lifecycle (ask→responder, notify→idle→wake, mid-injection takeover, escalation) runs in-process against the real 2s watcher via `coordinationIt` in `test/session/prompt.test.ts`.

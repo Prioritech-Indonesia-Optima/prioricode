@@ -30,6 +30,7 @@ import { Coordination } from "@/session/coordination"
 import { CoordinationWatcher } from "@/session/coordination-watcher"
 import { SessionMessageTable, SessionTable } from "@prioricode/core/session/sql"
 import { CoordinationTable } from "@prioricode/core/session/coordination.sql"
+import { SessionPresenceTable } from "@prioricode/core/session/presence.sql"
 import { LLM } from "../../src/session/llm"
 import { MessageV2 } from "../../src/session/message-v2"
 import { FSUtil } from "@prioricode/core/fs-util"
@@ -4029,6 +4030,56 @@ describe("sessions tool receipts and delegation", () => {
         })
         out = yield* def.execute({ action: "discover" }, toolCtx(sender.id))
         expect(out.output).toContain("ANSWERED:")
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "notify end-to-end: a waiter is woken exactly when a busy worker goes idle",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const { db } = yield* Database.Service
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const status = yield* SessionStatus.Service
+        const def = yield* Tool.init(yield* SessionsTool)
+        const waiter = yield* sessions.create({ title: "waiter", permission: [...receiptsAllow] })
+        const worker = yield* sessions.create({ title: "worker", permission: [...receiptsAllow] })
+
+        // The waiter registers a one-shot idle subscription via the tool.
+        const res = yield* def.execute(
+          { action: "notify", target: worker.id, note: "ship when free" },
+          toolCtx(waiter.id),
+        )
+        expect(res.title).toBe("sessions:notify")
+
+        // While the worker is busy, the subscription stays pending.
+        yield* status.set(worker.id, { type: "busy" })
+        yield* watcher.sweep()
+        expect(yield* coordination.pendingNotifies()).toHaveLength(1)
+
+        // The worker finishes → idle. Backdate presence past the idle-debounce so
+        // the next sweep sees it as genuinely settled (not a transient between turns).
+        yield* status.set(worker.id, { type: "idle" })
+        yield* db
+          .update(SessionPresenceTable)
+          .set({ state: "idle", time_changed: Date.now() - 11_000 })
+          .where(eq(SessionPresenceTable.session_id, worker.id))
+          .run()
+          .pipe(Effect.orDie)
+
+        // The idle notice wakes the waiter, which needs one canned reply.
+        yield* llm.text("thanks, proceeding with the release")
+        const woken = yield* watcher.sweep()
+        expect(yield* coordination.pendingNotifies()).toHaveLength(0)
+        expect(woken).toBeGreaterThanOrEqual(1)
+        const notices = yield* coordination.inbox({ sessionID: waiter.id, kinds: ["message"] })
+        expect(notices.some((n) => n.body.includes("is now idle") && n.body.includes("ship when free"))).toBe(true)
+        // The waiter's wake turn actually saw the notice in its system context.
+        const lastBody = JSON.stringify((yield* llm.hits).at(-1)?.body)
+        expect(lastBody).toContain("is now idle")
       }),
     20_000,
   )
