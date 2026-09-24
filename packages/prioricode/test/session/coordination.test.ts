@@ -224,29 +224,6 @@ describe("Coordination", () => {
     }),
   )
 
-  it.effect("claimStale leaves fresh rows alone and partitions under concurrency", () =>
-    Effect.gen(function* () {
-      yield* setup
-      const coordination = yield* Coordination.Service
-      yield* coordination.post({ projectID, kind: "request", fromSession: a, toSession: b, body: "req_fresh" })
-      yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "msg_not_a_request" })
-      // Nothing is older than 10s yet, and messages are not request kind.
-      expect(
-        yield* coordination.claimStale({ sessionID: b, kinds: ["request"], olderThanMs: 10_000, claimToken: "t0" }),
-      ).toHaveLength(0)
-      // olderThanMs = 0 sees everything; each concurrent claim takes a disjoint slice.
-      const claims = yield* Effect.all(
-        Array.from({ length: 4 }, (_, i) =>
-          coordination.claimStale({ sessionID: b, kinds: ["request"], olderThanMs: 0, claimToken: `t${i}` }),
-        ),
-        { concurrency: "unbounded" },
-      )
-      const all = claims.flat()
-      expect(all.map((item) => item.body)).toEqual(["req_fresh"])
-      expect(yield* coordination.inbox({ sessionID: b, kinds: ["message"], unreadOnly: true })).toHaveLength(1)
-    }),
-  )
-
   it.effect("claimUnanswered leases aged requests but never live injections or answered rows", () =>
     Effect.gen(function* () {
       yield* setup
@@ -567,6 +544,38 @@ describe("Coordination", () => {
       expect(text).toContain(b)
       expect(text).toContain(a)
       expect(text).toContain("do NOT message or wake a peer just to say hello")
+    }),
+  )
+
+  it.effect("a fresh request to an idle session is neither woken nor delegated", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      // Post a fresh request to an idle session (no status set = idle)
+      const request = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "are you done?",
+      })
+      // Not in the WAKE_KINDS inbox (request is not a wake kind)
+      const wakeInbox = yield* coordination.inbox({
+        sessionID: b,
+        kinds: Coordination.WAKE_KINDS,
+        unreadOnly: true,
+      })
+      expect(wakeInbox).toHaveLength(0)
+      // Not leased by claimUnanswered (grace not elapsed)
+      const leased = yield* coordination.claimUnanswered({
+        sessionID: b,
+        olderThanMs: 10_000,
+        claimToken: "responder-lease:test",
+      })
+      expect(leased).toHaveLength(0)
+      // The request is still unclaimed
+      const row = yield* coordination.get(request.id)
+      expect(row?.claimedBy).toBeUndefined()
     }),
   )
 })

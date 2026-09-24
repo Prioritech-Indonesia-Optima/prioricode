@@ -106,11 +106,11 @@ const layer = Layer.effect(
       )
     })
 
-    // Hand a busy session's aged unanswered requests to a hidden responder
-    // child session. The stale-claim above already gave this process exclusive
+    // Hand a session's aged unanswered requests to a hidden responder
+    // child session. The claim above already gave this process exclusive
     // ownership of `requests` (exactly-once via SQL), so it doubles as the
     // cross-process spawn lease. The child runs on its own runner, fully
-    // concurrent with the busy parent's turn — the parent is never interrupted.
+    // concurrent with the parent's turn — the parent is never interrupted.
     const spawnResponder = Effect.fnUntraced(function* (parent: Session.Info, requests: Coordination.Info[]) {
       runningResponders.add(parent.id)
       const snapshot = yield* responderSnapshot(parent)
