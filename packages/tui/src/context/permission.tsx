@@ -4,6 +4,8 @@ import { useSync } from "./sync"
 import { useSDK } from "./sdk"
 import { useArgs } from "./args"
 import { useRoute } from "./route"
+import { useToast } from "../ui/toast"
+import { errorMessage } from "../util/error"
 
 export type PermissionMode = "default" | "ask-first" | "always-allow"
 
@@ -16,6 +18,7 @@ export const { use: usePermission, provider: PermissionProvider } = createSimple
     const sdk = useSDK()
     const args = useArgs()
     const route = useRoute()
+    const toast = useToast()
 
     const currentSessionID = createMemo(() => (route.data.type === "session" ? route.data.sessionID : undefined))
 
@@ -27,8 +30,16 @@ export const { use: usePermission, provider: PermissionProvider } = createSimple
 
     function set(mode: PermissionMode) {
       const id = currentSessionID()
-      if (!id) return
-      void sdk.client.session.update({ sessionID: id, permissionMode: mode })
+      if (!id) {
+        toast.show({ message: "Permission mode needs an active session", variant: "warning" })
+        return
+      }
+      void sdk.client.session
+        .update({ sessionID: id, permissionMode: mode }, { throwOnError: true })
+        .then(() => toast.show({ message: `Permission mode set to ${mode}`, variant: "success" }))
+        .catch((error) =>
+          toast.show({ message: `Failed to set permission mode: ${errorMessage(error)}`, variant: "error" }),
+        )
     }
 
     if (args.auto) {

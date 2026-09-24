@@ -3,6 +3,7 @@ import { DialogSelect, type DialogSelectOption } from "../ui/dialog-select"
 import { DialogPrompt } from "../ui/dialog-prompt"
 import { DialogThemeList } from "./dialog-theme-list"
 import { DialogModelSettings } from "./dialog-model-settings"
+import { DialogPermission } from "./dialog-permission"
 import { useDialog } from "../ui/dialog"
 import { useSDK } from "../context/sdk"
 import { useSync } from "../context/sync"
@@ -500,7 +501,7 @@ export function DialogSettings() {
         category: "Behavior",
         description: "Per-session permission behavior (default / ask-first / always-allow)",
         footer: permission.mode,
-        onSelect: () => permission.cycle(),
+        onSelect: () => dialog.replace(() => <DialogPermission />),
       },
     ]
   })
