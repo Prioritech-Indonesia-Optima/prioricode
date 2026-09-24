@@ -5,8 +5,9 @@ Actions:
 - claim: declare the file paths this session is actively editing so peers can avoid them. Re-claim as the set changes.
 - release: release file-path claims you no longer need.
 - send: leave a fire-and-forget coordination note in another session's inbox (target + message). A busy target reads it at its next turn boundary without being interrupted; an idle target is woken within seconds to handle it.
-- ask: send a request to another session and wait (up to timeout seconds) for it to respond. The target's standing coordination representative guarantees an answer even if the main agent never reaches a boundary; if the main agent later answers itself, that arrives as a correction. Returns the answer, or — on timeout — exactly how far delivery got (never seen / seen but unanswered), and the answer still arrives later.
-- respond: answer a request using its request_id. Only the asked session may respond to requests addressed to it (its standing coordination responder may answer on its behalf when it has not).
+- ask: send a request to another session and wait (up to timeout seconds) for it to respond. The target's standing coordination representative guarantees an answer even if the main agent never reaches a boundary; if the main agent later answers itself, that arrives as a correction. Returns the answer, or — on timeout — exactly how far delivery got (never seen / seen but unanswered / being answered by the responder), and the answer still arrives later.
+- wait: re-wait on an existing request you already sent, using its request_id and a fresh timeout. Use this after an `ask` times out instead of re-asking (which would post a duplicate request). Returns the same as `ask`.
+- respond: answer a request using its request_id. Only the asked session may respond to requests addressed to it (its standing coordination responder may answer on its behalf when it has not). At most ONE response per request: if your responder already answered, post a correction with `send` referencing the request id instead of responding again.
 
 Delivery and receipts (how to stop guessing):
 - Every note moves through a ledger: queued -> seen (injected into the peer's context) -> received (the peer's model step consumed it cleanly). If a delivery dies mid-flight, the note is automatically re-queued and re-delivered — notes are not silently lost.

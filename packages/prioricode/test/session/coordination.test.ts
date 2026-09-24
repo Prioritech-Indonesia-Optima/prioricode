@@ -315,8 +315,8 @@ describe("Coordination", () => {
       expect(row?.claimedBy).toBe("responder-lease:t")
       expect(row?.timeRead).toBeNumber()
 
-      // a dead responder's lease re-ages and can be retried
-      yield* age(leased[0]!.id, 30_000)
+      // a dead responder's lease re-ages and can be retried (only if older than the 5-min lease TTL)
+      yield* age(leased[0]!.id, 6 * 60_000)
       const retried = yield* coordination.claimUnanswered({
         sessionID: b,
         olderThanMs: 10_000,
@@ -325,6 +325,183 @@ describe("Coordination", () => {
       expect(retried.map((item) => item.id)).toEqual([leased[0]!.id])
       // fresh request untouched by any of this
       expect((yield* coordination.get(fresh.id))?.claimedBy).toBeUndefined()
+    }),
+  )
+
+  it.effect("requestState derives the ledger state, first match wins", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      const base = {
+        id: "coo_x",
+        projectID,
+        kind: "request" as const,
+        fromSession: a,
+        toSession: b,
+        body: "q",
+        timeCreated: 1,
+      }
+      expect(Coordination.requestState({ ...base }, false)).toBe("pending")
+      expect(Coordination.requestState({ ...base, timeRead: 2 }, false)).toBe("injected")
+      expect(Coordination.requestState({ ...base, timeRead: 2, timeAck: 3 }, false)).toBe("acked")
+      expect(
+        Coordination.requestState({ ...base, timeRead: 2, claimedBy: `${Coordination.RESPONDER_LEASE_PREFIX}b:1` }, false),
+      ).toBe("leased")
+      expect(Coordination.requestState({ ...base, timeExpired: 4 }, false)).toBe("expired")
+      // answered wins over everything else
+      expect(
+        Coordination.requestState({ ...base, timeRead: 2, timeAck: 3, timeExpired: 4 }, true),
+      ).toBe("answered")
+    }),
+  )
+
+  it.effect("claimOrphanedInjected takes over a stuck live claim only for idle targets", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const { db } = yield* Database.Service
+      const coordination = yield* Coordination.Service
+      const age = (id: string, ms: number) =>
+        db
+          .update(CoordinationTable)
+          .set({ time_read: Date.now() - ms, time_updated: Date.now() - ms })
+          .where(eq(CoordinationTable.id, id))
+          .run()
+          .pipe(Effect.orDie)
+
+      // A request claimed by a live turn token (not a lease), never acked.
+      const stuck = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "stuck_mid_injection",
+      })
+      yield* db
+        .update(CoordinationTable)
+        .set({ time_read: Date.now(), claimed_by: "msg_live_turn" })
+        .where(eq(CoordinationTable.id, stuck.id))
+        .run()
+        .pipe(Effect.orDie)
+
+      // Too fresh (< 60s orphan grace): not taken over.
+      expect(
+        yield* coordination.claimOrphanedInjected({
+          sessionID: b,
+          idleSessionIDs: [b],
+          claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
+        }),
+      ).toHaveLength(0)
+
+      // Aged past the grace, target idle: taken over with a lease token.
+      yield* age(stuck.id, 90_000)
+      const leased = yield* coordination.claimOrphanedInjected({
+        sessionID: b,
+        idleSessionIDs: [b],
+        claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
+      })
+      expect(leased.map((item) => item.id)).toEqual([stuck.id])
+      expect(leased[0]?.claimedBy?.startsWith(Coordination.RESPONDER_LEASE_PREFIX)).toBe(true)
+
+      // An acked row is never taken over (it is handled by claimUnanswered instead).
+      const acked = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "acked_already",
+      })
+      yield* db
+        .update(CoordinationTable)
+        .set({ time_read: Date.now() - 90_000, time_ack: Date.now() - 90_000, claimed_by: "msg_done" })
+        .where(eq(CoordinationTable.id, acked.id))
+        .run()
+        .pipe(Effect.orDie)
+      expect(
+        yield* coordination.claimOrphanedInjected({
+          sessionID: b,
+          idleSessionIDs: [b],
+          claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
+        }),
+      ).toHaveLength(0)
+
+      // A busy target (not in idleSessionIDs) is never taken over even if aged.
+      const busyStuck = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "busy_target",
+      })
+      yield* db
+        .update(CoordinationTable)
+        .set({ time_read: Date.now() - 90_000, claimed_by: "msg_live" })
+        .where(eq(CoordinationTable.id, busyStuck.id))
+        .run()
+        .pipe(Effect.orDie)
+      expect(
+        yield* coordination.claimOrphanedInjected({
+          sessionID: b,
+          idleSessionIDs: [],
+          claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
+        }),
+      ).toHaveLength(0)
+    }),
+  )
+
+  it.effect("the unique partial index rejects a second response for one request", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const { db } = yield* Database.Service
+      const coordination = yield* Coordination.Service
+      const request = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "one response only",
+      })
+      yield* coordination.post({
+        projectID,
+        kind: "response",
+        fromSession: b,
+        toSession: a,
+        body: "first answer",
+        replyTo: request.id,
+      })
+      // A second response for the same request must fail at the DB level.
+      const second = yield* db
+        .insert(CoordinationTable)
+        .values({
+          id: "coo_second_response",
+          project_id: projectID,
+          kind: "response",
+          from_session: b,
+          to_session: a,
+          body: "duplicate answer",
+          reply_to: request.id,
+          time_created: Date.now(),
+          time_updated: Date.now(),
+        })
+        .run()
+        .pipe(Effect.exit)
+      expect(second._tag).toBe("Failure")
+      // Distinct requests may each have their own response.
+      const other = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "another question",
+      })
+      yield* coordination.post({
+        projectID,
+        kind: "response",
+        fromSession: b,
+        toSession: a,
+        body: "other answer",
+        replyTo: other.id,
+      })
+      expect(yield* coordination.responsesTo(other.id)).toHaveLength(1)
     }),
   )
 

@@ -28,6 +28,8 @@ export const WAKE_KINDS: ReadonlyArray<CoordinationKind> = ["message", "response
 export const REQUEST_KINDS: ReadonlyArray<CoordinationKind> = ["request"]
 /** Prefix of the watcher's responder lease stamped into claimed_by. */
 export const RESPONDER_LEASE_PREFIX = "responder-lease:"
+/** Responder lease TTL: re-age only leases older than this (5 min = responder-turn budget). */
+export const RESPONDER_LEASE_TTL_MS = 5 * 60_000
 
 /** Default cap on one claim batch, oldest first, so spam cannot monopolize a turn. */
 export const CLAIM_LIMIT = 12
@@ -44,6 +46,10 @@ export interface Info {
   readonly timeRead?: number
   readonly timeAck?: number
   readonly claimedBy?: string
+  readonly deadline?: number
+  readonly timeEscalated?: number
+  readonly timeExpired?: number
+  readonly threadId?: string
 }
 
 export interface PostInput {
@@ -54,6 +60,8 @@ export interface PostInput {
   readonly toSession?: SessionID
   readonly body: string
   readonly replyTo?: string
+  readonly deadline?: number
+  readonly threadId?: string
 }
 
 export interface InboxInput {
@@ -116,6 +124,18 @@ export interface Interface {
   readonly claimUnanswered: (input: {
     sessionID: SessionID
     olderThanMs: number
+    limit?: number
+    claimToken?: string
+  }) => Effect.Effect<Info[]>
+  /**
+   * Mid-injection takeover: claim request rows stuck in a live step (claimed
+   * by a turn token, not acked) for longer than ORPHAN_GRACE_MS (60s). Only
+   * claims rows addressed to sessions in `idleSessionIDs` — the live step is
+   * not going to ack. Phase 3 upgrades this to durable presence.
+   */
+  readonly claimOrphanedInjected: (input: {
+    sessionID: SessionID
+    idleSessionIDs: ReadonlyArray<SessionID>
     limit?: number
     claimToken?: string
   }) => Effect.Effect<Info[]>
@@ -261,6 +281,21 @@ export function responderPrompt(input: {
   ].join("\n")
 }
 
+/**
+ * Derived request state — not stored, computed from the ledger columns.
+ * Order matters: first match wins.
+ */
+export type RequestState = "answered" | "expired" | "leased" | "acked" | "injected" | "pending"
+
+export function requestState(row: Info, hasResponse: boolean): RequestState {
+  if (hasResponse) return "answered"
+  if (row.timeExpired !== undefined) return "expired"
+  if (row.claimedBy?.startsWith(RESPONDER_LEASE_PREFIX)) return "leased"
+  if (row.timeAck !== undefined) return "acked"
+  if (row.timeRead !== undefined) return "injected"
+  return "pending"
+}
+
 const fromRow = (row: typeof CoordinationTable.$inferSelect): Info => ({
   id: row.id,
   projectID: row.project_id,
@@ -273,6 +308,10 @@ const fromRow = (row: typeof CoordinationTable.$inferSelect): Info => ({
   ...(row.time_read === null ? {} : { timeRead: row.time_read }),
   ...(row.time_ack === null ? {} : { timeAck: row.time_ack }),
   ...(row.claimed_by === null ? {} : { claimedBy: row.claimed_by }),
+  ...(row.deadline === null ? {} : { deadline: row.deadline }),
+  ...(row.time_escalated === null ? {} : { timeEscalated: row.time_escalated }),
+  ...(row.time_expired === null ? {} : { timeExpired: row.time_expired }),
+  ...(row.thread_id === null ? {} : { threadId: row.thread_id }),
 })
 
 const layer = Layer.effect(
@@ -295,6 +334,8 @@ const layer = Layer.effect(
           reply_to: input.replyTo ?? null,
           time_created: now,
           time_updated: now,
+          deadline: input.deadline ?? null,
+          thread_id: input.threadId ?? null,
         })
         .run()
         .pipe(Effect.orDie)
@@ -307,6 +348,8 @@ const layer = Layer.effect(
         body: input.body,
         ...(input.replyTo ? { replyTo: input.replyTo } : {}),
         timeCreated: now,
+        ...(input.deadline !== undefined ? { deadline: input.deadline } : {}),
+        ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
       }
     })
 
@@ -399,14 +442,18 @@ const layer = Layer.effect(
     // A request is claimable by the responder once it has aged past the grace
     // since its last mutation AND nobody has answered it AND it is not in the
     // middle of a live parent injection (claimed by a turn token, not yet
-    // acked). Rows already leased by a dead responder re-age and get retried.
+    // acked). Rows already leased by a dead responder re-age and get retried,
+    // but only if the lease is older than RESPONDER_LEASE_TTL_MS (a slow-but-
+    // alive responder is not preempted).
     const unansweredWhere = (cutoff: number) => [
       eq(CoordinationTable.kind, "request"),
       lt(CoordinationTable.time_updated, cutoff),
+      isNull(CoordinationTable.time_expired),
       sql`not exists (select 1 from "session_coordination" "r" where "r"."reply_to" = "session_coordination"."id" and "r"."kind" = 'response')`,
       or(
         isNull(CoordinationTable.claimed_by),
-        like(CoordinationTable.claimed_by, `${RESPONDER_LEASE_PREFIX}%`),
+        // Re-age only leases older than the TTL (slow-but-alive leases are left alone)
+        sql`${CoordinationTable.claimed_by} LIKE ${RESPONDER_LEASE_PREFIX + "%"} AND ${CoordinationTable.time_updated} < ${Date.now() - RESPONDER_LEASE_TTL_MS}`,
         isNotNull(CoordinationTable.time_ack),
       ),
     ]
@@ -438,6 +485,59 @@ const layer = Layer.effect(
             inArray(CoordinationTable.id, ids),
             eq(CoordinationTable.to_session, input.sessionID),
             ...unansweredWhere(cutoff),
+          ),
+        )
+        .returning()
+        .all()
+        .pipe(Effect.orDie)) as (typeof CoordinationTable.$inferSelect)[]
+      return rows.map(fromRow)
+    })
+
+    // Mid-injection takeover: claim request rows that are stuck in a live step
+    // (claimed by a turn token, not acked) for longer than ORPHAN_GRACE_MS.
+    // Only claims rows addressed to sessions that are currently idle (the live
+    // step is not going to ack). Phase 3 upgrades this to durable presence.
+    const ORPHAN_GRACE_MS = 60_000
+    const claimOrphanedInjected = Effect.fn("Coordination.claimOrphanedInjected")(function* (input: {
+      sessionID: SessionID
+      idleSessionIDs: ReadonlyArray<SessionID>
+      limit?: number
+      claimToken?: string
+    }) {
+      if (input.idleSessionIDs.length === 0) return [] as Info[]
+      const cutoff = Date.now() - ORPHAN_GRACE_MS
+      const selection = db
+        .select({ id: CoordinationTable.id })
+        .from(CoordinationTable)
+        .where(
+          and(
+            eq(CoordinationTable.kind, "request"),
+            eq(CoordinationTable.to_session, input.sessionID),
+            isNotNull(CoordinationTable.claimed_by),
+            // Not a lease token
+            sql`${CoordinationTable.claimed_by} NOT LIKE ${RESPONDER_LEASE_PREFIX + "%"}`,
+            isNull(CoordinationTable.time_ack),
+            lt(CoordinationTable.time_read, cutoff),
+            isNull(CoordinationTable.time_expired),
+            sql`not exists (select 1 from "session_coordination" "r" where "r"."reply_to" = "session_coordination"."id" and "r"."kind" = 'response')`,
+          ),
+        )
+        .orderBy(asc(CoordinationTable.time_created))
+      const capped = input.limit === undefined ? selection : selection.limit(input.limit)
+      const ids = (yield* capped.all().pipe(Effect.orDie)).map((row) => row.id)
+      if (ids.length === 0) return [] as Info[]
+      const now = Date.now()
+      const rows = (yield* db
+        .update(CoordinationTable)
+        .set({
+          time_read: sql`coalesce(${CoordinationTable.time_read}, ${now})`,
+          time_updated: now,
+          claimed_by: input.claimToken ?? null,
+        })
+        .where(
+          and(
+            inArray(CoordinationTable.id, ids),
+            eq(CoordinationTable.to_session, input.sessionID),
           ),
         )
         .returning()
@@ -620,6 +720,7 @@ const layer = Layer.effect(
       markRead,
       claimUnread,
       claimUnanswered,
+      claimOrphanedInjected,
       markAck,
       unclaimStaleUnacked,
       unclaimUnacked,

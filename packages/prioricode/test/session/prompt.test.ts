@@ -3715,7 +3715,7 @@ describe("sessions tool receipts and delegation", () => {
   )
 
   coordinationIt.instance(
-    "delegated answers are single-shot but the owner may always correct",
+    "delegated answers are single-shot and the owner corrects via a message",
     () =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
@@ -3749,13 +3749,23 @@ describe("sessions tool receipts and delegation", () => {
         )
         expect(second.title).toBe("sessions:error")
         expect(second.output).toContain("already answered")
-        // The main agent itself may correct after the fact.
+        // The main agent may NOT post a second response — at most one response
+        // row per request is the one-response invariant. It is told to correct
+        // via a message instead.
         const third = yield* def.execute(
           { action: "respond", request_id: request.id, message: "update: actually I am on x.ts" },
           toolCtx(target.id),
         )
-        expect(third.title).toBe("sessions:respond")
-        expect(yield* coordination.responsesTo(request.id)).toHaveLength(2)
+        expect(third.title).toBe("sessions:error")
+        expect(third.output).toContain("already answered")
+        expect(third.output).toContain('use action "send"')
+        expect(yield* coordination.responsesTo(request.id)).toHaveLength(1)
+        // The owner's correction is a message referencing the request id.
+        const corrected = yield* def.execute(
+          { action: "send", target: sender.id, message: `Correction on ${request.id}: actually I am on x.ts` },
+          toolCtx(target.id),
+        )
+        expect(corrected.title).toBe("sessions:send")
         // Exactly one record for the one delegation.
         const records = yield* coordination.inbox({ sessionID: target.id, kinds: ["record"] })
         expect(records).toHaveLength(1)

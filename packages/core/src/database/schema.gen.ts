@@ -37,6 +37,10 @@ export default {
           \`time_read\` integer,
           \`time_ack\` integer,
           \`claimed_by\` text,
+          \`deadline\` integer,
+          \`time_escalated\` integer,
+          \`time_expired\` integer,
+          \`thread_id\` text,
           CONSTRAINT \`fk_session_coordination_project_id_project_id_fk\` FOREIGN KEY (\`project_id\`) REFERENCES \`project\`(\`id\`) ON DELETE CASCADE
         );
       `)
@@ -258,6 +262,10 @@ export default {
       yield* tx.run(`CREATE INDEX \`coordination_project_idx\` ON \`session_coordination\` (\`project_id\`,\`kind\`);`)
       yield* tx.run(`CREATE INDEX \`coordination_reply_idx\` ON \`session_coordination\` (\`reply_to\`);`)
       yield* tx.run(`CREATE INDEX \`coordination_from_idx\` ON \`session_coordination\` (\`from_session\`,\`kind\`);`)
+      yield* tx.run(`CREATE INDEX \`coordination_thread_idx\` ON \`session_coordination\` (\`thread_id\`);`)
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`coordination_response_unique\` ON \`session_coordination\` (\`reply_to\`) WHERE "session_coordination"."kind" = 'response' AND "session_coordination"."reply_to" IS NOT NULL;`,
+      )
       yield* tx.run(`CREATE UNIQUE INDEX \`event_aggregate_seq_idx\` ON \`event\` (\`aggregate_id\`,\`seq\`);`)
       yield* tx.run(`CREATE INDEX \`event_aggregate_type_seq_idx\` ON \`event\` (\`aggregate_id\`,\`type\`,\`seq\`);`)
       yield* tx.run(

@@ -307,9 +307,17 @@ export const SessionsTool = Tool.define(
           return failure(
             `Request ${requestID} is addressed to ${request.toSession}, not to your session — only the asked session (or its coordination responder) may answer it.`,
           )
-        if (delegate && (yield* coordination.responsesTo(requestID)).length > 0)
+        const existingResponses = yield* coordination.responsesTo(requestID)
+        if (delegate && existingResponses.length > 0)
           return failure(
             `Request ${requestID} was already answered — the main agent may correct it directly if needed.`,
+          )
+        // Owner-correction: at most one response row per request (enforced by
+        // the unique partial index). If the responder already answered, the
+        // owner must send a correction as a message, not a second response.
+        if (owner && existingResponses.length > 0)
+          return failure(
+            `Request ${requestID} was already answered (by your coordination responder). To correct it, use action "send" with a note referencing the request id.`,
           )
 
         const body = delegate
@@ -338,7 +346,7 @@ export const SessionsTool = Tool.define(
               `Your coordination responder answered a peer request on your behalf because you had not answered it at your own boundary. ` +
               `Request ${requestID} from session ${requester} asked: """${request.body}""". ` +
               `Your responder replied: """${answer}""". ` +
-              `That reply was generated from a snapshot of your session and may be incomplete or wrong — if so, send a corrected answer with the sessions tool: action "respond", request_id "${requestID}" (you may always correct your own responder). Otherwise ignore this record; no action is needed.`,
+              `That reply was generated from a snapshot of your session and may be incomplete or wrong — if so, send a corrected answer with the sessions tool: action "send", target "${requester}", referencing request ${requestID} in the message (the request itself is already answered — only one response per request). Otherwise ignore this record; no action is needed.`,
           })
         return result(
           "respond",

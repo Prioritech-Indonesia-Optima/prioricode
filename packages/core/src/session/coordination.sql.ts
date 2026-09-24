@@ -1,4 +1,5 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core"
+import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core"
+import { sql } from "drizzle-orm"
 import { ProjectTable } from "../project/sql"
 import { ProjectV2 } from "../project"
 import { Timestamps } from "../database/schema.sql"
@@ -37,11 +38,22 @@ export const CoordinationTable = sqliteTable(
     time_read: integer(),
     time_ack: integer(),
     claimed_by: text(),
+    deadline: integer(),
+    time_escalated: integer(),
+    time_expired: integer(),
+    thread_id: text(),
   },
   (table) => [
     index("coordination_to_idx").on(table.to_session, table.kind),
     index("coordination_project_idx").on(table.project_id, table.kind),
     index("coordination_reply_idx").on(table.reply_to),
     index("coordination_from_idx").on(table.from_session, table.kind),
+    index("coordination_thread_idx").on(table.thread_id),
+    // One-response invariant: at most one response row per request, enforced
+    // atomically at the DB level (a responder answer and an owner answer can
+    // never both land for the same request).
+    uniqueIndex("coordination_response_unique")
+      .on(table.reply_to)
+      .where(sql`${table.kind} = 'response' AND ${table.reply_to} IS NOT NULL`),
   ],
 )

@@ -197,6 +197,7 @@ const layer = Layer.effect(
         sessionIDs: fullyIdle.map((session) => session.id),
         cutoffMs: Date.now() - ACK_RECOVERY_GRACE_MS,
       })
+      const idle = roots.filter((session) => busy.get(session.id)?.type !== "busy")
       // Unanswered pass first: a request that has aged past the grace with nobody
       // answering it gets a reply from the session's standing responder child,
       // regardless of whether the main agent is busy or idle. The main agent
@@ -210,6 +211,7 @@ const layer = Layer.effect(
       if (!flags.disableCoordinationResponder) {
         let launches = 0
         const now = Date.now()
+        const idleIDs = idle.map((s) => s.id)
         for (const session of roots) {
           if (launches >= RESPONDERS_PER_SWEEP) break
           if (runningResponders.has(session.id)) continue
@@ -219,11 +221,20 @@ const layer = Layer.effect(
             sessionID: session.id,
             olderThanMs: RESPONDER_GRACE_MS,
             limit: RESPONDER_BATCH_LIMIT,
-            claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}${session.id}`,
+            claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}${session.id}:${Date.now()}`,
           })
-          if (leased.length === 0) continue
+          // Mid-injection takeover: also claim rows stuck in a live step for
+          // more than 60s, but only for sessions that are currently idle.
+          const orphaned = yield* coordination.claimOrphanedInjected({
+            sessionID: session.id,
+            idleSessionIDs: idleIDs,
+            limit: RESPONDER_BATCH_LIMIT - leased.length,
+            claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}${session.id}:${Date.now()}`,
+          })
+          const allLeased = [...leased, ...orphaned]
+          if (allLeased.length === 0) continue
           const worthAnswering: Coordination.Info[] = []
-          for (const request of leased) {
+          for (const request of allLeased) {
             const requester = yield* sessions
               .get(request.fromSession)
               .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
@@ -240,7 +251,6 @@ const layer = Layer.effect(
           yield* spawnResponder(session, worthAnswering)
         }
       }
-      const idle = roots.filter((session) => busy.get(session.id)?.type !== "busy")
       let woken = 0
       for (const session of idle) {
         // Detect without claiming: the turn-boundary claimUnread inside runLoop is the
