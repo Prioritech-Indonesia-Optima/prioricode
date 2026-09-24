@@ -784,4 +784,102 @@ describe("Coordination", () => {
       expect(yield* coordination.resolveNotify(request.id)).toBe(false)
     }),
   )
+
+  it.effect("guardNote rate-limits a chatty sender past the per-minute cap", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      // Fill the rolling window to the default cap (10) with distinct bodies.
+      for (let i = 0; i < 10; i++)
+        yield* coordination.post({
+          projectID,
+          kind: "message",
+          fromSession: a,
+          toSession: b,
+          body: `note ${i}`,
+        })
+      const guard = yield* coordination.guardNote({
+        fromSession: a,
+        toSession: b,
+        kind: "message",
+        body: "one more",
+      })
+      expect(guard.blocked).toContain("Rate limited")
+      // A different recipient is unaffected.
+      const other = yield* coordination.guardNote({
+        fromSession: a,
+        toSession: SessionV2.ID.make("ses_coord_c"),
+        kind: "message",
+        body: "one more",
+      })
+      expect(other.blocked).toBeUndefined()
+    }),
+  )
+
+  it.effect("guardNote dedupes an identical still-unprocessed note to the same target", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "are you done?" })
+      const dup = yield* coordination.guardNote({
+        fromSession: a,
+        toSession: b,
+        kind: "message",
+        body: "are you done?",
+      })
+      expect(dup.blocked).toContain("Already sent")
+      // A different body is allowed.
+      const fresh = yield* coordination.guardNote({
+        fromSession: a,
+        toSession: b,
+        kind: "message",
+        body: "different question?",
+      })
+      expect(fresh.blocked).toBeUndefined()
+    }),
+  )
+
+  it.effect("escalateDue then expireDue each fire once for an unanswered request", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const { db } = yield* Database.Service
+      const coordination = yield* Coordination.Service
+      const request = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "will this ever be answered?",
+      })
+      const backdate = (ms: number) =>
+        db
+          .update(CoordinationTable)
+          .set({ time_created: Date.now() - ms, time_updated: Date.now() - ms })
+          .where(eq(CoordinationTable.id, request.id))
+          .run()
+          .pipe(Effect.orDie)
+
+      // Not due yet.
+      expect(yield* coordination.escalateDue()).toHaveLength(0)
+      // Past the 15-min escalation grace → escalated exactly once.
+      yield* backdate(16 * 60_000)
+      const escalated = yield* coordination.escalateDue()
+      expect(escalated.map((item) => item.id)).toEqual([request.id])
+      expect(yield* coordination.escalateDue()).toHaveLength(0)
+      // Still not expired (needs escalation + a further grace).
+      expect(yield* coordination.expireDue()).toHaveLength(0)
+      // Past escalation + expiry grace → expired exactly once, and terminal.
+      yield* backdate(31 * 60_000)
+      const expired = yield* coordination.expireDue()
+      expect(expired.map((item) => item.id)).toEqual([request.id])
+      expect(yield* coordination.expireDue()).toHaveLength(0)
+      // An expired request is no longer claimable by the responder.
+      const leased = yield* coordination.claimUnanswered({
+        sessionID: b,
+        olderThanMs: 0,
+        claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
+      })
+      expect(leased.map((item) => item.id)).not.toContain(request.id)
+    }),
+  )
 })

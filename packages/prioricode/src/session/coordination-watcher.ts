@@ -36,8 +36,11 @@ const RESPONDER_REQUESTER_STALE_MS = 72 * 60 * 60_000
 // After a responder turn dies (e.g. provider down), its requests are fast-
 // requeued but the parent backs off before another responder is attempted —
 // otherwise every 2s sweep would respawn, clone sessions, and burn tokens
-// against a broken provider.
-const RESPONDER_BACKOFF_MS = 5 * 60_000
+// against a broken provider. Backoff doubles per consecutive failure, capped.
+const RESPONDER_BACKOFF_BASE_MS = 30_000
+const RESPONDER_BACKOFF_MAX_MS = 5 * 60_000
+const responderBackoffMs = (count: number) =>
+  Math.min(RESPONDER_BACKOFF_BASE_MS * 2 ** Math.max(0, count - 1), RESPONDER_BACKOFF_MAX_MS)
 // A notify fires only once the target has been idle at least this long AND has
 // nothing still queued — so a transient idle between a synthetic wake turn and
 // the next real note does not read as "done".
@@ -79,8 +82,13 @@ const layer = Layer.effect(
     // Parents with a responder child currently running (one at a time per
     // parent; cross-process duplicates are prevented by the atomic stale-claim).
     const runningResponders = new Set<SessionID>()
-    // Parents whose last responder turn died; skipped until the backoff passes.
-    const responderFailures = new Map<SessionID, number>()
+    // Parents whose last responder turn died; skipped until the (adaptive) backoff
+    // passes. `count` drives the exponential doubling.
+    const responderFailures = new Map<SessionID, { failedAt: number; count: number }>()
+    const recordResponderFailure = (id: SessionID) => {
+      const prev = responderFailures.get(id)
+      responderFailures.set(id, { failedAt: Date.now(), count: (prev?.count ?? 0) + 1 })
+    }
 
     // Recent visible (non-synthetic) conversation of the parent, its todo
     // list, and its file claims — everything a responder is allowed to answer
@@ -158,13 +166,13 @@ const layer = Layer.effect(
               ? Effect.sync(() => responderFailures.delete(parent.id)).pipe(
                   Effect.andThen(Effect.logInfo("coordination responder finished", { "responder.id": child.id })),
                 )
-              : Effect.sync(() => void responderFailures.set(parent.id, Date.now())).pipe(
+              : Effect.sync(() => recordResponderFailure(parent.id)).pipe(
                   Effect.andThen(coordination.unclaimUnacked(ids)),
                   Effect.asVoid,
                 ),
           ),
           Effect.catchCause((cause) =>
-            Effect.sync(() => void responderFailures.set(parent.id, Date.now())).pipe(
+            Effect.sync(() => recordResponderFailure(parent.id)).pipe(
               Effect.andThen(
                 Effect.logWarning("coordination responder failed", {
                   "session.id": parent.id,
@@ -243,6 +251,28 @@ const layer = Layer.effect(
           })
         }
       }
+      // Escalation + expiry passes: an unanswered request past its deadline is
+      // escalated once (a passive `record` tells the asker a human has been
+      // surfaced), then expires once more past the grace (terminal — no claim
+      // path touches it again). Records never wake, so this cannot storm.
+      for (const request of yield* coordination.escalateDue()) {
+        yield* coordination.post({
+          projectID: request.projectID,
+          kind: "record",
+          fromSession: request.toSession ?? request.fromSession,
+          toSession: request.fromSession,
+          body: `Your request ${request.id} to ${request.toSession} has gone unanswered past its deadline and was escalated — a human has been notified. You may continue without it or follow up directly.`,
+        })
+      }
+      for (const request of yield* coordination.expireDue()) {
+        yield* coordination.post({
+          projectID: request.projectID,
+          kind: "record",
+          fromSession: request.toSession ?? request.fromSession,
+          toSession: request.fromSession,
+          body: `Your request ${request.id} to ${request.toSession} has expired unanswered. No further reply will arrive; re-ask only if it still matters.`,
+        })
+      }
       // Unanswered pass first: a request that has aged past the grace with nobody
       // answering it gets a reply from the session's standing responder child,
       // regardless of whether the main agent is busy or idle. The main agent
@@ -260,8 +290,8 @@ const layer = Layer.effect(
         for (const session of roots) {
           if (launches >= RESPONDERS_PER_SWEEP) break
           if (runningResponders.has(session.id)) continue
-          const failedAt = responderFailures.get(session.id)
-          if (failedAt !== undefined && now - failedAt < RESPONDER_BACKOFF_MS) continue
+          const failure = responderFailures.get(session.id)
+          if (failure !== undefined && now - failure.failedAt < responderBackoffMs(failure.count)) continue
           const leased = yield* coordination.claimUnanswered({
             sessionID: session.id,
             olderThanMs: RESPONDER_GRACE_MS,

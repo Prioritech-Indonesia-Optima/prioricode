@@ -1,10 +1,11 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Effect, Layer, Context } from "effect"
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, like, lt, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from "drizzle-orm"
 import { Database } from "@prioricode/core/database/database"
 import { CoordinationTable, type CoordinationKind } from "@prioricode/core/session/coordination.sql"
 import { Identifier } from "@prioricode/core/id/id"
 import { ProjectV2 } from "@prioricode/core/project"
+import { RuntimeFlags } from "@/effect/runtime-flags"
 import { SessionID } from "./schema"
 
 export type { CoordinationKind }
@@ -172,6 +173,22 @@ export interface Interface {
    * only if still unread, returning true for the single winning caller.
    */
   readonly resolveNotify: (id: string) => Effect.Effect<boolean>
+  /**
+   * Loop protection for peer-authored notes (send/ask). Returns a `blocked`
+   * reason (rate-limited or duplicate — do NOT post) or an optional `warning`
+   * (recipient inbox is flooding — post anyway, tell the sender). System rows
+   * (response/record/notify) never call this.
+   */
+  readonly guardNote: (input: {
+    fromSession: SessionID
+    toSession: SessionID
+    kind: "message" | "request"
+    body: string
+  }) => Effect.Effect<{ blocked?: string; warning?: string }>
+  /** Stamp `time_escalated` on due unanswered requests; returns the newly-escalated rows. */
+  readonly escalateDue: () => Effect.Effect<Info[]>
+  /** Stamp `time_expired` on escalated-but-still-unanswered requests; returns the newly-expired rows. */
+  readonly expireDue: () => Effect.Effect<Info[]>
   /** Rows this session sent (message/request) within a recency window, for the sender-side receipt ledger. */
   readonly sentBy: (input: { sessionID: SessionID; withinMs: number; limit?: number }) => Effect.Effect<Info[]>
   /** Response rows threading back to any of the given request ids, in one query. */
@@ -329,6 +346,7 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const { db } = yield* Database.Service
+    const flags = yield* RuntimeFlags.Service
 
     const post = Effect.fn("Coordination.post")(function* (input: PostInput) {
       const id = input.id ?? Identifier.ascending("coordination")
@@ -362,6 +380,74 @@ const layer = Layer.effect(
         ...(input.deadline !== undefined ? { deadline: input.deadline } : {}),
         ...(input.threadId !== undefined ? { threadId: input.threadId } : {}),
       }
+    })
+
+    // Loop protection for peer-authored notes (send/ask). Enforced at the tool
+    // boundary so the SENDER is told synchronously what happened. System-authored
+    // rows (response/record/notify) bypass this — they are replies and bookkeeping,
+    // not chatter that can storm.
+    const guardNote = Effect.fn("Coordination.guardNote")(function* (input: {
+      fromSession: SessionID
+      toSession: SessionID
+      kind: "message" | "request"
+      body: string
+    }) {
+      const now = Date.now()
+      const count = (conditions: ReturnType<typeof and>[]) =>
+        db
+          .select({ c: sql<number>`count(*)` })
+          .from(CoordinationTable)
+          .where(and(...conditions))
+          .get()
+          .pipe(Effect.orDie)
+          .pipe(Effect.map((row) => row?.c ?? 0))
+
+      // 1. Per-sender rate limit over a rolling minute.
+      const recent = yield* count([
+        eq(CoordinationTable.from_session, input.fromSession),
+        eq(CoordinationTable.to_session, input.toSession),
+        inArray(CoordinationTable.kind, ["message", "request"]),
+        gte(CoordinationTable.time_created, now - 60_000),
+      ])
+      if (recent >= flags.coordinationRateLimitPerMinute)
+        return {
+          blocked: `Rate limited: you have already sent ${recent} notes to ${input.toSession} in the last 60s. Consolidate into one message or wait before sending more.`,
+        }
+
+      // 2. Identical-repeat dedupe while the earlier copy is still unprocessed.
+      const dupAge = yield* db
+        .select({ timeCreated: CoordinationTable.time_created })
+        .from(CoordinationTable)
+        .where(
+          and(
+            eq(CoordinationTable.from_session, input.fromSession),
+            eq(CoordinationTable.to_session, input.toSession),
+            eq(CoordinationTable.kind, input.kind),
+            eq(CoordinationTable.body, input.body),
+            isNull(CoordinationTable.time_ack),
+            gte(CoordinationTable.time_created, now - flags.coordinationDedupeWindowMs),
+          ),
+        )
+        .orderBy(asc(CoordinationTable.time_created))
+        .limit(1)
+        .all()
+        .pipe(Effect.orDie)
+      if (dupAge.length > 0)
+        return {
+          blocked: `Already sent: an identical ${input.kind} to ${input.toSession} is still queued and unprocessed (from ${Math.max(1, Math.round((now - dupAge[0].timeCreated) / 1000))}s ago). Not sending a duplicate — check discover for its receipt instead.`,
+        }
+
+      // 3. Inbox flood warning (lossless — the note is still delivered).
+      const unread = yield* count([
+        eq(CoordinationTable.to_session, input.toSession),
+        inArray(CoordinationTable.kind, [...WAKE_KINDS]),
+        isNull(CoordinationTable.time_read),
+      ])
+      const warning =
+        unread >= flags.coordinationInboxCap
+          ? ` Note: ${input.toSession} already has ${unread} unread coordination items; yours is queued and will deliver as space frees.`
+          : undefined
+      return { warning }
     })
 
     const inbox = Effect.fn("Coordination.inbox")(function* (input: InboxInput) {
@@ -645,6 +731,55 @@ const layer = Layer.effect(
       return rows.length > 0
     })
 
+    const noResponseSql = sql`not exists (select 1 from "session_coordination" "r" where "r"."reply_to" = "session_coordination"."id" and "r"."kind" = 'response')`
+    const dueFrom = (grace: number) =>
+      sql`COALESCE(${CoordinationTable.deadline}, ${CoordinationTable.time_created} + ${grace})`
+
+    // Escalation: an unanswered request past its deadline (or the default grace
+    // from creation) is stamped once and surfaced to the humans. Idempotent via
+    // the `time_escalated IS NULL` guard in the UPDATE.
+    const escalateDue = Effect.fn("Coordination.escalateDue")(function* () {
+      const now = Date.now()
+      const rows = yield* db
+        .update(CoordinationTable)
+        .set({ time_escalated: now, time_updated: now })
+        .where(
+          and(
+            eq(CoordinationTable.kind, "request"),
+            isNull(CoordinationTable.time_escalated),
+            isNull(CoordinationTable.time_expired),
+            noResponseSql,
+            sql`${now} > ${dueFrom(flags.coordinationEscalationMs)}`,
+          ),
+        )
+        .returning()
+        .all()
+        .pipe(Effect.orDie)
+      return rows.map(fromRow)
+    })
+
+    // Expiry: an escalated request still unanswered a further grace later is
+    // terminal — no claim path will touch it again (guarded on time_expired).
+    const expireDue = Effect.fn("Coordination.expireDue")(function* () {
+      const now = Date.now()
+      const rows = yield* db
+        .update(CoordinationTable)
+        .set({ time_expired: now, time_updated: now })
+        .where(
+          and(
+            eq(CoordinationTable.kind, "request"),
+            isNotNull(CoordinationTable.time_escalated),
+            isNull(CoordinationTable.time_expired),
+            noResponseSql,
+            sql`${now} > ${dueFrom(flags.coordinationEscalationMs)} + ${flags.coordinationExpiryGraceMs}`,
+          ),
+        )
+        .returning()
+        .all()
+        .pipe(Effect.orDie)
+      return rows.map(fromRow)
+    })
+
     const sentBy = Effect.fn("Coordination.sentBy")(function* (input: {
       sessionID: SessionID
       withinMs: number
@@ -765,6 +900,9 @@ const layer = Layer.effect(
       unclaimUnacked,
       pendingNotifies,
       resolveNotify,
+      guardNote,
+      escalateDue,
+      expireDue,
       sentBy,
       responsesFor,
       responsesTo,
@@ -777,6 +915,6 @@ const layer = Layer.effect(
   }),
 )
 
-export const node = LayerNode.make({ service: Service, layer, deps: [Database.node] })
+export const node = LayerNode.make({ service: Service, layer, deps: [Database.node, RuntimeFlags.node] })
 
 export * as Coordination from "./coordination"

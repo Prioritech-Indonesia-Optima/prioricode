@@ -7,6 +7,8 @@ const positiveInteger = (name: string) =>
     Config.map((value) => (Number.isInteger(value) && value > 0 ? value : undefined)),
     Config.orElse(() => Config.succeed(undefined)),
   )
+const positiveIntegerDefault = (name: string, fallback: number) =>
+  positiveInteger(name).pipe(Config.map((value) => value ?? fallback))
 const experimental = bool("PRIORICODE_EXPERIMENTAL")
 const enabledByExperimental = (name: string) =>
   Config.all({ experimental, enabled: Config.boolean(name).pipe(Config.option) }).pipe(
@@ -49,6 +51,11 @@ export class Service extends ConfigService.Service<Service>()("@prioricode/Runti
   experimentalEventSystem: enabledByExperimental("PRIORICODE_EXPERIMENTAL_EVENT_SYSTEM"),
   experimentalWorkspaces: enabledByExperimental("PRIORICODE_EXPERIMENTAL_WORKSPACES"),
   disableCoordinationResponder: bool("PRIORICODE_DISABLE_COORDINATION_RESPONDER"),
+  coordinationRateLimitPerMinute: positiveIntegerDefault("PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE", 10),
+  coordinationDedupeWindowMs: positiveIntegerDefault("PRIORICODE_COORDINATION_DEDUPE_WINDOW_MS", 5 * 60_000),
+  coordinationInboxCap: positiveIntegerDefault("PRIORICODE_COORDINATION_INBOX_CAP", 50),
+  coordinationEscalationMs: positiveIntegerDefault("PRIORICODE_COORDINATION_ESCALATION_MS", 15 * 60_000),
+  coordinationExpiryGraceMs: positiveIntegerDefault("PRIORICODE_COORDINATION_EXPIRY_GRACE_MS", 15 * 60_000),
   experimentalIconDiscovery: enabledByExperimental("PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY"),
   outputTokenMax: positiveInteger("PRIORICODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX"),
   bashDefaultTimeoutMs: positiveInteger("PRIORICODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS"),

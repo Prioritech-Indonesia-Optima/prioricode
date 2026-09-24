@@ -2889,6 +2889,35 @@ describe("cross-session coordination", () => {
   )
 
   coordinationIt.instance(
+    "sweep escalates an unanswered request past its deadline and records it to the asker",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const asker = yield* sessions.create({ title: "asker" })
+        const target = yield* sessions.create({ title: "silent target" })
+        const request = yield* coordination.post({
+          projectID: target.projectID,
+          kind: "request",
+          fromSession: asker.id,
+          toSession: target.id,
+          body: "STATUS_PLEASE",
+        })
+        // Past the 15-min escalation grace.
+        yield* setCoordinationTimes(request.id, { timeCreated: Date.now() - 16 * 60_000 })
+        // Make the asker stale so the responder pass settles the aged request as
+        // ghost traffic instead of spawning a model turn — escalation is the SUT.
+        yield* setLastActive(asker.id, Date.now() - 73 * 60 * 60_000)
+        yield* watcher.sweep()
+        const records = yield* coordination.inbox({ sessionID: asker.id, kinds: ["record"] })
+        expect(records).toHaveLength(1)
+        expect(records[0].body).toContain("escalated")
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
     "send fails for an unknown target id without posting anything",
     () =>
       Effect.gen(function* () {

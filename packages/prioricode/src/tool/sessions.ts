@@ -221,6 +221,13 @@ export const SessionsTool = Tool.define(
         if (!message) return failure("send requires a message")
         const resolved = yield* resolveTarget(target)
         if (!resolved.ok) return failure(resolved.error)
+        const guard = yield* coordination.guardNote({
+          fromSession: self.id,
+          toSession: SessionID.make(target),
+          kind: "message",
+          body: message,
+        })
+        if (guard.blocked) return failure(guard.blocked)
         yield* coordination.post({
           projectID: self.projectID,
           kind: "message",
@@ -233,6 +240,7 @@ export const SessionsTool = Tool.define(
           `Message queued in ${target} ("${resolved.session.title}")'s inbox. ` +
             "An idle target wakes within seconds to read it; a busy target reads it at its next step boundary. " +
             "Receipt: discover lists this note as seen/processed once the peer's context has consumed it." +
+            (guard.warning ?? "") +
             (resolved.stale ? staleWarning(target, resolved.idleFor) : ""),
           { target },
         )
@@ -273,6 +281,13 @@ export const SessionsTool = Tool.define(
         if (!message) return failure("ask requires a message")
         const resolved = yield* resolveTarget(target)
         if (!resolved.ok) return failure(resolved.error)
+        const guard = yield* coordination.guardNote({
+          fromSession: self.id,
+          toSession: SessionID.make(target),
+          kind: "request",
+          body: message,
+        })
+        if (guard.blocked) return failure(guard.blocked)
         const request = yield* coordination.post({
           projectID: self.projectID,
           kind: "request",
