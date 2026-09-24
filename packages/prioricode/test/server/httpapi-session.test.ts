@@ -348,6 +348,12 @@ describe("session HttpApi", () => {
         ).toEqual([])
 
         expect(
+          yield* requestJson<Record<string, unknown>>(pathFor(SessionPaths.coordination, { sessionID: parent.id }), {
+            headers,
+          }),
+        ).toMatchObject({ sessionID: parent.id, incoming: [], outgoing: [], notifies: [], escalated: 0 })
+
+        expect(
           yield* requestJson<unknown[]>(pathFor(SessionPaths.diff, { sessionID: parent.id }), { headers }),
         ).toEqual([])
 

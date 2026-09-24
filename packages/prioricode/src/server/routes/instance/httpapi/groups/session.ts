@@ -47,6 +47,37 @@ export const MessagesQuery = Schema.Struct({
   before: Schema.optional(Schema.String),
 })
 export const StatusMap = Schema.Record(Schema.String, SessionStatus.Info)
+export const CoordinationView = Schema.Struct({
+  sessionID: SessionID,
+  unread: Schema.Record(Schema.String, Schema.Number),
+  incoming: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      fromSession: Schema.String,
+      body: Schema.String,
+      state: Schema.String,
+      ageMs: Schema.Number,
+    }),
+  ),
+  outgoing: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      toSession: Schema.String,
+      body: Schema.String,
+      state: Schema.String,
+      ageMs: Schema.Number,
+    }),
+  ),
+  notifies: Schema.Array(
+    Schema.Struct({
+      id: Schema.String,
+      target: Schema.String,
+      note: Schema.String,
+      expires: Schema.Number,
+    }),
+  ),
+  escalated: Schema.Number,
+})
 export const UpdatePayload = Schema.Struct({
   title: Schema.optional(Schema.String),
   metadata: Schema.optional(Session.Metadata),
@@ -83,6 +114,7 @@ export const SessionPaths = {
   get: `${root}/:sessionID`,
   children: `${root}/:sessionID/children`,
   todo: `${root}/:sessionID/todo`,
+  coordination: `${root}/:sessionID/coordination`,
   diff: `${root}/:sessionID/diff`,
   messages: `${root}/:sessionID/message`,
   message: `${root}/:sessionID/message/:messageID`,
@@ -165,6 +197,19 @@ export const SessionApi = HttpApi.make("session")
             identifier: "session.todo",
             summary: "Get session todos",
             description: "Retrieve the todo list associated with a specific session, showing tasks and action items.",
+          }),
+        ),
+        HttpApiEndpoint.get("coordination", SessionPaths.coordination, {
+          params: { sessionID: SessionID },
+          query: WorkspaceRoutingQuery,
+          success: described(CoordinationView, "Coordination state"),
+          error: [HttpApiError.BadRequest, ApiNotFoundError],
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "session.coordination",
+            summary: "Get session coordination state",
+            description:
+              "Read-only view of a session's cross-session coordination: unread notes, pending incoming requests, requests it has sent, and active idle-subscriptions.",
           }),
         ),
         HttpApiEndpoint.get("diff", SessionPaths.diff, {

@@ -14,6 +14,7 @@ import { SessionRunState } from "@/session/run-state"
 import { SessionStatus } from "@/session/status"
 import { SessionSummary } from "@/session/summary"
 import { Todo } from "@/session/todo"
+import { Coordination } from "@/session/coordination"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { NamedError } from "@prioricode/core/util/error"
 import { Cause, Effect, Option, Schema, Scope } from "effect"
@@ -57,6 +58,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const permissionSvc = yield* Permission.Service
     const statusSvc = yield* SessionStatus.Service
     const todoSvc = yield* Todo.Service
+    const coordinationSvc = yield* Coordination.Service
     const summary = yield* SessionSummary.Service
     const events = yield* EventV2Bridge.Service
     const scope = yield* Scope.Scope
@@ -94,6 +96,63 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const todo = Effect.fn("SessionHttpApi.todo")(function* (ctx: { params: { sessionID: SessionID } }) {
       yield* requireSession(ctx.params.sessionID)
       return yield* todoSvc.get(ctx.params.sessionID)
+    })
+
+    const coordination = Effect.fn("SessionHttpApi.coordination")(function* (ctx: {
+      params: { sessionID: SessionID }
+    }) {
+      const sessionID = ctx.params.sessionID
+      yield* requireSession(sessionID)
+      const now = Date.now()
+      const unread = yield* coordinationSvc.inbox({ sessionID, unreadOnly: true })
+      const unreadCounts: Record<string, number> = {}
+      for (const row of unread) unreadCounts[row.kind] = (unreadCounts[row.kind] ?? 0) + 1
+
+      const incomingRows = (yield* coordinationSvc.inbox({ sessionID, kinds: ["request"] })).filter(
+        (row) => row.toSession === sessionID,
+      )
+      const incomingResponses = yield* coordinationSvc.responsesFor(incomingRows.map((row) => row.id))
+      const answered = new Set(incomingResponses.map((row) => row.replyTo))
+      const incoming = incomingRows.map((row) => ({
+        id: row.id,
+        fromSession: row.fromSession,
+        body: row.body.slice(0, 200),
+        state: Coordination.requestState(row, answered.has(row.id)),
+        ageMs: now - row.timeCreated,
+      }))
+
+      const outgoingRows = (yield* coordinationSvc.sentBy({ sessionID, withinMs: 30 * 60_000 })).filter(
+        (row) => row.kind === "request" && row.toSession !== sessionID,
+      )
+      const outgoingResponses = yield* coordinationSvc.responsesFor(outgoingRows.map((row) => row.id))
+      const outgoingAnswered = new Set(outgoingResponses.map((row) => row.replyTo))
+      const outgoing = outgoingRows.map((row) => ({
+        id: row.id,
+        toSession: row.toSession ?? "",
+        body: row.body.slice(0, 200),
+        state: Coordination.requestState(row, outgoingAnswered.has(row.id)),
+        ageMs: now - row.timeCreated,
+      }))
+
+      const notifies = (yield* coordinationSvc.notifiesFrom(sessionID)).map((row) => ({
+        id: row.id,
+        target: row.toSession ?? "",
+        note: row.body,
+        expires: row.deadline ?? 0,
+      }))
+
+      const escalated =
+        incomingRows.filter((row) => row.timeEscalated !== undefined && !answered.has(row.id)).length +
+        outgoingRows.filter((row) => row.timeEscalated !== undefined && !outgoingAnswered.has(row.id)).length
+
+      return {
+        sessionID,
+        unread: unreadCounts,
+        incoming,
+        outgoing,
+        notifies,
+        escalated,
+      }
     })
 
     const diff = Effect.fn("SessionHttpApi.diff")(function* (ctx: {
@@ -419,6 +478,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       .handle("get", get)
       .handle("children", children)
       .handle("todo", todo)
+      .handle("coordination", coordination)
       .handle("diff", diff)
       .handle("messages", messages)
       .handle("message", message)

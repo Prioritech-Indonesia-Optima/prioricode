@@ -9734,6 +9734,66 @@ export type SessionTodoResponses = {
 
 export type SessionTodoResponse = SessionTodoResponses[keyof SessionTodoResponses]
 
+export type SessionCoordinationData = {
+  body?: never
+  path: {
+    sessionID: string
+  }
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/session/{sessionID}/coordination"
+}
+
+export type SessionCoordinationErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+  /**
+   * NotFoundError
+   */
+  404: NotFoundError
+}
+
+export type SessionCoordinationError = SessionCoordinationErrors[keyof SessionCoordinationErrors]
+
+export type SessionCoordinationResponses = {
+  /**
+   * Coordination state
+   */
+  200: {
+    sessionID: string
+    unread: {
+      [key: string]: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }
+    incoming: Array<{
+      id: string
+      fromSession: string
+      body: string
+      state: string
+      ageMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }>
+    outgoing: Array<{
+      id: string
+      toSession: string
+      body: string
+      state: string
+      ageMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }>
+    notifies: Array<{
+      id: string
+      target: string
+      note: string
+      expires: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+    }>
+    escalated: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+  }
+}
+
+export type SessionCoordinationResponse = SessionCoordinationResponses[keyof SessionCoordinationResponses]
+
 export type SessionDiffData = {
   body?: never
   path: {

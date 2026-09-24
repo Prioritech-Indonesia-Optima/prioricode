@@ -1,4 +1,4 @@
-import { createMemo, Match, onCleanup, onMount, Show, Switch } from "solid-js"
+import { createEffect, createMemo, Match, onCleanup, onMount, Show, Switch } from "solid-js"
 import { useTheme } from "../../context/theme"
 import { useSync } from "../../context/sync"
 import { useDirectory } from "../../context/directory"
@@ -17,8 +17,21 @@ export function Footer() {
     if (route.data.type !== "session") return []
     return sync.data.permission[route.data.sessionID] ?? []
   })
+  const coordination = createMemo(() => {
+    if (route.data.type !== "session") return undefined
+    return sync.data.coordination[route.data.sessionID]
+  })
   const directory = useDirectory()
   const connected = useConnected()
+
+  // Poll the read-only coordination view only while this session is foregrounded.
+  createEffect(() => {
+    if (route.data.type !== "session") return
+    const sessionID = route.data.sessionID
+    void sync.refreshCoordination(sessionID)
+    const timer = setInterval(() => void sync.refreshCoordination(sessionID), 5000)
+    onCleanup(() => clearInterval(timer))
+  })
 
   const [store, setStore] = createStore({
     welcome: false,
@@ -64,6 +77,17 @@ export function Footer() {
               <text fg={theme.warning}>
                 <span style={{ fg: theme.warning }}>△</span> {permissions().length} Permission
                 {permissions().length > 1 ? "s" : ""}
+              </text>
+            </Show>
+            <Show when={(coordination()?.escalated ?? 0) > 0}>
+              <text fg={theme.error}>
+                <span style={{ fg: theme.error }}>⚠</span> {coordination()?.escalated} Escalated
+              </text>
+            </Show>
+            <Show when={coordination() && Object.values(coordination()!.unread).reduce((a, b) => a + b, 0) > 0}>
+              <text fg={theme.textMuted}>
+                <span style={{ fg: theme.success }}>⊙</span>{" "}
+                {Object.values(coordination()!.unread).reduce((a, b) => a + b, 0)} peer notes
               </text>
             </Show>
             <text fg={theme.text}>

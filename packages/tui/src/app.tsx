@@ -43,6 +43,7 @@ import { DialogModel } from "./component/dialog-model"
 import { useConnected } from "./component/use-connected"
 import { DialogMcp } from "./component/dialog-mcp"
 import { DialogStatus } from "./component/dialog-status"
+import { DialogCoordination } from "./component/dialog-coordination"
 import { DialogDebug } from "./component/dialog-debug"
 import { DialogThemeList } from "./component/dialog-theme-list"
 import { DialogSettings } from "./component/dialog-settings"
@@ -788,6 +789,15 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashName: "status",
         run: () => {
           dialog.replace(() => <DialogStatus />)
+        },
+        category: "System",
+      },
+      {
+        name: "prioricode.coordination",
+        title: "View cross-session coordination",
+        slashName: "coordination",
+        run: () => {
+          dialog.replace(() => <DialogCoordination />)
         },
         category: "System",
       },

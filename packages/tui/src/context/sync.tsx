@@ -56,6 +56,14 @@ function compareMessage(a: Message, b: Message) {
 
 const messageKey = (message: Message) => message.time.created + message.id
 
+export type CoordinationState = {
+  unread: Record<string, number>
+  incoming: { id: string; fromSession: string; body: string; state: string; ageMs: number }[]
+  outgoing: { id: string; toSession: string; body: string; state: string; ageMs: number }[]
+  notifies: { id: string; target: string; note: string; expires: number }[]
+  escalated: number
+}
+
 export const {
   context: SyncContext,
   use: useSync,
@@ -109,6 +117,9 @@ export const {
       }
       formatter: FormatterStatus[]
       vcs: VcsInfo | undefined
+      coordination: {
+        [sessionID: string]: CoordinationState | undefined
+      }
     }>({
       provider_next: {
         all: [],
@@ -139,6 +150,7 @@ export const {
       mcp_resource: {},
       formatter: [],
       vcs: undefined,
+      coordination: {},
     })
 
     const event = useEvent()
@@ -654,6 +666,18 @@ export const {
           syncingSessions.set(sessionID, task)
           return task
         },
+      },
+      async refreshCoordination(sessionID: string) {
+        const res = await sdk.client.session.coordination({ sessionID })
+        const data = res.data
+        if (!data) return
+        setStore("coordination", sessionID, {
+          unread: Object.fromEntries(Object.entries(data.unread).map(([k, v]) => [k, Number(v) || 0])),
+          incoming: data.incoming.map((row) => ({ ...row, ageMs: Number(row.ageMs) || 0 })),
+          outgoing: data.outgoing.map((row) => ({ ...row, ageMs: Number(row.ageMs) || 0 })),
+          notifies: data.notifies.map((row) => ({ ...row, expires: Number(row.expires) || 0 })),
+          escalated: Number(data.escalated) || 0,
+        })
       },
       bootstrap,
     }

@@ -168,6 +168,8 @@ export interface Interface {
    * goes durably idle, or expires it past its deadline.
    */
   readonly pendingNotifies: () => Effect.Effect<Info[]>
+  /** This session's own unresolved idle-subscriptions (what it is waiting on). */
+  readonly notifiesFrom: (sessionID: SessionID) => Effect.Effect<Info[]>
   /**
    * Atomically settle a notify row exactly once across processes: stamps it read
    * only if still unread, returning true for the single winning caller.
@@ -737,6 +739,23 @@ const layer = Layer.effect(
       return rows.map(fromRow)
     })
 
+    const notifiesFrom = Effect.fn("Coordination.notifiesFrom")(function* (sessionID: SessionID) {
+      const rows = yield* db
+        .select()
+        .from(CoordinationTable)
+        .where(
+          and(
+            eq(CoordinationTable.kind, "notify"),
+            eq(CoordinationTable.from_session, sessionID),
+            isNull(CoordinationTable.time_read),
+          ),
+        )
+        .orderBy(asc(CoordinationTable.time_created))
+        .all()
+        .pipe(Effect.orDie)
+      return rows.map(fromRow)
+    })
+
     const resolveNotify = Effect.fn("Coordination.resolveNotify")(function* (id: string) {
       const rows = yield* db
         .update(CoordinationTable)
@@ -935,6 +954,7 @@ const layer = Layer.effect(
       unclaimStaleUnacked,
       unclaimUnacked,
       pendingNotifies,
+      notifiesFrom,
       resolveNotify,
       guardNote,
       escalateDue,
