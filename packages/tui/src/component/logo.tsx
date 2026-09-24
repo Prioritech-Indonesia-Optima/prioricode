@@ -1,105 +1,80 @@
-import { RGBA, TextAttributes } from "@opentui/core"
-import { useRenderer } from "@opentui/solid"
-import { For, createEffect, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js"
+import { TextAttributes } from "@opentui/core"
+import { For, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import { useKV } from "../context/kv"
 import { tint, useTheme } from "../context/theme"
-import { logo, tone, type Tone } from "../logo"
+
+// Home screen hero: the wordmark is the logo. "PrioriCode" is set bold with a
+// per-cell gradient that flows from the brand primary into the text color,
+// with a muted tagline beneath it. A single left-to-right reveal plays once on
+// startup and then the component goes completely still — no shimmer loop, no
+// requestLive. The grainy ASCII mark in ../logo.ts is intentionally not used
+// here; it still backs the splash, upsell pulse, and CLI banners.
+const WORDMARK = "PrioriCode"
+const TAGLINE = "the open source AI coding agent"
 
 const FRAME_MS = 33
-const REVEAL_MS = 520
-const SHIMMER_MS = 4600
-const GLINT_WIDTH = 3.5
-const GLINT_STRENGTH = 0.9
+const REVEAL_MS = 600
+const WORDMARK_GRADIENT_END = 0.85
 
-type Cell = { char: string; x: number }
+type Cell = { char: string; x: number; offset: number }
 
-const width = (rows: string[]) => Math.max(0, ...rows.map((row) => row.length))
+const line = (text: string, offset: number): Cell[] => Array.from(text, (char, x) => ({ char, x, offset }))
 
-const LEFT_WIDTH = width(logo.left)
-const TOTAL_WIDTH = LEFT_WIDTH + 1 + width(logo.right)
+const LINES: { cells: Cell[]; bold: boolean; tone: "gradient" | "muted" }[] = [
+  { cells: line(WORDMARK, 0), bold: true, tone: "gradient" },
+  { cells: line(TAGLINE, WORDMARK.length + 1), bold: false, tone: "muted" },
+]
 
-const cells = (line: string, offset: number): Cell[] => Array.from(line, (char, x) => ({ char, x: x + offset }))
-
-const ROWS = logo.left.map((line, index) => ({
-  left: cells(line, 0),
-  right: cells(logo.right[index] ?? "", LEFT_WIDTH + 1),
-}))
+const SWEEP = WORDMARK.length + 1 + TAGLINE.length
 
 export function Logo() {
   const { theme } = useTheme()
-  const renderer = useRenderer()
   const kv = useKV()
   const [animationsEnabled] = kv.signal("animations_enabled", true)
-  const [frame, setFrame] = createSignal(0)
+  const [progress, setProgress] = createSignal(animationsEnabled() ? 0 : 1)
 
   onMount(() => {
+    if (!animationsEnabled()) return
     const start = performance.now()
-    const timer = setInterval(() => setFrame(Math.floor((performance.now() - start) / FRAME_MS)), FRAME_MS)
+    const timer = setInterval(() => {
+      const t = (performance.now() - start) / REVEAL_MS
+      if (t >= 1) {
+        clearInterval(timer)
+        setProgress(1)
+        return
+      }
+      setProgress(1 - (1 - t) ** 3)
+    }, FRAME_MS)
     onCleanup(() => clearInterval(timer))
   })
 
-  // The renderer stops emitting frames once it goes idle, so the glint sweep
-  // needs a live request to keep painting (same mechanism as the spinner).
-  createEffect(() => {
-    if (!animationsEnabled()) return
-    renderer.requestLive()
-    onCleanup(() => renderer.dropLive())
-  })
+  const gradient = createMemo(() =>
+    WORDMARK.split("").map((_, i) =>
+      tint(theme.primary, theme.text, (i / (WORDMARK.length - 1)) * WORDMARK_GRADIENT_END),
+    ),
+  )
 
-  const revealX = () => {
-    if (!animationsEnabled()) return TOTAL_WIDTH + 4
-    const progress = Math.min(1, (frame() * FRAME_MS) / REVEAL_MS)
-    return (1 - (1 - progress) ** 3) * (TOTAL_WIDTH + 4) - 2
-  }
-
-  const glintX = () => {
-    if (!animationsEnabled()) return Number.NEGATIVE_INFINITY
-    const elapsed = frame() * FRAME_MS - REVEAL_MS
-    if (elapsed < 0) return Number.NEGATIVE_INFINITY
-    return -6 + ((elapsed % SHIMMER_MS) / SHIMMER_MS) * (TOTAL_WIDTH + 12)
-  }
-
-  const base = (kind: Tone): RGBA => {
-    if (kind === "accent") return theme.primary
-    if (kind === "light") return tint(theme.background, theme.textMuted, 0.55)
-    return theme.text
-  }
-
-  const renderLine = (line: Cell[], rowIndex: number, bold: boolean): JSX.Element[] =>
-    line.map((cell) => {
+  const renderLine = (cells: Cell[], bold: boolean, kind: "gradient" | "muted"): JSX.Element[] =>
+    cells.map((cell, index) => {
       if (cell.char === " ") return <text> </text>
-      const kind = tone(cell.char)
-      const attrs = bold || kind === "text" ? TextAttributes.BOLD : undefined
-      const from = base(kind)
-      const edge = createMemo(() => Math.max(0, Math.min(1, revealX() - cell.x)))
-      const glint = createMemo(() => {
-        const raw = 1 - Math.abs(cell.x + rowIndex * 0.7 - glintX()) / GLINT_WIDTH
-        return raw <= 0 ? 0 : raw * raw * (3 - 2 * raw) * GLINT_STRENGTH
-      })
+      const edge = createMemo(() => Math.max(0, Math.min(1, progress() * SWEEP - cell.offset - cell.x)))
       const fg = createMemo(() => {
         const fade = edge()
         if (fade <= 0) return theme.background
-        const flash = kind === "accent" ? RGBA.fromInts(255, 255, 255) : theme.primary
-        return tint(tint(theme.background, from, fade), flash, glint() * fade)
+        const from = kind === "gradient" ? gradient()[index] : theme.textMuted
+        return tint(theme.background, from, fade)
       })
       const content = createMemo(() => (edge() <= 0 ? " " : cell.char))
       return (
-        <text fg={fg()} attributes={attrs} selectable={false}>
+        <text fg={fg()} attributes={bold ? TextAttributes.BOLD : undefined} selectable={false}>
           {content()}
         </text>
       )
     })
 
   return (
-    <box>
-      <For each={ROWS}>
-        {(row, index) => (
-          <box flexDirection="row" gap={1}>
-            <box flexDirection="row">{renderLine(row.left, index(), false)}</box>
-            <box flexDirection="row">{renderLine(row.right, index(), true)}</box>
-          </box>
-        )}
-      </For>
+    <box flexDirection="column" alignItems="center">
+      <For each={LINES}>{(row) => <box flexDirection="row">{renderLine(row.cells, row.bold, row.tone)}</box>}</For>
     </box>
   )
 }
