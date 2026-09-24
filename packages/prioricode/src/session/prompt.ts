@@ -1349,11 +1349,21 @@ const layer = Layer.effect(
             // ("compact" overflow) or errored (provider failure / interrupt) — those
             // claims stay unacked so the recovery pass re-delivers them. A clean
             // permission-block stop still acks: the model did see the notes.
-            if (coordinationNotes.length > 0 && result !== "compact" && !handle.message.error)
-              yield* coordination.markAck(
-                coordinationNotes.map((note) => note.id),
-                msg.id,
-              )
+            if (coordinationNotes.length > 0) {
+              if (result !== "compact" && !handle.message.error) {
+                yield* coordination.markAck(
+                  coordinationNotes.map((note) => note.id),
+                  msg.id,
+                )
+              } else {
+                // Step errored or was compact-rejected: the notes were claimed
+                // but never acked, and the carrying system prompt is discarded.
+                // Re-queue immediately so the next step boundary re-injects
+                // them — otherwise they would sit for the 15-min recovery grace
+                // and the model would never actually see them.
+                yield* coordination.unclaimUnacked(coordinationNotes.map((note) => note.id))
+              }
+            }
 
             if (structured !== undefined) {
               handle.message.structured = structured

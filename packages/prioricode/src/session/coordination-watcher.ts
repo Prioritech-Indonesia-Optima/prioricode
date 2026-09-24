@@ -197,6 +197,49 @@ const layer = Layer.effect(
         sessionIDs: fullyIdle.map((session) => session.id),
         cutoffMs: Date.now() - ACK_RECOVERY_GRACE_MS,
       })
+      // Unanswered pass first: a request that has aged past the grace with nobody
+      // answering it gets a reply from the session's standing responder child,
+      // regardless of whether the main agent is busy or idle. The main agent
+      // may still answer (or correct) at its own boundary — the atomic claim
+      // plus the already-answered guard make double replies impossible from
+      // the responder side, and a parent's later answer arrives as a
+      // correction. Fresh requests are deliberately left for the main agent's
+      // own next boundary.
+      // Run this BEFORE the wake pass so responder spawns are not delayed by
+      // long wake turns (the wake loop awaits each woken session's full turn).
+      if (!flags.disableCoordinationResponder) {
+        let launches = 0
+        const now = Date.now()
+        for (const session of roots) {
+          if (launches >= RESPONDERS_PER_SWEEP) break
+          if (runningResponders.has(session.id)) continue
+          const failedAt = responderFailures.get(session.id)
+          if (failedAt !== undefined && now - failedAt < RESPONDER_BACKOFF_MS) continue
+          const leased = yield* coordination.claimUnanswered({
+            sessionID: session.id,
+            olderThanMs: RESPONDER_GRACE_MS,
+            limit: RESPONDER_BATCH_LIMIT,
+            claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}${session.id}`,
+          })
+          if (leased.length === 0) continue
+          const worthAnswering: Coordination.Info[] = []
+          for (const request of leased) {
+            const requester = yield* sessions
+              .get(request.fromSession)
+              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
+            if (requester && !requester.time.archived && now - requester.time.updated < RESPONDER_REQUESTER_STALE_MS) {
+              worthAnswering.push(request)
+              continue
+            }
+            // Ghost traffic from a deleted or long-abandoned session: settle the
+            // ledger without spending model turns on it.
+            yield* coordination.markAck([request.id])
+          }
+          if (worthAnswering.length === 0) continue
+          launches++
+          yield* spawnResponder(session, worthAnswering)
+        }
+      }
       const idle = roots.filter((session) => busy.get(session.id)?.type !== "busy")
       let woken = 0
       for (const session of idle) {
@@ -232,47 +275,6 @@ const layer = Layer.effect(
               ),
             )
           pending = yield* unread(session.id)
-        }
-      }
-      // Unanswered pass: a request that has aged past the grace with nobody
-      // answering it gets a reply from the session's standing responder child,
-      // regardless of whether the main agent is busy or idle. The main agent
-      // may still answer (or correct) at its own boundary — the atomic claim
-      // plus the already-answered guard make double replies impossible from
-      // the responder side, and a parent's later answer arrives as a
-      // correction. Fresh requests are deliberately left for the main agent's
-      // own next boundary.
-      if (!flags.disableCoordinationResponder) {
-        let launches = 0
-        const now = Date.now()
-        for (const session of roots) {
-          if (launches >= RESPONDERS_PER_SWEEP) break
-          if (runningResponders.has(session.id)) continue
-          const failedAt = responderFailures.get(session.id)
-          if (failedAt !== undefined && now - failedAt < RESPONDER_BACKOFF_MS) continue
-          const leased = yield* coordination.claimUnanswered({
-            sessionID: session.id,
-            olderThanMs: RESPONDER_GRACE_MS,
-            limit: RESPONDER_BATCH_LIMIT,
-            claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}${session.id}`,
-          })
-          if (leased.length === 0) continue
-          const worthAnswering: Coordination.Info[] = []
-          for (const request of leased) {
-            const requester = yield* sessions
-              .get(request.fromSession)
-              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
-            if (requester && !requester.time.archived && now - requester.time.updated < RESPONDER_REQUESTER_STALE_MS) {
-              worthAnswering.push(request)
-              continue
-            }
-            // Ghost traffic from a deleted or long-abandoned session: settle the
-            // ledger without spending model turns on it.
-            yield* coordination.markAck([request.id])
-          }
-          if (worthAnswering.length === 0) continue
-          launches++
-          yield* spawnResponder(session, worthAnswering)
         }
       }
       return woken
