@@ -6,6 +6,7 @@ import { SessionV1 } from "@prioricode/core/v1/session"
 import { Session } from "./session"
 import { SessionID } from "./schema"
 import { SessionStatus } from "./status"
+import { SessionPresence } from "./presence"
 import { SessionPrompt } from "./prompt"
 import { Coordination } from "./coordination"
 import { Todo } from "./todo"
@@ -37,6 +38,10 @@ const RESPONDER_REQUESTER_STALE_MS = 72 * 60 * 60_000
 // otherwise every 2s sweep would respawn, clone sessions, and burn tokens
 // against a broken provider.
 const RESPONDER_BACKOFF_MS = 5 * 60_000
+// A notify fires only once the target has been idle at least this long AND has
+// nothing still queued — so a transient idle between a synthetic wake turn and
+// the next real note does not read as "done".
+const NOTIFY_IDLE_DEBOUNCE_MS = 10_000
 
 export interface Interface {
   /**
@@ -59,6 +64,7 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const sessions = yield* Session.Service
     const status = yield* SessionStatus.Service
+    const presence = yield* SessionPresence.Service
     const coordination = yield* Coordination.Service
     const prompt = yield* SessionPrompt.Service
     const todo = yield* Todo.Service
@@ -197,7 +203,46 @@ const layer = Layer.effect(
         sessionIDs: fullyIdle.map((session) => session.id),
         cutoffMs: Date.now() - ACK_RECOVERY_GRACE_MS,
       })
-      const idle = roots.filter((session) => busy.get(session.id)?.type !== "busy")
+      // Durable, cross-process idle set: a session genuinely busy in ANY process
+      // (fresh heartbeat) is excluded, so we never double-run or takeover-steal a
+      // peer another terminal is actively working. `idleSince` also carries the
+      // idle-since timestamp the notify pass debounces on.
+      const idleSince = yield* presence.idleSince(roots.map((session) => session.id))
+      const durableIdleIDs = [...idleSince.keys()]
+      // Keep locally-busy sessions' heartbeats fresh so a crash (no onIdle) makes
+      // their busy row go stale after the grace, rather than reading idle forever.
+      yield* presence.touch([...busy.keys()])
+      // Notify pass (before wakes, since it never runs a model turn): resolve each
+      // one-shot idle subscription exactly once across processes — firing when the
+      // target has been durably idle past the debounce with nothing queued, or
+      // expiring past its deadline. The resolution posts a real `message` to the
+      // waiter, which the wake pass below then delivers.
+      {
+        const now = Date.now()
+        for (const notify of yield* coordination.pendingNotifies()) {
+          if (!notify.toSession) continue
+          const target = notify.toSession
+          const since = idleSince.get(target)
+          const expired = notify.deadline !== undefined && now > notify.deadline
+          const settled =
+            since !== undefined &&
+            now - since >= NOTIFY_IDLE_DEBOUNCE_MS &&
+            (yield* coordination.inbox({ sessionID: target, kinds: Coordination.WAKE_KINDS, unreadOnly: true }))
+              .length === 0
+          if (!expired && !settled) continue
+          if (!(yield* coordination.resolveNotify(notify.id))) continue
+          const waiter = notify.fromSession
+          yield* coordination.post({
+            projectID: notify.projectID,
+            kind: "message",
+            fromSession: target,
+            toSession: waiter,
+            body: expired
+              ? `Your notify on session ${target} expired: it did not go idle within the deadline.${notify.body ? ` (${notify.body})` : ""}`
+              : `Session ${target} is now idle.${notify.body ? ` Your note: ${notify.body}` : ""}`,
+          })
+        }
+      }
       // Unanswered pass first: a request that has aged past the grace with nobody
       // answering it gets a reply from the session's standing responder child,
       // regardless of whether the main agent is busy or idle. The main agent
@@ -211,7 +256,7 @@ const layer = Layer.effect(
       if (!flags.disableCoordinationResponder) {
         let launches = 0
         const now = Date.now()
-        const idleIDs = idle.map((s) => s.id)
+        const idleIDs = durableIdleIDs
         for (const session of roots) {
           if (launches >= RESPONDERS_PER_SWEEP) break
           if (runningResponders.has(session.id)) continue
@@ -252,7 +297,7 @@ const layer = Layer.effect(
         }
       }
       let woken = 0
-      for (const session of idle) {
+      for (const session of roots.filter((s) => idleSince.has(s.id))) {
         // Detect without claiming: the turn-boundary claimUnread inside runLoop is the
         // single delivery point, so a note is only marked read when it is actually
         // injected into the model context. A coalesced wake therefore can never
@@ -314,7 +359,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [Session.node, SessionStatus.node, Coordination.node, SessionPrompt.node, Todo.node, RuntimeFlags.node],
+  deps: [Session.node, SessionStatus.node, SessionPresence.node, Coordination.node, SessionPrompt.node, Todo.node, RuntimeFlags.node],
 })
 
 export * as CoordinationWatcher from "./coordination-watcher"

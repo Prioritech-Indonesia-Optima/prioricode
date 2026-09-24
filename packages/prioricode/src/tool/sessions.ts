@@ -7,11 +7,11 @@ import { SessionStatus } from "@/session/status"
 import { SessionID } from "../session/schema"
 
 export const Parameters = Schema.Struct({
-  action: Schema.Literals(["discover", "claim", "release", "send", "ask", "respond", "wait"]).annotate({
+  action: Schema.Literals(["discover", "claim", "release", "send", "ask", "respond", "wait", "notify"]).annotate({
     description: "Coordination action to perform against sibling sessions in this project",
   }),
   target: Schema.optional(Schema.String).annotate({
-    description: "Target session ID for send/ask",
+    description: "Target session ID for send/ask/notify",
   }),
   message: Schema.optional(Schema.String).annotate({
     description: "Coordination text for send/ask, or the answer for respond",
@@ -22,8 +22,12 @@ export const Parameters = Schema.Struct({
   paths: Schema.optional(Schema.Array(Schema.String)).annotate({
     description: "File paths to claim or release (claim/release)",
   }),
+  note: Schema.optional(Schema.String).annotate({
+    description: "For notify: a short reminder of what you are waiting on, echoed back in the idle notice.",
+  }),
   timeout: Schema.optional(Schema.Number).annotate({
-    description: "For ask: maximum seconds to wait for a response. Defaults to 60, capped at 300.",
+    description:
+      "For ask/wait: maximum seconds to block for a response (default 60, max 300). For notify: seconds until the subscription expires (default 12h).",
   }),
 })
 
@@ -38,6 +42,8 @@ const DEFAULT_TIMEOUT_SECONDS = 60
 const MAX_TIMEOUT_SECONDS = 300
 const STALE_AFTER_MS = 1000 * 60 * 60 * 72
 const RECENT_DELIVERED_MS = 1000 * 60 * 30
+// Default lifetime of a notify subscription when no timeout is given.
+const NOTIFY_DEFAULT_MS = 1000 * 60 * 60 * 12
 
 const agoLabel = (ms: number) => {
   const minutes = Math.floor(ms / 60_000)
@@ -232,6 +238,31 @@ export const SessionsTool = Tool.define(
         )
       })
 
+      const notify = Effect.fn("SessionsTool.notify")(function* (
+        self: Session.Info,
+        params: Schema.Schema.Type<typeof Parameters>,
+      ) {
+        const target = params.target
+        if (!target) return failure("notify requires a target session id")
+        const resolved = yield* resolveTarget(target)
+        if (!resolved.ok) return failure(resolved.error)
+        const lifetime = params.timeout !== undefined ? params.timeout * 1000 : NOTIFY_DEFAULT_MS
+        yield* coordination.post({
+          projectID: self.projectID,
+          kind: "notify",
+          fromSession: self.id,
+          toSession: SessionID.make(target),
+          body: params.note ?? "",
+          deadline: Date.now() + lifetime,
+        })
+        return result(
+          "notify",
+          `You'll be notified when ${target} ("${resolved.session.title}") next goes idle (or this subscription expires in ${Math.round(lifetime / 1000)}s). ` +
+            "Continue working — the notice arrives in your inbox and wakes you if idle; do not block on it.",
+          { target },
+        )
+      })
+
       const ask = Effect.fn("SessionsTool.ask")(function* (
         self: Session.Info,
         params: Schema.Schema.Type<typeof Parameters>,
@@ -421,6 +452,8 @@ export const SessionsTool = Tool.define(
           return result("release", `Released ${params.paths?.length ?? 0} claim(s).`)
         case "send":
           return yield* send(self, params)
+        case "notify":
+          return yield* notify(self, params)
         case "ask":
           return yield* ask(self, params)
         case "respond":

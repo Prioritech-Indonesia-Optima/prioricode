@@ -755,4 +755,33 @@ describe("Coordination", () => {
       expect(row?.claimedBy).toBeUndefined()
     }),
   )
+
+  it.effect("pendingNotifies lists unresolved subscriptions and resolveNotify settles each once", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      const notify = yield* coordination.post({
+        projectID,
+        kind: "notify",
+        fromSession: a,
+        toSession: b,
+        body: "waiting for the release",
+        deadline: Date.now() + 60_000,
+      })
+      expect((yield* coordination.pendingNotifies()).map((item) => item.id)).toEqual([notify.id])
+      // The first resolver wins; a second (e.g. another process) is a no-op.
+      expect(yield* coordination.resolveNotify(notify.id)).toBe(true)
+      expect(yield* coordination.resolveNotify(notify.id)).toBe(false)
+      expect(yield* coordination.pendingNotifies()).toHaveLength(0)
+      // resolveNotify only touches notify rows, never a request.
+      const request = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "not a notify",
+      })
+      expect(yield* coordination.resolveNotify(request.id)).toBe(false)
+    }),
+  )
 })

@@ -4,7 +4,7 @@ import { ProjectTable } from "../project/sql"
 import { ProjectV2 } from "../project"
 import { Timestamps } from "../database/schema.sql"
 
-export type CoordinationKind = "message" | "request" | "response" | "claim" | "record"
+export type CoordinationKind = "message" | "request" | "response" | "claim" | "record" | "notify"
 
 /**
  * Durable, cross-process coordination between concurrent Sessions that share one

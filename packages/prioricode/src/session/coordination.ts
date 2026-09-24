@@ -161,6 +161,17 @@ export interface Interface {
    * could reply), leaving acked rows — consumed replies included — alone.
    */
   readonly unclaimUnacked: (ids: ReadonlyArray<string>) => Effect.Effect<number>
+  /**
+   * Unresolved one-shot idle subscriptions (kind='notify', never claimed). The
+   * watcher resolves each into a real `message` to the waiter when the target
+   * goes durably idle, or expires it past its deadline.
+   */
+  readonly pendingNotifies: () => Effect.Effect<Info[]>
+  /**
+   * Atomically settle a notify row exactly once across processes: stamps it read
+   * only if still unread, returning true for the single winning caller.
+   */
+  readonly resolveNotify: (id: string) => Effect.Effect<boolean>
   /** Rows this session sent (message/request) within a recency window, for the sender-side receipt ledger. */
   readonly sentBy: (input: { sessionID: SessionID; withinMs: number; limit?: number }) => Effect.Effect<Info[]>
   /** Response rows threading back to any of the given request ids, in one query. */
@@ -606,6 +617,34 @@ const layer = Layer.effect(
       return rows.length
     })
 
+    const pendingNotifies = Effect.fn("Coordination.pendingNotifies")(function* () {
+      const rows = yield* db
+        .select()
+        .from(CoordinationTable)
+        .where(and(eq(CoordinationTable.kind, "notify"), isNull(CoordinationTable.time_read)))
+        .orderBy(asc(CoordinationTable.time_created))
+        .all()
+        .pipe(Effect.orDie)
+      return rows.map(fromRow)
+    })
+
+    const resolveNotify = Effect.fn("Coordination.resolveNotify")(function* (id: string) {
+      const rows = yield* db
+        .update(CoordinationTable)
+        .set({ time_read: Date.now(), time_updated: Date.now() })
+        .where(
+          and(
+            eq(CoordinationTable.id, id),
+            eq(CoordinationTable.kind, "notify"),
+            isNull(CoordinationTable.time_read),
+          ),
+        )
+        .returning({ id: CoordinationTable.id })
+        .all()
+        .pipe(Effect.orDie)
+      return rows.length > 0
+    })
+
     const sentBy = Effect.fn("Coordination.sentBy")(function* (input: {
       sessionID: SessionID
       withinMs: number
@@ -724,6 +763,8 @@ const layer = Layer.effect(
       markAck,
       unclaimStaleUnacked,
       unclaimUnacked,
+      pendingNotifies,
+      resolveNotify,
       sentBy,
       responsesFor,
       responsesTo,

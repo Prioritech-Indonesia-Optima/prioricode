@@ -2748,6 +2748,147 @@ describe("cross-session coordination", () => {
   )
 
   coordinationIt.instance(
+    "notify on an idle target resolves and posts an idle notice to the waiter",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const waiter = yield* sessions.create({ title: "waiter" })
+        const target = yield* sessions.create({ title: "idle target" })
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "notify",
+          fromSession: waiter.id,
+          toSession: target.id,
+          body: "ping me when the build is done",
+          deadline: Date.now() + 60_000,
+        })
+        // Target never ran → durably idle since 0 → the subscription settles.
+        // The notice wakes the waiter, which needs one canned reply.
+        yield* llm.text("ack")
+        yield* watcher.sweep()
+        expect(yield* coordination.pendingNotifies()).toHaveLength(0)
+        const notices = yield* coordination.inbox({ sessionID: waiter.id, kinds: ["message"] })
+        expect(notices).toHaveLength(1)
+        expect(notices[0].body).toContain("is now idle")
+        expect(notices[0].body).toContain("ping me when the build is done")
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "notify on a busy target stays unresolved until it goes idle",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const prompt = yield* SessionPrompt.Service
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const waiter = yield* sessions.create({ title: "waiter" })
+        const target = yield* sessions.create({
+          title: "busy target",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "notify",
+          fromSession: waiter.id,
+          toSession: target.id,
+          body: "",
+          deadline: Date.now() + 60_000,
+        })
+        yield* llm.hang
+        yield* user(target.id, "working")
+        const busy = yield* prompt.loop({ sessionID: target.id }).pipe(Effect.forkChild)
+        yield* waitForBusy(target.id)
+        // Busy (fresh heartbeat) → not idle → subscription stays pending.
+        yield* watcher.sweep()
+        expect(yield* coordination.pendingNotifies()).toHaveLength(1)
+        expect(yield* coordination.inbox({ sessionID: waiter.id, kinds: ["message"], unreadOnly: true })).toHaveLength(
+          0,
+        )
+        yield* Fiber.interrupt(busy)
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "notify does not fire while the idle target still has queued work",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const waiter = yield* sessions.create({ title: "waiter" })
+        const target = yield* sessions.create({ title: "target" })
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "notify",
+          fromSession: waiter.id,
+          toSession: target.id,
+          body: "",
+          deadline: Date.now() + 60_000,
+        })
+        // Target is idle but has an unread note queued → not "done" yet, so the
+        // notify stays pending. The queued note still wakes the target (one reply).
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "message",
+          fromSession: waiter.id,
+          toSession: target.id,
+          body: "queued work",
+        })
+        yield* llm.text("ack")
+        yield* watcher.sweep()
+        expect(yield* coordination.pendingNotifies()).toHaveLength(1)
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "notify past its deadline expires with a notice to the waiter",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const { llm } = yield* useServerConfig(providerCfg)
+        const prompt = yield* SessionPrompt.Service
+        const waiter = yield* sessions.create({ title: "waiter" })
+        const target = yield* sessions.create({
+          title: "never-idle target",
+          permission: [{ permission: "*", pattern: "*", action: "allow" }],
+        })
+        yield* coordination.post({
+          projectID: target.projectID,
+          kind: "notify",
+          fromSession: waiter.id,
+          toSession: target.id,
+          body: "",
+          deadline: Date.now() - 1, // already expired
+        })
+        // Keep the target busy so only the expiry path can resolve the notify.
+        // The target hangs on the first reply; the waiter's wake uses the second.
+        yield* llm.hang
+        yield* llm.text("ack")
+        yield* user(target.id, "working")
+        const busy = yield* prompt.loop({ sessionID: target.id }).pipe(Effect.forkChild)
+        yield* waitForBusy(target.id)
+        yield* watcher.sweep()
+        expect(yield* coordination.pendingNotifies()).toHaveLength(0)
+        const notices = yield* coordination.inbox({ sessionID: waiter.id, kinds: ["message"] })
+        expect(notices).toHaveLength(1)
+        expect(notices[0].body).toContain("expired")
+        yield* Fiber.interrupt(busy)
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
     "send fails for an unknown target id without posting anything",
     () =>
       Effect.gen(function* () {

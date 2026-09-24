@@ -1,9 +1,9 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "99f42616-1b3b-4a2a-8b49-09996dc0dc15",
+  "id": "19c21123-d505-4cea-b183-86ecd9e7a324",
   "prevIds": [
-    "8911d049-eecb-4282-9665-b63fb2044a12"
+    "99f42616-1b3b-4a2a-8b49-09996dc0dc15"
   ],
   "ddl": [
     {
@@ -16,6 +16,10 @@
     },
     {
       "name": "session_coordination",
+      "entityType": "tables"
+    },
+    {
+      "name": "session_presence",
       "entityType": "tables"
     },
     {
@@ -345,6 +349,66 @@
       "name": "thread_id",
       "entityType": "columns",
       "table": "session_coordination"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "session_id",
+      "entityType": "columns",
+      "table": "session_presence"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "project_id",
+      "entityType": "columns",
+      "table": "session_presence"
+    },
+    {
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "state",
+      "entityType": "columns",
+      "table": "session_presence"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_changed",
+      "entityType": "columns",
+      "table": "session_presence"
+    },
+    {
+      "type": "integer",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "pid",
+      "entityType": "columns",
+      "table": "session_presence"
+    },
+    {
+      "type": "integer",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "time_heartbeat",
+      "entityType": "columns",
+      "table": "session_presence"
     },
     {
       "type": "integer",
@@ -1688,6 +1752,21 @@
     },
     {
       "columns": [
+        "project_id"
+      ],
+      "tableTo": "project",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "nameExplicit": false,
+      "name": "fk_session_presence_project_id_project_id_fk",
+      "entityType": "fks",
+      "table": "session_presence"
+    },
+    {
+      "columns": [
         "active_account_id"
       ],
       "tableTo": "account",
@@ -1921,6 +2000,15 @@
       "nameExplicit": false,
       "name": "session_coordination_pk",
       "table": "session_coordination",
+      "entityType": "pks"
+    },
+    {
+      "columns": [
+        "session_id"
+      ],
+      "nameExplicit": false,
+      "name": "session_presence_pk",
+      "table": "session_presence",
       "entityType": "pks"
     },
     {
