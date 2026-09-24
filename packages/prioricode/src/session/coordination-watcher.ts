@@ -139,6 +139,14 @@ const layer = Layer.effect(
         requests: requests.length,
       })
       const ids = requests.map((request) => request.id)
+      // Fetch each request's negotiation thread so the responder answers a
+      // follow-up with the prior rounds in view (consistent negotiation).
+      const threads: Record<string, Coordination.Info[]> = {}
+      for (const request of requests) {
+        if (!request.threadId) continue
+        const rows = yield* coordination.thread(request.threadId)
+        if (rows.length > 1) threads[request.id] = rows
+      }
       yield* prompt
         .prompt({
           sessionID: child.id,
@@ -151,6 +159,7 @@ const layer = Layer.effect(
                 parent: { id: parent.id, title: parent.title },
                 requests,
                 snapshot,
+                threads,
               }),
             },
           ],

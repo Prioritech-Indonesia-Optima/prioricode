@@ -19,6 +19,9 @@ export const Parameters = Schema.Struct({
   request_id: Schema.optional(Schema.String).annotate({
     description: "ID of a pending request to answer with respond, or to re-wait on with wait",
   }),
+  thread_id: Schema.optional(Schema.String).annotate({
+    description: "For ask: the thread_id of a prior request to continue that negotiation with context instead of starting a new thread.",
+  }),
   paths: Schema.optional(Schema.Array(Schema.String)).annotate({
     description: "File paths to claim or release (claim/release)",
   }),
@@ -294,6 +297,7 @@ export const SessionsTool = Tool.define(
           fromSession: self.id,
           toSession: SessionID.make(target),
           body: message,
+          ...(params.thread_id ? { threadId: params.thread_id } : {}),
         })
         const seconds = Math.min(params.timeout ?? DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS)
         const receipt = {
@@ -379,6 +383,7 @@ export const SessionsTool = Tool.define(
           toSession: requester,
           body,
           replyTo: requestID,
+          ...(request.threadId ? { threadId: request.threadId } : {}),
         })
         yield* coordination.markRead([requestID])
         yield* coordination.markAck([requestID])

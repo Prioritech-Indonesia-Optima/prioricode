@@ -669,6 +669,69 @@ describe("Coordination", () => {
     return Effect.sync(() => {})
   })
 
+  it.effect("responderPrompt embeds prior thread rounds for a follow-up negotiation", () => {
+    const root = {
+      id: "coo_root",
+      projectID,
+      kind: "request" as const,
+      fromSession: a,
+      toSession: b,
+      body: "is the API frozen?",
+      timeCreated: 1,
+      threadId: "coo_root",
+    }
+    const answer = {
+      id: "coo_ans",
+      projectID,
+      kind: "response" as const,
+      fromSession: b,
+      toSession: a,
+      body: "yes, frozen at v2",
+      timeCreated: 2,
+      threadId: "coo_root",
+    }
+    const followUp = {
+      id: "coo_follow",
+      projectID,
+      kind: "request" as const,
+      fromSession: a,
+      toSession: b,
+      body: "can I add a field?",
+      timeCreated: 3,
+      threadId: "coo_root",
+    }
+    const text = Coordination.responderPrompt({
+      parent: { id: b, title: "API owner" },
+      requests: [followUp],
+      snapshot: "assistant: API is frozen at v2",
+      threads: { [followUp.id]: [root, answer, followUp] },
+    })
+    expect(text).toContain("prior rounds in this thread")
+    expect(text).toContain("is the API frozen?")
+    expect(text).toContain("yes, frozen at v2")
+    // The follow-up itself is the request line, not duplicated as a prior round.
+    expect(text).toContain("request_id coo_follow")
+    return Effect.sync(() => {})
+  })
+
+  it.effect("formatNotes flags a follow-up request as part of an existing thread", () => {
+    const followUp = {
+      id: "coo_follow",
+      projectID,
+      kind: "request" as const,
+      fromSession: a,
+      toSession: b,
+      body: "can I add a field?",
+      timeCreated: 3,
+      threadId: "coo_root",
+    }
+    const text = Coordination.formatNotes([followUp])
+    expect(text).toContain("follow-up in thread coo_root")
+    const root = { ...followUp, threadId: "coo_follow" }
+    expect(Coordination.formatNotes([root])).not.toContain("follow-up in thread")
+    return Effect.sync(() => {})
+  })
+
   it.effect("deliveredWithin surfaces notes already consumed by a turn (no gaslighting)", () =>
     Effect.gen(function* () {
       yield* setup
@@ -880,6 +943,51 @@ describe("Coordination", () => {
         claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
       })
       expect(leased.map((item) => item.id)).not.toContain(request.id)
+    }),
+  )
+
+  it.effect("requests root a thread; replies and follow-ups join it in order", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      const root = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "round 1",
+      })
+      // A root request is its own thread.
+      expect(root.threadId).toBe(root.id)
+      const reply = yield* coordination.post({
+        projectID,
+        kind: "response",
+        fromSession: b,
+        toSession: a,
+        body: "answer 1",
+        replyTo: root.id,
+        threadId: root.threadId,
+      })
+      const followUp = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "round 2",
+        threadId: root.threadId,
+      })
+      expect(followUp.threadId).toBe(root.id)
+      const rows = yield* coordination.thread(root.id)
+      expect(rows.map((row) => row.id)).toEqual([root.id, reply.id, followUp.id])
+      // A message not tied to a thread has no thread_id.
+      const note = yield* coordination.post({
+        projectID,
+        kind: "message",
+        fromSession: a,
+        toSession: b,
+        body: "loose note",
+      })
+      expect(note.threadId).toBeUndefined()
     }),
   )
 })
