@@ -50,6 +50,19 @@ export const go = {
   ],
 }
 
+// Oversized block-letter "PrioriCode" wordmark for the home hero, rendered as
+// full-block cells with a horizontal amber→text gradient and a soft glow band.
+// 5x7 pixel glyphs per letter, one blank column between letters (59 columns).
+export const big = [
+  "████          █                 █    ████          █",
+  "█   █ █ ██         ███  █ ██        █      ███     █   ███",
+  "█   █ ██  █  ██   █   █ ██  █  ██   █     █   █  █ █  █   █",
+  "████  █       █   █   █ █       █   █     █   █ █ ██  █████",
+  "█     █       █   █   █ █       █   █     █   █ █  █  █",
+  "█     █       █   █   █ █       █   █     █   █ █  █  █",
+  "█     █      ███   ███  █      ███   ████  ███   ██ █  ███",
+]
+
 export type Tone = "space" | "light" | "base" | "accent" | "text"
 
 const LIGHT = new Set([".", ",", ":", "'"])
