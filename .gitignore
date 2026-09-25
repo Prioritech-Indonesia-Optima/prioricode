@@ -31,6 +31,10 @@ AGENTS.md
 
 # Local dev files
 prioricode-dev
+
+# Nested website repo (code.prioritech.co.id) — never tracked here, and never
+# `git clean -fdx` at root while this clone lives inside the worktree
+/prioricode-dist/
 UPCOMING_CHANGELOG.md
 logs/
 *.bun-build
