@@ -34,6 +34,23 @@ export const Info = Schema.Struct({
     description: "JSON schema reference for configuration validation",
   }),
   shell: Schema.optional(Schema.String).annotate({ description: "Default shell to use for terminal and bash tool" }),
+  bashSandbox: Schema.optional(
+    Schema.Struct({
+      mode: Schema.optional(Schema.Literals(["off", "best-effort", "require"])).annotate({
+        description:
+          "OS-level sandbox for the bash tool (macOS seatbelt, Linux bubblewrap). 'off' (default) runs commands unsandboxed; 'best-effort' sandboxes when the platform supports it and warns otherwise; 'require' fails bash calls when the sandbox is unavailable",
+      }),
+      network: Schema.optional(Schema.Literals(["allow", "deny"])).annotate({
+        description: "Whether sandboxed commands may use the network (default: allow)",
+      }),
+      writablePaths: Schema.optional(Schema.mutable(Schema.Array(Schema.String))).annotate({
+        description: "Additional absolute paths that sandboxed commands may write to",
+      }),
+    }),
+  ).annotate({
+    description:
+      "OS-level sandbox for the bash tool. Protects against accidental damage (writes outside the project, network side effects), not against malicious code. Windows is not sandboxed and reports it explicitly.",
+  }),
   logLevel: Schema.optional(LogLevelRef).annotate({ description: "Log level" }),
   server: Schema.optional(ConfigServerV1.Server).annotate({
     description: "Server configuration for prioricode serve and web commands",

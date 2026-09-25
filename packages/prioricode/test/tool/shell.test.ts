@@ -23,6 +23,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceStore } from "@/project/instance-store"
 import { BackgroundJob } from "@/background/job"
 import { JobsTool } from "../../src/tool/jobs"
+import { Sandbox } from "@/sandbox"
 
 const shellLayer = Layer.mergeAll(
   LayerNode.compile(
@@ -35,6 +36,7 @@ const shellLayer = Layer.mergeAll(
       Agent.node,
       RuntimeFlags.node,
       BackgroundJob.node,
+      Sandbox.node,
     ]),
   ),
   testInstanceStoreLayer,
@@ -1300,6 +1302,154 @@ describe("tool.shell background", () => {
         const jobs = yield* initJobs()
         const exit = yield* jobs.execute({ action: "output", id: "job_missing" }, ctx).pipe(Effect.exit)
         expect(Exit.isFailure(exit)).toBe(true)
+      }),
+    ),
+  )
+})
+
+describe("tool.shell sandbox", () => {
+  const fakeLayer = (
+    wrap: (input: Sandbox.WrapInput) => Effect.Effect<Sandbox.WrapResult, Sandbox.SandboxError>,
+  ) =>
+    Layer.succeed(
+      Sandbox.Service,
+      Sandbox.Service.of({
+        probe: () => Effect.succeed({ supported: false as const, reason: "fake" }),
+        wrap,
+      }),
+    )
+
+  const passthrough = (backend: "bwrap" | "seatbelt" | "off", warning?: string) =>
+    fakeLayer((input) => Effect.succeed({ command: input.original, backend, warning }))
+
+  it.live("runs unsandboxed by default and badges metadata sandbox off", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const result = yield* run({ command: "echo sandbox-default" })
+        expect(result.metadata.exit).toBe(0)
+        expect(result.metadata.sandbox).toBe("off")
+      }),
+    ),
+  )
+
+  it.live("require mode fails closed with the typed error and remediation", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const exit = yield* run({ command: "echo hi" }).pipe(
+          Effect.provide(fakeLayer(() => Effect.fail(new Sandbox.SandboxError({ code: "require_unsupported", reason: "fake backend missing" })))),
+          Effect.exit,
+        )
+        if (!Exit.isFailure(exit)) throw new Error("expected require-mode wrap to fail the tool call")
+        const error = Cause.squash(exit.cause)
+        expect(error).toBeInstanceOf(Sandbox.SandboxError)
+        if (!(error instanceof Sandbox.SandboxError)) return
+        expect(error.code).toBe("require_unsupported")
+        expect(error.message).toContain('bashSandbox.mode: "require"')
+        expect(error.message).toContain("fake backend missing")
+        expect(error.message).toContain('"best-effort"')
+      }),
+    ),
+  )
+
+  it.live("best-effort degradation surfaces a visible warning line", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const result = yield* run({ command: "echo ok" }).pipe(Effect.provide(passthrough("off", "no bwrap on this host")))
+        expect(result.metadata.exit).toBe(0)
+        expect(result.metadata.sandbox).toBe("off")
+        expect(result.output).toContain("bash sandbox: no bwrap on this host")
+      }),
+    ),
+  )
+
+  it.live("sandboxed failing commands hint denials; passing ones do not", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const failed = yield* run({ command: "exit 7" }).pipe(Effect.provide(passthrough("bwrap")))
+        expect(failed.metadata.exit).toBe(7)
+        expect(failed.metadata.sandbox).toBe("bwrap")
+        expect(failed.output).toContain("ran in the bwrap sandbox")
+
+        const passed = yield* run({ command: "echo fine" }).pipe(Effect.provide(passthrough("seatbelt")))
+        expect(passed.metadata.exit).toBe(0)
+        expect(passed.metadata.sandbox).toBe("seatbelt")
+        expect(passed.output).not.toContain("ran in the")
+      }),
+    ),
+  )
+
+  const liveBwrap =
+    process.platform === "linux" &&
+    Bun.spawnSync([
+      "bwrap",
+      "--ro-bind",
+      "/",
+      "/",
+      "--dev",
+      "/dev",
+      "--proc",
+      "/proc",
+      "--unshare-user",
+      "--unshare-pid",
+      "--unshare-ipc",
+      "--unshare-uts",
+      "--die-with-parent",
+      "true",
+    ]).exitCode === 0
+
+  if (liveBwrap) {
+    it.live("best-effort on a bwrap host: project writes succeed, system writes are denied", () =>
+      Effect.gen(function* () {
+        const tmp = yield* tmpdirScoped({ config: { bashSandbox: { mode: "best-effort" } } })
+        yield* runIn(
+          tmp,
+          Effect.gen(function* () {
+            const inside = yield* run({ command: "echo inside > canary.txt && cat canary.txt" })
+            expect(inside.metadata.exit).toBe(0)
+            expect(inside.metadata.sandbox).toBe("bwrap")
+            expect(inside.output).toContain("inside")
+
+            const outside = yield* run({ command: "echo nope > /etc/prioricode-sandbox-canary" })
+            expect(outside.metadata.exit).not.toBe(0)
+            expect(outside.metadata.sandbox).toBe("bwrap")
+            expect(outside.output).toContain("ran in the bwrap sandbox")
+          }),
+        )
+      }),
+    )
+  } else {
+    it.live("require mode on a host without a sandbox backend fails closed before spawning", () =>
+      Effect.gen(function* () {
+        const tmp = yield* tmpdirScoped({ config: { bashSandbox: { mode: "require" } } })
+        yield* runIn(
+          tmp,
+          Effect.gen(function* () {
+            const exit = yield* run({ command: "echo must-not-run" }).pipe(Effect.exit)
+            if (!Exit.isFailure(exit)) throw new Error("expected require mode to fail closed on this host")
+            const error = Cause.squash(exit.cause)
+            expect(error).toBeInstanceOf(Sandbox.SandboxError)
+            if (!(error instanceof Sandbox.SandboxError)) return
+            expect(error.code).toBe("require_unsupported")
+          }),
+        )
+      }),
+    )
+  }
+
+  it.live("background start badges the sandbox and forwards the warning", () =>
+    runIn(
+      projectRoot,
+      Effect.gen(function* () {
+        const result = yield* Effect.gen(function* () {
+          const bash = yield* initShell()
+          return yield* bash.execute({ command: "echo bg", background: true }, { ...ctx, extra: {} })
+        }).pipe(Effect.provide(passthrough("off", "windows has no sandbox")))
+        expect((result.metadata as Record<string, unknown>).sandbox).toBe("off")
+        expect(result.output).toContain("bash sandbox: windows has no sandbox")
       }),
     ),
   )

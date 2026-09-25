@@ -18,6 +18,7 @@ import { ShellID } from "./shell/id"
 import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { BackgroundJob } from "@/background/job"
+import { Sandbox } from "@/sandbox"
 import type { TaskPromptOps } from "./task"
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -347,6 +348,7 @@ export const ShellTool = Tool.define(
     const plugin = yield* Plugin.Service
     const flags = yield* RuntimeFlags.Service
     const background = yield* BackgroundJob.Service
+    const sandbox = yield* Sandbox.Service
     const scope = yield* Scope.Scope
     const defaultTimeoutMs = flags.bashDefaultTimeoutMs ?? 2 * 60 * 1000
 
@@ -431,11 +433,12 @@ export const ShellTool = Tool.define(
 
     const run = Effect.fn("ShellTool.run")(function* (
       input: {
-        shell: string
+        process: ChildProcess.Command
         command: string
         cwd: string
-        env: NodeJS.ProcessEnv
         timeout: number
+        sandbox: Sandbox.Backend | "off"
+        sandboxWarning?: string
       },
       ctx: Tool.Context,
     ) {
@@ -485,7 +488,7 @@ export const ShellTool = Tool.define(
       const code: number | null = yield* Effect.scoped(
         Effect.gen(function* () {
           yield* Effect.addFinalizer(closeSink)
-          const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
+          const handle = yield* spawner.spawn(input.process)
 
           yield* Effect.forkScoped(
             Stream.runForEach(Stream.decodeText(handle.all), (chunk) => {
@@ -569,6 +572,12 @@ export const ShellTool = Tool.define(
         )
       }
       if (aborted) meta.push("User aborted the command")
+      if (input.sandboxWarning) meta.push(`bash sandbox: ${input.sandboxWarning}`)
+      if (input.sandbox !== "off" && code !== null && code !== 0) {
+        meta.push(
+          `command ran in the ${input.sandbox} sandbox; "Operation not permitted" style failures may be sandbox denials — ask the user to widen bashSandbox.writablePaths or network instead of retrying the same command.`,
+        )
+      }
       const raw = list.map((item) => item.text).join("")
       const end = tail(raw, limits.maxLines, limits.maxBytes)
       if (end.cut) cut = true
@@ -592,6 +601,7 @@ export const ShellTool = Tool.define(
           output: last || preview(output),
           exit: code,
           truncated: cut,
+          sandbox: input.sandbox,
           ...(cut && file ? { outputPath: file } : {}),
         },
         output,
@@ -599,7 +609,13 @@ export const ShellTool = Tool.define(
     })
 
     const startBackground = Effect.fn("ShellTool.startBackground")(function* (
-      input: { shell: string; command: string; cwd: string; env: NodeJS.ProcessEnv },
+      input: {
+        process: ChildProcess.Command
+        command: string
+        cwd: string
+        sandbox: Sandbox.Backend | "off"
+        sandboxWarning?: string
+      },
       ctx: Tool.Context,
     ) {
       const limits = yield* trunc.limits()
@@ -609,7 +625,7 @@ export const ShellTool = Tool.define(
       const info = yield* background.start({
         type: "bash",
         title: input.command,
-        metadata: { command: input.command, cwd: input.cwd, outputPath, background: true },
+        metadata: { command: input.command, cwd: input.cwd, outputPath, background: true, sandbox: input.sandbox },
         run: Effect.scoped(
           Effect.gen(function* () {
             const sink = createWriteStream(outputPath, { flags: "w" })
@@ -625,7 +641,7 @@ export const ShellTool = Tool.define(
                   }),
               ).pipe(Effect.ignore),
             )
-            const handle = yield* spawner.spawn(cmd(input.shell, input.command, input.cwd, input.env))
+            const handle = yield* spawner.spawn(input.process)
             yield* Effect.addFinalizer(() => handle.kill({ forceKillAfter: "3 seconds" }).pipe(Effect.ignore))
             const reader = yield* Effect.forkScoped(
               Stream.runForEach(Stream.decodeText(handle.all), (chunk) =>
@@ -709,12 +725,14 @@ export const ShellTool = Tool.define(
           jobId: info.id,
           outputPath,
           command: input.command,
+          sandbox: input.sandbox,
         },
         output: [
           `Started in background (job ${info.id}).`,
           `Output is being appended to ${outputPath} — Read/Grep that file for full history.`,
           "You will be notified automatically when it finishes. Do not sleep or poll for it — continue with other work or end your response.",
           `If you need progress before completion, use the jobs tool: { "action": "output", "id": "${info.id}", "cursor": <offset> }.`,
+          ...(input.sandboxWarning ? [`bash sandbox: ${input.sandboxWarning}`] : []),
         ].join("\n"),
       }
     })
@@ -754,17 +772,36 @@ export const ShellTool = Tool.define(
               )
 
               const env = yield* shellEnv(ctx, cwd)
-              if (params.background === true) {
-                return yield* startBackground({ shell, command: params.command, cwd, env }, ctx)
-              }
-
-              return yield* run(
-                {
+              const wrapped = yield* sandbox
+                .wrap({
+                  original: cmd(shell, params.command, cwd, env),
                   shell,
                   command: params.command,
                   cwd,
                   env,
+                })
+                .pipe(Effect.orDie)
+              if (params.background === true) {
+                return yield* startBackground(
+                  {
+                    process: wrapped.command,
+                    command: params.command,
+                    cwd,
+                    sandbox: wrapped.backend,
+                    sandboxWarning: wrapped.warning,
+                  },
+                  ctx,
+                )
+              }
+
+              return yield* run(
+                {
+                  process: wrapped.command,
+                  command: params.command,
+                  cwd,
                   timeout,
+                  sandbox: wrapped.backend,
+                  sandboxWarning: wrapped.warning,
                 },
                 ctx,
               )

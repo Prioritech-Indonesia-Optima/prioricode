@@ -67,6 +67,7 @@ export type Event =
   | EventQuestionV2Asked
   | EventQuestionV2Replied
   | EventQuestionV2Rejected
+  | EventSandboxUnavailable
   | EventTodoUpdated
   | EventLspUpdated
   | EventPermissionAsked
@@ -1362,6 +1363,14 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "sandbox.unavailable"
+        properties: {
+          reason: string
+          mode: "best-effort" | "require"
+        }
+      }
+    | {
+        id: string
         type: "todo.updated"
         properties: {
           sessionID: string
@@ -1891,6 +1900,11 @@ export type AttachmentConfig = {
 export type Config = {
   $schema?: string
   shell?: string
+  bashSandbox?: {
+    mode?: "off" | "best-effort" | "require"
+    network?: "allow" | "deny"
+    writablePaths?: Array<string>
+  }
   logLevel?: LogLevel
   server?: ServerConfig
   command?: {
@@ -2924,6 +2938,7 @@ export type V2Event =
   | QuestionV2Asked
   | QuestionV2Replied
   | QuestionV2Rejected
+  | SandboxUnavailable
   | TodoUpdated
   | LspUpdated
   | PermissionAsked
@@ -5670,6 +5685,24 @@ export type QuestionV2Rejected = {
   }
 }
 
+export type SandboxUnavailable = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "sandbox.unavailable"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    reason: string
+    mode: "best-effort" | "require"
+  }
+}
+
 export type TodoUpdated = {
   id: string
   metadata?: {
@@ -6848,6 +6881,15 @@ export type EventQuestionV2Rejected = {
   properties: {
     sessionID: string
     requestID: string
+  }
+}
+
+export type EventSandboxUnavailable = {
+  id: string
+  type: "sandbox.unavailable"
+  properties: {
+    reason: string
+    mode: "best-effort" | "require"
   }
 }
 

@@ -57,6 +57,7 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ProviderV2 } from "@prioricode/core/provider"
 import { ModelV2 } from "@prioricode/core/model"
 import { MCP } from "@/mcp"
+import { Sandbox } from "@/sandbox"
 import { PermissionV1 } from "@prioricode/core/v1/permission"
 import { McpCatalog } from "@/mcp/catalog"
 
@@ -466,6 +467,7 @@ export const node = LayerNode.make({
     MCP.node,
     Database.node,
     Ripgrep.node,
+    Sandbox.node,
   ],
 })
 
