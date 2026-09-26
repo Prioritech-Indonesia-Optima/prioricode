@@ -8,6 +8,7 @@ export * as WriteTool from "./write"
 
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
+import { EditObserver } from "../edit-observer"
 import { FileMutation } from "../file-mutation"
 import { LocationMutation } from "../location-mutation"
 import { PermissionV2 } from "../permission"
@@ -31,17 +32,19 @@ export const Output = Schema.Struct({
   target: Schema.String,
   resource: Schema.String,
   existed: Schema.Boolean,
+  formatted: Schema.Boolean.pipe(Schema.optional),
+  diagnostics: Schema.String.pipe(Schema.optional),
+  snapshot: Schema.String.pipe(Schema.optional),
 })
 export type Output = typeof Output.Type
 
 export const toModelOutput = (output: Output) =>
-  `${output.existed ? "Wrote" : "Created"} file successfully: ${output.resource}`
+  `${output.existed ? "Wrote" : "Created"} file successfully: ${output.resource}` +
+  (output.diagnostics === undefined ? "" : `\n\nLSP errors detected in this file, please fix:\n${output.diagnostics}`)
 
 /** Deferred V2 write UX integrations remain visible at the model-facing seam. */
-// TODO: Add formatter integration after V2 formatter runtime exists.
 // TODO: Publish watcher/file-edit events after V2 watcher integration exists.
-// TODO: Add snapshots / undo after design exists.
-// TODO: Add LSP notification and diagnostics after V2 LSP runtime exists.
+// TODO: Add external formatter command runtime behind the V2 formatter config (LSP formatting already wired).
 
 const layer = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -49,6 +52,7 @@ const layer = Layer.effectDiscard(
     const mutation = yield* LocationMutation.Service
     const files = yield* FileMutation.Service
     const permission = yield* PermissionV2.Service
+    const observer = yield* EditObserver.Service
 
     yield* tools
       .register({
@@ -83,7 +87,9 @@ const layer = Layer.effectDiscard(
                   agent: context.agent,
                   source,
                 })
-                return yield* files.writeTextPreservingBom({ target, content: input.content })
+                const result = yield* files.writeTextPreservingBom({ target, content: input.content })
+                const observation = yield* observer.afterEdit([result.target])
+                return { ...result, ...observation }
               }).pipe(Effect.mapError((error) => Tool.failure(`Unable to write ${input.path}`, error))),
           }),
           "edit",
@@ -96,5 +102,5 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/write",
   layer,
-  deps: [ToolRegistry.node, LocationMutation.node, FileMutation.node, PermissionV2.node],
+  deps: [ToolRegistry.node, LocationMutation.node, FileMutation.node, PermissionV2.node, EditObserver.node],
 })

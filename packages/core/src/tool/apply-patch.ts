@@ -5,6 +5,7 @@ import { FileDiff } from "@prioricode/schema/file-diff"
 import { createTwoFilesPatch, diffLines } from "diff"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
+import { EditObserver } from "../edit-observer"
 import { FileMutation } from "../file-mutation"
 import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
@@ -31,6 +32,9 @@ export const Applied = Schema.Struct({
 export const Output = Schema.Struct({
   applied: Schema.Array(Applied),
   files: Schema.Array(FileDiff.Info),
+  formatted: Schema.Boolean.pipe(Schema.optional),
+  diagnostics: Schema.String.pipe(Schema.optional),
+  snapshot: Schema.String.pipe(Schema.optional),
 })
 export type Output = typeof Output.Type
 
@@ -40,6 +44,7 @@ export const toModelOutput = (output: Output) =>
     ...output.applied.map(
       (item) => `${item.type === "add" ? "A" : item.type === "delete" ? "D" : "M"} ${item.resource}`,
     ),
+    ...(output.diagnostics === undefined ? [] : [`LSP errors detected in these files, please fix:\n${output.diagnostics}`]),
   ].join("\n")
 
 type Prepared =
@@ -63,6 +68,7 @@ const layer = Layer.effectDiscard(
     const files = yield* FileMutation.Service
     const fs = yield* FSUtil.Service
     const permission = yield* PermissionV2.Service
+    const observer = yield* EditObserver.Service
 
     yield* tools
       .register({
@@ -185,7 +191,8 @@ const layer = Layer.effectDiscard(
                     }).pipe(Effect.mapError((error) => fail(change.path, error))),
                   { discard: true },
                 )
-                return { applied, files: patchFiles }
+                const observation = yield* observer.afterEdit(applied.map((item) => item.target))
+                return { applied, files: patchFiles, ...observation }
               }).pipe(Effect.mapError((error) => (error instanceof ToolFailure ? error : fail("patch", error))))
             },
           }),
@@ -199,7 +206,14 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/apply-patch",
   layer,
-  deps: [ToolRegistry.node, LocationMutation.node, FileMutation.node, FSUtil.node, PermissionV2.node],
+  deps: [
+    ToolRegistry.node,
+    LocationMutation.node,
+    FileMutation.node,
+    FSUtil.node,
+    PermissionV2.node,
+    EditObserver.node,
+  ],
 })
 
 function patchFile(change: Prepared): typeof FileDiff.Info.Type {

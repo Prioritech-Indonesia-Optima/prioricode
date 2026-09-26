@@ -11,6 +11,7 @@ import { FileDiff } from "@prioricode/schema/file-diff"
 import { createTwoFilesPatch, diffLines } from "diff"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
+import { EditObserver } from "../edit-observer"
 import { FileMutation } from "../file-mutation"
 import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
@@ -36,6 +37,9 @@ export const Input = Schema.Struct({
 export const Output = Schema.Struct({
   files: Schema.Array(FileDiff.Info),
   replacements: Schema.Number,
+  formatted: Schema.Boolean.pipe(Schema.optional),
+  diagnostics: Schema.String.pipe(Schema.optional),
+  snapshot: Schema.String.pipe(Schema.optional),
 })
 export type Output = typeof Output.Type
 
@@ -70,22 +74,26 @@ const previewLines = (value: string, prefix: "+" | "-") => {
   return shown
 }
 
-export const toModelOutput = (output: Output, oldString: string, newString: string) =>
-  [
+export const toModelOutput = (output: Output, oldString: string, newString: string) => {
+  const notes =
+    output.diagnostics === undefined
+      ? []
+      : ["", `LSP errors detected in this file, please fix:\n${output.diagnostics}`]
+  return [
     `Edited file successfully: ${output.files[0]?.file}`,
     `Replacements: ${output.replacements}`,
     "```diff",
     ...previewLines(oldString, "-"),
     ...previewLines(newString, "+"),
     "```",
+    ...notes,
   ].join("\n")
+}
 
 /** Deferred V2 edit behavior and UX integrations remain visible at the model-facing seam. */
 // TODO: Port V1 fuzzy correction strategies only after exact-edit behavior is established: line-trimmed matching, block-anchor fallback, indentation correction, and similarity-threshold review.
-// TODO: Add formatter integration after V2 formatter runtime exists.
 // TODO: Publish watcher/file-edit events after V2 watcher integration exists.
-// TODO: Add snapshots / undo after design exists.
-// TODO: Add LSP notification and diagnostics after V2 LSP runtime exists.
+// TODO: Add external formatter command runtime behind the V2 formatter config (LSP formatting already wired).
 
 const layer = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -94,6 +102,7 @@ const layer = Layer.effectDiscard(
     const files = yield* FileMutation.Service
     const fs = yield* FSUtil.Service
     const permission = yield* PermissionV2.Service
+    const observer = yield* EditObserver.Service
 
     yield* tools
       .register({
@@ -195,6 +204,7 @@ const layer = Layer.effectDiscard(
                     content: joinBom(next.text, source.bom || next.bom),
                   }),
                 )
+                const observation = yield* observer.afterEdit([result.target])
                 return {
                   files: [
                     {
@@ -205,6 +215,7 @@ const layer = Layer.effectDiscard(
                     },
                   ],
                   replacements,
+                  ...observation,
                 } satisfies Output
               })
             },
@@ -219,5 +230,12 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/edit",
   layer,
-  deps: [ToolRegistry.node, LocationMutation.node, FileMutation.node, FSUtil.node, PermissionV2.node],
+  deps: [
+    ToolRegistry.node,
+    LocationMutation.node,
+    FileMutation.node,
+    FSUtil.node,
+    PermissionV2.node,
+    EditObserver.node,
+  ],
 })
