@@ -67,3 +67,16 @@ export function runningTool(parts: Part[]): RunningTool | undefined {
 export function completedToolCount(parts: Part[]): number {
   return parts.filter((part): part is ToolPart => part.type === "tool" && (part.state.status === "completed" || part.state.status === "error")).length
 }
+
+// One-line live turn summary: current activity, finished tool count, elapsed
+// wall time, and a rough streamed-token estimate.
+export function formatTurnHud(input: { tool?: RunningTool; done: number; estimate: number; elapsedMs: number }): string {
+  return [
+    input.tool ? (input.tool.title ?? Locale.titlecase(input.tool.tool)) : undefined,
+    input.done > 0 ? `${input.done} tools` : undefined,
+    Locale.duration(input.elapsedMs),
+    input.estimate > 0 ? `~${Locale.number(input.estimate)} tok` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ")
+}

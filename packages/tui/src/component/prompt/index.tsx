@@ -39,6 +39,7 @@ import { type AutocompleteRef, Autocomplete } from "./autocomplete"
 import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import type { AssistantMessage, FilePart, UserMessage } from "@prioricode/sdk/v2"
 import { Locale } from "../../util/locale"
+import { completedToolCount, estimateStreamingTokens, formatTurnHud, runningTool } from "../../util/context-usage"
 import { errorMessage } from "../../util/error"
 import { formatDuration } from "../../util/format"
 import { createColors, createFrames } from "../../ui/spinner"
@@ -167,6 +168,54 @@ export function Prompt(props: PromptProps) {
   const dialog = useDialog()
   const toast = useToast()
   const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
+  const [turnStart, setTurnStart] = createSignal<number>()
+  createEffect(
+    on(
+      () => status().type === "idle",
+      (idle) => {
+        if (idle) {
+          setTurnStart(undefined)
+          return
+        }
+        if (turnStart() === undefined) setTurnStart(Date.now())
+      },
+    ),
+  )
+  const [turnTick, setTurnTick] = createSignal(0)
+  createEffect(() => {
+    if (status().type === "idle") return
+    const timer = setInterval(() => setTurnTick((n) => n + 1), 1000)
+    onCleanup(() => clearInterval(timer))
+  })
+  const turn = createMemo(() => {
+    const id = props.sessionID
+    if (!id || status().type === "idle") return
+    const messages = sync.data.message[id] ?? []
+    const completed = messages.findLastIndex((message) => message.role === "assistant" && message.time.completed)
+    const index = messages.findLastIndex(
+      (message, position) => position > completed && message.role === "assistant" && !message.time.completed,
+    )
+    if (index === -1) return
+    const parts = sync.data.part[messages[index]!.id] ?? []
+    const tool = runningTool(parts)
+    const done = completedToolCount(parts)
+    const estimate = estimateStreamingTokens(parts)
+    if (!tool && done === 0 && estimate === 0) return
+    return { tool, done, estimate }
+  })
+  const turnHud = createMemo(() => {
+    if (status().type !== "busy") return ""
+    const start = turnStart()
+    if (!start) return ""
+    turnTick()
+    const active = turn()
+    return formatTurnHud({
+      tool: active?.tool,
+      done: active?.done ?? 0,
+      estimate: active?.estimate ?? 0,
+      elapsedMs: Date.now() - start,
+    })
+  })
   const history = usePromptHistory()
   const stash = usePromptStash()
   const keymap = usePrioricodeKeymap()
@@ -1531,6 +1580,13 @@ export function Prompt(props: PromptProps) {
                       <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
                     </Show>
                   </box>
+                  <Show when={turnHud()}>
+                    <box flexDirection="row" flexShrink={0}>
+                      <text fg={theme.textMuted} wrapMode="none">
+                        {turnHud()}
+                      </text>
+                    </box>
+                  </Show>
                   <box flexDirection="row" gap={1} flexShrink={0}>
                     {(() => {
                       const retry = createMemo(() => {

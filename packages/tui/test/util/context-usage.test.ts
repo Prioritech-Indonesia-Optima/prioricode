@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import type { AssistantMessage, Message, Part, Provider, Session } from "@prioricode/sdk/v2"
-import { completedToolCount, computeUsage, estimateStreamingTokens, runningTool } from "../../src/util/context-usage"
+import { completedToolCount, computeUsage, estimateStreamingTokens, formatTurnHud, runningTool } from "../../src/util/context-usage"
 
 const assistant = (overrides: Partial<AssistantMessage> = {}): AssistantMessage =>
   ({
@@ -81,5 +81,15 @@ describe("runningTool / completedToolCount", () => {
 
   test("counts completed and errored tools", () => {
     expect(completedToolCount([toolPart("read", "completed"), toolPart("bash", "error"), toolPart("edit", "running")])).toBe(2)
+  })
+})
+
+describe("formatTurnHud", () => {
+  test("joins available segments only", () => {
+    expect(formatTurnHud({ tool: { tool: "edit", title: "src/a.ts" }, done: 3, estimate: 2100, elapsedMs: 45000 })).toBe(
+      "src/a.ts · 3 tools · 45.0s · ~2.1K tok",
+    )
+    expect(formatTurnHud({ done: 0, estimate: 0, elapsedMs: 1200 })).toBe("1.2s")
+    expect(formatTurnHud({ tool: { tool: "websearch" }, done: 0, estimate: 0, elapsedMs: 500 })).toBe("Websearch · 500ms")
   })
 })
