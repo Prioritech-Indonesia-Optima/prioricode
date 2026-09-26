@@ -1301,6 +1301,7 @@ export function Session() {
                   <PermissionPrompt
                     request={permissions()[0]}
                     directory={sync.session.get(permissions()[0].sessionID)?.directory}
+                    pending={permissions}
                   />
                 </Show>
                 <Show when={permissions().length === 0 && questions().length > 0}>

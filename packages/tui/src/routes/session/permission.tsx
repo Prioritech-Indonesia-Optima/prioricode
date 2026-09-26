@@ -108,7 +108,11 @@ function TextBody(props: { title: string; description?: string; icon?: string })
   )
 }
 
-export function PermissionPrompt(props: { request: PermissionRequest; directory?: string }) {
+export function PermissionPrompt(props: {
+  request: PermissionRequest
+  directory?: string
+  pending?: () => number
+}) {
   const sdk = useSDK()
   const project = useProject()
   const sync = useSync()
@@ -387,6 +391,9 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               <box flexDirection="row" gap={1} flexShrink={0}>
                 <text fg={theme.warning}>{"△"}</text>
                 <text fg={theme.text}>Permission required</text>
+                <Show when={(props.pending?.() ?? 0) > 1}>
+                  <text fg={theme.warning}>· {props.pending!() - 1} more pending</text>
+                </Show>
               </box>
               <box flexDirection="row" gap={1} paddingLeft={2} flexShrink={0}>
                 <text fg={theme.textMuted} flexShrink={0}>

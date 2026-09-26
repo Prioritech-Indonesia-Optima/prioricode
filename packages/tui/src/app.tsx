@@ -50,6 +50,7 @@ import { DialogSettings } from "./component/dialog-settings"
 import { DialogHelp } from "./ui/dialog-help"
 import { DialogAgent } from "./component/dialog-agent"
 import { DialogPermission } from "./component/dialog-permission"
+import { DialogPermissionHistory } from "./component/dialog-permission-history"
 import { DialogSessionList } from "./component/dialog-session-list"
 import { DialogWorkspaceList } from "./component/dialog-workspace-list"
 import { DialogConsoleOrg } from "./component/dialog-console-org"
@@ -705,6 +706,16 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashAliases: ["permissions"],
         run: () => {
           dialog.replace(() => <DialogPermission />)
+        },
+      },
+      {
+        name: "permission.history",
+        title: "Permission history",
+        category: "Agent",
+        slashName: "permission-history",
+        enabled: () => route.data.type === "session",
+        run: () => {
+          dialog.replace(() => <DialogPermissionHistory />)
         },
       },
       {
