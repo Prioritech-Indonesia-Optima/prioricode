@@ -21,6 +21,7 @@ import type {
   ConsoleState,
 } from "@prioricode/sdk/v2"
 import { createStore, produce, reconcile } from "solid-js/store"
+import { appendDecision, groupPermissionsBySession } from "../util/permission-state"
 import { useProject } from "./project"
 import { useEvent } from "./event"
 import { useSDK } from "./sdk"
@@ -36,6 +37,20 @@ const emptyConsoleState: ConsoleState = {
   consoleManagedProviders: [],
   switchableOrgCount: 0,
 }
+
+// One answered permission request, retained process-locally for the status
+// surface and history dialog. Replies are durable server-side events, but the
+// TUI keeps a bounded recent view per session so decisions stay visible after
+// the request card disappears.
+export type PermissionDecision = {
+  id: PermissionRequest["id"]
+  permission: string
+  patterns: string[]
+  reply: "once" | "always" | "reject"
+  time: number
+}
+
+const PERMISSION_HISTORY_LIMIT = 100
 
 function search<T>(items: T[], target: string, key: (item: T) => string) {
   let left = 0
@@ -88,6 +103,9 @@ export const {
       permission: {
         [sessionID: string]: PermissionRequest[]
       }
+      permission_history: {
+        [sessionID: string]: PermissionDecision[]
+      }
       question: {
         [sessionID: string]: QuestionRequest[]
       }
@@ -135,6 +153,7 @@ export const {
       status: "loading",
       agent: [],
       permission: {},
+      permission_history: {},
       question: {},
       command: [],
       provider: [],
@@ -193,6 +212,19 @@ export const {
           if (!requests) break
           const match = search(requests, event.properties.requestID, (r) => r.id)
           if (!match.found) break
+          const request = requests[match.index]!
+          const decision: PermissionDecision = {
+            id: request.id,
+            permission: request.permission,
+            patterns: request.patterns,
+            reply: event.properties.reply,
+            time: Date.now(),
+          }
+          setStore(
+            "permission_history",
+            event.properties.sessionID,
+            appendDecision(store.permission_history[event.properties.sessionID], decision, PERMISSION_HISTORY_LIMIT),
+          )
           setStore(
             "permission",
             event.properties.sessionID,
@@ -530,6 +562,12 @@ export const {
             sdk.client.formatter.status({ workspace }).then((x) => setStore("formatter", reconcile(x.data ?? []))),
             sdk.client.session.status({ workspace }).then((x) => {
               setStore("session_status", reconcile(x.data ?? {}))
+            }),
+            // Hydrate pending permission queues (events alone would leave a
+            // restarted TUI blind). The binary-search reducer requires each
+            // session's queue sorted by request id.
+            sdk.client.permission.list({ workspace }).then((x) => {
+              setStore("permission", reconcile(groupPermissionsBySession(x.data ?? [])))
             }),
             sdk.client.provider.auth({ workspace }).then((x) => setStore("provider_auth", reconcile(x.data ?? {}))),
             sdk.client.vcs.get({ workspace }).then((x) => setStore("vcs", reconcile(x.data))),
