@@ -1,0 +1,58 @@
+name: upgrade-e2e
+
+# The real user story on a real Windows runner: take the PREVIOUS released
+# prioricode.exe, run its `upgrade` command, and assert the binary on disk
+# actually becomes the latest release. This exists because for weeks the repo
+# had green unit tests while Windows users kept hitting `exit code 1` — unit
+# tests mocked the process boundary, and nothing ever executed an upgrade as a
+# running locked exe against the real installer sources. Failing here with the
+# domain stale is the point: it is red until code.prioritech.co.id serves the
+# current install.ps1 (sync or Cloudflare-redirect it), which is exactly what
+# breaks already-shipped clients.
+
+on:
+  schedule:
+    - cron: "33 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: upgrade previous release to latest (windows)
+    runs-on: windows-latest
+    shell: pwsh
+    steps:
+      - name: Resolve releases
+        id: rel
+        run: |
+          $tags = gh api "repos/Prioritech-Indonesia-Optima/prioricode/releases?per_page=20" --jq '[.[] | select(.prerelease == false) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))] | .[0].tag_name, .[1].tag_name'
+          $tags = $tags -split "`n"
+          $latest = $tags[0] -replace '^v',''
+          $prev = $tags[1] -replace '^v',''
+          if (-not $prev) { throw "no previous release found" }
+          "latest=$latest" >> $env:GITHUB_OUTPUT
+          "prev=$prev" >> $env:GITHUB_OUTPUT
+          Write-Host "upgrading $prev -> $latest"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install previous release
+        run: |
+          $zip = "prioricode-windows-x64.zip"
+          $url = "https://github.com/Prioritech-Indonesia-Optima/prioricode/releases/download/v${{ steps.rel.outputs.prev }}/$zip"
+          curl.exe -sSL --fail -o prev.zip $url
+          Expand-Archive prev.zip -DestinationPath prev
+          & ".\prev\bin\prioricode.exe" --version
+
+      - name: Run its upgrade command
+        run: |
+          & ".\prev\bin\prioricode.exe" upgrade --method curl 2>&1 | Tee-Object -FilePath upgrade.log
+          if ($LASTEXITCODE -ne 0) { Get-Content upgrade.log; throw "upgrade exited $LASTEXITCODE" }
+
+      - name: Assert binary is now latest
+        run: |
+          $got = & ".\prev\bin\prioricode.exe" --version
+          Write-Host "after upgrade: $got (want ${{ steps.rel.outputs.latest }})"
+          if ("$got".Trim() -ne "${{ steps.rel.outputs.latest }}") { throw "upgrade did not produce the latest release" }
