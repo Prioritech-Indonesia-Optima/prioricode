@@ -142,6 +142,7 @@ const appBindingCommands = [
   "app.toggle.diffwrap",
   "app.toggle.paste_summary",
   "app.toggle.session_directory_filter",
+  "toast.dismiss",
 ] as const
 
 export type TuiInput = {
@@ -885,6 +886,13 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashAliases: ["quit", "q"],
         run: () => exit(),
         category: "System",
+      },
+      {
+        name: "toast.dismiss",
+        title: "Dismiss notification",
+        category: "System",
+        enabled: () => toast.queue().length > 0,
+        run: () => toast.dismiss(),
       },
       {
         name: "app.debug",
