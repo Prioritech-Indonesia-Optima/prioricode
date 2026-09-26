@@ -49,6 +49,7 @@ import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
+import { Hook } from "@/hook"
 import { Database } from "@prioricode/core/database/database"
 import { ModelV2 } from "@prioricode/core/model"
 import { ProviderV2 } from "@prioricode/core/provider"
@@ -123,6 +124,7 @@ const layer = Layer.effect(
     const processor = yield* SessionProcessor.Service
     const compaction = yield* SessionCompaction.Service
     const plugin = yield* Plugin.Service
+    const hooks = yield* Hook.Service
     const commands = yield* Command.Service
     const config = yield* Config.Service
     const permission = yield* Permission.Service
@@ -1254,6 +1256,7 @@ const layer = Layer.effect(
               Effect.provideService(MCP.Service, mcp),
               Effect.provideService(Truncate.Service, truncate),
               Effect.provideService(RuntimeFlags.Service, flags),
+              Effect.provideService(Hook.Service, hooks),
             )
 
             if (lastUser.format?.type === "json_schema") {
@@ -1703,6 +1706,7 @@ export const node = LayerNode.make({
     SystemPrompt.node,
     LLM.node,
     EventV2Bridge.node,
+    Hook.node,
     RuntimeFlags.node,
     Database.node,
   ],

@@ -14,6 +14,7 @@ import { Tool } from "@/tool/tool"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
 import { Plugin } from "@/plugin"
+import { Hook } from "@/hook"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Effect, Layer, Schema } from "effect"
 import { testEffect } from "../lib/effect"
@@ -63,6 +64,10 @@ const fakeTruncate = Truncate.Service.of({
 
 const layer = Layer.mergeAll(
   Layer.succeed(Plugin.Service, fakePlugin),
+  Layer.succeed(Hook.Service, {
+    preToolUse: () => Effect.succeed(undefined),
+    postToolUse: () => Effect.void,
+  } satisfies Hook.Interface),
   Layer.succeed(Permission.Service, fakePermission),
   Layer.succeed(MCP.Service, fakeMcp()),
   Layer.succeed(Truncate.Service, fakeTruncate),

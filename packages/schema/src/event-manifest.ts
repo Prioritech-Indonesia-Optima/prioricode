@@ -5,6 +5,7 @@ import { Durable } from "./durable-event-manifest"
 import { Event } from "./event"
 import { FileSystem } from "./filesystem"
 import { FileSystemWatcher } from "./filesystem-watcher"
+import { HookEvent } from "./hook-event"
 import { InstallationEvent } from "./installation-event"
 import { Integration } from "./integration"
 import { LegacyEvent } from "./legacy-event"
@@ -54,6 +55,7 @@ const featureDefinitions = Event.inventory(
   ...Pty.Event.Definitions,
   ...Question.Event.Definitions,
   ...SandboxEvent.Definitions,
+  ...HookEvent.Definitions,
 )
 
 export const ServerDefinitions = Event.inventory(

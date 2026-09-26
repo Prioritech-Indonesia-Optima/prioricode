@@ -68,6 +68,7 @@ export type Event =
   | EventQuestionV2Replied
   | EventQuestionV2Rejected
   | EventSandboxUnavailable
+  | EventHookFailed
   | EventTodoUpdated
   | EventLspUpdated
   | EventPermissionAsked
@@ -1371,6 +1372,15 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "hook.failed"
+        properties: {
+          event: "PreToolUse" | "PostToolUse" | "SessionStart" | "Stop" | "Notification"
+          command: string
+          reason: string
+        }
+      }
+    | {
+        id: string
         type: "todo.updated"
         properties: {
           sessionID: string
@@ -1881,6 +1891,23 @@ export type McpRemoteConfig = {
   timeout?: number
 }
 
+export type HookCommand = {
+  matcher?: string
+  /**
+   * Shell command to run. Receives a JSON payload on stdin
+   */
+  command: string
+  timeout?: number
+}
+
+export type HooksConfig = {
+  PreToolUse?: Array<HookCommand>
+  PostToolUse?: Array<HookCommand>
+  SessionStart?: Array<HookCommand>
+  Stop?: Array<HookCommand>
+  Notification?: Array<HookCommand>
+}
+
 /**
  * @deprecated Always uses stretch layout.
  */
@@ -2017,6 +2044,7 @@ export type Config = {
             }
       }
   instructions?: Array<string>
+  hooks?: HooksConfig
   layout?: LayoutConfig
   permission?: PermissionConfig
   tools?: {
@@ -2939,6 +2967,7 @@ export type V2Event =
   | QuestionV2Replied
   | QuestionV2Rejected
   | SandboxUnavailable
+  | HookFailed
   | TodoUpdated
   | LspUpdated
   | PermissionAsked
@@ -5703,6 +5732,25 @@ export type SandboxUnavailable = {
   }
 }
 
+export type HookFailed = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "hook.failed"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    event: "PreToolUse" | "PostToolUse" | "SessionStart" | "Stop" | "Notification"
+    command: string
+    reason: string
+  }
+}
+
 export type TodoUpdated = {
   id: string
   metadata?: {
@@ -6890,6 +6938,16 @@ export type EventSandboxUnavailable = {
   properties: {
     reason: string
     mode: "best-effort" | "require"
+  }
+}
+
+export type EventHookFailed = {
+  id: string
+  type: "hook.failed"
+  properties: {
+    event: "PreToolUse" | "PostToolUse" | "SessionStart" | "Stop" | "Notification"
+    command: string
+    reason: string
   }
 }
 

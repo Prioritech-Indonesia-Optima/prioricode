@@ -1249,6 +1249,30 @@ Helper subagent prompt`,
   }),
 )
 
+it.effect("merges hook arrays from global and local configs with command dedupe", () =>
+  withConfigTree(
+    {
+      global: { hooks: { PreToolUse: [{ command: "global-hook" }, { command: "shared-hook" }] } },
+      local: {
+        hooks: {
+          PreToolUse: [{ command: "shared-hook", timeout: 5 }, { command: "local-hook" }],
+          Stop: [{ command: "stop-hook" }],
+        },
+      },
+    },
+    Effect.gen(function* () {
+      const cfg = yield* Config.use.get()
+      expect(cfg.hooks?.PreToolUse?.map((hook) => hook.command)).toEqual([
+        "global-hook",
+        "shared-hook",
+        "local-hook",
+      ])
+      expect(cfg.hooks?.PreToolUse?.[1]?.timeout).toBe(5)
+      expect(cfg.hooks?.Stop?.map((hook) => hook.command)).toEqual(["stop-hook"])
+    }),
+  ),
+)
+
 it.effect("merges instructions arrays from global and local configs", () =>
   withConfigTree(
     {

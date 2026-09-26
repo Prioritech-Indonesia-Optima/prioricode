@@ -11,6 +11,7 @@ import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
 
 import { Plugin } from "@/plugin"
+import { Hook } from "@/hook"
 import type { TaskPromptOps } from "@/tool/task"
 import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
 import { Effect } from "effect"
@@ -50,6 +51,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const tools: Record<string, AITool> = {}
   const run = yield* EffectBridge.make()
   const plugin = yield* Plugin.Service
+  const hooks = yield* Hook.Service
   const permission = yield* Permission.Service
   const registry = yield* ToolRegistry.Service
   const mcp = yield* MCP.Service
@@ -104,12 +106,21 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
         return run.promise(
           Effect.gen(function* () {
             const ctx = context(args, options)
+            const before: { args: any; block?: string } = { args }
             yield* plugin.trigger(
               "tool.execute.before",
               { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID },
-              { args },
+              before,
             )
-            const result = yield* item.execute(args, ctx)
+            const hookBlock = yield* hooks.preToolUse({
+              tool: item.id,
+              sessionID: ctx.sessionID,
+              callID: ctx.callID,
+              args: before.args,
+            })
+            const blocked = [before.block, hookBlock].filter((x): x is string => Boolean(x)).join("\n")
+            if (blocked) yield* new Hook.BlockedError({ tool: item.id, reason: blocked })
+            const result = yield* item.execute(before.args, ctx)
             const output = {
               ...result,
               attachments: result.attachments?.map((attachment) => ({
@@ -121,9 +132,16 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
             }
             yield* plugin.trigger(
               "tool.execute.after",
-              { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args },
+              { tool: item.id, sessionID: ctx.sessionID, callID: ctx.callID, args: before.args },
               output,
             )
+            yield* hooks.postToolUse({
+              tool: item.id,
+              sessionID: ctx.sessionID,
+              callID: ctx.callID,
+              args: before.args,
+              response: { title: output.title, output: output.output, metadata: output.metadata },
+            })
             if (options.abortSignal?.aborted) {
               yield* input.processor.completeToolCall(options.toolCallId, output)
             }

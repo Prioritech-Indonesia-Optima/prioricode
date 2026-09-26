@@ -48,6 +48,14 @@ function mergeConfigConcatArrays(target: Info, source: Info): Info {
   if (target.instructions && source.instructions) {
     merged.instructions = Array.from(new Set([...target.instructions, ...source.instructions]))
   }
+  if (target.hooks && source.hooks) {
+    const hooks = { ...merged.hooks } as NonNullable<Info["hooks"]>
+    for (const event of ["PreToolUse", "PostToolUse", "SessionStart", "Stop", "Notification"] as const) {
+      const list = [...(target.hooks[event] ?? []), ...(source.hooks[event] ?? [])]
+      if (list.length > 0) hooks[event] = Array.from(new Map(list.map((hook) => [hook.command, hook])).values())
+    }
+    merged.hooks = hooks
+  }
   return merged
 }
 
