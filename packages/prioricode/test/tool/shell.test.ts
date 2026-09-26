@@ -1308,9 +1308,7 @@ describe("tool.shell background", () => {
 })
 
 describe("tool.shell sandbox", () => {
-  const fakeLayer = (
-    wrap: (input: Sandbox.WrapInput) => Effect.Effect<Sandbox.WrapResult, Sandbox.SandboxError>,
-  ) =>
+  const fakeLayer = (wrap: (input: Sandbox.WrapInput) => Effect.Effect<Sandbox.WrapResult, Sandbox.SandboxError>) =>
     Layer.succeed(
       Sandbox.Service,
       Sandbox.Service.of({
@@ -1338,7 +1336,11 @@ describe("tool.shell sandbox", () => {
       projectRoot,
       Effect.gen(function* () {
         const exit = yield* run({ command: "echo hi" }).pipe(
-          Effect.provide(fakeLayer(() => Effect.fail(new Sandbox.SandboxError({ code: "require_unsupported", reason: "fake backend missing" })))),
+          Effect.provide(
+            fakeLayer(() =>
+              Effect.fail(new Sandbox.SandboxError({ code: "require_unsupported", reason: "fake backend missing" })),
+            ),
+          ),
           Effect.exit,
         )
         if (!Exit.isFailure(exit)) throw new Error("expected require-mode wrap to fail the tool call")
@@ -1357,7 +1359,9 @@ describe("tool.shell sandbox", () => {
     runIn(
       projectRoot,
       Effect.gen(function* () {
-        const result = yield* run({ command: "echo ok" }).pipe(Effect.provide(passthrough("off", "no bwrap on this host")))
+        const result = yield* run({ command: "echo ok" }).pipe(
+          Effect.provide(passthrough("off", "no bwrap on this host")),
+        )
         expect(result.metadata.exit).toBe(0)
         expect(result.metadata.sandbox).toBe("off")
         expect(result.output).toContain("bash sandbox: no bwrap on this host")

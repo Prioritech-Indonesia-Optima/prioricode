@@ -57,23 +57,29 @@ for (let gy = 0; gy < GLOW_ROWS; gy++) {
   ART.push(cells)
 }
 ART.push(
-  Array.from(TAGLINE, (char, x): Cell => ({
-    char,
-    x: x + Math.floor((GLOW_W - TAGLINE.length) / 2),
-    y: big.length + 1,
-    kind: char === " " ? "glow" : "tag",
-    wordIndex: -1,
-  })),
+  Array.from(
+    TAGLINE,
+    (char, x): Cell => ({
+      char,
+      x: x + Math.floor((GLOW_W - TAGLINE.length) / 2),
+      y: big.length + 1,
+      kind: char === " " ? "glow" : "tag",
+      wordIndex: -1,
+    }),
+  ),
 )
 
 const COMPACT: Cell[][] = [
-  Array.from(WORDMARK, (char, x): Cell => ({
-    char,
-    x: x + Math.floor((TAGLINE.length - WORDMARK.length) / 2),
-    y: 0,
-    kind: "word",
-    wordIndex: x,
-  })),
+  Array.from(
+    WORDMARK,
+    (char, x): Cell => ({
+      char,
+      x: x + Math.floor((TAGLINE.length - WORDMARK.length) / 2),
+      y: 0,
+      kind: "word",
+      wordIndex: x,
+    }),
+  ),
   Array.from(TAGLINE, (char, x): Cell => ({ char, x, y: 1, kind: "tag", wordIndex: -1 })),
 ]
 
@@ -141,9 +147,7 @@ export function Logo() {
         )
       }
       if (cell.char === " ") return <text> </text>
-      const edge = createMemo(() =>
-        Math.max(0, Math.min(1, reveal() * sweep() - cell.x - cell.y * REVEAL_SKEW - 3)),
-      )
+      const edge = createMemo(() => Math.max(0, Math.min(1, reveal() * sweep() - cell.x - cell.y * REVEAL_SKEW - 3)))
       const glint = createMemo(() => {
         const raw = 1 - Math.abs(cell.x + cell.y * 0.7 - glintX()) / GLINT_WIDTH
         return raw <= 0 ? 0 : raw * raw * (3 - 2 * raw) * GLINT_STRENGTH
@@ -153,9 +157,9 @@ export function Logo() {
         if (fade <= 0) return theme.background
         const base =
           cell.kind === "block"
-            ? columns()[cell.x - ART_X] ?? theme.text
+            ? (columns()[cell.x - ART_X] ?? theme.text)
             : cell.kind === "word"
-              ? wordGradient()[cell.wordIndex] ?? theme.text
+              ? (wordGradient()[cell.wordIndex] ?? theme.text)
               : theme.textMuted
         return tint(tint(theme.background, base, fade), RGBA.fromInts(255, 250, 235), glint() * fade)
       })

@@ -15720,6 +15720,12 @@
             "$ref": "#/components/schemas/EventQuestionV2Rejected"
           },
           {
+            "$ref": "#/components/schemas/EventSandboxUnavailable"
+          },
+          {
+            "$ref": "#/components/schemas/EventHookFailed"
+          },
+          {
             "$ref": "#/components/schemas/EventTodoUpdated"
           },
           {
@@ -19901,6 +19907,67 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["sandbox.unavailable"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "reason": {
+                        "type": "string"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "enum": ["best-effort", "require"]
+                      }
+                    },
+                    "required": ["reason", "mode"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["hook.failed"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "event": {
+                        "type": "string",
+                        "enum": ["PreToolUse", "PostToolUse", "SessionStart", "Stop", "Notification"]
+                      },
+                      "command": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["event", "command", "reason"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["todo.updated"]
                   },
                   "properties": {
@@ -21360,6 +21427,60 @@
         "required": ["type", "url"],
         "additionalProperties": false
       },
+      "HookCommand": {
+        "type": "object",
+        "properties": {
+          "matcher": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string",
+            "description": "Shell command to run. Receives a JSON payload on stdin"
+          },
+          "timeout": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": ["command"],
+        "additionalProperties": false
+      },
+      "HooksConfig": {
+        "type": "object",
+        "properties": {
+          "PreToolUse": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          },
+          "PostToolUse": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          },
+          "SessionStart": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          },
+          "Stop": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          },
+          "Notification": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "LayoutConfig": {
         "type": "string",
         "enum": ["auto", "stretch"],
@@ -21403,6 +21524,26 @@
           },
           "shell": {
             "type": "string"
+          },
+          "bashSandbox": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["off", "best-effort", "require"]
+              },
+              "network": {
+                "type": "string",
+                "enum": ["allow", "deny"]
+              },
+              "writablePaths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
           },
           "logLevel": {
             "$ref": "#/components/schemas/LogLevel"
@@ -21745,6 +21886,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "hooks": {
+            "$ref": "#/components/schemas/HooksConfig"
           },
           "layout": {
             "$ref": "#/components/schemas/LayoutConfig"
@@ -24492,6 +24636,12 @@
           },
           {
             "$ref": "#/components/schemas/QuestionV2Rejected"
+          },
+          {
+            "$ref": "#/components/schemas/SandboxUnavailable"
+          },
+          {
+            "$ref": "#/components/schemas/HookFailed"
           },
           {
             "$ref": "#/components/schemas/TodoUpdated"
@@ -32797,6 +32947,111 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "SandboxUnavailable": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["sandbox.unavailable"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["best-effort", "require"]
+              }
+            },
+            "required": ["reason", "mode"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
+      "HookFailed": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["hook.failed"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": ["PreToolUse", "PostToolUse", "SessionStart", "Stop", "Notification"]
+              },
+              "command": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": ["event", "command", "reason"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "TodoUpdated": {
         "type": "object",
         "properties": {
@@ -36320,6 +36575,67 @@
               }
             },
             "required": ["sessionID", "requestID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSandboxUnavailable": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["sandbox.unavailable"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["best-effort", "require"]
+              }
+            },
+            "required": ["reason", "mode"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventHookFailed": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["hook.failed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": ["PreToolUse", "PostToolUse", "SessionStart", "Stop", "Notification"]
+              },
+              "command": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": ["event", "command", "reason"],
             "additionalProperties": false
           }
         },

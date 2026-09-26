@@ -1262,11 +1262,7 @@ it.effect("merges hook arrays from global and local configs with command dedupe"
     },
     Effect.gen(function* () {
       const cfg = yield* Config.use.get()
-      expect(cfg.hooks?.PreToolUse?.map((hook) => hook.command)).toEqual([
-        "global-hook",
-        "shared-hook",
-        "local-hook",
-      ])
+      expect(cfg.hooks?.PreToolUse?.map((hook) => hook.command)).toEqual(["global-hook", "shared-hook", "local-hook"])
       expect(cfg.hooks?.PreToolUse?.[1]?.timeout).toBe(5)
       expect(cfg.hooks?.Stop?.map((hook) => hook.command)).toEqual(["stop-hook"])
     }),

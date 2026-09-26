@@ -6,7 +6,7 @@ import { PositiveInt } from "../../schema"
 export const HookCommand = Schema.Struct({
   matcher: Schema.optional(Schema.String).annotate({
     description:
-      "Wildcard pattern over the tool name for PreToolUse/PostToolUse (e.g. \"bash\", \"edit\", \"*\"). Omitted matches all tools; ignored by lifecycle hooks",
+      'Wildcard pattern over the tool name for PreToolUse/PostToolUse (e.g. "bash", "edit", "*"). Omitted matches all tools; ignored by lifecycle hooks',
   }),
   command: Schema.String.annotate({ description: "Shell command to run. Receives a JSON payload on stdin" }),
   timeout: Schema.optional(PositiveInt).annotate({ description: "Seconds before the hook is killed (default: 30)" }),
