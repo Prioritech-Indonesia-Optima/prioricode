@@ -1,6 +1,8 @@
 import { Prompt, type PromptRef } from "../component/prompt"
-import { createEffect, createMemo, createSignal, onMount } from "solid-js"
-import { Logo } from "../component/logo"
+import { createEffect, createMemo, createSignal, onMount, Show } from "solid-js"
+import { Logo, MIN_ART_WIDTH } from "../component/logo"
+import { HomeHero } from "../component/home-hero"
+import { useKV } from "../context/kv"
 import { useSync } from "../context/sync"
 import { Toast } from "../ui/toast"
 import { useArgs } from "../context/args"
@@ -27,6 +29,8 @@ export function Home() {
   const [ref, setRef] = createSignal<PromptRef | undefined>()
   const args = useArgs()
   const local = useLocal()
+  const kv = useKV()
+  const [animationsEnabled] = kv.signal("animations_enabled", true)
   const editor = useEditorContext()
   const dimensions = useTerminalDimensions()
   const tuiConfig = useTuiConfig()
@@ -35,6 +39,7 @@ export function Home() {
     if (configured === "auto") return Math.max(75, Math.floor(dimensions().width * 0.7))
     return configured ?? 75
   })
+  const animatedHero = createMemo(() => animationsEnabled() && dimensions().width >= MIN_ART_WIDTH)
   let sent = false
 
   onMount(() => {
@@ -74,7 +79,9 @@ export function Home() {
         <box height={2} minHeight={0} flexShrink={1} />
         <box flexShrink={0}>
           <pluginRuntime.Slot name="home_logo" mode="replace">
-            <Logo />
+            <Show when={animatedHero()} fallback={<Logo />}>
+              <HomeHero />
+            </Show>
           </pluginRuntime.Slot>
         </box>
         <box height={1} minHeight={0} flexShrink={1} />

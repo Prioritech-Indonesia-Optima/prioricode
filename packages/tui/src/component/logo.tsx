@@ -3,7 +3,7 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { For, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import { useKV } from "../context/kv"
 import { tint, useTheme } from "../context/theme"
-import { big } from "../logo"
+import { big, tagline as TAGLINE } from "../logo"
 
 // Home screen hero: an oversized block-letter "PrioriCode" wordmark (the `big`
 // bitmap in ../logo.ts) rendered as full-block cells. The letters carry a
@@ -14,7 +14,6 @@ import { big } from "../logo"
 // shimmer loop, no requestLive, zero idle repaints. Narrow terminals fall back
 // to the compact one-line wordmark so the art is never clipped.
 const WORDMARK = "PrioriCode"
-const TAGLINE = "the open source AI coding agent"
 
 const FRAME_MS = 33
 const REVEAL_MS = 700
@@ -23,7 +22,7 @@ const GLINT_WIDTH = 4
 const GLINT_STRENGTH = 0.9
 const GRADIENT_END = 0.85
 const REVEAL_SKEW = 0.6
-const MIN_ART_WIDTH = 76
+export const MIN_ART_WIDTH = 76
 
 const ART_W = Math.max(...big.map((row) => row.length))
 const GLOW_W = 71
