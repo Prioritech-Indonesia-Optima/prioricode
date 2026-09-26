@@ -12,8 +12,8 @@
     "bench:test": "bun run script/bench-test-suite.ts",
     "profile:test": "bun run script/profile-test-files.ts",
     "build": "bun run script/build.ts",
-    "dev": "bun run ./src/index.ts",
-    "dev:temporary": "bun run ./src/temporary.ts"
+    "dev": "PRIORICODE_DISABLE_CHANNEL_DB=1 bun run ./src/index.ts",
+    "dev:temporary": "PRIORICODE_DISABLE_CHANNEL_DB=1 bun run ./src/temporary.ts"
   },
   "bin": {
     "prioricode": "./bin/prioricode"

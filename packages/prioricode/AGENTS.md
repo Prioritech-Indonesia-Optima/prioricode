@@ -4,6 +4,7 @@
 
 - **Schema**: Drizzle schema lives in `packages/core/src/**/*.sql.ts`.
 - **Migrations**: database migrations live in `packages/core` and are applied by core.
+- **DB file routing**: `bun dev` (channel = `local`) MUST use the main `prioricode.db` so sessions, projects, and coordination state are shared with installed builds. The `dev` script sets `PRIORICODE_DISABLE_CHANNEL_DB=1` as a belt-and-suspenders guarantee alongside the `InstallationLocal` check in `packages/core/src/database/database.ts`. Do not introduce a channel-specific DB for local/dev runs without migrating existing data.
 
 ## Development server
 
