@@ -27,6 +27,7 @@ import { createSyntaxStyleMemo, generateSubtleSyntax, selectedForeground, useThe
 import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
 import { Prompt, type PromptRef } from "../../component/prompt"
 import { StatusBar } from "../../component/status-bar"
+import { DialogQueuedPrompts, collectQueuedPrompts, type QueuedPrompt } from "../../component/dialog-queued-prompts"
 import type {
   AssistantMessage,
   Part,
@@ -119,6 +120,7 @@ const sessionBindingCommands = [
   "session.timeline",
   "session.fork",
   "session.compact",
+  "session.queued_prompts",
   "session.unshare",
   "session.undo",
   "session.redo",
@@ -248,6 +250,9 @@ export function Session() {
     )
     return pending === -1 ? undefined : pending
   })
+  const queuedPrompts = createMemo<QueuedPrompt[]>(() =>
+    collectQueuedPrompts(messages(), (messageID) => sync.data.part[messageID] ?? []),
+  )
 
   const lastAssistant = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant")
@@ -585,6 +590,15 @@ export function Session() {
           providerID: selectedModel.providerID,
         })
         dialog.clear()
+      },
+    },
+    {
+      title: "Manage queued prompts",
+      value: "session.queued_prompts",
+      category: "Session",
+      enabled: queuedPrompts().length > 0,
+      run: () => {
+        dialog.replace(() => <DialogQueuedPrompts prompts={queuedPrompts} />)
       },
     },
     {
