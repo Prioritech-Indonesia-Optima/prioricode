@@ -126,6 +126,7 @@ const appBindingCommands = [
   "theme.switch",
   "theme.switch_mode",
   "theme.mode.lock",
+  "permission.mode",
   "help.show",
   "docs.open",
   "diff.open",

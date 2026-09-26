@@ -26,6 +26,7 @@ import { Spinner } from "../../component/spinner"
 import { createSyntaxStyleMemo, generateSubtleSyntax, selectedForeground, useTheme } from "../../context/theme"
 import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
 import { Prompt, type PromptRef } from "../../component/prompt"
+import { StatusBar } from "../../component/status-bar"
 import type {
   AssistantMessage,
   Part,
@@ -1334,6 +1335,9 @@ export function Session() {
                   </pluginRuntime.Slot>
                 </Show>
               </box>
+              <Show when={!session()?.parentID}>
+                <StatusBar sessionID={route.sessionID} permissions={permissions} />
+              </Show>
             </Show>
             <Toast />
           </box>

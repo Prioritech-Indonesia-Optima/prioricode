@@ -218,6 +218,7 @@ export const Definitions = {
   "prompt.autocomplete.select": keybind("return", "Select autocomplete item"),
   "prompt.autocomplete.complete": keybind("tab", "Complete autocomplete item"),
   "permission.prompt.fullscreen": keybind("ctrl+f", "Toggle permission prompt fullscreen"),
+  permission_mode_cycle: keybind("<leader>p", "Cycle permission mode"),
   "plugins.toggle": keybind("space", "Toggle plugin"),
   "dialog.plugins.install": keybind("shift+i", "Install plugin from plugin dialog"),
 
@@ -308,6 +309,7 @@ export const CommandMap = {
   session_toggle_timestamps: "session.toggle.timestamps",
   session_toggle_generic_tool_output: "session.toggle.generic_tool_output",
   session_queued_prompts: "session.queued_prompts",
+  permission_mode_cycle: "permission.mode",
   session_child_first: "session.child.first",
   session_child_cycle: "session.child.next",
   session_child_cycle_reverse: "session.child.previous",
