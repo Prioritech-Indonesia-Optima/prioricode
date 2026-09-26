@@ -65,6 +65,7 @@ const fakeTruncate = Truncate.Service.of({
 const layer = Layer.mergeAll(
   Layer.succeed(Plugin.Service, fakePlugin),
   Layer.succeed(Hook.Service, {
+    init: () => Effect.void,
     preToolUse: () => Effect.succeed(undefined),
     postToolUse: () => Effect.void,
   } satisfies Hook.Interface),
