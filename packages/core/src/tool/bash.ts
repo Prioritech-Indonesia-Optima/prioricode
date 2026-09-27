@@ -8,6 +8,7 @@ import { makeLocationNode } from "../effect/app-node"
 import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
 import { AppProcess } from "../process"
+import { CommandArity } from "../permission/arity"
 import { PermissionV2 } from "../permission"
 import { PositiveInt } from "../schema"
 import { ToolRegistry } from "./registry"
@@ -62,8 +63,8 @@ const isTimeout = (error: AppProcess.AppProcessError) =>
  * Minimal V2 core shell boundary. Keep parity debt visible without pulling the
  * legacy shell runtime into core.
  */
-// TODO: Port tree-sitter bash / PowerShell parser-based approval reduction.
-// TODO: Port BashArity reusable command-prefix approvals.
+// TODO: Replace separator-splitting decomposition with tree-sitter bash / PowerShell parsing for
+// exact quoting and redirection handling (CommandArity.patterns is the current approximation).
 // TODO: Replace token-based command-argument external-directory advisories with parser-based detection.
 // TODO: Restore PowerShell and cmd-specific invocation/path handling on Windows.
 // TODO: Add plugin shell.env environment augmentation once V2 plugin hooks exist.
@@ -138,10 +139,12 @@ const layer = Layer.effectDiscard(
                 (directory) =>
                   `Command argument references external directory ${path.join(directory, "*").replaceAll("\\", "/")}. Bash runs with host-user filesystem, process, and network authority; this scan is advisory only.`,
               )
+              const patterns = CommandArity.patterns(input.command)
               yield* permission.assert({
                 action: name,
-                resources: [input.command],
-                save: [input.command],
+                resources: patterns.length > 0 ? patterns : [input.command],
+                save: patterns.length > 0 ? patterns : [input.command],
+                fullText: input.command,
                 sessionID: context.sessionID,
                 agent: context.agent,
                 source,

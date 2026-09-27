@@ -339,7 +339,18 @@ describe("PermissionV2", () => {
       ).toMatchObject({ effect: "ask" })
       expect(
         yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["pwd"] })),
+      ).toMatchObject({ effect: "allow" })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["git push *"] })),
       ).toMatchObject({ effect: "ask" })
+      expect(
+        yield* service.ask(
+          assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["bun test *", "git push *"] }),
+        ),
+      ).toMatchObject({ effect: "ask" })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["bun test *"] })),
+      ).toMatchObject({ effect: "allow" })
     }),
   )
 

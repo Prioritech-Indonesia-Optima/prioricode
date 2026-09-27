@@ -172,7 +172,9 @@ describe("BashTool", () => {
               combineOutput: true,
               maxOutputBytes: BashTool.MAX_CAPTURE_BYTES,
             })
-            expect(assertions).toMatchObject([{ sessionID, action: "bash", resources: ["pwd"], save: ["pwd"] }])
+            expect(assertions).toMatchObject([
+              { sessionID, action: "bash", resources: ["pwd *"], save: ["pwd *"], fullText: "pwd" },
+            ])
           }),
         )
       },
@@ -416,13 +418,36 @@ describe("BashTool", () => {
       (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
     ),
   )
+
+  it.live("reduces a compound command to one approval pattern per simple command", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        return withTool(tmp.path, (registry) =>
+          Effect.gen(function* () {
+            yield* executeTool(registry, call({ command: "git push origin main && bun test" }, "call-reduce"))
+            expect(assertions).toMatchObject([
+              {
+                sessionID,
+                action: "bash",
+                resources: ["git push *", "bun test *"],
+                save: ["git push *", "bun test *"],
+                fullText: "git push origin main && bun test",
+              },
+            ])
+          }),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
 })
 
 test("keeps locked deferred parity TODOs visible", async () => {
   const source = await fs.readFile(new URL("../src/tool/bash.ts", import.meta.url), "utf8")
   for (const todo of [
-    "Port tree-sitter bash / PowerShell parser-based approval reduction.",
-    "Port BashArity reusable command-prefix approvals.",
+    "Replace separator-splitting decomposition with tree-sitter bash / PowerShell parsing for",
     "Replace token-based command-argument external-directory advisories with parser-based detection.",
     "Restore PowerShell and cmd-specific invocation/path handling on Windows.",
     "Add plugin shell.env environment augmentation once V2 plugin hooks exist.",

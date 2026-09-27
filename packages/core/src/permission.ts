@@ -11,6 +11,7 @@ import { SessionStore } from "./session/store"
 import { Wildcard } from "./util/wildcard"
 import { PermissionSaved } from "./permission/saved"
 import { DestructiveCommand } from "./permission/destructive"
+import { SafeCommand } from "./permission/safe"
 
 export { Effect, Rule, Ruleset } from "@prioricode/schema/permission"
 const missingAgentPermissions: Permission.Ruleset = [{ action: "*", resource: "*", effect: "deny" }]
@@ -40,6 +41,12 @@ export const AssertInput = Schema.Struct({
   id: ID.pipe(Schema.optional),
   ...RequestFields,
   agent: AgentV2.ID.pipe(Schema.optional),
+  /**
+   * Full original text behind reduced `resources` (for example shell command
+   * prefixes). Safety heuristics evaluate it so approval reduction cannot hide
+   * destructive arguments from the always-allow guard.
+   */
+  fullText: Schema.String.pipe(Schema.optional),
 }).annotate({ identifier: "PermissionV2.AssertInput" })
 export type AssertInput = typeof AssertInput.Type
 
@@ -175,11 +182,25 @@ const layer = Layer.effect(
       const all = [...rules, ...(yield* savedRules())]
       const effects = input.resources.map((resource) => {
         const effect = evaluate(input.action, resource, all).effect
-        if (mode === "always-allow" && input.action === "bash" && DestructiveCommand.isDestructive(resource))
+        if (
+          mode === "always-allow" &&
+          input.action === "bash" &&
+          (input.fullText !== undefined
+            ? DestructiveCommand.isDestructive(input.fullText)
+            : DestructiveCommand.isDestructive(resource))
+        )
           return "ask" as const
         return effect
       })
-      const effect: Permission.Effect = effects.includes("deny") ? "deny" : effects.includes("ask") ? "ask" : "allow"
+      let effect: Permission.Effect = effects.includes("deny") ? "deny" : effects.includes("ask") ? "ask" : "allow"
+      if (
+        mode === "ask-first" &&
+        effect === "ask" &&
+        input.action === "bash" &&
+        input.resources.length > 0 &&
+        input.resources.every((resource) => SafeCommand.isSafe(resource))
+      )
+        effect = "allow"
       return { effect, rules: all }
     })
 
