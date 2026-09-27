@@ -29,9 +29,10 @@ export const boundedRecovery: Scenario = {
       const context = yield* sessions.context(sessionID)
       const assistant = context.findLast((message) => message.type === "assistant" && message.finish === "stop")
       if (assistant === undefined) return yield* Effect.fail(new Error("run never recovered to a settled assistant"))
-      const events = yield* sessions
-        .events({ sessionID })
-        .pipe(Stream.runCollect, Effect.map((chunk) => Array.from(chunk)))
+      const events = yield* sessions.events({ sessionID }).pipe(
+        Stream.runCollect,
+        Effect.map((chunk) => Array.from(chunk)),
+      )
       const retried = events.filter((event) => event.type === "session.next.retried")
       if (retried.length < 2)
         return yield* Effect.fail(new Error(`expected durable retry notices, saw ${retried.length}`))

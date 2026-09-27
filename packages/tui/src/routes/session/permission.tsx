@@ -108,11 +108,7 @@ function TextBody(props: { title: string; description?: string; icon?: string })
   )
 }
 
-export function PermissionPrompt(props: {
-  request: PermissionRequest
-  directory?: string
-  pending?: () => number
-}) {
+export function PermissionPrompt(props: { request: PermissionRequest; directory?: string; pending?: () => number }) {
   const sdk = useSDK()
   const project = useProject()
   const sync = useSync()

@@ -76,9 +76,7 @@ const previewLines = (value: string, prefix: "+" | "-") => {
 
 export const toModelOutput = (output: Output, oldString: string, newString: string) => {
   const notes =
-    output.diagnostics === undefined
-      ? []
-      : ["", `LSP errors detected in this file, please fix:\n${output.diagnostics}`]
+    output.diagnostics === undefined ? [] : ["", `LSP errors detected in this file, please fix:\n${output.diagnostics}`]
   return [
     `Edited file successfully: ${output.files[0]?.file}`,
     `Replacements: ${output.replacements}`,
@@ -89,7 +87,6 @@ export const toModelOutput = (output: Output, oldString: string, newString: stri
     ...notes,
   ].join("\n")
 }
-
 
 type FuzzyReplacer = (content: string, find: string) => Generator<string>
 
@@ -392,7 +389,9 @@ const fuzzyReplace = (content: string, oldString: string, newString: string, rep
       return { text: content.substring(0, index) + newString + content.substring(index + search.length) }
     }
   }
-  return { failure: "Could not find oldString in the file. It must match exactly, including whitespace and indentation." }
+  return {
+    failure: "Could not find oldString in the file. It must match exactly, including whitespace and indentation.",
+  }
 }
 
 // TODO: Publish watcher/file-edit events after V2 watcher integration exists.
@@ -478,7 +477,11 @@ const layer = Layer.effectDiscard(
                 const replaceAll = input.replaceAll === true
                 const fuzzy =
                   exactCount === 1 || replaceAll
-                    ? { text: replaceAll ? source.text.replaceAll(oldString, newString) : source.text.replace(oldString, newString) }
+                    ? {
+                        text: replaceAll
+                          ? source.text.replaceAll(oldString, newString)
+                          : source.text.replace(oldString, newString),
+                      }
                     : exactCount > 1
                       ? {
                           failure:
@@ -487,8 +490,7 @@ const layer = Layer.effectDiscard(
                       : fuzzyReplace(source.text, oldString, newString, replaceAll)
                 if (fuzzy.failure !== undefined) return yield* new ToolFailure({ message: fuzzy.failure })
                 const replaced = fuzzy.text
-                const replacements =
-                  exactCount === 1 || exactCount > 1 ? exactCount : source.text === replaced ? 0 : 1
+                const replacements = exactCount === 1 || exactCount > 1 ? exactCount : source.text === replaced ? 0 : 1
                 const counts = diffLines(source.text, replaced).reduce(
                   (result, item) => ({
                     additions: result.additions + (item.added ? (item.count ?? 0) : 0),

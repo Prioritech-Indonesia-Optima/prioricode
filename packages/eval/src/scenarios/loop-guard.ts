@@ -45,13 +45,13 @@ export const loopGuard: Scenario = {
       const settled = context.findLast((message) => message.type === "assistant" && message.finish === "stop")
       if (settled === undefined) return yield* Effect.fail(new Error("assistant never settled with stop"))
       const caller = context.find(
-        (message) => message.type === "assistant" && message.content.some((content) => content.type === "tool" && content.id === "call-repeat-3"),
+        (message) =>
+          message.type === "assistant" &&
+          message.content.some((content) => content.type === "tool" && content.id === "call-repeat-3"),
       )
       if (caller === undefined || caller.type !== "assistant")
         return yield* Effect.fail(new Error("third identical call never settled"))
-      const blocked = caller.content.find(
-        (content) => content.type === "tool" && content.id === "call-repeat-3",
-      )
+      const blocked = caller.content.find((content) => content.type === "tool" && content.id === "call-repeat-3")
       if (blocked === undefined || blocked.type !== "tool" || blocked.state.status !== "error")
         return yield* Effect.fail(new Error("third identical call was not blocked"))
       if (!JSON.stringify(blocked.state.error).includes("TOOL CALL BLOCKED"))

@@ -186,8 +186,6 @@ const taskText = (result: { type: string; value: unknown }) => {
   return { sessionID: match![1], state: match![2], text }
 }
 
-
-
 const it = testEffect(Layer.empty)
 
 describe("TaskTool", () => {
@@ -202,7 +200,7 @@ describe("TaskTool", () => {
           ),
         )
         expect(output.sessionID).toStartWith("ses_")
-        expect(output.text).toContain("state=\"error\"")
+        expect(output.text).toContain('state="error"')
         expect(resumed).toEqual([output.sessionID as SessionV2.ID])
 
         const { db } = yield* Database.Service

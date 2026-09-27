@@ -47,7 +47,8 @@ export const Input = Schema.Struct({
   description: Schema.String.annotate({ description: "A short (3-5 word) description of the task" }),
   prompt: Schema.String.annotate({ description: "The self-contained task for the agent to perform" }),
   subagent_type: Schema.String.pipe(Schema.optional).annotate({
-    description: "Specialized agent to use (default: general). Must be a subagent-capable agent from the system context.",
+    description:
+      "Specialized agent to use (default: general). Must be a subagent-capable agent from the system context.",
   }),
   task_id: Schema.String.pipe(Schema.optional).annotate({
     description: "Continue a previous subagent Session of this Session instead of creating a fresh one.",
@@ -165,9 +166,9 @@ const layer = Layer.effectDiscard(
 
               let child: SessionSchema.Info | undefined
               if (input.task_id !== undefined) {
-                const found = yield* sessions.get(SessionSchema.ID.make(input.task_id)).pipe(
-                  Effect.catch(() => Effect.succeed(undefined)),
-                )
+                const found = yield* sessions
+                  .get(SessionSchema.ID.make(input.task_id))
+                  .pipe(Effect.catch(() => Effect.succeed(undefined)))
                 if (found === undefined || found.parentID !== context.sessionID)
                   return yield* new ToolFailure({
                     message: `Unable to resume task_id ${input.task_id}: Session not found or not owned by this Session.`,
@@ -199,8 +200,10 @@ const layer = Layer.effectDiscard(
               if (input.background === true) {
                 const notify = settle(childID).pipe(
                   Effect.flatMap((result) =>
-                    steer(context.sessionID, completionNotice(childID, input.description, result.state, result.text))
-                      .pipe(Effect.as("notified")),
+                    steer(
+                      context.sessionID,
+                      completionNotice(childID, input.description, result.state, result.text),
+                    ).pipe(Effect.as("notified")),
                   ),
                   Effect.catch(() =>
                     steer(

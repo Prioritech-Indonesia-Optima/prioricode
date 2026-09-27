@@ -48,9 +48,7 @@ const textOf = (result: CallToolResult) =>
 
 const contentOf = (result: CallToolResult) =>
   result.content.flatMap(
-    (
-      item,
-    ): Array<{ type: "text"; text: string } | { type: "file"; data: string; mime: string; name?: string }> => {
+    (item): Array<{ type: "text"; text: string } | { type: "file"; data: string; mime: string; name?: string }> => {
       if (item.type === "text") return [{ type: "text" as const, text: item.text }]
       if (item.type === "image") return [{ type: "file" as const, data: item.data, mime: item.mimeType, name: "image" }]
       if (item.type === "resource" && "text" in item.resource && typeof item.resource.text === "string")
@@ -134,14 +132,15 @@ const buildTransport = (serverName: string, server: ConfigMCP.ServerType, direct
               args,
               cwd: server.cwd === undefined ? directory : path.resolve(directory, server.cwd),
               env:
-                server.environment === undefined
-                  ? baseEnvironment()
-                  : { ...baseEnvironment(), ...server.environment },
+                server.environment === undefined ? baseEnvironment() : { ...baseEnvironment(), ...server.environment },
             })
           })()
         : new StreamableHTTPClientTransport(new URL(server.url), { requestInit: { headers: server.headers } }),
     catch: (error) => (error instanceof Error ? error : new Error(String(error))),
-  }).pipe(Effect.map(Option.some), Effect.catch(() => Effect.succeed(Option.none())))
+  }).pipe(
+    Effect.map(Option.some),
+    Effect.catch(() => Effect.succeed(Option.none())),
+  )
 
 const openServer = Effect.fn("MCPv2.openServer")(function* (
   serverName: string,
@@ -154,8 +153,7 @@ const openServer = Effect.fn("MCPv2.openServer")(function* (
   if (server.type === "remote" && server.oauth !== undefined && server.oauth !== false)
     return unavailable({ status: "skipped", detail: "OAuth is not supported by the V2 MCP client yet" })
   const transport = yield* buildTransport(serverName, server, directory)
-  if (Option.isNone(transport))
-    return unavailable({ status: "failed", detail: "invalid local command or remote URL" })
+  if (Option.isNone(transport)) return unavailable({ status: "failed", detail: "invalid local command or remote URL" })
   const connection = yield* Effect.gen(function* () {
     const client = yield* Effect.acquireRelease(
       Effect.tryPromise({
@@ -212,9 +210,7 @@ const registration = Layer.effectDiscard(
         ),
       )
       if (outcome._tag === "Connected") {
-        yield* tools
-          .register(Object.fromEntries(outcome.registrations))
-          .pipe(Effect.catch(() => Effect.void))
+        yield* tools.register(Object.fromEntries(outcome.registrations)).pipe(Effect.catch(() => Effect.void))
         yield* Effect.addFinalizer(() => Effect.tryPromise(() => outcome.client.close()).pipe(Effect.ignore))
         yield* Effect.logInfo("MCP server connected", { server: serverName, tools: outcome.status.tools })
       } else yield* Effect.logWarning("MCP server unavailable", { server: serverName, detail: outcome.status.detail })

@@ -64,13 +64,7 @@ const location = Layer.succeed(Location.Service, Location.Service.of(locationFix
 
 const it = testEffect(
   AppNodeBuilder.build(
-    LayerNode.group([
-      Database.node,
-      EventV2.node,
-      SessionProjector.node,
-      SessionStore.node,
-      SessionV2.node,
-    ]),
+    LayerNode.group([Database.node, EventV2.node, SessionProjector.node, SessionStore.node, SessionV2.node]),
     [
       [SessionExecution.node, execution],
       [ProjectV2.node, projects],
@@ -119,10 +113,12 @@ describe("SessionV2 operations while in use", () => {
       const sessions = yield* SessionV2.Service
 
       const busy = new SessionV2.BusyError({ sessionID })
-      const stage = yield* Effect.exit(sessions.revert.stage({
-        sessionID,
-        messageID: SessionMessage.ID.make("msg_missing_boundary"),
-      }))
+      const stage = yield* Effect.exit(
+        sessions.revert.stage({
+          sessionID,
+          messageID: SessionMessage.ID.make("msg_missing_boundary"),
+        }),
+      )
       expect(hasFailure(stage, busy)).toBe(true)
       const clear = yield* Effect.exit(sessions.revert.clear(sessionID))
       expect(hasFailure(clear, busy)).toBe(true)

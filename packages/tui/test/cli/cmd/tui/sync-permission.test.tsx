@@ -23,12 +23,8 @@ describe("permission queue sync", () => {
   test("replies are recorded in bounded per-session history before the queue entry disappears", async () => {
     const { app, emit, sync } = await mount()
     try {
-      emit(
-        global({ id: "evt_1", type: "permission.asked", properties: request("per_a") }) as never,
-      )
-      emit(
-        global({ id: "evt_2", type: "permission.asked", properties: request("per_b") }) as never,
-      )
+      emit(global({ id: "evt_1", type: "permission.asked", properties: request("per_a") }) as never)
+      emit(global({ id: "evt_2", type: "permission.asked", properties: request("per_b") }) as never)
       await wait(() => (sync.data.permission["ses_1"]?.length ?? 0) === 2)
       expect(sync.data.permission["ses_1"]?.map((r) => r.id)).toEqual(["per_a", "per_b"])
 

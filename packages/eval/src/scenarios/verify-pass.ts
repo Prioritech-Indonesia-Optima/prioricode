@@ -32,7 +32,8 @@ export const verifyCatchesBrokenEdits: Scenario = {
         return yield* Effect.fail(new Error(`verification never continued the drain (${harness.requests} turns)`))
       const context = yield* sessions.context(sessionID)
       const sawFailure = context.some(
-        (message) => message.type === "user" && message.text.includes("Automatic verification before completion failed"),
+        (message) =>
+          message.type === "user" && message.text.includes("Automatic verification before completion failed"),
       )
       if (!sawFailure) return yield* Effect.fail(new Error("verification steering prompt never reached the model"))
       const assistant = context.findLast((message) => message.type === "assistant" && message.finish === "stop")

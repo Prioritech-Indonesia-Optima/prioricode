@@ -29,12 +29,7 @@ import { SessionStore } from "./session/store"
 import { SessionExecution } from "./session/execution"
 import { makeGlobalNode } from "./effect/app-node"
 import { LocationServiceMap } from "./location-service-map"
-import {
-  BusyError,
-  MessageDecodeError,
-  NotFoundError,
-  PromptConflictError,
-} from "./session/error"
+import { BusyError, MessageDecodeError, NotFoundError, PromptConflictError } from "./session/error"
 import { SessionEvent } from "./session/event"
 import { SessionInput } from "./session/input"
 import { Snapshot } from "./snapshot"
@@ -95,8 +90,6 @@ type CompactInput = {
   prompt?: Prompt
 }
 
-
-
 export class OperationUnavailableError extends Schema.TaggedErrorClass<OperationUnavailableError>()(
   "Session.OperationUnavailableError",
   {
@@ -111,8 +104,6 @@ export {
   NotFoundError,
   PromptConflictError,
 } from "./session/error"
-
-
 
 /**
  * SessionV2.Service operations are classified by how they behave while a Session

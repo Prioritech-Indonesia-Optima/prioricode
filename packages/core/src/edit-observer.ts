@@ -52,10 +52,7 @@ const layer = Layer.effect(
   }),
 )
 
-export const noopLayer = Layer.succeed(
-  Service,
-  Service.of({ afterEdit: () => Effect.succeed(empty) }),
-)
+export const noopLayer = Layer.succeed(Service, Service.of({ afterEdit: () => Effect.succeed(empty) }))
 
 export const node = makeLocationNode({
   service: Service,

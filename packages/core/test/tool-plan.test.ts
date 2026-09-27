@@ -37,9 +37,7 @@ const question = Layer.succeed(
     ask: (input) =>
       Effect.sync(() => {
         asked.push(input)
-      }).pipe(
-        Effect.andThen(reject ? Effect.fail(new QuestionV2.RejectedError()) : Effect.succeed(answers)),
-      ),
+      }).pipe(Effect.andThen(reject ? Effect.fail(new QuestionV2.RejectedError()) : Effect.succeed(answers))),
     reply: () => Effect.die("unused"),
     reject: () => Effect.die("unused"),
     list: () => Effect.die("unused"),
@@ -161,7 +159,9 @@ describe("PlanTool", () => {
       expect(text).toContain("approved switching to plan agent")
       expect(asked[0]?.questions[0]?.header).toBe("Plan Agent")
       expect(asAgent(yield* session.get(sessionID).pipe(Effect.map((info) => info.agent)))).toBe(<AgentV2.ID>"plan")
-      expect(yield* pendingSteers).toEqual([{ text: expect.stringContaining("Switched to plan agent"), delivery: "steer" }])
+      expect(yield* pendingSteers).toEqual([
+        { text: expect.stringContaining("Switched to plan agent"), delivery: "steer" },
+      ])
       expect(wake).toEqual([])
     }),
   )

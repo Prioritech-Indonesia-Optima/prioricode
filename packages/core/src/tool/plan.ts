@@ -40,11 +40,7 @@ After presenting the plan, ask the user to approve switching to the build agent 
 
 const transition = Effect.fnUntraced(function* (
   question: QuestionV2.Interface,
-  write: (
-    sessionID: SessionSchema.ID,
-    agent: string,
-    instruction: string,
-  ) => Effect.Effect<void, ToolFailure>,
+  write: (sessionID: SessionSchema.ID, agent: string, instruction: string) => Effect.Effect<void, ToolFailure>,
   request: {
     readonly sessionID: SessionSchema.ID
     readonly assistantMessageID: SessionMessage.ID
@@ -66,7 +62,8 @@ const transition = Effect.fnUntraced(function* (
       Effect.catchTag("QuestionV2.RejectedError", () =>
         Effect.fail(
           new ToolFailure({
-            message: "The user rejected the plan-mode transition. Continue with the current agent; do not call this tool again for it.",
+            message:
+              "The user rejected the plan-mode transition. Continue with the current agent; do not call this tool again for it.",
           }),
         ),
       ),
@@ -87,11 +84,7 @@ const layer = Layer.effectDiscard(
     const store = yield* SessionStore.Service
     const { db } = yield* Database.Service
 
-    const write = Effect.fnUntraced(function* (
-      sessionID: SessionSchema.ID,
-      agent: string,
-      instruction: string,
-    ) {
+    const write = Effect.fnUntraced(function* (sessionID: SessionSchema.ID, agent: string, instruction: string) {
       if ((yield* store.get(sessionID)) === undefined)
         return yield* new ToolFailure({
           message: `Session ${sessionID} no longer exists. The plan-mode transition did not apply.`,

@@ -68,7 +68,10 @@ function endPosition(text: string) {
   return { line: lines.length - 1, character: lines.at(-1)?.length ?? 0 }
 }
 
-function applyEdits(text: string, edits: ReadonlyArray<{ range: { start: Position; end: Position }; newText: string }>) {
+function applyEdits(
+  text: string,
+  edits: ReadonlyArray<{ range: { start: Position; end: Position }; newText: string }>,
+) {
   const lines = text.split("\n")
   const offset = (position: Position) =>
     Math.max(
@@ -127,7 +130,9 @@ export async function create(options: Options): Promise<Client> {
     const items = (params as { items?: { section?: string }[] }).items ?? []
     return items.map((item) => configurationValue(options.initialization, item.section))
   })
-  connection.onRequest("workspace/workspaceFolders", () => [{ name: "workspace", uri: pathToFileURL(options.root).href }])
+  connection.onRequest("workspace/workspaceFolders", () => [
+    { name: "workspace", uri: pathToFileURL(options.root).href },
+  ])
   connection.onRequest("window/workDoneProgress/create", () => null)
   connection.onRequest("client/registerCapability", () => null)
   connection.onRequest("client/unregisterCapability", () => null)
@@ -166,7 +171,8 @@ export async function create(options: Options): Promise<Client> {
     throw error
   }
   connection.notify("initialized", {})
-  if (options.initialization) connection.notify("workspace/didChangeConfiguration", { settings: options.initialization })
+  if (options.initialization)
+    connection.notify("workspace/didChangeConfiguration", { settings: options.initialization })
 
   function dispose() {
     connection.close()
@@ -249,7 +255,11 @@ export async function create(options: Options): Promise<Client> {
       }
     },
     async shutdown() {
-      await withTimeoutOption(connection.request("shutdown", undefined).catch(() => undefined), SHUTDOWN_TIMEOUT_MS, undefined)
+      await withTimeoutOption(
+        connection.request("shutdown", undefined).catch(() => undefined),
+        SHUTDOWN_TIMEOUT_MS,
+        undefined,
+      )
       connection.notify("exit")
       await new Promise((resolve) => setTimeout(resolve, 50).unref?.())
       dispose()

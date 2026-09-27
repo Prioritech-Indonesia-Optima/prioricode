@@ -15,7 +15,11 @@ const request = (route: string, init?: RequestInit) => {
   return server.handler(new Request(`http://prioricode.test${route}`, { ...init, headers }), context)
 }
 
-const body = (input: unknown) => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) })
+const body = (input: unknown) => ({
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify(input),
+})
 
 beforeAll(async () => {
   directory = await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(), "prioricode-server-read-")))
@@ -35,7 +39,11 @@ const createSession = async () => {
 describe("V2 session read surfaces", () => {
   test("messages, questions, and permissions are empty for a fresh session", async () => {
     const sessionID = await createSession()
-    for (const route of [`/api/session/${sessionID}/message`, `/api/session/${sessionID}/question`, `/api/session/${sessionID}/permission`]) {
+    for (const route of [
+      `/api/session/${sessionID}/message`,
+      `/api/session/${sessionID}/question`,
+      `/api/session/${sessionID}/permission`,
+    ]) {
       const response = await request(route)
       expect(response.status, route).toBe(200)
       expect(((await response.json()) as { data: unknown }).data, route).toEqual([])
@@ -48,7 +56,10 @@ describe("V2 session read surfaces", () => {
     expect(((await missing.json()) as { _tag: string })._tag).toBe("SessionNotFoundError")
 
     const sessionID = await createSession()
-    const reply = await request(`/api/session/${sessionID}/question/que_missing_00000000/reply`, body({ answers: [["Yes"]] }))
+    const reply = await request(
+      `/api/session/${sessionID}/question/que_missing_00000000/reply`,
+      body({ answers: [["Yes"]] }),
+    )
     expect(reply.status).toBe(404)
     expect(((await reply.json()) as { _tag: string })._tag).toBe("QuestionNotFoundError")
 

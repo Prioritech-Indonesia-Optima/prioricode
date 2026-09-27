@@ -26,7 +26,9 @@ export function collectQueuedPrompts(messages: Message[], parts: (messageID: str
     .map(({ message }) => ({
       message: message as UserMessage,
       text: parts(message.id)
-        .filter((part): part is Extract<Part, { type: "text" }> => part.type === "text" && !part.synthetic && !part.ignored)
+        .filter(
+          (part): part is Extract<Part, { type: "text" }> => part.type === "text" && !part.synthetic && !part.ignored,
+        )
         .map((part) => part.text)
         .join("\n")
         .trim(),

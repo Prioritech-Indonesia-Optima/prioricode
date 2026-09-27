@@ -40,7 +40,12 @@ export function shouldRetry(error: LLMError, attempt: number, config: Settings) 
  * `nextAttempt - 1`. Honors provider `retryAfterMs`, otherwise exponentially
  * grows from the configured initial delay with bounded jitter.
  */
-export function delay(error: LLMError, nextAttempt: number, config: Settings = DEFAULT_SETTINGS, random = Math.random()) {
+export function delay(
+  error: LLMError,
+  nextAttempt: number,
+  config: Settings = DEFAULT_SETTINGS,
+  random = Math.random(),
+) {
   const provider = error.retryAfterMs
   if (provider !== undefined && Number.isFinite(provider)) return cap(provider, config)
   const base = config.initialDelayMs * Math.pow(2, Math.max(0, nextAttempt - 2))

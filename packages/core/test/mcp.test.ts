@@ -29,7 +29,11 @@ const config = Layer.succeed(
             mcp: new ConfigMCP.Info({
               servers: {
                 fixture: new ConfigMCP.Local({ type: "local", command: [process.execPath, serverPath] }),
-                broken: new ConfigMCP.Local({ type: "local", command: [process.execPath, "/nonexistent/mcp.ts"], timeout: new ConfigMCP.Timeout({ startup: 1_000, request: 1_000 }) }),
+                broken: new ConfigMCP.Local({
+                  type: "local",
+                  command: [process.execPath, "/nonexistent/mcp.ts"],
+                  timeout: new ConfigMCP.Timeout({ startup: 1_000, request: 1_000 }),
+                }),
                 off: new ConfigMCP.Local({ type: "local", command: ["true"], disabled: true }),
               },
             }),

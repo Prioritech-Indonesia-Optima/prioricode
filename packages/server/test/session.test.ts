@@ -15,7 +15,11 @@ const request = (route: string, init?: RequestInit) => {
   return server.handler(new Request(`http://prioricode.test${route}`, { ...init, headers }), context)
 }
 
-const body = (input: unknown) => ({ method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(input) })
+const body = (input: unknown) => ({
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify(input),
+})
 
 const payload = async <A>(response: Response) => (await response.json()) as A
 
@@ -94,7 +98,7 @@ describe("V2 session HTTP surface", () => {
 
     const compact = await request(`/api/session/${session.id}/compact`, { method: "POST" })
     expect(compact.status).toBe(503)
-    expect(((await payload<{ _tag: string }>(compact))._tag)).toBe("ServiceUnavailableError")
+    expect((await payload<{ _tag: string }>(compact))._tag).toBe("ServiceUnavailableError")
 
     const commit = await request(`/api/session/${session.id}/revert/commit`, { method: "POST" })
     expect(commit.status).toBe(204)
@@ -104,6 +108,6 @@ describe("V2 session HTTP surface", () => {
       body({ messageID: "msg_missing_boundary_server_test" }),
     )
     expect(stage.status).toBe(404)
-    expect(((await payload<{ _tag: string }>(stage))._tag)).toBe("MessageNotFoundError")
+    expect((await payload<{ _tag: string }>(stage))._tag).toBe("MessageNotFoundError")
   })
 })

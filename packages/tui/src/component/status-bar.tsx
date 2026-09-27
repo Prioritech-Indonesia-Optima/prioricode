@@ -36,7 +36,8 @@ export function StatusBar(props: { sessionID: string; permissions: () => Permiss
 
   const mode = createMemo(() => permission.mode)
   const modePill = createMemo(() => {
-    if (mode() === "ask-first") return { label: "ask-first", bg: theme.warning, fg: selectedForeground(theme, theme.warning) }
+    if (mode() === "ask-first")
+      return { label: "ask-first", bg: theme.warning, fg: selectedForeground(theme, theme.warning) }
     if (mode() === "always-allow")
       return { label: "always-allow", bg: theme.success, fg: selectedForeground(theme, theme.success) }
     return undefined

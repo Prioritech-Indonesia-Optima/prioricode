@@ -44,7 +44,9 @@ export const toModelOutput = (output: Output) =>
     ...output.applied.map(
       (item) => `${item.type === "add" ? "A" : item.type === "delete" ? "D" : "M"} ${item.resource}`,
     ),
-    ...(output.diagnostics === undefined ? [] : [`LSP errors detected in these files, please fix:\n${output.diagnostics}`]),
+    ...(output.diagnostics === undefined
+      ? []
+      : [`LSP errors detected in these files, please fix:\n${output.diagnostics}`]),
   ].join("\n")
 
 type Prepared =

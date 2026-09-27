@@ -87,7 +87,14 @@ for (let gy = 0; gy < ROWS; gy++) {
   for (let x = 0; x < GLOW_W; x++) {
     if (tagRow) {
       const char = tagline[x - TAG_OFFSET] ?? " "
-      CELLS.push({ x, row: gy, y, kind: char === " " ? "glow" : "tag", charCode: char.codePointAt(0) ?? 32, threshold: 0 })
+      CELLS.push({
+        x,
+        row: gy,
+        y,
+        kind: char === " " ? "glow" : "tag",
+        charCode: char.codePointAt(0) ?? 32,
+        threshold: 0,
+      })
       continue
     }
     const char = x >= ART_X && x - ART_X < line.length ? line[x - ART_X] : " "

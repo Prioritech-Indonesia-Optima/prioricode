@@ -137,13 +137,7 @@ const appLayer = (file: string) =>
           }),
         ),
       ],
-      [
-        Config.node,
-        Layer.succeed(
-          Config.Service,
-          Config.Service.of({ entries: () => Effect.succeed([]) }),
-        ),
-      ],
+      [Config.node, Layer.succeed(Config.Service, Config.Service.of({ entries: () => Effect.succeed([]) }))],
       [
         ProjectV2.node,
         Layer.succeed(
@@ -167,10 +161,7 @@ const appLayer = (file: string) =>
           }),
         ),
       ],
-      [
-        SkillGuidance.node,
-        Layer.mock(SkillGuidance.Service, { load: () => Effect.succeed(SystemContext.empty) }),
-      ],
+      [SkillGuidance.node, Layer.mock(SkillGuidance.Service, { load: () => Effect.succeed(SystemContext.empty) })],
       [
         ReferenceGuidance.node,
         Layer.mock(ReferenceGuidance.Service, { load: () => Effect.succeed(SystemContext.empty) }),
@@ -220,7 +211,12 @@ const lifetime1 = Effect.gen(function* () {
   const sessions = yield* SessionV2.Service
   const runner = yield* SessionRunner.Service
   const created = yield* sessions.create({ location: { directory } })
-  yield* sessions.prompt({ sessionID: created.id, prompt: { text: "Echo then report" }, delivery: "queue", resume: false })
+  yield* sessions.prompt({
+    sessionID: created.id,
+    prompt: { text: "Echo then report" },
+    delivery: "queue",
+    resume: false,
+  })
   turns = [crashTurn]
   providerTurns = 0
   const drain = yield* runner.run({ sessionID: created.id, force: true }).pipe(Effect.forkScoped)

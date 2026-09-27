@@ -113,23 +113,20 @@ function init() {
     show(options: ToastInput) {
       const id = nextId++
       const item: ToastOptions = { ...options, id, duration: options.duration ?? 5000 }
-      setStore(
-        "queue",
-        (queue) => {
-          const next = [...queue, item]
-          const dropped = next.slice(Math.max(0, next.length - TOAST_STACK_LIMIT))
-          for (const stale of queue) {
-            if (!dropped.some((kept) => kept.id === stale.id)) {
-              const timer = timers.get(stale.id)
-              if (timer) {
-                clearTimeout(timer)
-                timers.delete(stale.id)
-              }
+      setStore("queue", (queue) => {
+        const next = [...queue, item]
+        const dropped = next.slice(Math.max(0, next.length - TOAST_STACK_LIMIT))
+        for (const stale of queue) {
+          if (!dropped.some((kept) => kept.id === stale.id)) {
+            const timer = timers.get(stale.id)
+            if (timer) {
+              clearTimeout(timer)
+              timers.delete(stale.id)
             }
           }
-          return dropped
-        },
-      )
+        }
+        return dropped
+      })
       timers.set(
         id,
         setTimeout(() => {

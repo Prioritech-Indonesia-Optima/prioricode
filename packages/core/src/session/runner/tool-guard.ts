@@ -119,9 +119,7 @@ export const make = (resolved: Settings): Guard => {
         return { type: "block", reason: outputBudgetMessage(resolved.toolOutputBytesPerTurn) }
       const key = callKey(name, input)
       const count = (seen.get(key) ?? 0) + 1
-      const blockThreshold = resolved.readOnlyTools.has(name)
-        ? resolved.readOnlyRepeatBlock
-        : resolved.repeatBlock
+      const blockThreshold = resolved.readOnlyTools.has(name) ? resolved.readOnlyRepeatBlock : resolved.repeatBlock
       if (count >= blockThreshold) return { type: "block", reason: repeatBlockMessage(name, count) }
       seen.set(key, count)
       callsInTurn += 1

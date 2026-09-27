@@ -1,6 +1,12 @@
 import { describe, expect, test } from "bun:test"
 import type { AssistantMessage, Message, Part, Provider, Session } from "@prioricode/sdk/v2"
-import { completedToolCount, computeUsage, estimateStreamingTokens, formatTurnHud, runningTool } from "../../src/util/context-usage"
+import {
+  completedToolCount,
+  computeUsage,
+  estimateStreamingTokens,
+  formatTurnHud,
+  runningTool,
+} from "../../src/util/context-usage"
 
 const assistant = (overrides: Partial<AssistantMessage> = {}): AssistantMessage =>
   ({
@@ -26,7 +32,10 @@ describe("computeUsage", () => {
   })
 
   test("computes tokens, percent, context and cost from the last completed message", () => {
-    const messages = [assistant(), assistant({ tokens: { input: 2000, output: 1000, reasoning: 0, cache: { read: 0, write: 0 } } as never })] as unknown as Message[]
+    const messages = [
+      assistant(),
+      assistant({ tokens: { input: 2000, output: 1000, reasoning: 0, cache: { read: 0, write: 0 } } as never }),
+    ] as unknown as Message[]
     const usage = computeUsage({
       session: { cost: 1.4 } as unknown as Session,
       messages,
@@ -56,7 +65,9 @@ const toolPart = (tool: string, status: string, title?: string): Part =>
 
 describe("estimateStreamingTokens", () => {
   test("sums text and reasoning length, quantized to hundreds", () => {
-    expect(estimateStreamingTokens([textPart("a".repeat(400)), { type: "reasoning", text: "b".repeat(420) } as Part])).toBe(200)
+    expect(
+      estimateStreamingTokens([textPart("a".repeat(400)), { type: "reasoning", text: "b".repeat(420) } as Part]),
+    ).toBe(200)
   })
 
   test("ignores synthetic and ignored parts", () => {
@@ -71,7 +82,11 @@ describe("estimateStreamingTokens", () => {
 
 describe("runningTool / completedToolCount", () => {
   test("picks the last running tool", () => {
-    const parts = [toolPart("read", "completed"), toolPart("bash", "running", "ls"), toolPart("edit", "running", "src/a.ts")]
+    const parts = [
+      toolPart("read", "completed"),
+      toolPart("bash", "running", "ls"),
+      toolPart("edit", "running", "src/a.ts"),
+    ]
     expect(runningTool(parts)).toEqual({ tool: "edit", title: "src/a.ts" })
   })
 
@@ -80,16 +95,20 @@ describe("runningTool / completedToolCount", () => {
   })
 
   test("counts completed and errored tools", () => {
-    expect(completedToolCount([toolPart("read", "completed"), toolPart("bash", "error"), toolPart("edit", "running")])).toBe(2)
+    expect(
+      completedToolCount([toolPart("read", "completed"), toolPart("bash", "error"), toolPart("edit", "running")]),
+    ).toBe(2)
   })
 })
 
 describe("formatTurnHud", () => {
   test("joins available segments only", () => {
-    expect(formatTurnHud({ tool: { tool: "edit", title: "src/a.ts" }, done: 3, estimate: 2100, elapsedMs: 45000 })).toBe(
-      "src/a.ts · 3 tools · 45.0s · ~2.1K tok",
-    )
+    expect(
+      formatTurnHud({ tool: { tool: "edit", title: "src/a.ts" }, done: 3, estimate: 2100, elapsedMs: 45000 }),
+    ).toBe("src/a.ts · 3 tools · 45.0s · ~2.1K tok")
     expect(formatTurnHud({ done: 0, estimate: 0, elapsedMs: 1200 })).toBe("1.2s")
-    expect(formatTurnHud({ tool: { tool: "websearch" }, done: 0, estimate: 0, elapsedMs: 500 })).toBe("Websearch · 500ms")
+    expect(formatTurnHud({ tool: { tool: "websearch" }, done: 0, estimate: 0, elapsedMs: 500 })).toBe(
+      "Websearch · 500ms",
+    )
   })
 })

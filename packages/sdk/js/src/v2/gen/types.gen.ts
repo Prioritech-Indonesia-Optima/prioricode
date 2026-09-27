@@ -11751,9 +11751,9 @@ export type V2SessionPromptErrors = {
    */
   404: SessionNotFoundError
   /**
-   * ConflictError
+   * ConflictError | SessionBusyError
    */
-  409: ConflictError
+  409: ConflictError | SessionBusyError
 }
 
 export type V2SessionPromptError = V2SessionPromptErrors[keyof V2SessionPromptErrors]
@@ -11791,6 +11791,10 @@ export type V2SessionCompactErrors = {
    * SessionNotFoundError
    */
   404: SessionNotFoundError
+  /**
+   * ConflictError | SessionBusyError
+   */
+  409: ConflictError | SessionBusyError
   /**
    * ServiceUnavailableError
    */
@@ -11830,6 +11834,10 @@ export type V2SessionWaitErrors = {
    * SessionNotFoundError
    */
   404: SessionNotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
   /**
    * ServiceUnavailableError
    */
@@ -11873,6 +11881,10 @@ export type V2SessionRevertStageErrors = {
    */
   404: MessageNotFoundError | SessionNotFoundError
   /**
+   * ConflictError | SessionBusyError
+   */
+  409: ConflictError | SessionBusyError
+  /**
    * UnknownError
    */
   500: UnknownError1
@@ -11914,6 +11926,10 @@ export type V2SessionRevertClearErrors = {
    */
   404: SessionNotFoundError
   /**
+   * ConflictError | SessionBusyError
+   */
+  409: ConflictError | SessionBusyError
+  /**
    * UnknownError
    */
   500: UnknownError1
@@ -11952,6 +11968,10 @@ export type V2SessionRevertCommitErrors = {
    * SessionNotFoundError
    */
   404: SessionNotFoundError
+  /**
+   * ConflictError | SessionBusyError
+   */
+  409: ConflictError | SessionBusyError
 }
 
 export type V2SessionRevertCommitError = V2SessionRevertCommitErrors[keyof V2SessionRevertCommitErrors]

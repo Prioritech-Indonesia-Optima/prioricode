@@ -63,17 +63,20 @@ test("toasts stack newest last, cap at four, and dismiss individually", async ()
     let frame = app.captureCharFrame()
     expect(frame).toContain("first notice")
     expect(frame).toContain("second notice")
-    expect(toast().queue().map((item) => item.message)).toEqual(["first notice", "second notice"])
+    expect(
+      toast()
+        .queue()
+        .map((item) => item.message),
+    ).toEqual(["first notice", "second notice"])
 
     toast().show({ message: "third notice", variant: "warning", duration: 60000 })
     toast().show({ message: "fourth notice", variant: "error", duration: 60000 })
     toast().show({ message: "fifth notice", variant: "info", duration: 60000 })
-    expect(toast().queue().map((item) => item.message)).toEqual([
-      "second notice",
-      "third notice",
-      "fourth notice",
-      "fifth notice",
-    ])
+    expect(
+      toast()
+        .queue()
+        .map((item) => item.message),
+    ).toEqual(["second notice", "third notice", "fourth notice", "fifth notice"])
 
     toast().dismiss()
     expect(toast().queue().at(-1)?.message).toBe("fourth notice")

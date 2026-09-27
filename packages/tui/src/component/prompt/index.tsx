@@ -39,7 +39,13 @@ import { type AutocompleteRef, Autocomplete } from "./autocomplete"
 import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
 import type { FilePart, UserMessage } from "@prioricode/sdk/v2"
 import { Locale } from "../../util/locale"
-import { completedToolCount, computeUsage, estimateStreamingTokens, formatTurnHud, runningTool } from "../../util/context-usage"
+import {
+  completedToolCount,
+  computeUsage,
+  estimateStreamingTokens,
+  formatTurnHud,
+  runningTool,
+} from "../../util/context-usage"
 import { errorMessage } from "../../util/error"
 import { formatDuration } from "../../util/format"
 import { createColors, createFrames } from "../../ui/spinner"
