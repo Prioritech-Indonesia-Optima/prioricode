@@ -10,7 +10,6 @@ import { GrepTool } from "./grep"
 import { QuestionTool } from "./question"
 import { ReadTool } from "./read"
 import { SkillTool } from "./skill"
-import { TaskTool } from "./task"
 import { TodoWriteTool } from "./todowrite"
 import { WebFetchTool } from "./webfetch"
 import { WebSearchTool } from "./websearch"
@@ -24,10 +23,10 @@ import { WriteTool } from "./write"
  * than this static list. The caller intentionally supplies shared Location
  * services once to this merged set.
  *
- * TODO: Port the remaining launch-follow-up leaves deliberately: edit fuzzy
- * parity, task, LSP,
- * repo_clone, repo_overview, plan_exit, and Rune/code mode. Keep MCP and plugin
- * transforms separate from this static built-in list.
+ * TaskTool and PlanTool are intentionally absent from this static list: their
+ * layers capture SessionV2.Service, whose node graph reaches the LocationServiceMap
+ * that BuiltInTools itself composes into. Register them where the application graph
+ * can supply that service (server composition), not as Location leaves.
  */
 export const node = makeLocationNode({
   name: "built-in-tools",

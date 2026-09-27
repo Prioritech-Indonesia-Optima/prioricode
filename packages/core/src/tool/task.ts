@@ -8,10 +8,11 @@ export * as TaskTool from "./task"
 
 import { ToolFailure } from "@prioricode/llm"
 import { Effect, Exit, Layer, Schema } from "effect"
-import { makeLocationNode } from "../effect/app-node"
+import { makeLocationNode, Node } from "../effect/app-node"
 import { AgentV2 } from "../agent"
 import { BackgroundJob } from "../background-job"
 import { SessionExecution } from "../session/execution"
+import { LayerNode } from "../effect/layer-node"
 import { SessionMessage } from "../session/message"
 import { SessionSchema } from "../session/schema"
 import { SessionV2 } from "../session"
@@ -20,6 +21,11 @@ import { Tool } from "./tool"
 import { Tools } from "./tools"
 
 export const name = "task"
+
+// Location tools must stay leaves of the LocationServiceMap graph. SessionV2's
+// node implementation reaches the map, so request its service as an unbound
+// global dependency and let the application graph supply the implementation.
+export const SessionV2Unbound = LayerNode.unbound(SessionV2.Service, Node.tags.values.global)
 
 export const description = `Launch one specialist subagent as a separate child Session and return its final result.
 
@@ -252,5 +258,5 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/task",
   layer,
-  deps: [ToolRegistry.node, AgentV2.node, SessionV2.node, SessionExecution.node, BackgroundJob.node],
+  deps: [ToolRegistry.node, AgentV2.node, SessionV2Unbound, SessionExecution.node, BackgroundJob.node],
 })

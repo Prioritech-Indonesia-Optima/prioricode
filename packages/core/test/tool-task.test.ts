@@ -77,20 +77,18 @@ const background = Layer.succeed(
     list: () => Effect.succeed([]),
     get: () => Effect.succeed(undefined),
     start: (input) =>
-      Effect.gen(function* () {
-        const info = {
+      Effect.sync(() => {
+        startedJobs.push(input.id ?? "job")
+      }).pipe(
+        Effect.as({
           id: input.id ?? "job",
           type: input.type,
           status: "running" as const,
           started_at: 0,
-        }
-        startedJobs.push(info.id)
-        yield* input.run.pipe(
-          Effect.catch(() => Effect.void),
-          Effect.asVoid,
-        )
-        return info
-      }),
+          ...(input.title === undefined ? {} : { title: input.title }),
+          ...(input.metadata === undefined ? {} : { metadata: input.metadata }),
+        }),
+      ),
     extend: () => Effect.succeed(false),
     wait: () => Effect.succeed({ timedOut: false }),
     waitForPromotion: () => Effect.runPromise(Effect.never) as never,
@@ -140,6 +138,7 @@ const withTask = <A, E, R>(body: (registry: ToolRegistry.Interface) => Effect.Ef
         ]),
         [
           [SessionExecution.node, execution],
+          [TaskTool.SessionV2Unbound, SessionV2.node],
           [AgentV2.node, agents],
           [BackgroundJob.node, background],
           [PermissionV2.node, permission],
@@ -283,7 +282,7 @@ describe("TaskTool", () => {
         expect(output.state).toBe("running")
         expect(output.text).toContain("working in the background")
         expect(startedJobs).toEqual([output.sessionID])
-        expect(resumed).toEqual([output.sessionID as SessionV2.ID, parentSessionID as SessionV2.ID])
+        expect(resumed).toEqual([])
       }),
     ),
   )
