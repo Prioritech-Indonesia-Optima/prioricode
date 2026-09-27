@@ -13,6 +13,7 @@ import { Watcher } from "./filesystem/watcher"
 import { Image } from "./image"
 import { Integration } from "./integration"
 import { Location } from "./location"
+import { MCPv2 } from "./mcp/mcp"
 import { LocationMutation } from "./location-mutation"
 import { LocationServiceMap } from "./location-service-map"
 import { PermissionV2 } from "./permission"
@@ -73,6 +74,9 @@ export const locationServices = LayerNode.group([
   QuestionV2.node,
   ReadToolFileSystem.node,
   BuiltInTools.node,
+  // MCP connects and registers only servers named in config; with an empty
+  // `mcp.servers` map this layer performs no external work at Location boot.
+  MCPv2.node,
   SessionRunnerModel.node,
   Snapshot.node,
   SessionRunnerLLM.node,

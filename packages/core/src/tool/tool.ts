@@ -72,6 +72,12 @@ type Config<
   readonly description: string
   readonly input: Input
   readonly output: Output
+  /**
+   * Raw upstream JSON Schema replacing the derived input definition (MCP and
+   * plugin tools whose schema is not known at compile time). Pair it with
+   * `Schema.Unknown` input and output codecs, which pass values through.
+   */
+  readonly jsonSchema?: JsonSchema.JsonSchema
   readonly structured?: Structured
   readonly toStructuredOutput?: (input: {
     readonly input: Schema.Schema.Type<Input>
@@ -109,8 +115,8 @@ export function make<
       const definition = new ToolDefinition({
         name,
         description: config.description,
-        inputSchema: toJsonSchema(config.input),
-        outputSchema: toJsonSchema(config.structured ?? config.output),
+        inputSchema: config.jsonSchema ?? toJsonSchema(config.input),
+        outputSchema: config.jsonSchema === undefined ? toJsonSchema(config.structured ?? config.output) : undefined,
       })
       definitions.set(name, definition)
       return definition
