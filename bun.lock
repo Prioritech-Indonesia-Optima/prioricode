@@ -493,6 +493,20 @@
         "vite": "catalog:",
       },
     },
+    "packages/eval": {
+      "name": "@prioricode/eval",
+      "dependencies": {
+        "@prioricode/core": "workspace:*",
+        "@prioricode/llm": "workspace:*",
+        "effect": "catalog:",
+      },
+      "devDependencies": {
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
+        "typescript": "catalog:",
+      },
+    },
     "packages/function": {
       "name": "@prioricode/function",
       "version": "0.1.9",
@@ -2307,6 +2321,8 @@
     "@prioricode/effect-sqlite-node": ["@prioricode/effect-sqlite-node@workspace:packages/effect-sqlite-node"],
 
     "@prioricode/enterprise": ["@prioricode/enterprise@workspace:packages/enterprise"],
+
+    "@prioricode/eval": ["@prioricode/eval@workspace:packages/eval"],
 
     "@prioricode/function": ["@prioricode/function@workspace:packages/function"],
 
@@ -6031,6 +6047,10 @@
     "@pierre/diffs/@shikijs/transformers": ["@shikijs/transformers@3.20.0", "", { "dependencies": { "@shikijs/core": "3.20.0", "@shikijs/types": "3.20.0" } }, "sha512-PrHHMRr3Q5W1qB/42kJW6laqFyWdhrPF2hNR9qjOm1xcSiAO3hAHo7HaVyHE6pMyevmy3i51O8kuGGXC78uK3g=="],
 
     "@pierre/diffs/diff": ["diff@8.0.3", "", {}, "sha512-qejHi7bcSD4hQAZE0tNAawRK1ZtafHDmMTMkrrIGgSLl7hTnQHmKCeB45xAcbfTqK2zowkM3j3bHt/4b/ARbYQ=="],
+
+    "@pierre/diffs/react": ["react@19.3.0", "", {}, "sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog=="],
+
+    "@pierre/trees/react": ["react@19.3.0", "", {}, "sha512-E8LUcbtBWt20bbl2YoHfx4ZDBdxVTfOKtCZn9cDSJ4l6/nuoApcpIBcj47t2wZoVX8g2ZHuMHbiShgCR1T5Sog=="],
 
     "@poppinss/dumper/supports-color": ["supports-color@10.2.2", "", {}, "sha512-SS+jx45GF1QjgEXQx4NJZV9ImqmO2NPz5FNsIHrsDjh2YsHnawpan7SNQ1o8NuhrbHZy9AZhIoCUiCeaW/C80g=="],
 
