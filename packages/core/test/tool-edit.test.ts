@@ -423,10 +423,22 @@ test("keeps the locked edit schema, semantics docstring, and deferred TODOs visi
     "absolute external paths retain mutation capability through a separate\n * external_directory approval before edit approval.",
   )
   for (const todo of [
-    "Port V1 fuzzy correction strategies only after exact-edit behavior is established: line-trimmed matching, block-anchor fallback, indentation correction, and similarity-threshold review.",
     "Publish watcher/file-edit events after V2 watcher integration exists.",
     "Add external formatter command runtime behind the V2 formatter config (LSP formatting already wired).",
   ]) {
     expect(source).toContain(`TODO: ${todo}`)
+  }
+  expect(source).not.toContain("Port V1 fuzzy correction strategies")
+  for (const strategy of [
+    "lineTrimmedReplacer",
+    "blockAnchorReplacer",
+    "whitespaceNormalizedReplacer",
+    "indentationFlexibleReplacer",
+    "escapeNormalizedReplacer",
+    "trimmedBoundaryReplacer",
+    "contextAwareReplacer",
+    "isDisproportionateMatch",
+  ]) {
+    expect(source).toContain(strategy)
   }
 })
