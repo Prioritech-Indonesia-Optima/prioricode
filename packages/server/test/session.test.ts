@@ -33,7 +33,7 @@ describe("V2 session HTTP surface", () => {
   test("health responds without location headers", async () => {
     const response = await server.handler(new Request("http://prioricode.test/api/health"), context)
     expect(response.status).toBe(200)
-    expect(await payload(response)).toEqual({ healthy: true })
+    expect(await payload<{ healthy: boolean }>(response)).toEqual({ healthy: true })
   })
 
   test("openapi advertises the standardized busy wire error", async () => {
