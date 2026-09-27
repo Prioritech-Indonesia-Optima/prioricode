@@ -14,6 +14,9 @@ import { Cause, DateTime, Duration, Effect, FiberSet, Layer, Option, Semaphore, 
 import { AgentV2 } from "../../agent"
 import { Config } from "../../config"
 import { Database } from "../../database/database"
+import { FSUtil } from "../../fs-util"
+import { AppProcess } from "../../process"
+import { SessionVerify } from "./verify"
 import { EventV2 } from "../../event"
 import { Location } from "../../location"
 import { ModelV2 } from "../../model"
@@ -109,6 +112,8 @@ const layer = Layer.effect(
     const referenceGuidance = yield* ReferenceGuidance.Service
     const config = yield* Config.Service
     const snapshots = yield* Snapshot.Service
+    const fs = yield* FSUtil.Service
+    const appProcess = yield* AppProcess.Service
     const db = (yield* Database.Service).db
     const compaction = SessionCompaction.make({ events, llm, config: yield* config.entries() })
     const getSession = Effect.fn("SessionRunner.getSession")(function* (sessionID: SessionSchema.ID) {
@@ -159,10 +164,16 @@ const layer = Layer.effect(
       // Overflow compaction completed; rebuild once through the path without overflow recovery.
       | { readonly _tag: "ContinueAfterOverflowCompaction"; readonly step: number }
       // A retryable provider failure happened before any assistant output; re-attempt after backoff.
-      | { readonly _tag: "RetryProviderTurn"; readonly step: number; readonly attempt: number; readonly delayMs: number }
+      | {
+          readonly _tag: "RetryProviderTurn"
+          readonly step: number
+          readonly attempt: number
+          readonly delayMs: number
+        }
 
     interface TurnPolicy {
       readonly guard: ToolGuard.Guard
+      readonly verify: SessionVerify.Verifier
       readonly retry: ProviderRetry.Settings
     }
 
@@ -310,6 +321,7 @@ const layer = Layer.effect(
               ).pipe(
                 Effect.flatMap((settlement) => {
                   policy.guard.recordOutput(settlementBytes(settlement))
+                  if (settlement.result.type !== "error") policy.verify.recordMutation(event.name)
                   return publish(
                     LLMEvent.toolResult({
                       id: event.id,
@@ -474,10 +486,21 @@ const layer = Layer.effect(
       readonly sessionID: SessionSchema.ID
       readonly force: boolean
     }) {
-      const loop = Config.latest(yield* config.entries(), "loop")
+      const entries = yield* config.entries()
+      const loop = Config.latest(entries, "loop")
+      const verify = yield* SessionVerify.make({
+        db,
+        events,
+        fs,
+        process: appProcess,
+        directory: location.directory,
+        sessionID: input.sessionID,
+        config: Config.latest(entries, "verify"),
+      })
       const policy: TurnPolicy = {
         guard: ToolGuard.make(ToolGuard.settings(loop)),
         retry: ProviderRetry.settings(loop?.retry),
+        verify,
       }
       const hasSteer = yield* SessionInput.hasPending(db, input.sessionID, "steer")
       const hasQueue = hasSteer ? false : yield* SessionInput.hasPending(db, input.sessionID, "queue")
@@ -493,7 +516,8 @@ const layer = Layer.effect(
           needsContinuation = result.needsContinuation
           step = result.step + 1
           promotion = "steer"
-          if (!needsContinuation) needsContinuation = yield* SessionInput.hasPending(db, input.sessionID, "steer")
+          if (!needsContinuation && (yield* policy.verify.beforeFinish())) needsContinuation = true
+          else if (!needsContinuation) needsContinuation = yield* SessionInput.hasPending(db, input.sessionID, "steer")
         }
         shouldRun = yield* SessionInput.hasPending(db, input.sessionID, "queue")
         promotion = shouldRun ? "queue" : undefined
@@ -523,5 +547,7 @@ export const node = makeLocationNode({
     Config.node,
     Snapshot.node,
     Database.node,
+    FSUtil.node,
+    AppProcess.node,
   ],
 })

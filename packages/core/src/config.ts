@@ -23,6 +23,7 @@ import { ConfigPlugin } from "./config/plugin"
 import { ConfigProvider } from "./config/provider"
 import { ConfigReference } from "./config/reference"
 import { ConfigToolOutput } from "./config/tool-output"
+import { ConfigVerify } from "./config/verify"
 import { ConfigWatcher } from "./config/watcher"
 import { ConfigV1 } from "./v1/config/config"
 import { ConfigMigrateV1 } from "./v1/config/migrate"
@@ -90,6 +91,9 @@ export class Info extends Schema.Class<Info>("Config.Info")({
   }),
   loop: ConfigLoop.Info.pipe(Schema.optional).annotate({
     description: "Agent-loop robustness bounds: provider retries, per-turn tool-call caps, and repeated-call detection",
+  }),
+  verify: ConfigVerify.Info.pipe(Schema.optional).annotate({
+    description: "Automatic verification pass before the agent may finish after mutating files",
   }),
   skills: Schema.String.pipe(Schema.Array, Schema.optional).annotate({
     description: "Additional paths or URLs to discover skills from",
