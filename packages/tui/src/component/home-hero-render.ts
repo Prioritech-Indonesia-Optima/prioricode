@@ -121,6 +121,15 @@ function same(a: Rgb, b: Rgb) {
   return a[0] === b[0] && a[1] === b[1] && a[2] === b[2]
 }
 
+// The solid renderer stringifies certain JSX attribute values before they
+// reach a renderable setter (see the "text"/"content" cases in opentui's
+// setProperty). Guard the theme boundary so a malformed color degrades to the
+// previous value instead of crashing the home screen.
+function safeRgb(value: RGBA | undefined): Rgb | undefined {
+  if (!value || typeof value.toInts !== "function") return undefined
+  return toRgb(value)
+}
+
 function mix(a: Rgb, b: Rgb, alpha: number): Rgb {
   const t = clamp01(alpha)
   return [
@@ -164,10 +173,10 @@ export class HomeHeroPainter {
   }
 
   setTheme(next: Partial<HomeHeroThemeColors>) {
-    const background = next.background ? toRgb(next.background) : this.backgroundRgb
-    const primary = next.primary ? toRgb(next.primary) : this.primaryRgb
-    const text = next.text ? toRgb(next.text) : this.textRgb
-    const muted = next.textMuted ? toRgb(next.textMuted) : this.mutedRgb
+    const background = safeRgb(next.background) ?? this.backgroundRgb
+    const primary = safeRgb(next.primary) ?? this.primaryRgb
+    const text = safeRgb(next.text) ?? this.textRgb
+    const muted = safeRgb(next.textMuted) ?? this.mutedRgb
     const changed =
       !same(background, this.backgroundRgb) ||
       !same(primary, this.primaryRgb) ||

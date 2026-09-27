@@ -1,10 +1,26 @@
-import { FrameBufferRenderable, type OptimizedBuffer, type RenderContext, type RenderableOptions } from "@opentui/core"
+import {
+  FrameBufferRenderable,
+  type OptimizedBuffer,
+  type RenderContext,
+  type RenderableOptions,
+} from "@opentui/core"
 import { extend, useRenderer } from "@opentui/solid"
 import { onCleanup, onMount } from "solid-js"
 import { useTheme } from "../context/theme"
 import { HERO_H, HERO_W, HomeHeroPainter, type HomeHeroThemeColors } from "./home-hero-render"
 
-type HomeHeroOptions = RenderableOptions<FrameBufferRenderable> & Partial<HomeHeroThemeColors>
+// NOTE: the solid renderer's setProperty intercepts the JSX attribute names
+// "text" and "content" for every renderable and stringifies their values
+// before assigning them. Custom renderables must never expose those prop
+// names — theme colors therefore arrive as textColor/mutedColor. (Passing
+// `text={theme.text}` crashed v0.1.11 startup: the painter received
+// "[object Object]" and RGBA.toInts threw inside setTheme.)
+type HomeHeroOptions = RenderableOptions<FrameBufferRenderable> & {
+  background?: HomeHeroThemeColors["background"]
+  primary?: HomeHeroThemeColors["primary"]
+  textColor?: HomeHeroThemeColors["text"]
+  mutedColor?: HomeHeroThemeColors["textMuted"]
+}
 
 class HomeHeroRenderable extends FrameBufferRenderable {
   private painter = new HomeHeroPainter()
@@ -17,23 +33,28 @@ class HomeHeroRenderable extends FrameBufferRenderable {
       live: options.live ?? true,
       respectAlpha: false,
     })
-    this.painter.setTheme(options)
+    this.painter.setTheme({
+      background: options.background,
+      primary: options.primary,
+      text: options.textColor,
+      textMuted: options.mutedColor,
+    })
   }
 
   set background(value: HomeHeroOptions["background"]) {
-    if (value && this.painter.setTheme({ background: value })) this.requestRender()
+    if (this.painter.setTheme({ background: value })) this.requestRender()
   }
 
   set primary(value: HomeHeroOptions["primary"]) {
-    if (value && this.painter.setTheme({ primary: value })) this.requestRender()
+    if (this.painter.setTheme({ primary: value })) this.requestRender()
   }
 
-  set text(value: HomeHeroOptions["text"]) {
-    if (value && this.painter.setTheme({ text: value })) this.requestRender()
+  set textColor(value: HomeHeroOptions["textColor"]) {
+    if (this.painter.setTheme({ text: value })) this.requestRender()
   }
 
-  set textMuted(value: HomeHeroOptions["textMuted"]) {
-    if (value && this.painter.setTheme({ textMuted: value })) this.requestRender()
+  set mutedColor(value: HomeHeroOptions["mutedColor"]) {
+    if (this.painter.setTheme({ textMuted: value })) this.requestRender()
   }
 
   protected override renderSelf(buffer: OptimizedBuffer, deltaTime = 0): void {
@@ -75,8 +96,8 @@ export function HomeHero() {
       height={HERO_H}
       background={theme.background}
       primary={theme.primary}
-      text={theme.text}
-      textMuted={theme.textMuted}
+      textColor={theme.text}
+      mutedColor={theme.textMuted}
       live
     />
   )
