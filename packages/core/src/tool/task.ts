@@ -3,29 +3,33 @@
  * Session, runs it to a settle, and returns its final text so the parent can
  * verify and continue. Background children are process-local jobs that notify
  * the parent through a durable steering prompt when they settle.
+ *
+ * Like every Location-scoped tool this layer must stay a leaf of the
+ * LocationServiceMap graph: it therefore uses the shared durable Session
+ * operations (database, event log, projector-backed store, execution
+ * coordinator) directly instead of the SessionV2 facade, whose own layer
+ * resolves the map.
  */
 export * as TaskTool from "./task"
 
 import { ToolFailure } from "@prioricode/llm"
 import { Effect, Exit, Layer, Schema } from "effect"
-import { makeLocationNode, Node } from "../effect/app-node"
+import { makeLocationNode } from "../effect/app-node"
 import { AgentV2 } from "../agent"
 import { BackgroundJob } from "../background-job"
+import { Database } from "../database/database"
+import { EventV2 } from "../event"
+import { ProjectV2 } from "../project"
 import { SessionExecution } from "../session/execution"
-import { LayerNode } from "../effect/layer-node"
 import { SessionMessage } from "../session/message"
+import { makeSessionOperations } from "../session/operations"
 import { SessionSchema } from "../session/schema"
-import { SessionV2 } from "../session"
+import { SessionStore } from "../session/store"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
 
 export const name = "task"
-
-// Location tools must stay leaves of the LocationServiceMap graph. SessionV2's
-// node implementation reaches the map, so request its service as an unbound
-// global dependency and let the application graph supply the implementation.
-export const SessionV2Unbound = LayerNode.unbound(SessionV2.Service, Node.tags.values.global)
 
 export const description = `Launch one specialist subagent as a separate child Session and return its final result.
 
@@ -101,32 +105,37 @@ const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const agents = yield* AgentV2.Service
-    const sessions = yield* SessionV2.Service
-    const execution = yield* SessionExecution.Service
     const background = yield* BackgroundJob.Service
+    const events = yield* EventV2.Service
+    const projects = yield* ProjectV2.Service
+    const store = yield* SessionStore.Service
+    const execution = yield* SessionExecution.Service
+    const { db } = yield* Database.Service
+    const sessions = makeSessionOperations({ db, events, projects, store, execution })
 
     const settle = Effect.fn("TaskTool.settle")(function* (sessionID: SessionSchema.ID) {
-      const failed = yield* execution
-        .resume(sessionID)
-        .pipe(
-          Effect.as(false),
-          Effect.catch(() => Effect.succeed(true)),
-        )
-      const answer = yield* sessions
-        .context(sessionID)
-        .pipe(
-          Effect.map(finalAnswer),
-          Effect.catch(() => Effect.succeed(undefined)),
-        )
+      const failed = yield* execution.resume(sessionID).pipe(
+        Effect.as(false),
+        Effect.catch(() => Effect.succeed(true)),
+      )
+      const answer = yield* store.context(sessionID).pipe(
+        Effect.map(finalAnswer),
+        Effect.catch(() => Effect.succeed(undefined)),
+      )
       if (failed || answer === undefined || answer.failed)
         return {
           state: "error" as const,
           text:
             answer?.text ||
-            (failed ? "The subagent run failed; see its Session transcript for details." : "The subagent finished without a text response."),
+            (failed
+              ? "The subagent run failed; see its Session transcript for details."
+              : "The subagent finished without a text response."),
         }
       return { state: "completed" as const, text: answer.text }
     })
+
+    const steer = (sessionID: SessionSchema.ID, text: string) =>
+      sessions.prompt({ sessionID, prompt: { text }, delivery: "steer", resume: false })
 
     yield* tools
       .register({
@@ -137,9 +146,7 @@ const layer = Layer.effectDiscard(
           toModelOutput: ({ output }) => [{ type: "text", text: output.text }],
           execute: (input, context) =>
             Effect.gen(function* () {
-              const parent = yield* sessions
-                .get(context.sessionID)
-                .pipe(Effect.catch(() => Effect.succeed(undefined)))
+              const parent = yield* sessions.get(context.sessionID).pipe(Effect.catch(() => Effect.succeed(undefined)))
               if (parent === undefined)
                 return yield* new ToolFailure({ message: "Task requires a parent Session that could not be loaded." })
               if (parent.parentID !== undefined)
@@ -158,9 +165,9 @@ const layer = Layer.effectDiscard(
 
               let child: SessionSchema.Info | undefined
               if (input.task_id !== undefined) {
-                const found = yield* sessions
-                  .get(SessionSchema.ID.make(input.task_id))
-                  .pipe(Effect.catch(() => Effect.succeed(undefined)))
+                const found = yield* sessions.get(SessionSchema.ID.make(input.task_id)).pipe(
+                  Effect.catch(() => Effect.succeed(undefined)),
+                )
                 if (found === undefined || found.parentID !== context.sessionID)
                   return yield* new ToolFailure({
                     message: `Unable to resume task_id ${input.task_id}: Session not found or not owned by this Session.`,
@@ -192,31 +199,19 @@ const layer = Layer.effectDiscard(
               if (input.background === true) {
                 const notify = settle(childID).pipe(
                   Effect.flatMap((result) =>
-                    sessions
-                      .prompt({
-                        sessionID: context.sessionID,
-                        prompt: { text: completionNotice(childID, input.description, result.state, result.text) },
-                        delivery: "steer",
-                        resume: true,
-                      })
+                    steer(context.sessionID, completionNotice(childID, input.description, result.state, result.text))
                       .pipe(Effect.as("notified")),
                   ),
                   Effect.catch(() =>
-                    sessions
-                      .prompt({
-                        sessionID: context.sessionID,
-                        prompt: {
-                          text: completionNotice(
-                            childID,
-                            input.description,
-                            "error",
-                            "The background subagent was interrupted before it settled.",
-                          ),
-                        },
-                        delivery: "steer",
-                        resume: true,
-                      })
-                      .pipe(Effect.as("notified")),
+                    steer(
+                      context.sessionID,
+                      completionNotice(
+                        childID,
+                        input.description,
+                        "error",
+                        "The background subagent was interrupted before it settled.",
+                      ),
+                    ).pipe(Effect.as("notified")),
                   ),
                 )
                 const extended = yield* background.extend({ id: childID, run: notify })
@@ -239,8 +234,7 @@ const layer = Layer.effectDiscard(
               const settled = yield* Effect.acquireUseRelease(
                 Effect.succeed(childID),
                 () => settle(childID),
-                (sessionID, exit) =>
-                  Exit.hasInterrupts(exit) ? execution.interrupt(sessionID) : Effect.void,
+                (sessionID, exit) => (Exit.hasInterrupts(exit) ? execution.interrupt(sessionID) : Effect.void),
               )
               return {
                 sessionID: childID,
@@ -258,5 +252,14 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/task",
   layer,
-  deps: [ToolRegistry.node, AgentV2.node, SessionV2Unbound, SessionExecution.node, BackgroundJob.node],
+  deps: [
+    ToolRegistry.node,
+    AgentV2.node,
+    BackgroundJob.node,
+    Database.node,
+    EventV2.node,
+    ProjectV2.node,
+    SessionStore.node,
+    SessionExecution.node,
+  ],
 })

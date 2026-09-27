@@ -7,8 +7,10 @@ import { ApplyPatchTool } from "./apply-patch"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
 import { GrepTool } from "./grep"
+import { PlanTool } from "./plan"
 import { QuestionTool } from "./question"
 import { ReadTool } from "./read"
+import { TaskTool } from "./task"
 import { SkillTool } from "./skill"
 import { TodoWriteTool } from "./todowrite"
 import { WebFetchTool } from "./webfetch"
@@ -23,15 +25,12 @@ import { WriteTool } from "./write"
  * than this static list. The caller intentionally supplies shared Location
  * services once to this merged set.
  *
- * TaskTool and PlanTool are intentionally absent from this static list: their
- * layers capture SessionV2.Service, whose node graph reaches the LocationServiceMap
- * that BuiltInTools itself composes into. Register them where the application graph
- * can supply that service (server composition), not as Location leaves.
- *
- * TODO: Port edit fuzzy-match parity from the legacy edit tool (line-trimmed,
- * block-anchor, indentation-flexible, escape-normalized, trimmed-boundary,
- * whitespace-normalized, and context-aware replacers with proportionality
- * guard) once V2 edit behavior is re-established with parity tests.
+ * TaskTool and PlanTool are deliberately absent: Session-coordinating tools need
+ * the run coordinator and SessionV2, and any Location-scoped node that captures
+ * those services makes buildLocationServiceMap construct SessionExecutionLocal
+ * inside its own LayerMap body (a detected layer cycle). They are registered
+ * through the future Session-scoped canonical tool registration designed in
+ * specs/v2/tools.md and tool/AGENTS.md "Current Gaps", not this static list.
  */
 export const node = makeLocationNode({
   name: "built-in-tools",

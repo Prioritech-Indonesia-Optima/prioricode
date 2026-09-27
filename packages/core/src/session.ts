@@ -29,7 +29,12 @@ import { SessionStore } from "./session/store"
 import { SessionExecution } from "./session/execution"
 import { makeGlobalNode } from "./effect/app-node"
 import { LocationServiceMap } from "./location-service-map"
-import { MessageDecodeError } from "./session/error"
+import {
+  BusyError,
+  MessageDecodeError,
+  NotFoundError,
+  PromptConflictError,
+} from "./session/error"
 import { SessionEvent } from "./session/event"
 import { SessionInput } from "./session/input"
 import { Snapshot } from "./snapshot"
@@ -90,9 +95,7 @@ type CompactInput = {
   prompt?: Prompt
 }
 
-export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Session.NotFoundError", {
-  sessionID: SessionSchema.ID,
-}) {}
+
 
 export class OperationUnavailableError extends Schema.TaggedErrorClass<OperationUnavailableError>()(
   "Session.OperationUnavailableError",
@@ -101,15 +104,16 @@ export class OperationUnavailableError extends Schema.TaggedErrorClass<Operation
   },
 ) {}
 
-export { ContextSnapshotDecodeError, MessageDecodeError } from "./session/error"
+export {
+  BusyError,
+  ContextSnapshotDecodeError,
+  MessageDecodeError,
+  NotFoundError,
+  PromptConflictError,
+} from "./session/error"
 
-export class PromptConflictError extends Schema.TaggedErrorClass<PromptConflictError>()("Session.PromptConflictError", {
-  sessionID: SessionSchema.ID,
-  messageID: SessionMessage.ID,
-}) {}
-export class BusyError extends Schema.TaggedErrorClass<BusyError>()("Session.BusyError", {
-  sessionID: SessionSchema.ID,
-}) {}
+
+
 /**
  * SessionV2.Service operations are classified by how they behave while a Session
  * drain is active in this process. Always-safe operations (prompt, switchAgent,

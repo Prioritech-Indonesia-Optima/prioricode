@@ -138,7 +138,6 @@ const withTask = <A, E, R>(body: (registry: ToolRegistry.Interface) => Effect.Ef
         ]),
         [
           [SessionExecution.node, execution],
-          [TaskTool.SessionV2Unbound, SessionV2.node],
           [AgentV2.node, agents],
           [BackgroundJob.node, background],
           [PermissionV2.node, permission],
