@@ -27,6 +27,11 @@ import { WriteTool } from "./write"
  * layers capture SessionV2.Service, whose node graph reaches the LocationServiceMap
  * that BuiltInTools itself composes into. Register them where the application graph
  * can supply that service (server composition), not as Location leaves.
+ *
+ * TODO: Port edit fuzzy-match parity from the legacy edit tool (line-trimmed,
+ * block-anchor, indentation-flexible, escape-normalized, trimmed-boundary,
+ * whitespace-normalized, and context-aware replacers with proportionality
+ * guard) once V2 edit behavior is re-established with parity tests.
  */
 export const node = makeLocationNode({
   name: "built-in-tools",
