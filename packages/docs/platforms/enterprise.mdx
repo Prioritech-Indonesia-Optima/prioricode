@@ -1,0 +1,74 @@
+---
+title: "Teams & enterprise"
+description: "PrioriCode in an organization — console accounts and org config, managed system config, MDM on macOS, self-hosted share pages, and the data posture."
+---
+
+PrioriCode is honest about its default posture: it runs on *your* machine with *your* keys. Everything on this page is the layer for when "your machine" becomes "your fleet."
+
+## Console accounts
+
+The hosted console ([prioricode.ai/console](https://prioricode.ai/console)) manages accounts, organizations, and the hosted provider key:
+
+```bash
+prioricode console login            # device-code flow: URL + short code in a browser
+prioricode console orgs             # your orgs, `●` marks the active one
+prioricode console switch           # change the active org
+prioricode console open             # console in the browser
+prioricode console logout [email]
+```
+
+(Yes, it's a hidden command — `console` intentionally doesn't clutter the help. The TUI's `/connect` and org-switching dialogs are the day-to-day path.)
+
+With an active console session two things come automatically:
+
+1. **Org configuration** — the server's `/api/config` for your active org is fetched and merged into every workspace's config (see [layer 7](/configure/files)). Centralize defaults: shared `provider` blocks through the org gateway, a standard `model`, baseline `permission` — one edit, every seat.
+2. **Provider takeover** — the org announces which provider IDs it manages (e.g. an internal gateway), and members inherit credentials/policies for those without pasting keys around. Enterprise SSO and internal AI gateways live here.
+
+## Managed configuration (IT-controlled, no opt-out)
+
+Two enforcement planes that override user and project config:
+
+| Plane | Location | Platform |
+| --- | --- | --- |
+| Managed config dir | `/Library/Application Support/prioricode`, `%ProgramData%\prioricode`, `/etc/prioricode` — `prioricode.json(c)` | macOS, Windows, Linux |
+| MDM preferences | domain `ai.prioricode.managed` (`.mobileconfig`) | macOS |
+
+Use them for the non-negotiables: `share: disabled`, `autoupdate` pinned, required `permission` rules, locked `disabled_providers`. Also worth fleet-spreading as defaults: the `hooks` and `bashSandbox` blocks — a PreToolUse hook can enforce policy in any language CI already speaks.
+
+## Self-hosted share pages
+
+`/share` normally publishes to the hosted service (`opncd.ai`). Point the whole product at your own deployment:
+
+```jsonc
+{ "enterprise": { "url": "https://shares.acme.dev" } }
+```
+
+The self-hostable app is `packages/enterprise` in this repo (share pages only — the transcripts stay on users' machines and stream their updates to your deployment). For orgs that must share *without* leaving the domain: this is the door, and `"share": "disabled"` is the wall.
+
+## Data posture — the plain version
+
+- **Code and context don't leave the machine.** Processing is local or direct-to-your-provider API calls. There's no default telemetry; OpenTelemetry (`experimental.openTelemetry`, standard `OTEL_*` env) is opt-in plumbing that exports to *your* collector.
+- **The exceptions are explicit**: AI providers (they see prompts by definition — org gateways control which ones), and share links (opt-in, revocable, disableable fleet-wide).
+- **Credentials**: `<data>/auth.json`, `0600`, local. Org-managed providers keep member machines from holding raw keys at all.
+- **Server mode is user infrastructure**: `serve`/`web` default to loopback and say so when unsecured — the network boundary is yours to draw ([server](/platforms/server)).
+
+<Note>
+  The repo's [SECURITY.md](https://github.com/Prioritech-Indonesia-Optima/prioricode/blob/main/SECURITY.md) is the threat model of record: permissions are UX, not isolation; out-of-scope items are enumerated; responsible disclosure goes through GitHub Security Advisories. Enterprise docs claims and this page both defer to it on wording.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Providers" icon="key" href="/getting-started/providers">
+    OAuth, gateways, and `providers login <url>`.
+  </Card>
+  <Card title="Config files" icon="sliders" href="/configure/files">
+    Where org/managed config sits in the merge order.
+  </Card>
+  <Card title="Sharing" icon="share-nodes" href="/using/sharing">
+    The share mechanism being self-hosted.
+  </Card>
+  <Card title="GitHub agent" icon="github" href="/platforms/github">
+    Org CI running the same agent.
+  </Card>
+</CardGroup>

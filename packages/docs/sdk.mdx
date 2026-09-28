@@ -1,46 +1,117 @@
 ---
 title: "TypeScript SDK"
-description: "Drive PrioriCode programmatically with the official TypeScript SDK."
+description: "The @prioricode/sdk typed client — sessions, prompts, file attachments, event streams, and answering permission requests from code."
 ---
 
-PrioriCode ships a typed client for the server API. Use it to embed the agent in your own apps, scripts, and CI pipelines.
+The SDK is the typed door to everything the TUI does: the client is generated from the server's OpenAPI spec, so requests, responses, and events are all real types — no guessing payloads.
 
-## Install
+## Install & talk to a server
 
 ```bash
 npm install @prioricode/sdk
 ```
 
-## Start a server
-
 ```bash
-prioricode serve --port 4096
+prioricode serve --port 4096      # export PRIORICODE_SERVER_PASSWORD if it's not loopback-only
 ```
-
-## Quick example
 
 ```ts
 import { createPrioricodeClient } from "@prioricode/sdk"
 
 const client = createPrioricodeClient({
   baseUrl: "http://localhost:4096",
-  directory: process.cwd(),
-})
-
-const session = await client.session.create({ body: {} })
-
-await client.session.prompt({
-  path: { id: session.data.id },
-  body: { parts: [{ type: "text", text: "Summarize the failing tests." }] },
+  directory: process.cwd(), // project scoping: sent as a header/query, honored on reads
 })
 ```
 
-Every request and response is fully typed — the client is generated from the OpenAPI spec below.
+If your server has a password (it should, off-loopback), requests need HTTP Basic like any other client (`attach` uses `-u/-p`; the SDK config accepts the same credentials via its request options). Loopback servers accept unauthenticated requests — same security story as [server & remote](/platforms/server).
+
+Prefer the SDK to own the whole lifecycle? `createPrioricode()` boots a local server process (`prioricode serve` under the hood, default `127.0.0.1:4096`, options for `hostname`/`port`) and hands you a connected client — one call, disposable agent.
+
+## Sessions and prompts
+
+```ts
+const session = await client.session.create()
+
+await client.session.prompt({
+  path: { id: session.data.id },
+  body: {
+    parts: [
+      { type: "text", text: "Write tests for every public function in this file." },
+      { type: "file", mime: "text/plain", url: "file:///abs/path/to/src/core.ts" },
+    ],
+  },
+})
+```
+
+Parts are the vocabulary of prompts: text, files (data-URLs or `file://` URLs, images included), and anything else the API defines. The same `prompt` body powers `--continue`, agents, models:
+
+```ts
+await client.session.prompt({
+  path: { id: session.data.id },
+  body: { parts: [{ type: "text", text: "…" }], model: { providerID: "anthropic", modelID: "claude-sonnet-4-5" }, agent: "plan" },
+})
+```
+
+The full request/response surface — `session.list`, messages, revert, fork, share (`POST`/`DELETE /session/{id}/share`), MCP, providers, TUI control — is in the **API** section of this tab, generated live from the spec with an interactive playground.
+
+## Listening: the event stream
+
+```ts
+const events = await client.event.subscribe()
+
+for await (const event of events.stream) {
+  if (event.type === "message.updated") {
+    // event.properties.info.role, .agent, .modelID …
+  }
+}
+```
+
+Event types are the same bus the TUI renders from — `session.created`/`updated`/`deleted`, `message.updated`, `message.part.updated`, permission and question requests, provider and catalog changes. This is how a headless client becomes interactive.
+
+## Being the human, programmatically
+
+Two routes are where "unattended" gets judged:
+
+```ts
+// Answer a permission request (same semantics as the TUI panel)
+await client.postSessionIdPermissionsPermissionId({
+  path: { sessionID: id, permissionID: permission.id },
+  body: { response: "once" }, // "once" | "always" | "reject"
+})
+```
+
+Questions from the `question` tool reply through `POST /question/{requestID}/reply` — body `{ answers: [["selected label", …]] }`, one array per question — or via the `/api/session/...` family on the `@prioricode/sdk/v2` client, which namespaces `session`, `permission`, and `question` with typed helpers. Both shapes are fully described in the interactive [API reference](/sdk) below.
+
+That's the entire contract for policy engines: subscribe, evaluate the ask against *your* rules (CMDB, ownership, blast radius), reply. The agent blocks until you do — an approve-gate you can audit.
+
+## Patterns worth stealing
+
+- **Fan-out CI jobs**: one `createPrioricode()` per shard, `Promise.all` over `session.prompt` (the repo's own SDK example processes files this way) — then harvest transcripts with `session.get`/parts or share them.
+- **Approval bot**: subscribe to events, forward `permission.*` asks into Slack, reply from the button press.
+- **Fleet runner**: `run --attach` is this SDK from a CLI; anything it can do, your binary can.
 
 ## Reference
 
-Full endpoint documentation lives in the **API** section of this tab, generated from the OpenAPI spec.
-
-<Card title="Run a server" icon="server" href="/quickstart">
-  Start `prioricode serve` locally to expose the API the SDK talks to.
+<Card title="API reference (OpenAPI playground)" icon="brackets-curly" href="/sdk">
+  The "API" group under this tab lists every endpoint with typed request/response schemas and live try-it.
 </Card>
+
+<Note>
+  The spec at `packages/sdk/openapi.json` is generated — after HttpApi route changes, regenerate with `bun run build` in `packages/sdk/js` (repo convention). Docs never hand-copy endpoint tables; they link to the generated section.
+  npm availability note: like the CLI, `@prioricode/sdk` publishes when registry credentials are configured; if npm 404s, vendor it from the repo.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Server & remote" icon="network" href="/platforms/server">
+    Auth, events, CORS — the server side.
+  </Card>
+  <Card title="Headless" icon="robot" href="/using/headless">
+    `run --format json` for shell pipelines.
+  </Card>
+  <Card title="Plugins" icon="puzzle-piece" href="/extending/plugins">
+    In-process extensions when the API is too far away.
+  </Card>
+</CardGroup>

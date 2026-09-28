@@ -1,0 +1,54 @@
+---
+title: "Desktop app"
+description: "The PrioriCode desktop app — an Electron shell around the full agent: channels, sidecar server, auto-update, WSL, and how it stores state."
+---
+
+The desktop app puts the same engine behind window chrome: the web interface rendered in Electron, with a PrioriCode server process living next door. It's the phone-in-your-pocket of PrioriCode surfaces — one install, sessions everywhere.
+
+<Note>
+  Availability first: desktop builds are wired into the release pipeline but, as of this writing, release pages ship CLI binaries — the desktop app is marked *coming soon* in the project README. Check the [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) for `prioricode-desktop-…` artifacts; when they appear, this is what you're installing.
+</Note>
+
+## What it actually is
+
+- **Electron** shell rendering the same SolidJS app UI as `prioricode web` — sessions, prompts, settings — with native niceties: custom title bar (traffic lights on macOS, frameless-with-overlay on Windows), context menus, first-run onboarding, and a localized interface.
+- **Sidecar server**: a real `prioricode` server process launched per window-session, with the embedded web UI disabled (the Electron renderer *is* the UI). Tools run locally, exactly as the CLI would.
+- **Deep link**: `prioricode://` URLs can hand work to the app.
+
+## Channels: dev, beta, prod
+
+Three identities side-by-side on one machine:
+
+| Channel | App name | Bundle id | Database |
+| --- | --- | --- | --- |
+| prod | PrioriCode | `ai.prioricode.desktop` | shared `prioricode.db` |
+| beta | PrioriCode Beta | `ai.prioricode.desktop.beta` | shared `prioricode.db` |
+| dev | PrioriCode Dev | `ai.prioricode.desktop.dev` | separate `prioricode-dev.db` |
+
+That last row is the interesting one: production and beta desktop builds share the CLI's database — sessions, projects, and coordination state carry between surfaces — while the dev channel is sandboxed to its own DB by design (see [config files](/configure/files) for the routing table).
+
+## Updates
+
+Auto-update is packaged-only and dialog-driven: it notifies, you decide, download follows your choice. Beta/dev builds point at their own update feeds. If the app ever goes unresponsive there's a recovery flow with log export — no hunting for the log dir yourself.
+
+## Windows + WSL
+
+On Windows the app can host sessions inside WSL distros: install the CLI within the distro (the installer one-liner) and the desktop app drives servers there, with the same attach-style connection as any remote server.
+
+## Relationship to `prioricode web`
+
+Same UI, different transport. The desktop wraps the app in Electron and talks to its own sidecar; `prioricode web` serves the same bundle over HTTP from a CLI machine. If you want sessions reachable from a phone or another computer, run the **server**, not the desktop.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Server & remote" icon="network" href="/platforms/server">
+    The browser-hosted sibling.
+  </Card>
+  <Card title="Installation" icon="download" href="/getting-started/install">
+    The CLI remains the supported install today.
+  </Card>
+  <Card title="Config files" icon="sliders" href="/configure/files">
+    Channel-based DB routing explained.
+  </Card>
+</CardGroup>

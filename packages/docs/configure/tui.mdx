@@ -1,0 +1,99 @@
+---
+title: "Themes & keybindings"
+description: "tui.json configuration — theme selection and custom themes, keybind overrides with leader-key syntax, attention sounds, cursor, scrolling, and diff style."
+---
+
+The interface half of configuration lives in its own file, `tui.json(c)` — discovered with the same walk-up-and-merge rules as [product config](/configure/files), but scoped so project settings and terminal aesthetics stay separate. (Old configs with `theme`/`keybinds` inside `prioricode.json` are migrated out automatically; they're stripped from the product config.)
+
+```jsonc
+// ~/.config/prioricode/tui.json — the global default; drop one in .prioricode/ per project
+{
+  "theme": "catppuccin",
+  "keybinds": {
+    "leader": "ctrl+space",
+    "agent_cycle": "none",
+    "session_compact": ["<leader>c", "<leader>k"]
+  },
+  "leader_timeout": 2000,
+}
+```
+
+Settings changed through `/settings` and `/themes` write themselves back to the highest-precedence existing `tui.json`, or the global one — you don't have to hand-edit to customize.
+
+## Themes
+
+- `/themes` (`<leader>t`) lists everything, including a light/dark switch and a mode lock so a terminal theme flip doesn't drag your app theme with it.
+- Built-ins cover the canon: catppuccin (×4 flavors), dracula, gruvbox, nord, tokyonight, one-dark, solarized, rosepine, matrix, monokai, nightowl, everforest, flexoki, kanagawa, aura, ayu, carbonfox, cobalt2, cursor, material, vercel, vesper, zenburn, palenight, mercury, osaka-jade, synthwave84, lucent-orng, orng, github — plus `prioricode`'s own amber identity and a `system` theme derived from your terminal palette.
+- **Custom:** drop `themes/*.json` files into any config directory — `~/.config/prioricode/themes/` or `.prioricode/themes/` — and they join the picker. Theme plugins install into the same place, so "plugin theme" and "hand-written theme" are the same mechanism.
+
+## Keybinds
+
+Every binding is overridable by its **keybind id** (the full id→default table is in the [keybind reference](/reference/keybinds)). The grammar:
+
+| Value | Meaning |
+| --- | --- |
+| `"ctrl+p"` | Bind one chord |
+| `"up,ctrl+p"` | Comma-separated: multiple chords for one command |
+| `["<leader>m", "ctrl+m"]` | Array: same, as data |
+| `{ "key": "ctrl+v", "preventDefault": false }` | Object form — also `event: "press"|"release"`, `fallthrough` |
+| `"none"` or `false` | Unbind |
+| `"<leader>…"` | The leader prefix expands to your leader key (default `ctrl+x`) |
+
+Chords read left-to-right with `+` for modifiers (`shift+`, `ctrl+`, `alt+`, `super+`). `enter`/`esc`/`pgup`/`pgdown` are understood as aliases. An unrecognized keybind id is rejected loudly (`Unrecognized keybind…`) rather than silently ignored — typos don't hide here.
+
+Two leader-key niceties:
+
+- **`leader_timeout`** — window to complete a `<leader>` chord, default 2000 ms.
+- **which-key panel** (`ctrl+alt+k`) — live overlay of valid next keys; it also explains what each chord does, which is how most people learn the set.
+
+## Attention
+
+Sounds and notifications for the moments you're not looking at the terminal:
+
+```jsonc
+{
+  "attention": {
+    "enabled": true,            // master switch (default: off)
+    "notifications": true,      // desktop notifications
+    "sound": true,
+    "volume": 0.4,
+    "sounds": {
+      "question": "~/sounds/ask.wav",     // the agent needs an answer
+      "permission": "~/sounds/ask.wav",   // a permission prompt is pending
+      "error": "~/sounds/error.wav",
+      "done": "~/sounds/done.wav",        // session went idle
+      "subagent_done": "~/sounds/ding.wav"
+    }
+  }
+}
+```
+
+Each slot accepts a custom audio file path; the default pack (`prioricode.default`) ships with the app. `enabled` stays off until you flip it — the terminal that pings only when you ask is the terminal you keep using.
+
+## Interface odds and ends
+
+| Key | Default | Effect |
+| --- | --- | --- |
+| `mouse` | `true` | Mouse selection/scroll in the TUI |
+| `diff_style` | `"auto"` | `"stacked"` forces single-pane diffs on narrow terminals |
+| `cursor.style` / `blinking` | terminal default | Block/underline/line in the prompt |
+| `prompt.max_height` / `max_width` | adaptive | Cap the composer box |
+| `scroll_speed`, `scroll_acceleration.enabled` | — | How the wheel feels |
+
+<Note>
+  `PRIORICODE_DISABLE_MOUSE=1` is there for terminal multiplexers that fight mouse capture; `PRIORICODE_DISABLE_TERMINAL_TITLE=1` for shells that hate title writes. Full list on the [environment reference](/reference/environment-variables).
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Keybind reference" icon="keyboard" href="/reference/keybinds">
+    Every id, default chord, and description.
+  </Card>
+  <Card title="Terminal UI" icon="terminal" href="/using/tui">
+    What these keys operate on.
+  </Card>
+  <Card title="Config files" icon="file-code" href="/configure/files">
+    How tui.json files merge across scopes.
+  </Card>
+</CardGroup>

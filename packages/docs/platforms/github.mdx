@@ -1,0 +1,80 @@
+---
+title: "GitHub agent"
+description: "Run prioricode from GitHub issues and PRs — the Actions workflow, @mention triggers, hosted app vs OIDC vs PAT modes, and scheduled runs."
+---
+
+Comment `/prioricode fix this` on an issue and an agent picks up your repo **on your own GitHub runners**, opens a branch, and sends a PR. The GitHub agent is the same engine pointed at events instead of a terminal.
+
+## Trigger surface
+
+| Event | What happens |
+| --- | --- |
+| `issue_comment` containing `/prioricode` or `/pc` | The agent acts on the issue: explain it, or fix it (branch + PR). |
+| `pull_request_review_comment` | Line-specific review with file/diff context; requested changes get committed back to the same PR. |
+| `schedule` / `workflow_dispatch` | Headless repo tasks — nightly triage, weekly audits — whatever prompt the workflow defines. |
+
+The mention tokens are configurable (`mentions` input), so `/pc` for the keyboard-honest.
+
+## Install it
+
+```bash
+prioricode github install
+```
+
+The command walks the three moving parts: installing the GitHub App (`github.com/apps/prioricode-agent`), creating the workflow at `.github/workflows/prioricode.yml`, and wiring secrets/OIDC. The resulting workflow calls `Prioritech-Indonesia-Optima/prioricode/github@latest`.
+
+Three auth routes, pick by policy:
+
+| Mode | Setup | Notes |
+| --- | --- | --- |
+| **Hosted app (default)** | App installed on the repo; workflow gets `id-token: write` | Actions authenticate via OIDC to the hosted exchange, which mints a scoped GitHub token per run. |
+| **Plain `GITHUB_TOKEN`** | `use_github_token: true` in inputs | No app at all — runs with the workflow's own token. Fewer moving parts, the same default permissions model. |
+| **PAT** | `--token`/secret (`github_pat_…`) | Escape hatch for dry runs and testing. |
+
+### Workflow inputs
+
+```yaml
+with:
+  model: anthropic/claude-sonnet-4-5   # required — provider/model, as everywhere else
+  agent: build                          # any agent: built-in or your custom
+  prompt: "triage new issues nightly"   # for schedule/dispatch runs
+  mentions: "/prioricode,/pc"
+  share: true                           # publish the session transcript (see sharing)
+  variant: high
+```
+
+## Test locally before it runs on CI
+
+```bash
+prioricode github run --event ./fixtures/issue-comment.json --token "$PAT"
+```
+
+Replays a GitHub event JSON against a real session — the loop is fast enough to iterate on prompts against fixtures.
+
+## What to expect from it
+
+- **Issues**: it reads the thread, explores the repo, then either comments an explanation or opens a PR with the fix. No silent pushes to protected branches — it works the way outside collaborators do.
+- **PR reviews**: it reviews *changes*, answers follow-up comments on the same PR, and commits requested fixes to the PR branch when asked.
+- **Everything is a session**: runs can be shared (`share: true`) so a review thread links to the agent's actual transcript — receipts included.
+
+<Note>
+  The action executes with your workflow's permissions — that's the whole security story in one sentence. Scope the app/`GITHUB_TOKEN` the way you'd scope any bot: contents read/write on target repos, nothing more, and keep secrets out of `prompt`. The threat model discussion lives in [SECURITY.md](https://github.com/Prioritech-Indonesia-Optima/prioricode/blob/main/SECURITY.md).
+</Note>
+
+## Bonus: the `pr` command
+
+Locally: `prioricode pr 4813` fetches and checks out the PR branch (needs `gh`), auto-imports the agent's session if the PR body links one, and opens the TUI on that branch. Review-and-iterate round-trips without touching the mouse.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Headless" icon="robot" href="/using/headless">
+    The same story for non-GitHub CI.
+  </Card>
+  <Card title="Sharing" icon="share-nodes" href="/using/sharing">
+    What `share: true` actually produces.
+  </Card>
+  <Card title="Agents" icon="robot" href="/using/agents">
+    Pick (or build) the agent the bot runs.
+  </Card>
+</CardGroup>

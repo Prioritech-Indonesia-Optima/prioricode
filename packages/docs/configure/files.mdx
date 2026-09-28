@@ -1,0 +1,104 @@
+---
+title: "Configuration files"
+description: "How prioricode discovers and merges config (prioricode.json/jsonc, .prioricode/, managed dirs), {env} and {file} substitution, data paths, and database routing."
+---
+
+PrioriCode reads your config the way git reads dotfiles: look everywhere in a defined order, merge deeply, last word wins. This page is the full discovery map — for the individual keys, see the [config reference](/reference/config).
+
+## The files
+
+| File | What it's for |
+| --- | --- |
+| `prioricode.json` / `prioricode.jsonc` | Product configuration (comments supported in `.jsonc`) |
+| `tui.json` / `tui.jsonc` | Interface configuration — themes & keybinds ([next page](/configure/tui)) |
+| `AGENTS.md` (+ `CLAUDE.md`, `CONTEXT.md`) | Project instructions ([context](/using/context)) |
+| `.prioricode/{agents,commands,skills,tools,plugin,themes}/` | The extension folders ([extending](/extending/skills)) |
+| `<data>/auth.json` | Stored provider credentials, mode `0600` |
+| `<data>/prioricode*.db` | Sessions and state (SQLite) |
+
+New config files are seeded with `"$schema": "https://prioricode.ai/config.json"` — that URL lights up autocomplete and validation in editors that support JSON Schema.
+
+## Where it looks, in order
+
+Priority runs bottom-up (later layers override earlier; deep-merged):
+
+1. **Remote well-known configs** — any `providers login <url>` target contributes its advertised `config`.
+2. **Global config dir** — `~/.config/prioricode` (XDG; `PRIORICODE_CONFIG_DIR` relocates it): `config.json` → `prioricode.json` → `prioricode.jsonc`.
+3. `PRIORICODE_CONFIG` — one extra file, anywhere.
+4. **Project files** — `prioricode.json(c)` walked from your cwd **up to the worktree root**; root-first, so the file closest to you has the highest say.
+5. **Config directories** — the global dir, every `.prioricode/` between cwd and root, `~/.prioricode`, and `PRIORICODE_CONFIG_DIR`: each contributes config files, agents, commands, skills, tools, themes, and plugins.
+6. `PRIORICODE_CONFIG_CONTENT` — inline JSON(C) as a final local layer. (Great for CI: no files on disk.)
+7. **Console org config** — if you're logged into a PrioriCode org, its config is fetched and merged.
+8. **Managed config** — `prioricode.json(c)` in the system dirs: `/Library/Application Support/prioricode` (macOS), `%ProgramData%\prioricode` (Windows), `/etc/prioricode` (Linux).
+9. **macOS managed preferences** — the `ai.prioricode.managed` `.mobileconfig` domain. Overrules everything above.
+
+Escape hatches: `PRIORICODE_DISABLE_PROJECT_CONFIG=1` skips project discovery entirely (repo can't configure your machine), and `--pure` skips external plugins.
+
+`.prioricode/` gets bootstrapped politely: a `.gitignore` so local junk stays local, and `@prioricode/plugin` installed for file plugins and typed custom tools.
+
+## Substitution
+
+Any config text supports two templates:
+
+```jsonc
+{
+  "model": "{env:PRIORICODE_MODEL}",
+  "provider": {
+    "acme": { "options": { "apiKey": "{file:./secrets/acme.key}" } }
+  }
+}
+```
+
+`{env:VAR}` pulls an environment variable; `{file:path}` reads a file (relative to the config file's directory, `~/` expanded). Secrets stay in files, patterns stay in git.
+
+## Where PrioriCode puts its things
+
+All XDG-standard, all overridable via the usual `XDG_*` env vars:
+
+| Path | Contents |
+| --- | --- |
+| `~/.local/share/prioricode` (data) | `prioricode.db`, `auth.json`, `mcp-auth.json`, `log/`, `plans/`, `tool-output/`, `repos/`, `snapshot/` |
+| `~/.config/prioricode` (config) | global config dir (see above) |
+| `~/.cache/prioricode` (cache) | cached model catalog, skill packs, `bin/` |
+| `~/.local/state/prioricode` (state) | recently-used models, misc state |
+| `$TMPDIR/prioricode` (tmp) | scratch |
+
+Print the truth for your machine with `prioricode debug paths`, and `prioricode db path` for the database specifically.
+
+### Which database, exactly
+
+| Your build's channel | DB file (under data dir) |
+| --- | --- |
+| `latest`, `beta`, `prod`, or running from source (`local`) | `prioricode.db` — shared, so sessions/projects/coordination carry across |
+| any other channel (e.g. a desktop `dev` build) | `prioricode-<channel>.db` — deliberately isolated |
+| `PRIORICODE_DISABLE_CHANNEL_DB=1` | forces `prioricode.db` |
+| `PRIORICODE_DB=/some/path` | that path, full stop (`:memory:` works too) |
+
+<Warning>
+  Two processes with *different* DB files will cheerfully not coordinate — that's the #1 "why don't my sessions see each other?" cause. Run `prioricode db path` in each process when [coordination](/using/coordination) looks deaf. And `PRIORICODE_DB` is a sledgehammer: it relocates *all* state, including credentials' neighborhood.
+</Warning>
+
+## Effective-config debugging
+
+```bash
+prioricode debug config     # the merged result, what the app actually sees
+```
+
+Precedence fights are resolved by inspection, not archaeology.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Config reference" icon="sliders" href="/reference/config">
+    Every key, type, and default.
+  </Card>
+  <Card title="Environment variables" icon="list" href="/reference/environment-variables">
+    Every `PRIORICODE_*` switch.
+  </Card>
+  <Card title="TUI config" icon="paintbrush" href="/configure/tui">
+    The `tui.json` half of the split.
+  </Card>
+  <Card title="Project context" icon="file-lines" href="/using/context">
+    AGENTS.md loading rules.
+  </Card>
+</CardGroup>
