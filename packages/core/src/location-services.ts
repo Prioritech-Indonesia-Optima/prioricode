@@ -13,6 +13,7 @@ import { Watcher } from "./filesystem/watcher"
 import { Image } from "./image"
 import { Integration } from "./integration"
 import { Location } from "./location"
+import { Hook } from "./hook"
 import { MCPv2 } from "./mcp/mcp"
 import { LocationMutation } from "./location-mutation"
 import { LocationServiceMap } from "./location-service-map"
@@ -77,6 +78,9 @@ export const locationServices = LayerNode.group([
   // MCP connects and registers only servers named in config; with an empty
   // `mcp.servers` map this layer performs no external work at Location boot.
   MCPv2.node,
+  // The hook engine only reads config and spawns processes when a caller
+  // invokes its event methods; registration itself is inert.
+  Hook.node,
   SessionRunnerModel.node,
   Snapshot.node,
   SessionRunnerLLM.node,

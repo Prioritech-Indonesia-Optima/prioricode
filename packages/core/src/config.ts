@@ -16,6 +16,7 @@ import { ConfigCompaction } from "./config/compaction"
 import { ConfigCommand } from "./config/command"
 import { ConfigExperimental } from "./config/experimental"
 import { ConfigFormatter } from "./config/formatter"
+import { ConfigHooks } from "./config/hooks"
 import { ConfigLoop } from "./config/loop"
 import { ConfigLSP } from "./config/lsp"
 import { ConfigMCP } from "./config/mcp"
@@ -94,6 +95,9 @@ export class Info extends Schema.Class<Info>("Config.Info")({
   }),
   verify: ConfigVerify.Info.pipe(Schema.optional).annotate({
     description: "Automatic verification pass before the agent may finish after mutating files",
+  }),
+  hooks: ConfigHooks.Info.pipe(Schema.optional).annotate({
+    description: "Deterministic lifecycle shell hooks (PreToolUse/PostToolUse/Stop/SessionStart) that run regardless of model instructions",
   }),
   skills: Schema.String.pipe(Schema.Array, Schema.optional).annotate({
     description: "Additional paths or URLs to discover skills from",

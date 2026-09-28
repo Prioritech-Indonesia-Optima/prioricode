@@ -228,6 +228,13 @@ export const make = Effect.gen(function* () {
     Effect.suspend(() => {
       let sink: Sink.Sink<void, unknown, never, PlatformError.PlatformError> = Sink.drain
       if (Predicate.isNotNull(proc.stdin)) {
+        // NodeSink pulls the error listener off the writable once the write loop
+        // finishes, then calls end(); a child that exits without draining stdin
+        // (e.g. `exit 2`) emits EPIPE during that final flush with no listener
+        // left, which would crash the process. Keep a permanent no-op handler so
+        // the flush error is observed; sink.onError still surfaces genuine write
+        // failures while the pull is active.
+        proc.stdin.on("error", () => {})
         sink = NodeSink.fromWritable({
           evaluate: () => proc.stdin!,
           onError: (err) => toPlatformError("fromWritable(stdin)", toError(err), command),
