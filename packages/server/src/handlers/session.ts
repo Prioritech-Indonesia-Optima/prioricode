@@ -189,7 +189,11 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
       .handle(
         "session.compact",
         Effect.fn(function* (ctx) {
-          yield* session.compact({ sessionID: ctx.params.sessionID }).pipe(
+          yield* session.compact({
+            sessionID: ctx.params.sessionID,
+            anchor: ctx.payload.anchor,
+            instructions: ctx.payload.instructions,
+          }).pipe(
             Effect.catchTag("Session.NotFoundError", (error) =>
               Effect.fail(
                 new SessionNotFoundError({
@@ -206,14 +210,30 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                 }),
               ),
             ),
-            Effect.catchTag("Session.OperationUnavailableError", (error) =>
+            Effect.catchTag("Session.MessageNotFoundError", (error) =>
               Effect.fail(
-                new ServiceUnavailableError({
-                  message: `Session ${error.operation} is not available yet`,
-                  service: `session.${error.operation}`,
+                new MessageNotFoundError({
+                  sessionID: error.sessionID,
+                  messageID: error.messageID,
+                  message: `Message not found in session: ${error.messageID}`,
                 }),
               ),
             ),
+            Effect.catch((error): Effect.Effect<
+              never,
+              SessionNotFoundError | SessionBusyError | MessageNotFoundError | UnknownError
+            > => {
+              if (
+                error instanceof SessionNotFoundError ||
+                error instanceof SessionBusyError ||
+                error instanceof MessageNotFoundError
+              )
+                return Effect.fail(error)
+              const ref = `err_${crypto.randomUUID().slice(0, 8)}`
+              return Effect.logError("failed to compact session", { ref, error }).pipe(
+                Effect.andThen(Effect.fail(new UnknownError({ message: "Unexpected server error. Check server logs for details.", ref }))),
+              )
+            }),
           )
           return HttpApiSchema.NoContent.make()
         }),

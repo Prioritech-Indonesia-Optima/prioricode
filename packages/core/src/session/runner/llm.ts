@@ -670,8 +670,25 @@ const layer = Layer.effect(
       }
     })
 
+    const compact = Effect.fn("SessionRunner.compact")(function* (input: {
+      readonly sessionID: SessionSchema.ID
+      readonly headCutSeq?: number
+      readonly instructions?: string
+    }) {
+      const session = yield* getSession(input.sessionID)
+      const entries = yield* SessionHistory.entriesForRunner(db, session.id, 0)
+      const compactable = entries.filter((entry) => entry.message.type !== "compaction")
+      if (compactable.length < 2) return false
+      const model = yield* models.resolve(session)
+      // unanchored manual compaction keeps the final exchange verbatim
+      const headCutSeq =
+        input.headCutSeq ?? (compactable.length > 2 ? compactable[compactable.length - 3]?.seq : compactable[0]?.seq)
+      return yield* compaction.compactManual({ ...input, headCutSeq, entries, model, sessionID: session.id })
+    })
+
     return Service.of({
       run,
+      compact,
     })
   }),
 )

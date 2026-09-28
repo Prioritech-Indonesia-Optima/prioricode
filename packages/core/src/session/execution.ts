@@ -15,6 +15,12 @@ export interface Interface {
   readonly wake: (sessionID: SessionSchema.ID) => Effect.Effect<void>
   /** Interrupt active work owned by this process. Idle interruption is a no-op. */
   readonly interrupt: (sessionID: SessionSchema.ID) => Effect.Effect<void>
+  /** Performs one caller-requested compaction; returns whether a summary was written. */
+  readonly compact: (input: {
+    readonly sessionID: SessionSchema.ID
+    readonly headCutSeq?: number
+    readonly instructions?: string
+  }) => Effect.Effect<boolean, SessionRunner.RunError>
 }
 
 /** Routes execution from a Session ID to the runner owned by that Session's Location. */
@@ -30,5 +36,6 @@ export const noopLayer = Layer.succeed(
     resume: () => Effect.void,
     wake: () => Effect.void,
     interrupt: () => Effect.void,
+    compact: () => Effect.succeed(false),
   }),
 )

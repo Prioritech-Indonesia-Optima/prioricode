@@ -1,11 +1,5 @@
 import { describe, expect } from "bun:test"
-import {
-  LLMClient,
-  LLMEvent,
-  Model,
-  type LLMClientShape,
-  type LLMRequest,
-} from "@prioricode/llm"
+import { LLMClient, LLMEvent, Model, type LLMClientShape, type LLMRequest } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
 import { AgentV2 } from "@prioricode/core/agent"
 import { Config } from "@prioricode/core/config"
@@ -141,6 +135,7 @@ const execution = Layer.effect(
       resume: coordinator.run,
       wake: coordinator.wake,
       interrupt: coordinator.interrupt,
+      compact: () => Effect.succeed(false),
     })
   }),
 ).pipe(Layer.provide(runnerLayer))
@@ -190,7 +185,14 @@ const setup = Effect.gen(function* () {
     .pipe(Effect.orDie)
   yield* db
     .insert(SessionTable)
-    .values({ id: sessionID, project_id: Project.ID.global, slug: sessionID, directory, title: "budget", version: "test" })
+    .values({
+      id: sessionID,
+      project_id: Project.ID.global,
+      slug: sessionID,
+      directory,
+      title: "budget",
+      version: "test",
+    })
     .onConflictDoNothing()
     .run()
     .pipe(Effect.orDie)

@@ -87,7 +87,8 @@ type CreateInput = {
 
 type CompactInput = {
   sessionID: SessionSchema.ID
-  prompt?: Prompt
+  anchor?: SessionMessage.ID
+  instructions?: string
 }
 
 export class OperationUnavailableError extends Schema.TaggedErrorClass<OperationUnavailableError>()(
@@ -172,7 +173,8 @@ export interface Interface {
     skill: string
     resume?: boolean
   }) => Effect.Effect<void, OperationUnavailableError>
-  readonly compact: (input: CompactInput) => Effect.Effect<void, NotFoundError | OperationUnavailableError | BusyError>
+  readonly compact: (input: CompactInput) =>
+    Effect.Effect<boolean, NotFoundError | MessageNotFoundError | BusyError | SessionRunner.RunError>
   readonly wait: (id: SessionSchema.ID) => Effect.Effect<void, NotFoundError | OperationUnavailableError | BusyError>
   readonly active: Effect.Effect<ReadonlySet<SessionSchema.ID>>
   readonly resume: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError | SessionRunner.RunError>
@@ -444,9 +446,19 @@ const layer = Layer.effect(
       }),
       // Idle-only: compact rewrites durable history and must not race an active drain.
       compact: Effect.fn("V2Session.compact")(function* (input) {
-        yield* result.get(input.sessionID)
-        yield* requireIdle(input.sessionID)
-        return yield* new OperationUnavailableError({ operation: "compact" })
+        const session = yield* result.get(input.sessionID)
+        yield* requireIdle(session.id)
+        if (input.anchor !== undefined) {
+          const anchored = yield* store.message(input.anchor)
+          if (anchored === undefined || anchored.sessionID !== session.id)
+            return yield* new MessageNotFoundError({ sessionID: session.id, messageID: input.anchor })
+          return yield* execution.compact({
+            sessionID: session.id,
+            headCutSeq: anchored.seq,
+            instructions: input.instructions,
+          })
+        }
+        return yield* execution.compact({ sessionID: session.id, instructions: input.instructions })
       }),
       wait: Effect.fn("V2Session.wait")(function* (sessionID) {
         yield* result.get(sessionID)

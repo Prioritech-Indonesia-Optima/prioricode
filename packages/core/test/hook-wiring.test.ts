@@ -2,13 +2,7 @@ import { describe, expect } from "bun:test"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import {
-  LLMClient,
-  LLMEvent,
-  Model,
-  type LLMClientShape,
-  type LLMRequest,
-} from "@prioricode/llm"
+import { LLMClient, LLMEvent, Model, type LLMClientShape, type LLMRequest } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
 import { Config } from "@prioricode/core/config"
 import { ConfigHooks } from "@prioricode/core/config/hooks"
@@ -162,6 +156,7 @@ const execution = Layer.effect(
       resume: coordinator.run,
       wake: coordinator.wake,
       interrupt: coordinator.interrupt,
+      compact: () => Effect.succeed(false),
     })
   }),
 ).pipe(Layer.provide(runnerLayer))
@@ -294,7 +289,13 @@ posixOnly("hook wiring", () => {
 
   it.live("matcher mismatch lets the tool run", () =>
     Effect.gen(function* () {
-      yield* setup([info({ PreToolUse: [new ConfigHooks.HookCommand({ matcher: "edit*", command: "printf 'no echoing allowed\\n' >&2; exit 2" })] })])
+      yield* setup([
+        info({
+          PreToolUse: [
+            new ConfigHooks.HookCommand({ matcher: "edit*", command: "printf 'no echoing allowed\\n' >&2; exit 2" }),
+          ],
+        }),
+      ])
       const session = yield* SessionV2.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Echo this" }), resume: false })
       responses = [toolCallEvents("call-run", "hello"), []]
@@ -323,18 +324,13 @@ posixOnly("hook wiring", () => {
       yield* setup([
         info({
           Stop: [
-            sh(
-              "if [ -e stop.done ]; then exit 0; fi; touch stop.done; printf 'run the tests first\\n' >&2; exit 2",
-            ),
+            sh("if [ -e stop.done ]; then exit 0; fi; touch stop.done; printf 'run the tests first\\n' >&2; exit 2"),
           ],
         }),
       ])
       const session = yield* SessionV2.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Done?" }), resume: false })
-      responses = [
-        finalTextEvents("text-stop", "All done"),
-        finalTextEvents("text-stop-2", "Tests pass now"),
-      ]
+      responses = [finalTextEvents("text-stop", "All done"), finalTextEvents("text-stop-2", "Tests pass now")]
       yield* session.resume(sessionID)
       expect(requests).toHaveLength(2)
       const texts = yield* userTexts(session)

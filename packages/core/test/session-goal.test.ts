@@ -1,11 +1,5 @@
 import { describe, expect } from "bun:test"
-import {
-  LLMClient,
-  LLMEvent,
-  Model,
-  type LLMClientShape,
-  type LLMRequest,
-} from "@prioricode/llm"
+import { LLMClient, LLMEvent, Model, type LLMClientShape, type LLMRequest } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
 import { AgentV2 } from "@prioricode/core/agent"
 import { Config } from "@prioricode/core/config"
@@ -71,10 +65,7 @@ const permission = Layer.succeed(
   }),
 )
 
-const config = Layer.succeed(
-  Config.Service,
-  Config.Service.of({ entries: () => Effect.succeed([]) }),
-)
+const config = Layer.succeed(Config.Service, Config.Service.of({ entries: () => Effect.succeed([]) }))
 const models = SessionRunnerModel.layerWith(() => Effect.succeed(model))
 const skillGuidance = Layer.mock(SkillGuidance.Service, { load: () => Effect.succeed(SystemContext.empty) })
 const referenceGuidance = Layer.mock(ReferenceGuidance.Service, { load: () => Effect.succeed(SystemContext.empty) })
@@ -110,6 +101,7 @@ const execution = Layer.effect(
       resume: coordinator.run,
       wake: coordinator.wake,
       interrupt: coordinator.interrupt,
+      compact: () => Effect.succeed(false),
     })
   }),
 ).pipe(Layer.provide(runnerLayer))
@@ -175,12 +167,7 @@ const systemTexts = (request: LLMRequest) =>
 const goalEventCount = (id: SessionV2.ID) =>
   Effect.gen(function* () {
     const { db } = yield* Database.Service
-    const rows = yield* db
-      .select()
-      .from(EventTable)
-      .where(eq(EventTable.aggregate_id, id))
-      .all()
-      .pipe(Effect.orDie)
+    const rows = yield* db.select().from(EventTable).where(eq(EventTable.aggregate_id, id)).all().pipe(Effect.orDie)
     return rows.filter((row) => row.type.includes("goal")).length
   })
 
@@ -191,7 +178,13 @@ describe("session goal", () => {
       const session = yield* SessionV2.Service
       yield* session.setGoal({ sessionID, goal: "Ship phase 4 with green tests" })
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Work" }), resume: false })
-      responses = [[LLMEvent.stepStart({ index: 0 }), LLMEvent.stepFinish({ index: 0, reason: "stop" }), LLMEvent.finish({ reason: "stop" })]]
+      responses = [
+        [
+          LLMEvent.stepStart({ index: 0 }),
+          LLMEvent.stepFinish({ index: 0, reason: "stop" }),
+          LLMEvent.finish({ reason: "stop" }),
+        ],
+      ]
       yield* session.resume(sessionID)
       expect(turnRequests()).toHaveLength(1)
       expect(systemTexts(turnRequests()[0]!).join("\n")).toContain("durable goal for this session")
@@ -267,7 +260,11 @@ describe("session goal", () => {
           LLMEvent.stepFinish({ index: 0, reason: "tool-calls" }),
           LLMEvent.finish({ reason: "tool-calls" }),
         ],
-        [LLMEvent.stepStart({ index: 0 }), LLMEvent.stepFinish({ index: 0, reason: "stop" }), LLMEvent.finish({ reason: "stop" })],
+        [
+          LLMEvent.stepStart({ index: 0 }),
+          LLMEvent.stepFinish({ index: 0, reason: "stop" }),
+          LLMEvent.finish({ reason: "stop" }),
+        ],
       ]
       yield* session.resume(sessionID)
       expect(turnRequests()).toHaveLength(2)
@@ -293,7 +290,11 @@ describe("session goal", () => {
         .pipe(Effect.orDie)
       expect(recorded.filter((event) => event.type.startsWith("session.next.goal.set."))).toHaveLength(1)
       yield* events.remove(sessionID)
-      yield* db.delete(SessionMessageTable).where(eq(SessionMessageTable.session_id, sessionID)).run().pipe(Effect.orDie)
+      yield* db
+        .delete(SessionMessageTable)
+        .where(eq(SessionMessageTable.session_id, sessionID))
+        .run()
+        .pipe(Effect.orDie)
       yield* db.delete(SessionInputTable).where(eq(SessionInputTable.session_id, sessionID)).run().pipe(Effect.orDie)
       yield* db
         .update(SessionTable)
@@ -345,4 +346,3 @@ describe("session goal", () => {
     }),
   )
 })
-

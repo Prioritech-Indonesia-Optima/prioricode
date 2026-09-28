@@ -18,9 +18,9 @@ export interface Interface {
     sessionID: SessionSchema.ID,
     baselineSeq: number,
   ) => Effect.Effect<SessionMessage.Message[], MessageDecodeError>
-  readonly message: (
-    messageID: SessionMessage.ID,
-  ) => Effect.Effect<{ readonly sessionID: SessionSchema.ID; readonly message: SessionMessage.Message } | undefined>
+  readonly message: (messageID: SessionMessage.ID) => Effect.Effect<
+    { readonly sessionID: SessionSchema.ID; readonly seq: number; readonly message: SessionMessage.Message } | undefined
+  >
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/SessionStore") {}
@@ -52,6 +52,7 @@ const layer = Layer.effect(
         return row
           ? {
               sessionID: SessionSchema.ID.make(row.session_id),
+              seq: row.seq,
               message: yield* decodeMessage({ ...row.data, id: row.id, type: row.type }).pipe(Effect.orDie),
             }
           : undefined

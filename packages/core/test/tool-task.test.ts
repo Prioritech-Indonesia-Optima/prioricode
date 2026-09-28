@@ -39,6 +39,7 @@ const execution = Layer.succeed(
       Effect.sync(() => {
         resumed.push(sessionID)
       }),
+    compact: () => Effect.succeed(false),
     wake: (sessionID) =>
       Effect.sync(() => {
         resumed.push(sessionID)

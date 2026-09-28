@@ -41,6 +41,7 @@ const execution = Layer.succeed(
         wakes.push(id)
       }),
     interrupt: () => Effect.void,
+    compact: () => Effect.succeed(false),
   }),
 )
 
@@ -139,9 +140,9 @@ describe("SessionV2 operations while in use", () => {
       // No staged revert: commit and clear are durable no-ops when idle.
       yield* sessions.revert.commit(sessionID)
       yield* sessions.revert.clear(sessionID)
-      // Compact remains an unimplemented stub once existence and idle checks pass.
+      // Compact now proceeds when idle; the test execution seam performs no summary.
       const compact = yield* Effect.exit(sessions.compact({ sessionID }))
-      expect(hasFailure(compact, new SessionV2.OperationUnavailableError({ operation: "compact" }))).toBe(true)
+      expect(compact._tag).toBe("Success")
     }),
   )
 

@@ -96,9 +96,15 @@ describe("V2 session HTTP surface", () => {
     const created = await request("/api/session", body({ location: { directory } }))
     const session = (await payload<{ data: { id: string } }>(created)).data
 
-    const compact = await request(`/api/session/${session.id}/compact`, { method: "POST" })
-    expect(compact.status).toBe(503)
-    expect((await payload<{ _tag: string }>(compact))._tag).toBe("ServiceUnavailableError")
+    const wait = await request(`/api/session/${session.id}/wait`, { method: "POST", body: "{}", headers: { "content-type": "application/json" } })
+    expect(wait.status).toBe(503)
+    expect((await payload<{ _tag: string }>(wait))._tag).toBe("ServiceUnavailableError")
+
+    const compact = await request(`/api/session/${session.id}/compact`, body({}))
+    expect(compact.status).toBe(204)
+    const anchored = await request(`/api/session/${session.id}/compact`, body({ anchor: "msg_missing_anchor_test" }))
+    expect(anchored.status).toBe(404)
+    expect((await payload<{ _tag: string }>(anchored))._tag).toBe("MessageNotFoundError")
 
     const commit = await request(`/api/session/${session.id}/revert/commit`, { method: "POST" })
     expect(commit.status).toBe(204)

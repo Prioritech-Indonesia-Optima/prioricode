@@ -79,7 +79,10 @@ type Input = {
   readonly sessionID: SessionSchema.ID
   readonly entries: readonly Entry[]
   readonly model: Model
-  readonly request: LLMRequest
+  readonly request?: LLMRequest
+  readonly reason?: "auto" | "manual"
+  readonly headCutSeq?: number
+  readonly instructions?: string
 }
 
 const estimate = (value: unknown) => Token.estimate(JSON.stringify(value))
@@ -141,36 +144,57 @@ const settings = (documents: readonly Config.Entry[]) => {
 const select = (
   entries: readonly Entry[],
   tokens: number,
+  headCutSeq?: number,
 ): { readonly head: string; readonly recent: string } | undefined => {
   const conversation = entries
     .filter((entry) => entry.message.type !== "compaction")
-    .map((entry) => serialize(entry.message))
-    .filter(Boolean)
+    .map((entry) => ({ seq: entry.seq, text: serialize(entry.message) }))
+    .filter((item) => item.text !== "")
   if (conversation.length === 0) return
-  let total = 0
-  let split = conversation.length
-  for (let index = conversation.length - 1; index >= 0; index--) {
-    const next = total + Token.estimate(conversation[index])
-    if (next > tokens) break
-    total = next
-    split = index
+  let split: number
+  if (headCutSeq !== undefined) {
+    // Summarize everything up to and including the anchor, then clamp so at
+    // least one trailing message is retained verbatim. Idle-only callers
+    // guarantee no unsettled tool call straddles the boundary.
+    split = conversation.findIndex((item) => item.seq > headCutSeq)
+    if (split === -1) split = conversation.length
+    split = Math.min(split, Math.max(conversation.length - 1, 1))
+  } else {
+    split = conversation.length
+    let total = 0
+    for (let index = conversation.length - 1; index >= 0; index--) {
+      const next = total + Token.estimate(conversation[index]!.text)
+      if (next > tokens) break
+      total = next
+      split = index
+    }
   }
   return {
-    head: conversation.slice(0, split).join("\n\n"),
-    recent: conversation.slice(split).join("\n\n"),
+    head: conversation.slice(0, split).map((item) => item.text).join("\n\n"),
+    recent: conversation.slice(split).map((item) => item.text).join("\n\n"),
   }
 }
 
-export const buildPrompt = (input: { readonly previousSummary?: string; readonly context: readonly string[] }) => {
+export const buildPrompt = (input: {
+  readonly previousSummary?: string
+  readonly context: readonly string[]
+  readonly instructions?: string
+}) => {
   const conversation = `Here is the conversation so far:\n\n<conversation>\n${input.context.join("\n\n")}\n</conversation>`
+  const focus =
+    input.instructions === undefined || input.instructions.trim() === ""
+      ? []
+      : [`The user asked this summary to specifically preserve: ${input.instructions.trim()}`]
   if (!input.previousSummary)
     return [
       conversation,
+      ...focus,
       "Create a new anchored summary from the conversation history in the <conversation> tags above so another coding agent can continue the work.",
       SUMMARY_TEMPLATE,
     ].join("\n\n")
   return [
     conversation,
+    ...focus,
     `Here is the summary of the conversation before the <conversation> above:\n\n<prior-summary>\n${input.previousSummary}\n</prior-summary>`,
     SUMMARY_UPDATE_INSTRUCTIONS,
     SUMMARY_TEMPLATE,
@@ -179,17 +203,19 @@ export const buildPrompt = (input: { readonly previousSummary?: string; readonly
 
 export const make = (dependencies: Dependencies) => {
   const config = settings(dependencies.config)
-  const compactAfterOverflow = Effect.fn("SessionCompaction.compactAfterOverflow")(function* (input: Input) {
+  const compact = Effect.fn("SessionCompaction.compact")(function* (input: Input) {
+    const reason = input.reason ?? "auto"
     const rawContext = input.model.route.defaults.limits?.context
     const context = rawContext && rawContext > 0 ? rawContext : config.defaultContext
     if (context <= 0) return false
-    const output = input.request.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
-    const selected = select(input.entries, config.tokens)
+    const output = input.request?.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
+    const selected = select(input.entries, config.tokens, input.headCutSeq)
     const previousSummary = input.entries.find((entry) => entry.message.type === "compaction")?.message
     if (!selected || (selected.head.length === 0 && previousSummary?.type !== "compaction")) return false
     const summaryPrompt = buildPrompt({
       previousSummary: previousSummary?.type === "compaction" ? previousSummary.summary : undefined,
       context: [previousSummary?.type === "compaction" ? previousSummary.recent : "", selected.head].filter(Boolean),
+      instructions: input.instructions,
     })
     const summaryOutput = Math.min(output || SUMMARY_OUTPUT_TOKENS, SUMMARY_OUTPUT_TOKENS)
     if (Token.estimate(summaryPrompt) > context - summaryOutput) return false
@@ -198,7 +224,7 @@ export const make = (dependencies: Dependencies) => {
       sessionID: input.sessionID,
       messageID,
       timestamp: yield* DateTime.now,
-      reason: "auto",
+      reason,
     })
 
     const chunks: string[] = []
@@ -207,7 +233,7 @@ export const make = (dependencies: Dependencies) => {
       .stream(
         LLM.request({
           model: input.model,
-          http: input.request.http,
+          http: input.request?.http,
           messages: [Message.user(summaryPrompt)],
           tools: [],
           generation: { maxTokens: summaryOutput },
@@ -228,13 +254,16 @@ export const make = (dependencies: Dependencies) => {
       sessionID: input.sessionID,
       messageID,
       timestamp: yield* DateTime.now,
-      reason: "auto",
+      reason,
       text: summary,
       recent: selected.recent,
     })
     return true
   })
-  const compactIfNeeded = Effect.fn("SessionCompaction.compactIfNeeded")(function* (input: Input) {
+  const compactAfterOverflow = (input: Input) => compact(input)
+  const compactManual = (input: Input) => compact({ ...input, reason: "manual" })
+  const compactIfNeeded = Effect.fn("SessionCompaction.compactIfNeeded")(
+    function* (input: Input & { readonly request: LLMRequest }) {
     if (!config.auto) return false
     const rawContext = input.model.route.defaults.limits?.context
     const context = rawContext && rawContext > 0 ? rawContext : config.defaultContext
@@ -255,5 +284,6 @@ export const make = (dependencies: Dependencies) => {
   return {
     compactIfNeeded,
     compactAfterOverflow,
+    compactManual,
   }
 }

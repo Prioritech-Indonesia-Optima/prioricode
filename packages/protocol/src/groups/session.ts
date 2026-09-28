@@ -243,15 +243,19 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
     .add(
       HttpApiEndpoint.post("session.compact", "/api/session/:sessionID/compact", {
         params: { sessionID: Session.ID },
+        payload: Schema.Struct({
+          anchor: SessionMessage.ID.pipe(Schema.optional),
+          instructions: Schema.String.pipe(Schema.optional),
+        }),
         success: HttpApiSchema.NoContent,
-        error: [ConflictError, SessionBusyError, SessionNotFoundError, ServiceUnavailableError],
+        error: [ConflictError, SessionBusyError, SessionNotFoundError, ServiceUnavailableError, MessageNotFoundError, UnknownError],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.compact",
             summary: "Compact session",
-            description: "Compact a session conversation.",
+            description: "Summarize durable history now; optionally only up to an anchor message, with focus instructions.",
           }),
         ),
     )

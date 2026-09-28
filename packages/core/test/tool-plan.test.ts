@@ -65,6 +65,7 @@ const execution = Layer.succeed(
       Effect.sync(() => {
         wake.push(id)
       }),
+    compact: () => Effect.succeed(false),
     wake: (id) =>
       Effect.sync(() => {
         wake.push(id)

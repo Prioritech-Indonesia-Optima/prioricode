@@ -32,6 +32,7 @@ const execution = Layer.succeed(
       Effect.sync(() => {
         executionCalls.push(sessionID)
       }),
+    compact: () => Effect.succeed(false),
     interrupt: (sessionID) =>
       Effect.sync(() => {
         interruptCalls.push(sessionID)

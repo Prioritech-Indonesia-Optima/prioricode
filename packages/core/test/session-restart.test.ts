@@ -175,6 +175,7 @@ const appLayer = (file: string) =>
             resume: () => Effect.void,
             wake: () => Effect.void,
             interrupt: () => Effect.void,
+            compact: () => Effect.succeed(false),
           }),
         ),
       ],
