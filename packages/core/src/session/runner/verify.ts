@@ -19,6 +19,7 @@ import { SessionInput } from "../input"
 import { SessionMessage } from "../message"
 import { Prompt } from "../prompt"
 import { SessionSchema } from "../schema"
+import { SessionGate } from "./gate"
 
 const defaultShell = () =>
   process.platform === "win32"
@@ -65,6 +66,19 @@ const detectCommand = Effect.fn("SessionVerify.detectCommand")(function* (fs: FS
   for (const [file, run] of managers) if (yield* fs.existsSafe(path.join(directory, file))) return run
   return "npm test"
 })
+
+/** Adapt the verification pass into the finish-gate pipeline. */
+export const asGate = (deps: Parameters<typeof make>[0]): Effect.Effect<SessionGate.Gate, never, never> =>
+  make(deps).pipe(
+    Effect.map((verifier) => ({
+      id: "verify",
+      observe: (name: string, ok: boolean) => {
+        if (ok) verifier.recordMutation(name)
+      },
+      beforeFinish: () =>
+        verifier.beforeFinish().pipe(Effect.map((cont) => (cont ? SessionGate.continued : SessionGate.pass))),
+    })),
+  )
 
 export interface Verifier {
   /** Records that a settled local tool call mutated the workspace. */

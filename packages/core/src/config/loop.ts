@@ -37,5 +37,8 @@ export class Info extends Schema.Class<Info>("ConfigV2.Loop")({
   read_only_tools: Schema.String.pipe(Schema.Array, Schema.optional).annotate({
     description: "Tool names treated as side-effect-free when counting identical repeated calls",
   }),
+  gate_max_rounds: PositiveInt.pipe(Schema.optional).annotate({
+    description: "Maximum finish-gate continuations (verification, Stop hooks, goal) across one drain before the session is allowed to end",
+  }),
   retry: Retry.pipe(Schema.optional),
 }) {}

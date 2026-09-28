@@ -17,6 +17,7 @@ import { Database } from "../../database/database"
 import { FSUtil } from "../../fs-util"
 import { AppProcess } from "../../process"
 import { SessionVerify } from "./verify"
+import { SessionGate } from "./gate"
 import { EventV2 } from "../../event"
 import { Location } from "../../location"
 import { ModelV2 } from "../../model"
@@ -173,7 +174,7 @@ const layer = Layer.effect(
 
     interface TurnPolicy {
       readonly guard: ToolGuard.Guard
-      readonly verify: SessionVerify.Verifier
+      readonly gates: SessionGate.Pipeline
       readonly retry: ProviderRetry.Settings
     }
 
@@ -321,7 +322,7 @@ const layer = Layer.effect(
               ).pipe(
                 Effect.flatMap((settlement) => {
                   policy.guard.recordOutput(settlementBytes(settlement))
-                  if (settlement.result.type !== "error") policy.verify.recordMutation(event.name)
+                  policy.gates.observe(event.name, settlement.result.type !== "error")
                   return publish(
                     LLMEvent.toolResult({
                       id: event.id,
@@ -488,19 +489,24 @@ const layer = Layer.effect(
     }) {
       const entries = yield* config.entries()
       const loop = Config.latest(entries, "loop")
-      const verify = yield* SessionVerify.make({
-        db,
-        events,
-        fs,
-        process: appProcess,
-        directory: location.directory,
-        sessionID: input.sessionID,
-        config: Config.latest(entries, "verify"),
+      const gates = SessionGate.makePipeline({
+        gates: [
+          yield* SessionVerify.asGate({
+            db,
+            events,
+            fs,
+            process: appProcess,
+            directory: location.directory,
+            sessionID: input.sessionID,
+            config: Config.latest(entries, "verify"),
+          }),
+        ],
+        maxRounds: loop?.gate_max_rounds ?? 6,
       })
       const policy: TurnPolicy = {
         guard: ToolGuard.make(ToolGuard.settings(loop)),
         retry: ProviderRetry.settings(loop?.retry),
-        verify,
+        gates,
       }
       const hasSteer = yield* SessionInput.hasPending(db, input.sessionID, "steer")
       const hasQueue = hasSteer ? false : yield* SessionInput.hasPending(db, input.sessionID, "queue")
@@ -516,7 +522,7 @@ const layer = Layer.effect(
           needsContinuation = result.needsContinuation
           step = result.step + 1
           promotion = "steer"
-          if (!needsContinuation && (yield* policy.verify.beforeFinish())) needsContinuation = true
+          if (!needsContinuation && (yield* policy.gates.beforeFinish())) needsContinuation = true
           else if (!needsContinuation) needsContinuation = yield* SessionInput.hasPending(db, input.sessionID, "steer")
         }
         shouldRun = yield* SessionInput.hasPending(db, input.sessionID, "queue")
