@@ -15,6 +15,7 @@ type HomeHeroOptions = RenderableOptions<FrameBufferRenderable> & {
   primary?: HomeHeroThemeColors["primary"]
   textColor?: HomeHeroThemeColors["text"]
   mutedColor?: HomeHeroThemeColors["textMuted"]
+  scheme?: "dark" | "light"
 }
 
 class HomeHeroRenderable extends FrameBufferRenderable {
@@ -34,6 +35,13 @@ class HomeHeroRenderable extends FrameBufferRenderable {
       text: options.textColor,
       textMuted: options.mutedColor,
     })
+    if (options.scheme) this.painter.setScheme(options.scheme)
+  }
+
+  set scheme(value: HomeHeroOptions["scheme"]) {
+    if (value === "dark" || value === "light") {
+      if (this.painter.setScheme(value)) this.requestRender()
+    }
   }
 
   set background(value: HomeHeroOptions["background"]) {
@@ -68,7 +76,7 @@ declare module "@opentui/solid" {
 extend({ home_hero: HomeHeroRenderable })
 
 export function HomeHero() {
-  const { theme } = useTheme()
+  const { theme, mode } = useTheme()
   const renderer = useRenderer()
   let targetFps = renderer.targetFps
   let maxFps = renderer.maxFps
@@ -93,6 +101,7 @@ export function HomeHero() {
       primary={theme.primary}
       textColor={theme.text}
       mutedColor={theme.textMuted}
+      scheme={mode()}
       live
     />
   )

@@ -1,6 +1,6 @@
 import { Prompt, type PromptRef } from "../component/prompt"
 import { createEffect, createMemo, createSignal, onMount, Show } from "solid-js"
-import { Logo, MIN_ART_WIDTH } from "../component/logo"
+import { Logo, heroFits } from "../component/logo"
 import { HomeHero } from "../component/home-hero"
 import { useKV } from "../context/kv"
 import { useSync } from "../context/sync"
@@ -39,7 +39,9 @@ export function Home() {
     if (configured === "auto") return Math.max(75, Math.floor(dimensions().width * 0.7))
     return configured ?? 75
   })
-  const animatedHero = createMemo(() => animationsEnabled() && dimensions().width >= MIN_ART_WIDTH)
+  const animatedHero = createMemo(() =>
+    heroFits({ width: dimensions().width, height: dimensions().height, animationsEnabled: animationsEnabled() }),
+  )
   let sent = false
 
   onMount(() => {

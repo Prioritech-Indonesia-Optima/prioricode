@@ -23,6 +23,13 @@ const GLINT_STRENGTH = 0.9
 const GRADIENT_END = 0.85
 const REVEAL_SKEW = 0.6
 export const MIN_ART_WIDTH = 76
+// The 10-row wordmark band plus the prompt block needs vertical headroom;
+// below this height both heroes fall back to the 2-row compact wordmark so
+// the prompt is never pushed off-screen.
+export const MIN_ART_HEIGHT = 22
+export function heroFits(input: { width: number; height: number; animationsEnabled: boolean }) {
+  return input.animationsEnabled && input.width >= MIN_ART_WIDTH && input.height >= MIN_ART_HEIGHT
+}
 
 const ART_W = Math.max(...big.map((row) => row.length))
 const GLOW_W = 71
@@ -85,7 +92,7 @@ const COMPACT: Cell[][] = [
 const SWEEP = GLOW_W + ART.length * REVEAL_SKEW + 8
 
 export function Logo() {
-  const { theme } = useTheme()
+  const { theme, mode } = useTheme()
   const kv = useKV()
   const dimensions = useTerminalDimensions()
   const [animationsEnabled] = kv.signal("animations_enabled", true)
@@ -106,7 +113,9 @@ export function Logo() {
     onCleanup(() => clearInterval(timer))
   })
 
-  const showArt = createMemo(() => dimensions().width >= MIN_ART_WIDTH)
+  const showArt = createMemo(
+    () => dimensions().width >= MIN_ART_WIDTH && dimensions().height >= MIN_ART_HEIGHT,
+  )
   const rows = createMemo(() => (showArt() ? ART : COMPACT))
   const sweep = createMemo(() => (showArt() ? SWEEP : TAGLINE.length + COMPACT.length * REVEAL_SKEW + 8))
 
@@ -136,7 +145,8 @@ export function Logo() {
         const bg = createMemo(() => {
           if (!showArt()) return theme.background
           const falloff = Math.max(0, 1 - Math.abs(cell.y - ART_CY) / (ART_CY + 1.5))
-          const alpha = gauss(cell.x, GLOW_CX, 20) * falloff * 0.35 * reveal()
+          const glowScale = mode() === "light" ? 0.14 : 0.35
+          const alpha = gauss(cell.x, GLOW_CX, 20) * falloff * glowScale * reveal()
           return alpha < 0.01 ? theme.background : tint(theme.background, theme.primary, alpha)
         })
         return (
@@ -160,7 +170,10 @@ export function Logo() {
             : cell.kind === "word"
               ? (wordGradient()[cell.wordIndex] ?? theme.text)
               : theme.textMuted
-        return tint(tint(theme.background, base, fade), RGBA.fromInts(255, 250, 235), glint() * fade)
+        // Full-strength warm-white glint converges dark blocks into a light
+        // background and erases the wordmark; damp it in light mode.
+        const shine = mode() === "light" ? 0.45 : 1
+        return tint(tint(theme.background, base, fade), RGBA.fromInts(255, 250, 235), glint() * shine * fade)
       })
       const content = createMemo(() => (edge() <= 0 ? " " : cell.char))
       return (

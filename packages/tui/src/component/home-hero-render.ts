@@ -161,15 +161,40 @@ function phaseOf(cycleT: number): { phase: Phase; progress: number } {
 
 export class HomeHeroPainter {
   private elapsed = 0
+  private scheme: "dark" | "light" = "dark"
   private backgroundRgb: Rgb = [0, 0, 0]
   private primaryRgb: Rgb = [255, 255, 255]
   private textRgb: Rgb = [255, 255, 255]
   private mutedRgb: Rgb = [128, 128, 128]
   private warmRgb: Rgb = toRgb(WARM_WHITE)
+  private glyphRgb: Rgb = [255, 255, 255]
   private columns: Rgb[] = []
 
   constructor() {
     this.refreshPalette()
+  }
+
+  // Light terminals cannot carry the dark-mode glow budget: a 35% gold wash
+  // over a cream background reads as a muddy stain, and low-alpha gold glyph
+  // rain is illegible. Light mode gets a faint warm tint and darkened amber
+  // glyphs so the dissolve still animates without the smear.
+  setScheme(value: "dark" | "light") {
+    if (this.scheme === value) return false
+    this.scheme = value
+    this.refreshPalette()
+    return true
+  }
+
+  private get glowScale() {
+    return this.scheme === "light" ? 0.14 : 0.35
+  }
+
+  // Warm-white shines read as bright flashes on dark blocks over a dark base.
+  // At full strength on light backgrounds the glint converges the (dark) block
+  // color into the (cream) background and erases the wordmark; damping the
+  // shine keeps a visible shimmer that never crosses the base color.
+  private get shineScale() {
+    return this.scheme === "light" ? 0.45 : 1
   }
 
   setTheme(next: Partial<HomeHeroThemeColors>) {
@@ -195,6 +220,7 @@ export class HomeHeroPainter {
     this.columns = Array.from({ length: ART_W }, (_, x) =>
       mix(this.primaryRgb, this.textRgb, (x / (ART_W - 1)) * GRADIENT_END),
     )
+    this.glyphRgb = this.scheme === "light" ? mix(this.primaryRgb, this.textRgb, 0.55) : this.primaryRgb
   }
 
   render(frameBuffer: OptimizedBuffer, options: { deltaTime?: number } = {}) {
@@ -218,7 +244,7 @@ export class HomeHeroPainter {
       const index = cell.row * HERO_W + cell.x
       const offset = index * 4
       const falloff = Math.max(0, 1 - Math.abs(cell.y - ART_CY) / (ART_CY + 1.5))
-      const glow = gauss(cell.x, GLOW_CX, 20) * falloff * 0.35 * reveal * glowBreathe
+      const glow = gauss(cell.x, GLOW_CX, 20) * falloff * this.glowScale * reveal * glowBreathe
       const base = glow < 0.01 ? this.backgroundRgb : mix(this.backgroundRgb, this.primaryRgb, glow)
       write(fg, offset, base)
       write(bg, offset, base)
@@ -245,15 +271,15 @@ export class HomeHeroPainter {
       if (phase !== "solid" && this.dissolved(cell, phase, progress)) {
         const glyph = glyphAt(cell.x, cell.y, mutateSlot)
         chars[index] = glyph.codePointAt(0) ?? 32
-        const shimmer = 0.2 + 0.45 * hash(cell.x, cell.y, mutateSlot + 1)
-        write(fg, offset, mix(base, this.primaryRgb, shimmer * edge))
+        const shimmer = (this.scheme === "light" ? 0.45 : 0.2) + 0.45 * hash(cell.x, cell.y, mutateSlot + 1)
+        write(fg, offset, mix(base, this.glyphRgb, shimmer * edge))
         continue
       }
 
       chars[index] = cell.charCode
       let color = this.columns[cell.x - ART_X] ?? this.textRgb
       const wave = 0.5 + 0.5 * Math.sin((2 * Math.PI * t) / BREATHE_PERIOD - cell.x * 0.45 + cell.y * 0.2)
-      color = mix(color, this.warmRgb, wave * BREATHE_MIX)
+      color = mix(color, this.warmRgb, wave * BREATHE_MIX * this.shineScale)
       const raw = 1 - Math.abs(cell.x + cell.y * 0.7 - glintX) / GLINT_WIDTH
       const glint = raw <= 0 ? 0 : raw * raw * (3 - 2 * raw) * GLINT_STRENGTH
       const slot = Math.floor(t / TWINKLE_SLOT_MS)
@@ -261,7 +287,7 @@ export class HomeHeroPainter {
         hash(cell.x, cell.y, slot) < TWINKLE_CHANCE
           ? Math.sin(Math.PI * ((t % TWINKLE_SLOT_MS) / TWINKLE_SLOT_MS)) * TWINKLE_MIX
           : 0
-      color = mix(color, this.warmRgb, clamp01(glint + twinkle))
+      color = mix(color, this.warmRgb, clamp01((glint + twinkle) * this.shineScale))
       write(fg, offset, mix(base, color, edge))
       attrs[index] = TextAttributes.BOLD
     }
@@ -286,7 +312,8 @@ export class HomeHeroPainter {
     if (hash(cell.x, cell.y, cycleIndex * 31 + 5) >= PARTICLE_CHANCE) return
     const glyph = glyphAt(cell.x, cell.y, mutateSlot)
     buffers.char[index] = glyph.codePointAt(0) ?? 32
-    write(buffers.fg, index * 4, mix(base, this.primaryRgb, 0.1 + 0.18 * hash(cell.x, cell.y, mutateSlot)))
+    const floor = this.scheme === "light" ? 0.2 : 0.1
+    write(buffers.fg, index * 4, mix(base, this.glyphRgb, floor + 0.18 * hash(cell.x, cell.y, mutateSlot)))
   }
 
   private glintPosition(t: number, intro: boolean, cycleT: number, phase: Phase, progress: number) {
