@@ -2,7 +2,16 @@ import { expect, test } from "bun:test"
 import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import type { TerminalColors } from "@opentui/core"
-import { DEFAULT_THEMES, addTheme, allThemes, contrastRatio, hasTheme, resolveTheme, selectedForeground, terminalMode } from "../src/theme"
+import {
+  DEFAULT_THEMES,
+  addTheme,
+  allThemes,
+  contrastRatio,
+  hasTheme,
+  resolveTheme,
+  selectedForeground,
+  terminalMode,
+} from "../src/theme"
 import { discoverThemes } from "../src/context/theme"
 import { tmpdir } from "./fixture/fixture"
 

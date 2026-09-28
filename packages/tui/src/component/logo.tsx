@@ -112,9 +112,7 @@ export function Logo() {
     onCleanup(() => clearInterval(timer))
   })
 
-  const showArt = createMemo(
-    () => dimensions().width >= MIN_ART_WIDTH && dimensions().height >= MIN_ART_HEIGHT,
-  )
+  const showArt = createMemo(() => dimensions().width >= MIN_ART_WIDTH && dimensions().height >= MIN_ART_HEIGHT)
   const rows = createMemo(() => (showArt() ? ART : COMPACT))
   const sweep = createMemo(() => (showArt() ? SWEEP : TAGLINE.length + COMPACT.length * REVEAL_SKEW + 8))
 

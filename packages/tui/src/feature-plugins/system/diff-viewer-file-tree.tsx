@@ -56,8 +56,7 @@ export function DiffViewerFileTree(props: DiffViewerFileTreeProps) {
   // surface (matches selectedForeground's opaque branch) without requiring
   // the full Theme shape this plugin contract narrows.
   const selectedFg = () =>
-    contrastRatio(props.theme.text, props.theme.primary) >
-    contrastRatio(props.theme.background, props.theme.primary)
+    contrastRatio(props.theme.text, props.theme.primary) > contrastRatio(props.theme.background, props.theme.primary)
       ? props.theme.text
       : props.theme.background
 
@@ -114,11 +113,7 @@ export function DiffViewerFileTree(props: DiffViewerFileTreeProps) {
                         {name()}
                       </text>
                     </box>
-                    <text
-                      fg={highlighted() ? selectedFg() : props.theme.textMuted}
-                      wrapMode="none"
-                      flexShrink={0}
-                    >
+                    <text fg={highlighted() ? selectedFg() : props.theme.textMuted} wrapMode="none" flexShrink={0}>
                       {status()}
                     </text>
                   </box>

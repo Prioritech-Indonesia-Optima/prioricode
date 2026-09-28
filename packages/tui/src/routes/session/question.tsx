@@ -350,7 +350,9 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                 selectTab(questions().length)
               }}
             >
-              <text wrapMode="none" fg={confirm() ? selectedForeground(theme, theme.accent) : theme.textMuted}>Confirm</text>
+              <text wrapMode="none" fg={confirm() ? selectedForeground(theme, theme.accent) : theme.textMuted}>
+                Confirm
+              </text>
             </box>
           </box>
         </Show>

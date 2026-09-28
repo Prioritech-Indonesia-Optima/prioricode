@@ -1545,7 +1545,9 @@ export function Prompt(props: PromptProps) {
                         </text>
                       </Show>
                       <Show when={store.mode === "normal" && local.permission.mode !== "default" && !sessionChrome()}>
-                        <text flexShrink={0} wrapMode="none" fg={fadeColor(theme.textMuted, agentMetaAlpha())}>{local.permission.mode}</text>
+                        <text flexShrink={0} wrapMode="none" fg={fadeColor(theme.textMuted, agentMetaAlpha())}>
+                          {local.permission.mode}
+                        </text>
                       </Show>
                       <Show when={store.mode === "normal"}>
                         <box flexDirection="row" gap={1}>
@@ -1559,7 +1561,9 @@ export function Prompt(props: PromptProps) {
                           >
                             {local.model.parsed().model}
                           </text>
-                          <text flexShrink={0} wrapMode="none" fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
+                          <text flexShrink={0} wrapMode="none" fg={fadeColor(theme.textMuted, modelMetaAlpha())}>
+                            {currentProviderLabel()}
+                          </text>
                           <Show when={showVariant()}>
                             <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
                             <text>

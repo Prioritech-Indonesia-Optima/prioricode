@@ -102,7 +102,11 @@ function channelDelta(a: [number, number, number], r: number, g: number, b: numb
 }
 
 // Drive a painter deterministically to a fixed elapsed time (25ms steps).
-function drive(painter: InstanceType<typeof import("../../src/component/home-hero-render").HomeHeroPainter>, buffer: ReturnType<typeof mockBuffer>, to: number) {
+function drive(
+  painter: InstanceType<typeof import("../../src/component/home-hero-render").HomeHeroPainter>,
+  buffer: ReturnType<typeof mockBuffer>,
+  to: number,
+) {
   let t = 0
   while (t < to) {
     painter.render(buffer, { deltaTime: 25 })
@@ -161,8 +165,24 @@ test("light mode glint keeps the wordmark legible and still sweeps", async () =>
   for (let i = 0; i < buffers.attributes.length; i++) {
     if ((buffers.attributes[i] ?? 0) !== TextAttributes.BOLD) continue
     const o = i * 4
-    minContrast = Math.min(minContrast, channelDelta([buffers.fg[o]!, buffers.fg[o + 1]!, buffers.fg[o + 2]!], buffers.bg[o]!, buffers.bg[o + 1]!, buffers.bg[o + 2]!))
-    if (channelDelta([buffers.fg[o]!, buffers.fg[o + 1]!, buffers.fg[o + 2]!], calm.buffer.buffers.fg[o]!, calm.buffer.buffers.fg[o + 1]!, calm.buffer.buffers.fg[o + 2]!) >= 10) shifted++
+    minContrast = Math.min(
+      minContrast,
+      channelDelta(
+        [buffers.fg[o]!, buffers.fg[o + 1]!, buffers.fg[o + 2]!],
+        buffers.bg[o]!,
+        buffers.bg[o + 1]!,
+        buffers.bg[o + 2]!,
+      ),
+    )
+    if (
+      channelDelta(
+        [buffers.fg[o]!, buffers.fg[o + 1]!, buffers.fg[o + 2]!],
+        calm.buffer.buffers.fg[o]!,
+        calm.buffer.buffers.fg[o + 1]!,
+        calm.buffer.buffers.fg[o + 2]!,
+      ) >= 10
+    )
+      shifted++
   }
   expect(minContrast).toBeGreaterThanOrEqual(20)
   expect(shifted).toBeGreaterThan(0)

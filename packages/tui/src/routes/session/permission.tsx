@@ -697,7 +697,10 @@ function Prompt<const T extends Record<string, string>>(props: {
                   props.onSelect(option)
                 }}
               >
-                <text wrapMode="none" fg={option === store.selected ? selectedForeground(theme, theme.warning) : theme.textMuted}>
+                <text
+                  wrapMode="none"
+                  fg={option === store.selected ? selectedForeground(theme, theme.warning) : theme.textMuted}
+                >
                   {props.options[option]}
                 </text>
               </box>

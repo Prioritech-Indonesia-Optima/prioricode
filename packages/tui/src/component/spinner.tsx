@@ -14,11 +14,20 @@ export function Spinner(props: { children?: JSX.Element; color?: RGBA }) {
   const kv = useKV()
   const color = () => props.color ?? theme.textMuted
   return (
-    <Show when={kv.get("animations_enabled", true)} fallback={<text fg={color()} wrapMode="none">⋯ {props.children}</text>}>
+    <Show
+      when={kv.get("animations_enabled", true)}
+      fallback={
+        <text fg={color()} wrapMode="none">
+          ⋯ {props.children}
+        </text>
+      }
+    >
       <box flexDirection="row" gap={1}>
         <spinner frames={SPINNER_FRAMES} interval={80} color={color()} />
         <Show when={props.children}>
-          <text fg={color()} wrapMode="none">{props.children}</text>
+          <text fg={color()} wrapMode="none">
+            {props.children}
+          </text>
         </Show>
       </box>
     </Show>
