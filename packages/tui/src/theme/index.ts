@@ -98,16 +98,35 @@ export function selectedForeground(theme: Theme, bg?: RGBA): RGBA {
     return theme.selectedListItemText
   }
 
+  // Selection surfaces sit on the primary color unless the caller passes the
+  // actual background the text will render on.
+  const target = bg ?? theme.primary
+
   // For transparent backgrounds, calculate contrast based on the actual bg (or fallback to primary)
   if (theme.background.a === 0) {
-    const targetColor = bg ?? theme.primary
-    const { r, g, b } = targetColor
-    const luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    const luminance = 0.299 * target.r + 0.587 * target.g + 0.114 * target.b
     return luminance > 0.5 ? RGBA.fromInts(0, 0, 0) : RGBA.fromInts(255, 255, 255)
   }
 
-  // Fall back to background color
-  return theme.background
+  // Opaque themes: pick whichever theme color reads best on the actual
+  // surface. Returning theme.background blindly gives cream-on-gold (~2.9:1)
+  // for light themes, whose background is near-white; light themes get the
+  // contrast from theme.text instead. Dark themes keep background (near-black
+  // on gold ≈ 7:1), so existing dark rendering is unchanged.
+  const onBackground = contrastRatio(theme.background, target)
+  const onText = contrastRatio(theme.text, target)
+  return onText > onBackground ? theme.text : theme.background
+}
+
+// WCAG 2.1 relative-luminance contrast ratio (1..21) between two colors.
+export function contrastRatio(a: RGBA, b: RGBA): number {
+  const channel = (value: number) => (value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4)
+  const luminance = (color: RGBA) => 0.2126 * channel(color.r) + 0.7152 * channel(color.g) + 0.0722 * channel(color.b)
+  const first = luminance(a)
+  const second = luminance(b)
+  const lighter = Math.max(first, second)
+  const darker = Math.min(first, second)
+  return (lighter + 0.05) / (darker + 0.05)
 }
 
 type HexColor = `#${string}`
