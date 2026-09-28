@@ -1,0 +1,101 @@
+---
+title: "The Terminal UI"
+description: "Prompting, @-mentions, attachments, shell mode, queuing, interrupting, and the command palette inside prioricode's TUI."
+---
+
+Run `prioricode` in a project and you get one screen: your prompt at the bottom, the conversation above, a sidebar to the side. Everything else is a keystroke away.
+
+## Sessions
+
+A session starts the moment you submit your first prompt — there's no ceremony. Sessions are stored in the local database with a generated title (say `/rename` if you disagree with the one it picked). See [sessions](/using/sessions) for resuming, forking, undo, and the storage story.
+
+- `/new` (or `<leader>n`) starts a fresh session; `/sessions` (`<leader>l`) lists and resumes old ones.
+- `<leader>1`…`<leader>9` are quick slots — pin a session in the list with `ctrl+f` and jump back with one chord.
+- In `--auto`-free workflows, the agent stops and asks; see [permissions](/using/permissions).
+
+## Writing prompts
+
+The input is a text editor in disguise. Standard bindings (`ctrl+a`/`ctrl+e`, word-wise `alt+f`/`alt+b`, `ctrl+w`, kill lines with `ctrl+u`/`ctrl+k`), multi-line with `shift+return` (or `ctrl+return`, `alt+return`, `ctrl+j`), and `up`/`down` walks your prompt history.
+
+### `@` mentions
+
+Type `@` to attach context, fuzzy-searched and ranked by how often you touch the files:
+
+| Syntax | Attaches |
+| --- | --- |
+| `@src/api.ts` | a file (or `@src/routes/` a directory) |
+| `@src/api.ts#10-20` | just lines 10–20 |
+| `@general` | a subagent — routes the message through it |
+| `@<name>` | a project reference (configured `references`) |
+| MCP resources | when a connected server exposes them |
+
+Slash commands complete from `/` at the start of a line — the full list is on the [slash-commands reference](/reference/slash-commands).
+
+### Shell mode
+
+Start an empty prompt with `!` and the next line runs in your shell, no model involved. Output stays in the transcript. `escape` (or backspace at the start) drops back to normal.
+
+## Getting things in
+
+- **Paste an image or PDF** with `ctrl+v` — it becomes an `[Image 1]` / `[PDF 1]` chip in your message and a real attachment on send.
+- **Paste long text** (3+ lines or >150 chars) and it collapses to a `[Pasted ~N lines]` chip that expands when you submit, keeping the transcript readable.
+- **Paste a file path or URL** and it attaches itself — text inlined, binaries as attachments.
+- **Pipe into the prompt:** `cat error.log | prioricode --prompt "why did this fail"` — piped stdin is prepended to the prompt.
+- **From your editor:** the TUI picks up Zed's current selection as context, and `$EDITOR` integration works via `/editor` (see below).
+
+## While the agent is working
+
+Keep typing — the input never blocks. New messages queue (you'll see a **QUEUED** badge) and are picked up as soon as the loop can take them. Manage the queue with `<leader>q`.
+
+**To stop it:** press `escape` — the footer says "again to interrupt". Press `escape` a second time within five seconds and the session is aborted mid-step.
+
+## Your other keys
+
+`ctrl+p` opens the command palette: every command, searchable, no memorization required. The big-ticket defaults:
+
+| Keys | Command |
+| --- | --- |
+| `ctrl+x` | the leader key — prefix for most chords below (2 s window) |
+| `tab` / `shift+tab` | next / previous agent |
+| `<leader>m`, `f2` | model list / cycle recent models |
+| `<leader>c` | compact the session |
+| `<leader>u` / `<leader>r` | undo / redo the last message |
+| `<leader>b` | hide the sidebar when you want the conversation full-bleed |
+| `<leader>e` | compose in `$EDITOR` |
+| `/help` | keybinding cheatsheet in-app |
+
+The complete table lives in the [keybinds reference](/reference/keybinds), and all of it is rebindable in `tui.json` — see [themes & keybindings](/configure/tui).
+
+<Tip>
+  Forgot a chord? `ctrl+alt+k` toggles the which-key panel: a live overlay of what you can press next.
+</Tip>
+
+## Sidebar & reading the screen
+
+The sidebar carries the todo list (when the agent is planning multi-step work), context usage (tokens used vs the model's window), and your spend for the session. Press `<leader>h` to hide/show tool code, toggle timestamps with `/timestamps`, and cycle how much "thinking" is displayed with `/thinking`. The permission panel renders diffs — `ctrl+f` blows it up to fullscreen when the diff deserves it.
+
+## Exporting the conversation
+
+- `/copy` puts a formatted transcript on your clipboard.
+- `/export` opens a dialog (include thinking? tool details? metadata?) and hands you a markdown file — in `$EDITOR` if you have one set.
+
+## Mini mode
+
+`prioricode --mini` is the same sessions, the same server, a much smaller footprint — a split-footer interface for tmux panes and SSH sessions over flaky connections. It speaks `/editor`, `/new`, `/exit`, and pipes cleanly; see [headless & scripting](/using/headless).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Sessions" icon="clock-rotate-left" href="/using/sessions">
+    Resume, fork, undo, compact, and the storage layout.
+  </Card>
+  <Card title="Agents & modes" icon="robot" href="/using/agents">
+    What `tab` is actually cycling through.
+  </Card>
+  <Card title="Slash commands" icon="terminal" href="/reference/slash-commands">
+    Every `/command`, with aliases.
+  </Card>
+  <Card title="Themes & keybinds" icon="paintbrush" href="/configure/tui">
+    Make it yours: 30+ themes, every binding overridable.
+  </Card>
+</CardGroup>

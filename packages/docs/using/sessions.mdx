@@ -1,0 +1,102 @@
+---
+title: "Sessions"
+description: "Create, resume, fork, undo, compact, share, export, and delete PrioriCode sessions — and where they live on disk."
+---
+
+Every conversation PrioriCode has with you is a **session**: a stream of messages, tool calls, file diffs, todos, and costs, all living in one database. Sessions are also where subagents do their work — each task spawns a child session you can jump into.
+
+## Creating and resuming
+
+<Tabs>
+  <Tab title="In the TUI">
+    ```bash
+    prioricode                    # new session in the current project
+    prioricode --continue         # jump back into the latest session
+    prioricode --session ses_…    # resume a specific one
+    ```
+  </Tab>
+  <Tab title="From the CLI">
+    ```bash
+    prioricode session list               # recent sessions, paginated
+    prioricode session list --format json # machine-readable
+    prioricode session delete ses_…
+    ```
+  </Tab>
+</Tabs>
+
+Inside the TUI: `/sessions` (or `<leader>l`) is the resume dialog, `/new` starts fresh, and `/rename` fixes the title. The agent auto-generates a title after your first message — usually better than what you would have typed.
+
+Sessions form a tree: when the agent dispatches a subagent, that's a child session. Follow it with `<leader>down` (first child), `left`/`right` (cycle siblings), and `up` (back to the parent).
+
+## Fork, undo, redo
+
+The agent went down a rabbit hole? Time-travel instead of apologizing:
+
+- **`/undo`** reverts the last user message and everything that followed — files on disk are restored from the snapshot, and the message text lands back in your prompt, ready to edit and resubmit.
+- **`/redo`** steps the reverts forward again, restoring what you undid.
+- **`/fork`** (or `/timeline` → pick a message) branches the conversation up to that point into a new session, titled `… (fork #N)`. The original stays untouched.
+- `--fork` on the CLI does the same from the latest (or `--session`) state.
+
+<Note>
+  Revert state is transient: send a new message and the undo chain is cleaned up. Undo, then undo again, then act — don't undo after the fact.
+</Note>
+
+## Compaction
+
+Every model has a context window; long sessions fill it. When you approach the limit, PrioriCode **compacts**: it summarizes older history and keeps the recent turns verbatim.
+
+```bash
+/compact        # or /summarize — do it yourself, before you have to
+```
+
+The `compaction` config block tunes the whole system — automatic vs manual, the threshold at which it fires, how much recent context survives (`tail_turns`, `preserve_recent_tokens`, `reserved`), and `prune`, which drops old tool output (the defaults keep everything; pruning saves tokens once a session gets chatty). Details in the [config reference](/reference/config#compaction).
+
+## Sharing & export
+
+- `/share` produces a read-only web page of the transcript (with a consent prompt the first time — read it, it's honest about what leaves your machine). `/unshare` deletes it. See [sharing](/using/sharing).
+- `prioricode export [sessionID]` writes the full session as JSON; add `--sanitize` to redact transcript and file contents for bug reports.
+- `prioricode import <file-or-share-url>` brings an export or a shared link back into a local session — the fastest way to reproduce someone else's debugging session.
+
+## Usage stats
+
+```bash
+prioricode stats --days 7       # last week of tokens and cost
+prioricode stats --tools        # which tools the agent leaned on
+prioricode stats --models       # per-model breakdown
+prioricode stats --project ""   # just this project
+```
+
+Totals, per-day cost, input/output/reasoning/cache tokens — straight from the session records, no account required.
+
+## Where sessions live
+
+Sessions, messages, parts, and todos live in a SQLite database, not in scattered JSON files:
+
+```bash
+prioricode db path              # the resolved file, e.g. ~/.local/share/prioricode/prioricode.db
+prioricode db                  # interactive sqlite3 shell
+prioricode db "select id,title from session order by time_updated desc limit 10" --format tsv
+```
+
+Different release channels use different DB files, and `PRIORICODE_DB` overrides the whole thing — the routing rules are on the [config files page](/configure/files).
+
+<Warning>
+  The database contains your prompts, file contents, and diffs. It's local — but local files are still files. Back it up or wipe it like you would an SSH keychain.
+</Warning>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Sharing" icon="share-nodes" href="/using/sharing">
+    What a share link exposes and how to take it back.
+  </Card>
+  <Card title="Coordination" icon="comments" href="/using/coordination">
+    Sessions that talk to each other.
+  </Card>
+  <Card title="Headless" icon="robot" href="/using/headless">
+    Sessions scripted from CI.
+  </Card>
+  <Card title="Session commands" icon="list" href="/reference/slash-commands">
+    The full `/` inventory.
+  </Card>
+</CardGroup>

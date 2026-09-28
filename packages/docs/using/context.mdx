@@ -1,0 +1,93 @@
+---
+title: "Project context"
+description: "AGENTS.md, instructions, references, snapshots, and compaction — how PrioriCode learns your project and stays inside the context window."
+---
+
+The model is smart; your repo is specific. PrioriCode's job is to feed the second into the first, every turn, without drowning it. There are four mechanisms: standing instructions, extra instruction files, referenced projects, and the context-window plumbing itself.
+
+## AGENTS.md — the project's own doc
+
+The file every agent reads first. Search order, from the session directory **up to the repo root** — the first match wins:
+
+1. `AGENTS.md`
+2. `CLAUDE.md`
+3. `CONTEXT.md` *(deprecated — prefer AGENTS.md)*
+
+Plus a global file: `<config dir>/AGENTS.md` (`~/.config/prioricode/AGENTS.md` on Linux) is always in context, and if it's missing, `~/.claude/CLAUDE.md` is picked up instead (disable with `PRIORICODE_DISABLE_CLAUDE_CODE=1`).
+
+Contents are injected with a header (`Instructions from: <path>`), so the model knows who wrote it. Treat it as onboarding docs for a very fast, very literal coworker:
+
+```markdown
+# AGENTS.md
+
+- Bun monorepo. `bun run dev` starts the CLI, `bun test` per package.
+- Never edit `packages/sdk/openapi.json` — it's generated.
+- Commits: `type(scope): summary`. Ask before pushing.
+- The DB schema is in `packages/core/src/**/sql.ts`; migrations via script/migration.ts.
+```
+
+Good AGENTS.md content: commands that must pass, files that are sacred, conventions the linter can't catch, "never do X" rules. Bad content: the README, a tutorial, your feelings about tabs. (And yes — the reason this repo's own AGENTS.md tells you how releases work is exactly this feature at work.)
+
+<Note>
+  Only the file at the match is loaded — there's no stacking of every ancestor AGENTS.md. If your monorepo has per-package notes, add them with `instructions` below.
+</Note>
+
+## instructions — more files, URLs, globs
+
+```jsonc
+{
+  "instructions": [
+    "docs/conventions.md",              // relative, walked up to worktree
+    "packages/*/AGENTS.md",             // globs work
+    "~/company-styleguide.md",          // absolute + ~ fine
+    "https://intranet.example.com/rules.md"  // fetched at session start
+  ]
+}
+```
+
+URLs are fetched with a 5-second timeout and injected like any file.
+
+## references — a second repo in context
+
+`references` (config, replacing the deprecated `reference` key) attaches another directory — local path or git repository — whose files are readable without an `external_directory` prompt and searchable by name: `@frontend` mentions pull in the referenced project. Used by this very workspace (the `effect` reference). It's aimed at polyglot setups where the truth lives in two trees. See [config reference](/reference/config#references).
+
+## Keeping the lights on: snapshots, truncation, compaction
+
+The other half of context is *not* letting it rot:
+
+- **File snapshots.** On by default (`snapshot: true`). PrioriCode tracks workspace changes so [undo/redo](/using/sessions) can rewind code and conversation together, and diffs stay honest after the fact.
+- **Tool output truncation.** Long command output is capped (2,000 lines / 50 KB by default) — but never *lost*: the full text spills to a file in the tool-output directory, with the path printed. Tweak `tool_output.max_lines` / `max_bytes`.
+- **Compaction.** The `compaction` block decides what happens when the window fills: automatic summary of old turns (`auto`, on by default), what stays verbatim (`tail_turns`, `preserve_recent_tokens`), a `reserved` safety buffer, and `prune` (drop old tool output — off by default). Manual trigger: `/compact`. Kill switches: `PRIORICODE_DISABLE_AUTOCOMPACT` / `PRIORICODE_DISABLE_PRUNE`.
+- **Images.** Pasted/attached images are auto-resized before sending (`attachment.image` — max 2000×2000 and a 5 MB base64 cap by default). Turn it off if your model likes pixels rude.
+
+<Tip>
+  A session that keeps forgetting is a session that got compacted. Check the sidebar's context meter (`used %` and spend), and `/compact` at a natural seam — after a phase, not mid-thought — so the summary falls on the boring part of history.
+</Tip>
+
+## Rules, in one table
+
+| Want | Use |
+| --- | --- |
+| "Always use bun, never npm" | `AGENTS.md` |
+| Per-package conventions | `instructions` globs |
+| Keep secrets out of context | `read` permission `*.env: ask` ([permissions](/using/permissions)) |
+| Another repo in view | `references` |
+| Reusable procedures | [skills](/extending/skills) |
+| Project-specific commands | [custom commands](/extending/commands) |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Config files" icon="file-code" href="/configure/files">
+    Where config and context files are discovered.
+  </Card>
+  <Card title="Skills" icon="wand-magic-sparkles" href="/extending/skills">
+    Procedures the agent loads on demand instead of bloating AGENTS.md.
+  </Card>
+  <Card title="Sessions" icon="clock-rotate-left" href="/using/sessions">
+    Compaction, undo, and the context meter.
+  </Card>
+  <Card title="Coordination" icon="comments" href="/using/coordination">
+    Multiple sessions, one repo, no collisions.
+  </Card>
+</CardGroup>

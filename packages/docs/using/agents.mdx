@@ -1,0 +1,112 @@
+---
+title: "Agents & modes"
+description: "Built-in build/plan/auto agents, subagents like explore and general, custom agents in markdown, and per-agent models and permissions."
+---
+
+An **agent** is PrioriCode's job description: a system prompt, a model, and a permission profile — bundled with a personality. Switching agents changes what the assistant is allowed to do *and* how it approaches the work.
+
+## The built-ins
+
+Press `tab` to cycle primaries (or `/agents`, or `--agent name` on the CLI):
+
+| Agent | Mode | What it's for |
+| --- | --- | --- |
+| `build` | primary | The default. Executes tools based on your configured permissions. This is the "do the work" agent. |
+| `plan` | primary | Read-only. All edit tools are denied — except one: its plan file. Reads, greps, explores, and writes a plan; then asks to switch back. |
+| `auto` | primary | Automation mode. Explores, plans, and executes without user interaction, auto-committing each verified phase. For unattended runs. |
+| `general` | subagent | Complex search and multistep tasks. Lives as a child session; can't touch your todos. |
+| `explore` | subagent | Read-only scout: grep, glob, read, bash (careful), web. Great for "find everything that touches X". |
+
+A few hidden workers run the machinery for you — `title` (names your sessions), `summary`, `compaction`, and the coordination `responder`. You'll see them in transcripts; you don't switch to them.
+
+### Plan mode, properly
+
+`plan` is not "please behave" — it's enforced. Edits are denied by rule; the only file it may write is the plan itself:
+
+```
+<prioricode/plans directory>/.prioricode/plans/<date>-<slug>.md    # in a repo
+<data dir>/plans/…                                                  # outside one
+```
+
+The model can also *propose* mode changes: from `build`, `plan_enter` asks to switch into planning; from `plan`, `plan_exit` asks to switch to `build` and start implementing — accepting it injects an "approved, go build it" message with your answer. Say no, and planning continues. That handshake is the feature: the plan gets read before the code gets written.
+
+<Tip>
+  Start a fresh session with `prioricode --agent plan`, let it write the plan, review the `.md` like any other file, then approve the switch. You'll ship fewer "wait, why did you rewrite that?" moments.
+</Tip>
+
+## Subagents
+
+Subagents run as **child sessions** with their own context — the parent delegates, the child reports back. The agent invokes them with the `task` tool; you can nudge one in with an `@general`-style mention, and once a session exists you can watch its transcript directly (child-session navigation is on the [sessions page](/using/sessions)).
+
+Two knobs matter:
+
+- **`subagent_depth`** (config, default `1`) — how deep subagents may recurse. At 1, a subagent can't spawn its own subagents. Good default; raise it only when you trust the plan.
+- **Background subagents** — experimental. `ctrl+b` backgrounds running synchronous subagents so the parent keeps working; results land back in the conversation when they finish. Requires `PRIORICODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=1`.
+
+By default subagents are denied `todowrite` and `task` (no stealing the parent's checklist or grandkid agents) unless their permissions say otherwise.
+
+## Custom agents
+
+A custom agent is a markdown file. Drop it in `.prioricode/agents/` (project) or `~/.config/prioricode/agents/` (global — any config dir works, and the file's path in the folder becomes the name):
+
+```markdown
+---
+description: Security review pass over a diff or directory
+mode: primary
+model: anthropic/claude-sonnet-4-5
+temperature: 0.2
+permission:
+  edit: deny
+  bash:
+    "git diff*": allow
+    "*": ask
+  webfetch: allow
+color: "#f87171"
+---
+
+You are a security reviewer. Read the target code, hunt for injection, auth,
+and secrets-handling issues, and report by severity — with file:line evidence.
+Never edit files; propose fixes in the report.
+```
+
+The body is the system prompt. Frontmatter fields: `description`, `mode` (`primary` | `subagent` | `all`), `model`, `variant`, `temperature`, `top_p`, `steps` (max agentic steps), `hidden`, `color`, `options` (passthrough to the provider), and `permission` (full ruleset — see [permissions](/using/permissions)). Unknown keys are passed to the provider as options, so typos don't fail loudly — keep the file tidy.
+
+Or let the machine write it for you:
+
+```bash
+prioricode agent create          # interactive: description, mode, tools, model
+prioricode agent list            # what's registered, and where it stands
+```
+
+`create` writes the file with a locked-down permission set — every tool you didn't select is denied, which is the right bias for a specialist.
+
+Registering in config instead of markdown works too — `agent` is a map of the same keys (`agent.my-reviewer.model`, `agent.my-reviewer.permission`, `disable: true` to remove any agent, built-in or custom). See [config reference](/reference/config#agent).
+
+### Picking a default
+
+```jsonc
+{ "default_agent": "plan" }
+```
+
+The default agent must be a visible primary. `tab` still gets you everywhere.
+
+## Models per agent
+
+`agent.<name>.model` pins an agent to a model (`variant` optional); when a subagent is dispatched, it uses its own configured model, falling back to the parent's current one. Practical pattern: `build` on a strong model, `explore` on something cheap and fast — see [providers & models](/getting-started/providers).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Permissions" icon="user-shield" href="/using/permissions">
+    The rules each agent profile leans on.
+  </Card>
+  <Card title="Tools" icon="screwdriver-wrench" href="/reference/tools">
+    What the agent can actually execute.
+  </Card>
+  <Card title="Headless" icon="robot" href="/using/headless">
+    `--agent` for CI and scripts.
+  </Card>
+  <Card title="Skills" icon="wand-magic-sparkles" href="/extending/skills">
+    Teach an agent a procedure without forking it.
+  </Card>
+</CardGroup>

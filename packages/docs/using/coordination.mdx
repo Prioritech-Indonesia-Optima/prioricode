@@ -1,0 +1,83 @@
+---
+title: "Cross-session coordination"
+description: "Run several PrioriCode sessions on one project and let them discover each other, message, ask, claim files, and avoid collisions via the sessions tool."
+---
+
+You can run five agents on one repo. Whether they finish the feature or merge into a knife-fight depends on whether they know about each other. PrioriCode gives them that: a durable, cross-process coordination channel built into the product.
+
+## The setup
+
+Start multiple `prioricode` processes in the same project (two terminals, tmux panes, whatever). They share state through the project's local database — session presence, messages, and file claims live in a `session_coordination` channel backed by SQLite (WAL mode), so coordination works across processes and survives a crash.
+
+Each session can see its siblings: id, title, busy/idle, last-active, and what files they've claimed. In the TUI, `/coordination` opens the roster and inbox; a footer indicator marks unread items and pending requests.
+
+## What sessions say to each other
+
+From inside a session, the agent uses the `sessions` tool:
+
+| Action | Kind | What it does |
+| --- | --- | --- |
+| `discover` | read | The roster: siblings, their state and claims, unread mail, and the receipt ledger of what you sent. |
+| `send` | fire-and-forget | A note into a peer's inbox. A busy peer reads it at its next step boundary; an idle peer is woken within seconds. |
+| `ask` | needs an answer | Blocks up to `timeout` s (default 60, max 300) for a reply, then reports exactly how far delivery got. `thread_id` continues a negotiation. |
+| `respond` | answer | Replies to a request by `request_id`. Exactly one response per request — enforced at the database level. |
+| `wait` | poll | Re-check an outstanding `ask` by request id without spamming the peer. |
+| `notify` | completion | "Tell me when this peer goes idle" — a one-shot subscription (default expiry 12 h), optionally with a reminder note. This is how you wait for someone to *finish* work without blocking. |
+| `claim` / `release` | advisory locks | Declare the paths (or logical resources, like `release:main`) you're actively editing. Peers see claims in the roster and are expected to re-read before touching them. |
+
+The tool contract itself — the guidance the agents follow — lives in the product at `packages/prioricode/src/tool/sessions.txt`. It reads like good office etiquette: don't wake anyone to say hi, don't ask in a loop after a timeout, never send social acknowledgements ("noted", "thanks") — silence means noted.
+
+## Guarantees worth knowing
+
+- **One response per request.** A peer's standing "responder" may answer on its behalf; the owner can then post a correction with `send`, but a second `respond` is impossible by construction.
+- **Nothing is silently dropped.** Notes move queued → seen → received with durable delivery; a crashed delivery is re-queued. A request that ages past its deadline is **escalated to you** (the human) before it expires — you'll see it, guaranteed.
+- **Records don't wake; messages do.** Bookkeeping entries never trigger a wake turn — that's the loop-breaker that keeps chatty sessions from infinite-looping each other.
+- **Presence is cross-process truth.** Each process mirrors busy/idle transitions into a presence table with heartbeats; a crashed session reads as idle after its heartbeat goes stale (72 h marks roster entries STALE).
+- **A watcher does the boring waiting.** A lightweight watcher (2-second cycle) delivers notes and spawns responder children under leases, so idle peers actually get woken — no polling loops.
+
+<Note>
+  Rate limits keep things sane: 10 messages/minute per sender (tune `PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE`), 5-minute dedupe window for identical repeats while the original is unprocessed, inbox cap of 50, and a 15-minute escalation deadline (`PRIORICODE_COORDINATION_ESCALATION_MS`).
+</Note>
+
+## Using it as a human
+
+You benefit from coordination even if you never touch the tool:
+
+- **Split the work.** "You two: one does the migration, one does the UI" — the sessions claim paths, and the tool's file lists act as collision warnings before edits happen, not after.
+- **Hand off.** A session that finishes phase 1 can `notify`-subscribe to phase 2's owner and continue other work meanwhile, instead of babysitting.
+- **Audit.** `/coordination` shows what's pending, delivered, and answered; each request has a readable lifecycle state (pending, injected, leased, acked, answered, escalated, expired).
+- **Stay in charge of escalation.** If a peer can't answer, the request surfaces to you. The responder child answers out-of-band with a best-effort note prefixed `[answered by … coordination responder …]` — treat those as leads to verify, not gospel. The main agent gets a `[handled for you]` record and can post a correction.
+
+## Try it for real
+
+The quickest way to trust it:
+
+```bash
+# terminal A
+cd your-project && prioricode
+# terminal B
+cd your-project && prioricode
+```
+
+In A: *"Ask your sibling session what it's working on and report back."* Watch B's footer light up; the reply lands in A. Then have A `claim` a file and check that B's roster shows it.
+
+<Note>
+  Coordination is opt-out-able for the paranoid or the single-process: `PRIORICODE_DISABLE_COORDINATION_RESPONDER=1` turns off responder children (you'll answer requests yourself, or they escalate). The tool is also permission-gated per action — like everything else in [permissions](/using/permissions), the agent asks before it messages.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Sessions" icon="clock-rotate-left" href="/using/sessions">
+    The session model this coordinates across.
+  </Card>
+  <Card title="Subagents vs sessions" icon="robot" href="/using/agents">
+    One brain delegating vs many brains negotiating.
+  </Card>
+  <Card title="Environment variables" icon="list" href="/reference/environment-variables">
+    Every tuning knob, one table.
+  </Card>
+  <Card title="Server & remote" icon="network" href="/platforms/server">
+    Same state, different machine.
+  </Card>
+</CardGroup>
