@@ -109,7 +109,7 @@
                 "pages": [
                   "sdk"
                 ],
-                "openapi": "https://prioricode.ai/openapi.json"
+                "openapi": "/openapi.json"
               }
             ]
           }

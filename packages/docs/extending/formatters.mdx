@@ -7,7 +7,7 @@ Agents write code fast; formatters keep it boring. After every `edit`/`write`/`a
 
 ## Built-ins
 
-Formatters activate when their tool is *usable in your project* (the binary resolves — via your project's node_modules, a global install, or a language package manager):
+Each formatter activates on its own detection rule — the general shape is "the tool exists for this project." (Prettier, for instance, requires a `prettier` dependency in a `package.json` between cwd and worktree *and* a resolvable binary.):
 
 | Formatter | Extensions |
 | --- | --- |

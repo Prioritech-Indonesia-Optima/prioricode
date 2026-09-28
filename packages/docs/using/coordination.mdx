@@ -27,10 +27,10 @@ From inside a session, the agent uses the `sessions` tool:
 
 The tool contract itself — the guidance the agents follow — lives in the product at `packages/prioricode/src/tool/sessions.txt`. It reads like good office etiquette: don't wake anyone to say hi, don't ask in a loop after a timeout, never send social acknowledgements ("noted", "thanks") — silence means noted.
 
-## Guarantees worth knowing
+## Properties the channel keeps
 
 - **One response per request.** A peer's standing "responder" may answer on its behalf; the owner can then post a correction with `send`, but a second `respond` is impossible by construction.
-- **Nothing is silently dropped.** Notes move queued → seen → received with durable delivery; a crashed delivery is re-queued. A request that ages past its deadline is **escalated to you** (the human) before it expires — you'll see it, guaranteed.
+- **Nothing is silently dropped.** Notes move queued → seen → received with durable delivery; a crashed delivery is re-queued. A request that ages past its deadline is **escalated to you** (the human) before it expires — the channel's built-in escape hatch.
 - **Records don't wake; messages do.** Bookkeeping entries never trigger a wake turn — that's the loop-breaker that keeps chatty sessions from infinite-looping each other.
 - **Presence is cross-process truth.** Each process mirrors busy/idle transitions into a presence table with heartbeats; a crashed session reads as idle after its heartbeat goes stale (72 h marks roster entries STALE).
 - **A watcher does the boring waiting.** A lightweight watcher (2-second cycle) delivers notes and spawns responder children under leases, so idle peers actually get woken — no polling loops.
