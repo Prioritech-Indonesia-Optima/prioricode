@@ -338,7 +338,10 @@ const layer = Layer.effectDiscard(
     yield* events.project(SessionEvent.GoalSet, (event) =>
       db
         .update(SessionTable)
-        .set({ goal: event.data.goal === "" ? null : event.data.goal, time_updated: DateTime.toEpochMillis(event.data.timestamp) })
+        .set({
+          goal: event.data.goal === "" ? null : event.data.goal,
+          time_updated: DateTime.toEpochMillis(event.data.timestamp),
+        })
         .where(eq(SessionTable.id, event.data.sessionID))
         .run()
         .pipe(Effect.orDie, Effect.andThen(run(db, event))),

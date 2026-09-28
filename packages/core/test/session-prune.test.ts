@@ -78,10 +78,7 @@ describe("session prune projection", () => {
 
   test("monotone: growing the conversation never un-prunes an earlier result", () => {
     const short = run(history(), options)
-    const grown = run(
-      [...history(), assistantWithCall("d"), toolResult("call-d", "read", big("v", 2_000))],
-      options,
-    )
+    const grown = run([...history(), assistantWithCall("d"), toolResult("call-d", "read", big("v", 2_000))], options)
     const prunedIndex = short.findIndex((message) => JSON.stringify(message).includes("tool output pruned"))
     expect(prunedIndex).toBeGreaterThanOrEqual(0)
     expect(JSON.stringify(grown[prunedIndex])).toContain("tool output pruned")
@@ -90,7 +87,12 @@ describe("session prune projection", () => {
 
   test("elided byte count approximates the original projected size", () => {
     const projected = run(
-      [toolResult("call-old", "read", big("q", 2_000)), assistantWithCall("e"), assistantWithCall("f"), assistantWithCall("g")],
+      [
+        toolResult("call-old", "read", big("q", 2_000)),
+        assistantWithCall("e"),
+        assistantWithCall("f"),
+        assistantWithCall("g"),
+      ],
       options,
     )
     const match = JSON.stringify(projected[0]).match(/tool output pruned — (\d+) bytes elided/)

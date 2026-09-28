@@ -173,8 +173,9 @@ export interface Interface {
     skill: string
     resume?: boolean
   }) => Effect.Effect<void, OperationUnavailableError>
-  readonly compact: (input: CompactInput) =>
-    Effect.Effect<boolean, NotFoundError | MessageNotFoundError | BusyError | SessionRunner.RunError>
+  readonly compact: (
+    input: CompactInput,
+  ) => Effect.Effect<boolean, NotFoundError | MessageNotFoundError | BusyError | SessionRunner.RunError>
   readonly wait: (id: SessionSchema.ID) => Effect.Effect<void, NotFoundError | OperationUnavailableError | BusyError>
   readonly active: Effect.Effect<ReadonlySet<SessionSchema.ID>>
   readonly resume: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError | SessionRunner.RunError>

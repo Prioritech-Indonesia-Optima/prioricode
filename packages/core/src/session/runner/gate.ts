@@ -33,10 +33,7 @@ export interface Pipeline {
   readonly beforeFinish: () => Effect.Effect<boolean>
 }
 
-export const makePipeline = (deps: {
-  readonly gates: readonly Gate[]
-  readonly maxRounds: number
-}): Pipeline => {
+export const makePipeline = (deps: { readonly gates: readonly Gate[]; readonly maxRounds: number }): Pipeline => {
   let rounds = 0
   return {
     observe: (name, ok) => {

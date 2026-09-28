@@ -105,7 +105,8 @@ export class Info extends Schema.Class<Info>("Config.Info")({
     description: "Context-economics projection of stale tool output when provider requests approach the context window",
   }),
   hooks: ConfigHooks.Info.pipe(Schema.optional).annotate({
-    description: "Deterministic lifecycle shell hooks (PreToolUse/PostToolUse/Stop/SessionStart) that run regardless of model instructions",
+    description:
+      "Deterministic lifecycle shell hooks (PreToolUse/PostToolUse/Stop/SessionStart) that run regardless of model instructions",
   }),
   skills: Schema.String.pipe(Schema.Array, Schema.optional).annotate({
     description: "Additional paths or URLs to discover skills from",

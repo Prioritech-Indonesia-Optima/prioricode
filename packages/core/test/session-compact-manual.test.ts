@@ -1,11 +1,5 @@
 import { describe, expect } from "bun:test"
-import {
-  LLMClient,
-  LLMEvent,
-  Model,
-  type LLMClientShape,
-  type LLMRequest,
-} from "@prioricode/llm"
+import { LLMClient, LLMEvent, Model, type LLMClientShape, type LLMRequest } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
 import { AgentV2 } from "@prioricode/core/agent"
 import { Config } from "@prioricode/core/config"
@@ -291,4 +285,3 @@ describe("manual compaction", () => {
     }),
   )
 })
-

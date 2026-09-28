@@ -170,8 +170,14 @@ const select = (
     }
   }
   return {
-    head: conversation.slice(0, split).map((item) => item.text).join("\n\n"),
-    recent: conversation.slice(split).map((item) => item.text).join("\n\n"),
+    head: conversation
+      .slice(0, split)
+      .map((item) => item.text)
+      .join("\n\n"),
+    recent: conversation
+      .slice(split)
+      .map((item) => item.text)
+      .join("\n\n"),
   }
 }
 
@@ -262,8 +268,9 @@ export const make = (dependencies: Dependencies) => {
   })
   const compactAfterOverflow = (input: Input) => compact(input)
   const compactManual = (input: Input) => compact({ ...input, reason: "manual" })
-  const compactIfNeeded = Effect.fn("SessionCompaction.compactIfNeeded")(
-    function* (input: Input & { readonly request: LLMRequest }) {
+  const compactIfNeeded = Effect.fn("SessionCompaction.compactIfNeeded")(function* (
+    input: Input & { readonly request: LLMRequest },
+  ) {
     if (!config.auto) return false
     const rawContext = input.model.route.defaults.limits?.context
     const context = rawContext && rawContext > 0 ? rawContext : config.defaultContext

@@ -132,7 +132,11 @@ describe("goal gate", () => {
   it.live("command success clears the goal and admits nothing", () =>
     Effect.gen(function* () {
       const dir = yield* Effect.promise(() => makeDirectory())
-      const { gate, sessionID, db, sessions } = yield* gateFor(dir, info({ check: "command", command: "exit 0" }), "Ship it")
+      const { gate, sessionID, db, sessions } = yield* gateFor(
+        dir,
+        info({ check: "command", command: "exit 0" }),
+        "Ship it",
+      )
       expect(yield* gate.beforeFinish()).toEqual({ _tag: "Pass" })
       expect((yield* sessions.get(sessionID)).goal).toBeUndefined()
       expect(yield* SessionInput.hasPending(db, sessionID, "steer")).toBe(false)
@@ -230,5 +234,4 @@ describe("goal gate", () => {
       judgeFails = false
     }),
   )
-
 })

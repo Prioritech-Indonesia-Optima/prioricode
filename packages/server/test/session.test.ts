@@ -96,7 +96,11 @@ describe("V2 session HTTP surface", () => {
     const created = await request("/api/session", body({ location: { directory } }))
     const session = (await payload<{ data: { id: string } }>(created)).data
 
-    const wait = await request(`/api/session/${session.id}/wait`, { method: "POST", body: "{}", headers: { "content-type": "application/json" } })
+    const wait = await request(`/api/session/${session.id}/wait`, {
+      method: "POST",
+      body: "{}",
+      headers: { "content-type": "application/json" },
+    })
     expect(wait.status).toBe(503)
     expect((await payload<{ _tag: string }>(wait))._tag).toBe("ServiceUnavailableError")
 

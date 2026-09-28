@@ -24,9 +24,11 @@ export const tierFor = (percent: number): Tier => {
 
 const guidance: Record<Tier, string> = {
   low: "Context usage is low. No special economy is needed.",
-  moderate: "Context usage is moderate. Prefer targeted file reads over whole-file dumps when you already know the region you need.",
+  moderate:
+    "Context usage is moderate. Prefer targeted file reads over whole-file dumps when you already know the region you need.",
   high: "Context usage is high. Consume output economically: read exact ranges instead of whole files, batch related operations, and expect automatic compaction soon.",
-  critical: "Context usage is critical. Be maximally economical: minimal reads, no large pastes, finish the current verification loop before expanding scope.",
+  critical:
+    "Context usage is critical. Be maximally economical: minimal reads, no large pastes, finish the current verification loop before expanding scope.",
 }
 
 export const render = (tier: Tier) => `Context usage tier: ${tier}. ${guidance[tier]}`

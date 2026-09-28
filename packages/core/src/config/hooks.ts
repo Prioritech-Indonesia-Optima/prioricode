@@ -13,7 +13,8 @@ import { PositiveInt } from "../schema"
  */
 export class HookCommand extends Schema.Class<HookCommand>("ConfigV2.Hooks.Command")({
   matcher: Schema.String.pipe(Schema.optional).annotate({
-    description: "Wildcard over tool names (PreToolUse/PostToolUse); omitted or '*' matches all. Ignored by Stop/SessionStart",
+    description:
+      "Wildcard over tool names (PreToolUse/PostToolUse); omitted or '*' matches all. Ignored by Stop/SessionStart",
   }),
   command: Schema.Union([Schema.String, Schema.Array(Schema.String)]),
   timeout: PositiveInt.pipe(Schema.optional).annotate({

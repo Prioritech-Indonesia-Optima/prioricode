@@ -48,6 +48,7 @@ export type Event =
   | EventSessionNextRevertStaged
   | EventSessionNextRevertCleared
   | EventSessionNextRevertCommitted
+  | EventSessionNextGoalSet
   | EventMessagePartDelta
   | EventSessionDiff
   | EventSessionError
@@ -1196,6 +1197,16 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "session.next.goal.set"
+        properties: {
+          timestamp: number
+          sessionID: string
+          messageID: string
+          goal: string
+        }
+      }
+    | {
+        id: string
         type: "message.part.delta"
         properties: {
           sessionID: string
@@ -1657,6 +1668,7 @@ export type GlobalEvent = {
     | SyncEventSessionNextRevertStaged
     | SyncEventSessionNextRevertCleared
     | SyncEventSessionNextRevertCommitted
+    | SyncEventSessionNextGoalSet
 }
 
 /**
@@ -2768,17 +2780,17 @@ export type ConflictError = {
   resource?: string
 }
 
-export type ServiceUnavailableError = {
-  _tag: "ServiceUnavailableError"
-  message: string
-  service?: string
-}
-
 export type MessageNotFoundError = {
   _tag: "MessageNotFoundError"
   sessionID: string
   messageID: string
   message: string
+}
+
+export type ServiceUnavailableError = {
+  _tag: "ServiceUnavailableError"
+  message: string
+  service?: string
 }
 
 export type UnknownError1 = {
@@ -2816,6 +2828,7 @@ export type SessionDurableEvent =
   | SessionNextRevertStaged
   | SessionNextRevertCleared
   | SessionNextRevertCommitted
+  | SessionNextGoalSet
 
 export type SessionHistory = {
   data: Array<SessionDurableEvent>
@@ -2947,6 +2960,7 @@ export type V2Event =
   | SessionNextRevertStaged
   | SessionNextRevertCleared
   | SessionNextRevertCommitted
+  | SessionNextGoalSet
   | MessagePartDelta
   | SessionDiff
   | SessionError
@@ -3878,6 +3892,23 @@ export type SyncEventSessionNextRevertCommitted = {
   }
 }
 
+export type SyncEventSessionNextGoalSet = {
+  type: "sync"
+  id: string
+  syncEvent: {
+    type: "session.next.goal.set.1"
+    id: string
+    seq: number
+    aggregateID: string
+    data: {
+      timestamp: number
+      sessionID: string
+      messageID: string
+      goal: string
+    }
+  }
+}
+
 export type ConfigV2ReferenceGit = {
   repository: string
   branch?: string
@@ -3963,6 +3994,7 @@ export type SessionV2Info = {
   projectID: string
   agent?: string
   model?: ModelRef
+  goal?: string
   cost: number
   tokens: {
     input: number
@@ -4024,6 +4056,18 @@ export type SessionMessageModelSwitched = {
   }
   type: "model-switched"
   model: ModelRef
+}
+
+export type SessionMessageGoalSet = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  time: {
+    created: number
+  }
+  type: "goal-set"
+  goal: string
 }
 
 export type SessionMessageUser = {
@@ -4211,6 +4255,7 @@ export type SessionMessageCompaction = {
 export type SessionMessage =
   | SessionMessageAgentSwitched
   | SessionMessageModelSwitched
+  | SessionMessageGoalSet
   | SessionMessageUser
   | SessionMessageSynthetic
   | SessionMessageSystem
@@ -4824,6 +4869,26 @@ export type SessionNextRevertCommitted = {
     timestamp: number
     sessionID: string
     messageID: string
+  }
+}
+
+export type SessionNextGoalSet = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.next.goal.set"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    timestamp: number
+    sessionID: string
+    messageID: string
+    goal: string
   }
 }
 
@@ -6742,6 +6807,17 @@ export type EventSessionNextRevertCommitted = {
     timestamp: number
     sessionID: string
     messageID: string
+  }
+}
+
+export type EventSessionNextGoalSet = {
+  id: string
+  type: "session.next.goal.set"
+  properties: {
+    timestamp: number
+    sessionID: string
+    messageID: string
+    goal: string
   }
 }
 
@@ -11723,6 +11799,43 @@ export type V2SessionSwitchModelResponses = {
 
 export type V2SessionSwitchModelResponse = V2SessionSwitchModelResponses[keyof V2SessionSwitchModelResponses]
 
+export type V2SessionSetGoalData = {
+  body: {
+    goal: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/goal"
+}
+
+export type V2SessionSetGoalErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SessionNotFoundError
+   */
+  404: SessionNotFoundError
+}
+
+export type V2SessionSetGoalError = V2SessionSetGoalErrors[keyof V2SessionSetGoalErrors]
+
+export type V2SessionSetGoalResponses = {
+  /**
+   * <No Content>
+   */
+  204: void
+}
+
+export type V2SessionSetGoalResponse = V2SessionSetGoalResponses[keyof V2SessionSetGoalResponses]
+
 export type V2SessionPromptData = {
   body: {
     id?: string
@@ -11770,7 +11883,10 @@ export type V2SessionPromptResponses = {
 export type V2SessionPromptResponse = V2SessionPromptResponses[keyof V2SessionPromptResponses]
 
 export type V2SessionCompactData = {
-  body?: never
+  body: {
+    anchor?: string
+    instructions?: string
+  }
   path: {
     sessionID: string
   }
@@ -11788,13 +11904,17 @@ export type V2SessionCompactErrors = {
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * SessionNotFoundError | MessageNotFoundError
    */
-  404: SessionNotFoundError
+  404: MessageNotFoundError | SessionNotFoundError
   /**
    * ConflictError | SessionBusyError
    */
   409: ConflictError | SessionBusyError
+  /**
+   * UnknownError
+   */
+  500: UnknownError1
   /**
    * ServiceUnavailableError
    */

@@ -128,13 +128,15 @@ const layer = Layer.effect(
     const location = yield* Location.Service
     const appProcess = yield* AppProcess.Service
 
-    const current = Effect.suspend(() => Effect.map(config.entries(), (entries) => {
-      const documents = entries.filter((entry): entry is Config.Document => entry.type === "document")
-      return {
-        hooks: ConfigHooks.merged(documents, location.project.directory),
-        shell: Config.latest(documents, "shell"),
-      }
-    }))
+    const current = Effect.suspend(() =>
+      Effect.map(config.entries(), (entries) => {
+        const documents = entries.filter((entry): entry is Config.Document => entry.type === "document")
+        return {
+          hooks: ConfigHooks.merged(documents, location.project.directory),
+          shell: Config.latest(documents, "shell"),
+        }
+      }),
+    )
 
     // evaluated per call, not per layer: an escaping hook must die at the next
     // event without requiring the Location to reopen
@@ -250,8 +252,7 @@ const layer = Layer.effect(
           session_id: input.sessionID,
           stop_hook_active: input.stopHookActive === true,
         })
-        if (result?.exitCode === 2)
-          reasons.push(result.stderr || result.stdout || "Blocked by a configured Stop hook.")
+        if (result?.exitCode === 2) reasons.push(result.stderr || result.stdout || "Blocked by a configured Stop hook.")
       }
       if (reasons.length === 0) return { _tag: "Allow" } as StopOutcome
       return { _tag: "Continue", reason: reasons.join("\n\n").slice(0, MAX_NOTE_CHARS * 2) } satisfies StopOutcome
@@ -267,11 +268,13 @@ const layer = Layer.effect(
 
     return Service.of({
       hasProjectHooks: () =>
-        Effect.map(current, (source) =>
-          source.hooks.PreToolUse.some((entry) => entry.scope === "project") ||
-          source.hooks.PostToolUse.some((entry) => entry.scope === "project") ||
-          source.hooks.Stop.some((entry) => entry.scope === "project") ||
-          source.hooks.SessionStart.some((entry) => entry.scope === "project"),
+        Effect.map(
+          current,
+          (source) =>
+            source.hooks.PreToolUse.some((entry) => entry.scope === "project") ||
+            source.hooks.PostToolUse.some((entry) => entry.scope === "project") ||
+            source.hooks.Stop.some((entry) => entry.scope === "project") ||
+            source.hooks.SessionStart.some((entry) => entry.scope === "project"),
         ),
       projectHash: () =>
         Effect.map(current, (source) =>

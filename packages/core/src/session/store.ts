@@ -18,7 +18,9 @@ export interface Interface {
     sessionID: SessionSchema.ID,
     baselineSeq: number,
   ) => Effect.Effect<SessionMessage.Message[], MessageDecodeError>
-  readonly message: (messageID: SessionMessage.ID) => Effect.Effect<
+  readonly message: (
+    messageID: SessionMessage.ID,
+  ) => Effect.Effect<
     { readonly sessionID: SessionSchema.ID; readonly seq: number; readonly message: SessionMessage.Message } | undefined
   >
 }

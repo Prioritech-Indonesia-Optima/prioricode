@@ -82,14 +82,7 @@ export const asGate = (deps: Dependencies): SessionGate.Gate => {
         if (!streamed || failed) return SessionGate.pass
         const verdict = chunks.join("").trim().toUpperCase()
         if (!verdict.startsWith("REFUTED")) return SessionGate.pass
-        const objection = chunks
-          .join("")
-          .trim()
-          .split(/\r?\n/)
-          .slice(1)
-          .join("\n")
-          .trim()
-          .slice(0, MAX_REASON_CHARS)
+        const objection = chunks.join("").trim().split(/\r?\n/).slice(1).join("\n").trim().slice(0, MAX_REASON_CHARS)
         if (objection === "") return SessionGate.pass
         return yield* SessionInput.admit(deps.db, deps.events, {
           id: SessionMessage.ID.create(),

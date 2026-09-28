@@ -10773,6 +10773,91 @@
         ]
       }
     },
+    "/api/session/{sessionID}/goal": {
+      "post": {
+        "tags": ["sessions"],
+        "operationId": "v2.session.setGoal",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SessionNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SessionNotFoundError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionNotFoundError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Set, update, or (with an empty value) clear the durable goal re-anchored into every provider turn.",
+        "summary": "Set durable session goal",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "goal": {
+                    "type": "string"
+                  }
+                },
+                "required": ["goal"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createPrioricodeClient } from \"@prioricode/sdk\n\nconst client = createPrioricodeClient()\nawait client.v2.session.setGoal({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/api/session/{sessionID}/prompt": {
       "post": {
         "tags": ["sessions"],
@@ -10941,11 +11026,14 @@
             }
           },
           "404": {
-            "description": "SessionNotFoundError",
+            "description": "SessionNotFoundError | MessageNotFoundError",
             "content": {
               "application/json": {
                 "schema": {
                   "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MessageNotFoundError"
+                    },
                     {
                       "$ref": "#/components/schemas/SessionNotFoundError"
                     },
@@ -10974,6 +11062,16 @@
               }
             }
           },
+          "500": {
+            "description": "UnknownError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnknownError1"
+                }
+              }
+            }
+          },
           "503": {
             "description": "ServiceUnavailableError",
             "content": {
@@ -10985,8 +11083,28 @@
             }
           }
         },
-        "description": "Compact a session conversation.",
+        "description": "Summarize durable history now; optionally only up to an anchor message, with focus instructions.",
         "summary": "Compact session",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "anchor": {
+                    "type": "string",
+                    "pattern": "^msg_"
+                  },
+                  "instructions": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
         "x-codeSamples": [
           {
             "lang": "js",
@@ -15748,6 +15866,9 @@
             "$ref": "#/components/schemas/EventSessionNextRevertCommitted"
           },
           {
+            "$ref": "#/components/schemas/EventSessionNextGoalSet"
+          },
+          {
             "$ref": "#/components/schemas/EventMessagePartDelta"
           },
           {
@@ -19398,6 +19519,42 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["session.next.goal.set"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "number"
+                      },
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "messageID": {
+                        "type": "string",
+                        "pattern": "^msg_"
+                      },
+                      "goal": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["timestamp", "sessionID", "messageID", "goal"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["message.part.delta"]
                   },
                   "properties": {
@@ -20955,6 +21112,9 @@
               },
               {
                 "$ref": "#/components/schemas/SyncEventSessionNextRevertCommitted"
+              },
+              {
+                "$ref": "#/components/schemas/SyncEventSessionNextGoalSet"
               }
             ]
           }
@@ -24133,23 +24293,6 @@
         "required": ["_tag", "message"],
         "additionalProperties": false
       },
-      "ServiceUnavailableError": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["ServiceUnavailableError"]
-          },
-          "message": {
-            "type": "string"
-          },
-          "service": {
-            "type": "string"
-          }
-        },
-        "required": ["_tag", "message"],
-        "additionalProperties": false
-      },
       "MessageNotFoundError": {
         "type": "object",
         "properties": {
@@ -24168,6 +24311,23 @@
           }
         },
         "required": ["_tag", "sessionID", "messageID", "message"],
+        "additionalProperties": false
+      },
+      "ServiceUnavailableError": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["ServiceUnavailableError"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        },
+        "required": ["_tag", "message"],
         "additionalProperties": false
       },
       "UnknownError1": {
@@ -24272,6 +24432,9 @@
           },
           {
             "$ref": "#/components/schemas/SessionNextRevertCommitted"
+          },
+          {
+            "$ref": "#/components/schemas/SessionNextGoalSet"
           }
         ]
       },
@@ -24664,6 +24827,9 @@
           },
           {
             "$ref": "#/components/schemas/SessionNextRevertCommitted"
+          },
+          {
+            "$ref": "#/components/schemas/SessionNextGoalSet"
           },
           {
             "$ref": "#/components/schemas/MessagePartDelta"
@@ -27557,6 +27723,63 @@
         "required": ["type", "id", "syncEvent"],
         "additionalProperties": false
       },
+      "SyncEventSessionNextGoalSet": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["sync"]
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "syncEvent": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["session.next.goal.set.1"]
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^evt_"
+              },
+              "seq": {
+                "type": "number"
+              },
+              "aggregateID": {
+                "type": "string"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "timestamp": {
+                    "type": "number"
+                  },
+                  "sessionID": {
+                    "type": "string",
+                    "pattern": "^ses"
+                  },
+                  "messageID": {
+                    "type": "string",
+                    "pattern": "^msg_"
+                  },
+                  "goal": {
+                    "type": "string"
+                  }
+                },
+                "required": ["timestamp", "sessionID", "messageID", "goal"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["type", "id", "seq", "aggregateID", "data"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["type", "id", "syncEvent"],
+        "additionalProperties": false
+      },
       "ConfigV2ReferenceGit": {
         "type": "object",
         "properties": {
@@ -27798,6 +28021,9 @@
           "model": {
             "$ref": "#/components/schemas/ModelRef"
           },
+          "goal": {
+            "type": "string"
+          },
           "cost": {
             "type": "number"
           },
@@ -27977,6 +28203,37 @@
           }
         },
         "required": ["id", "time", "type", "model"],
+        "additionalProperties": false
+      },
+      "SessionMessageGoalSet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^msg_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "number"
+              }
+            },
+            "required": ["created"],
+            "additionalProperties": false
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goal-set"]
+          },
+          "goal": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "time", "type", "goal"],
         "additionalProperties": false
       },
       "SessionMessageUser": {
@@ -28500,6 +28757,9 @@
           },
           {
             "$ref": "#/components/schemas/SessionMessageModelSwitched"
+          },
+          {
+            "$ref": "#/components/schemas/SessionMessageGoalSet"
           },
           {
             "$ref": "#/components/schemas/SessionMessageUser"
@@ -30280,6 +30540,64 @@
               }
             },
             "required": ["timestamp", "sessionID", "messageID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
+      "SessionNextGoalSet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.next.goal.set"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "number"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "messageID": {
+                "type": "string",
+                "pattern": "^msg_"
+              },
+              "goal": {
+                "type": "string"
+              }
+            },
+            "required": ["timestamp", "sessionID", "messageID", "goal"],
             "additionalProperties": false
           }
         },
@@ -36066,6 +36384,42 @@
               }
             },
             "required": ["timestamp", "sessionID", "messageID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSessionNextGoalSet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.next.goal.set"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "number"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "messageID": {
+                "type": "string",
+                "pattern": "^msg_"
+              },
+              "goal": {
+                "type": "string"
+              }
+            },
+            "required": ["timestamp", "sessionID", "messageID", "goal"],
             "additionalProperties": false
           }
         },

@@ -19,7 +19,8 @@ export class Info extends Schema.Class<Info>("ConfigV2.Goal")({
     description: "Shell command for command mode; exit 0 marks the goal met and clears it",
   }),
   review: Schema.Boolean.pipe(Schema.optional).annotate({
-    description: "Additionally run the adversarial completion reviewer at finish (one refute round, fail open; default off)",
+    description:
+      "Additionally run the adversarial completion reviewer at finish (one refute round, fail open; default off)",
   }),
   max_attempts: PositiveInt.pipe(Schema.optional).annotate({
     description: "Maximum finish-gate continuations per drain (default 2, then fail open)",

@@ -272,8 +272,7 @@ const layer = Layer.effect(
         }
         if (promoted > 0) currentStep = 1
       }
-      const system =
-        initialized ?? (yield* SessionContextEpoch.prepare(db, events, loadContext(), session.id))
+      const system = initialized ?? (yield* SessionContextEpoch.prepare(db, events, loadContext(), session.id))
       const entries = yield* SessionHistory.entriesForRunner(db, session.id, system.baselineSeq)
       const context = entries.map((entry) => entry.message)
       if (
@@ -288,14 +287,22 @@ const layer = Layer.effect(
       const toolMaterialization = isLastStep ? undefined : yield* tools.materialize(agent.info?.permissions)
       const promptCacheKey = /^ses_[0-9a-f]{64}$/.test(session.id) ? session.id.slice(4) : session.id
       const pruneConfig = Config.latest(yield* config.entries(), "prune")
-      const fullMessages = [...toLLMMessages(context, model), ...(isLastStep ? [Message.assistant(MAX_STEPS_PROMPT)] : [])]
+      const fullMessages = [
+        ...toLLMMessages(context, model),
+        ...(isLastStep ? [Message.assistant(MAX_STEPS_PROMPT)] : []),
+      ]
       const systemParts = [agent.info?.system, system.baseline].filter(
         (part): part is string => part !== undefined && part.length > 0,
       )
       const pressure =
         contextLimit > 0 &&
-        Token.estimate(JSON.stringify({ system: systemParts, messages: fullMessages, tools: toolMaterialization?.definitions ?? [] })) >=
-          Math.floor((contextLimit * (pruneConfig?.pressure_percent ?? 70)) / 100)
+        Token.estimate(
+          JSON.stringify({
+            system: systemParts,
+            messages: fullMessages,
+            tools: toolMaterialization?.definitions ?? [],
+          }),
+        ) >= Math.floor((contextLimit * (pruneConfig?.pressure_percent ?? 70)) / 100)
       const request = LLM.request({
         model,
         http: {
@@ -567,37 +574,32 @@ const layer = Layer.effect(
     const DEFAULT_CONTEXT_TOKENS = 128_000
     const sessionStartFired = new Set<string>()
 
-    const stopHookGate = (
-      sessionID: SessionSchema.ID,
-      allowProjectHooks: boolean,
-    ): SessionGate.Gate => {
+    const stopHookGate = (sessionID: SessionSchema.ID, allowProjectHooks: boolean): SessionGate.Gate => {
       let fired = false
       return {
         id: "stop-hook",
         observe: () => {},
         beforeFinish: () =>
-          hooks
-            .stop({ sessionID, allowProject: allowProjectHooks, stopHookActive: fired })
-            .pipe(
-              Effect.flatMap((outcome) => {
-                if (outcome._tag !== "Continue") return Effect.succeed(SessionGate.pass)
-                fired = true
-                return SessionInput.admit(db, events, {
-                  id: SessionMessage.ID.create(),
-                  sessionID,
-                  prompt: Prompt.make({
-                    text: [
-                      `A configured Stop hook prevented completion:\n${outcome.reason}`,
-                      "Address the hook's requirement before ending the task; the drain will not finish while it blocks.",
-                    ].join("\n"),
-                  }),
-                  delivery: "steer",
-                }).pipe(
-                  Effect.map(() => SessionGate.continued),
-                  Effect.catch(() => Effect.succeed(SessionGate.pass)),
-                )
-              }),
-            ),
+          hooks.stop({ sessionID, allowProject: allowProjectHooks, stopHookActive: fired }).pipe(
+            Effect.flatMap((outcome) => {
+              if (outcome._tag !== "Continue") return Effect.succeed(SessionGate.pass)
+              fired = true
+              return SessionInput.admit(db, events, {
+                id: SessionMessage.ID.create(),
+                sessionID,
+                prompt: Prompt.make({
+                  text: [
+                    `A configured Stop hook prevented completion:\n${outcome.reason}`,
+                    "Address the hook's requirement before ending the task; the drain will not finish while it blocks.",
+                  ].join("\n"),
+                }),
+                delivery: "steer",
+              }).pipe(
+                Effect.map(() => SessionGate.continued),
+                Effect.catch(() => Effect.succeed(SessionGate.pass)),
+              )
+            }),
+          ),
       }
     }
 
