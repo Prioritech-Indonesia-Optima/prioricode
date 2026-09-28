@@ -111,6 +111,17 @@ export function update(adapter: Adapter, event: SessionEvent.Event) {
           }),
         )
       },
+      "session.next.goal.set": (event) => {
+        return adapter.appendMessage(
+          SessionMessage.GoalSet.make({
+            id: event.data.messageID,
+            type: "goal-set",
+            metadata: event.metadata,
+            goal: event.data.goal,
+            time: { created: event.data.timestamp },
+          }),
+        )
+      },
       "session.next.model.switched": (event) => {
         return adapter.appendMessage(
           SessionMessage.ModelSwitched.make({

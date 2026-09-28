@@ -35,6 +35,7 @@ import { SessionContextEpoch } from "../context-epoch"
 import { SessionCompaction } from "../compaction"
 import { SessionEvent } from "../event"
 import { SessionHistory } from "../history"
+import { SessionGoal } from "../goal"
 import { SessionInput } from "../input"
 import { SessionMessage } from "../message"
 import { Prompt } from "../prompt"
@@ -196,10 +197,14 @@ const layer = Layer.effect(
     const retryProviderTurn = (step: number, attempt: number, delayMs: number) =>
       new TurnTransitionError({ _tag: "RetryProviderTurn", step, attempt, delayMs })
 
-    const loadSystemContext = (agent: AgentV2.Selection) =>
-      Effect.all([systemContext.load(), skillGuidance.load(agent), referenceGuidance.load()], {
+    const loadSystemContext = (sessionID: SessionSchema.ID, agent: AgentV2.Selection) =>
+      Effect.all([systemContext.load(), skillGuidance.load(agent), referenceGuidance.load(), store.get(sessionID)], {
         concurrency: "unbounded",
-      }).pipe(Effect.map(SystemContext.combine))
+      }).pipe(
+        Effect.map(([environment, skills, references, session]) =>
+          SystemContext.combine([environment, skills, references, SessionGoal.context(session?.goal)]),
+        ),
+      )
 
     const hookResultText = (result: ToolResultValue) =>
       typeof result.value === "string" ? result.value : JSON.stringify(result.value)
@@ -237,7 +242,7 @@ const layer = Layer.effect(
       if (session.location.directory !== location.directory || session.location.workspaceID !== location.workspaceID)
         return yield* Effect.interrupt
       const agent = yield* agents.select(session.agent)
-      const initialized = yield* SessionContextEpoch.initialize(db, loadSystemContext(agent), session.id)
+      const initialized = yield* SessionContextEpoch.initialize(db, loadSystemContext(session.id, agent), session.id)
       const toolFibers = yield* FiberSet.make<void, ToolOutputStore.Error>()
       policy.guard.beginTurn()
       let needsContinuation = false
@@ -253,7 +258,7 @@ const layer = Layer.effect(
         if (promoted > 0) currentStep = 1
       }
       const system =
-        initialized ?? (yield* SessionContextEpoch.prepare(db, events, loadSystemContext(agent), session.id))
+        initialized ?? (yield* SessionContextEpoch.prepare(db, events, loadSystemContext(session.id, agent), session.id))
       const model = yield* models.resolve(session)
       const entries = yield* SessionHistory.entriesForRunner(db, session.id, system.baselineSeq)
       const context = entries.map((entry) => entry.message)

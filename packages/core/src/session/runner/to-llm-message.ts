@@ -116,6 +116,7 @@ function toLLMMessage(message: SessionMessage.Message, model: Model): Message[] 
   switch (message.type) {
     case "agent-switched":
     case "model-switched":
+    case "goal-set":
       return []
     case "user":
       return [

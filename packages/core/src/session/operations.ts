@@ -188,7 +188,18 @@ export const makeSessionOperations = (deps: SessionOperationsDeps) => {
     })
   })
 
-  return { create, get, prompt, switchAgent, switchModel }
+  const setGoal = Effect.fn("V2Session.setGoal")(function* (input: { sessionID: SessionSchema.ID; goal: string }) {
+    const session = yield* get(input.sessionID)
+    if ((session.goal ?? "") === input.goal) return
+    yield* events.publish(SessionEvent.GoalSet, {
+      sessionID: input.sessionID,
+      messageID: SessionMessage.ID.create(),
+      timestamp: yield* DateTime.now,
+      goal: input.goal,
+    })
+  })
+
+  return { create, get, prompt, switchAgent, switchModel, setGoal }
 }
 
 export type SessionOperations = ReturnType<typeof makeSessionOperations>

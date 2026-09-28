@@ -203,6 +203,23 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         ),
     )
     .add(
+      HttpApiEndpoint.post("session.setGoal", "/api/session/:sessionID/goal", {
+        params: { sessionID: Session.ID },
+        payload: Schema.Struct({ goal: Schema.String }),
+        success: HttpApiSchema.NoContent,
+        error: SessionNotFoundError,
+      })
+        .middleware(sessionLocationMiddleware)
+        .annotateMerge(
+          OpenApi.annotations({
+            identifier: "v2.session.setGoal",
+            summary: "Set durable session goal",
+            description:
+              "Set, update, or (with an empty value) clear the durable goal re-anchored into every provider turn.",
+          }),
+        ),
+    )
+    .add(
       HttpApiEndpoint.post("session.prompt", "/api/session/:sessionID/prompt", {
         params: { sessionID: Session.ID },
         payload: Schema.Struct({

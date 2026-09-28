@@ -148,6 +148,7 @@ export interface Interface {
     limit: number
   }) => Effect.Effect<{ events: ReadonlyArray<SessionEvent.DurableEvent>; hasMore: boolean }, NotFoundError>
   readonly switchAgent: (input: { sessionID: SessionSchema.ID; agent: string }) => Effect.Effect<void, NotFoundError>
+  readonly setGoal: (input: { sessionID: SessionSchema.ID; goal: string }) => Effect.Effect<void, NotFoundError>
   readonly switchModel: (input: {
     sessionID: SessionSchema.ID
     model: ModelV2.Ref
@@ -414,6 +415,16 @@ const layer = Layer.effect(
           messageID: SessionMessage.ID.create(),
           timestamp: yield* DateTime.now,
           agent: input.agent,
+        })
+      }),
+      setGoal: Effect.fn("V2Session.setGoal")(function* (input) {
+        const session = yield* result.get(input.sessionID)
+        if ((session.goal ?? "") === input.goal) return
+        yield* events.publish(SessionEvent.GoalSet, {
+          sessionID: input.sessionID,
+          messageID: SessionMessage.ID.create(),
+          timestamp: yield* DateTime.now,
+          goal: input.goal,
         })
       }),
       switchModel: Effect.fn("V2Session.switchModel")(function* (input) {
