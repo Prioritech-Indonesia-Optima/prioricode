@@ -48,10 +48,10 @@ function useReveal<T extends HTMLElement>(threshold = 0.25) {
   const [shown, setShown] = useState(false)
   useEffect(() => {
     const el = ref.current
-    if (!el) return
+    if (!el) return undefined
     if (prefersReducedMotion()) {
       setShown(true)
-      return
+      return undefined
     }
     const io = new IntersectionObserver(
       (entries) => {
@@ -74,7 +74,7 @@ function useParallax() {
   const ref = useRef<SVGSVGElement | null>(null)
   useEffect(() => {
     const el = ref.current
-    if (!el || prefersReducedMotion()) return
+    if (!el || prefersReducedMotion()) return undefined
     let raf = 0
     const onScroll = () => {
       cancelAnimationFrame(raf)
@@ -207,10 +207,10 @@ function TerminalMock() {
   const [ref, shown] = useReveal<HTMLDivElement>(0.4)
   const [line, setLine] = useState(0)
   useEffect(() => {
-    if (!shown) return
+    if (!shown) return undefined
     if (prefersReducedMotion()) {
       setLine(TERM_LINES.length)
-      return
+      return undefined
     }
     const id = setInterval(() => setLine((n) => (n < TERM_LINES.length ? n + 1 : n)), 620)
     return () => clearInterval(id)
