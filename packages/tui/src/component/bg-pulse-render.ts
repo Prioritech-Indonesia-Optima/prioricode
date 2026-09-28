@@ -100,12 +100,13 @@ function writeLogoTint(
   primary: Rgb,
   primaryMix: number,
   peakMix: number,
+  peak: Rgb,
 ) {
   const p = clamp(primaryMix)
   const q = clamp(peakMix)
-  const r = mixChannel(mixChannel(base[0], primary[0], p), 255, q)
-  const g = mixChannel(mixChannel(base[1], primary[1], p), 255, q)
-  const b = mixChannel(mixChannel(base[2], primary[2], p), 255, q)
+  const r = mixChannel(mixChannel(base[0], primary[0], p), peak[0], q)
+  const g = mixChannel(mixChannel(base[1], primary[1], p), peak[1], q)
+  const b = mixChannel(mixChannel(base[2], primary[2], p), peak[2], q)
   writeRgb(buffer, offset, r, g, b)
 }
 
@@ -117,6 +118,7 @@ export class GoUpsellArtPainter {
   private panelRgb: Rgb = [0, 0, 0]
   private primaryRgb: Rgb = [255, 255, 255]
   private logoBaseRgb: Rgb = [180, 180, 180]
+  private scheme: "dark" | "light" = "dark"
   private elapsed = 0
   private distances = new Float32Array(0)
   private edgeFalloff = new Float32Array(0)
@@ -157,6 +159,24 @@ export class GoUpsellArtPainter {
     this.primaryRgb = next
     this.invalidateCache()
     return true
+  }
+
+  setScheme(value: "dark" | "light") {
+    if (this.scheme === value) return false
+    this.scheme = value
+    this.invalidateCache()
+    return true
+  }
+
+  // Dark mode peaks the logo toward white; on a light panel white erases the
+  // mid-gray mark, so light mode saturates toward the brand primary instead.
+  // The ring wash is also damped so it doesn't smear the whole panel.
+  private get peakRgb(): Rgb {
+    return this.scheme === "light" ? this.primaryRgb : [255, 255, 255]
+  }
+
+  private get ringStrength() {
+    return this.scheme === "light" ? 0.32 : 0.7
   }
 
   render(frameBuffer: OptimizedBuffer, options: GoUpsellArtRenderOptions = {}) {
@@ -316,7 +336,7 @@ export class GoUpsellArtPainter {
         (crest1 * AMP + tail1 * TAIL_AMP) * eased1 +
         (crest2 * AMP + tail2 * TAIL_AMP) * eased2
       const rawStrength = (level * RING_SCALE + breath) * edgeFalloff[index]
-      const strength = (rawStrength > 1 ? 1 : rawStrength) * 0.7
+      const strength = (rawStrength > 1 ? 1 : rawStrength) * this.ringStrength
       const offset = index * 4
       const r = Math.round(baseR + deltaR * strength)
       const g = Math.round(baseG + deltaG * strength)
@@ -374,11 +394,11 @@ export class GoUpsellArtPainter {
       const primary = this.pulsePrimary
 
       if (cell.tone === LogoTone.Accent) {
-        writeLogoTint(fg, offset, this.primaryRgb, this.primaryRgb, 1, peak * 0.8)
+        writeLogoTint(fg, offset, this.primaryRgb, this.primaryRgb, 1, peak * 0.8, this.peakRgb)
       } else if (cell.tone === LogoTone.Light) {
-        writeLogoTint(fg, offset, this.logoBaseRgb, this.primaryRgb, primary * 0.3, peak * 0.5)
+        writeLogoTint(fg, offset, this.logoBaseRgb, this.primaryRgb, primary * 0.3, peak * 0.5, this.peakRgb)
       } else {
-        writeLogoTint(fg, offset, this.logoBaseRgb, this.primaryRgb, primary, peak)
+        writeLogoTint(fg, offset, this.logoBaseRgb, this.primaryRgb, primary, peak, this.peakRgb)
       }
       writeRgb(bg, offset, this.panelRgb[0], this.panelRgb[1], this.panelRgb[2])
     }
