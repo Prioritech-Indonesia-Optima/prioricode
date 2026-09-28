@@ -28,7 +28,6 @@ const REFORM_MS = 1300
 const PARTICLE_CHANCE = 0.055
 const GLYPH_MUTATE_MS = 70
 
-const GRADIENT_END = 0.85
 const REVEAL_SKEW = 0.6
 const BREATHE_PERIOD = 5200
 const BREATHE_MIX = 0.08
@@ -189,12 +188,12 @@ export class HomeHeroPainter {
     return this.scheme === "light" ? 0.14 : 0.35
   }
 
-  // Warm-white shines read as bright flashes on dark blocks over a dark base.
-  // At full strength on light backgrounds the glint converges the (dark) block
-  // color into the (cream) background and erases the wordmark; damping the
-  // shine keeps a visible shimmer that never crosses the base color.
-  private get shineScale() {
-    return this.scheme === "light" ? 0.45 : 1
+  // Dark mode shines read as bright warm-white flashes on dark blocks over a
+  // dark base. On a light background the same white converges the glyph toward
+  // the cream base and erases it, so light mode shines toward a dark ink
+  // instead — a shadow sweep that only ever increases contrast.
+  private get shineRgb(): Rgb {
+    return this.scheme === "light" ? mix(this.textRgb, [0, 0, 0], 0.7) : this.warmRgb
   }
 
   setTheme(next: Partial<HomeHeroThemeColors>) {
@@ -217,10 +216,13 @@ export class HomeHeroPainter {
   }
 
   private refreshPalette() {
-    this.columns = Array.from({ length: ART_W }, (_, x) =>
-      mix(this.primaryRgb, this.textRgb, (x / (ART_W - 1)) * GRADIENT_END),
-    )
-    this.glyphRgb = this.scheme === "light" ? mix(this.primaryRgb, this.textRgb, 0.55) : this.primaryRgb
+    // Solid brand color across the whole wordmark (no gradient): the theme
+    // already resolves a readable `primary` per scheme, and a single fill
+    // reads cleaner than the old gold→text sweep.
+    this.columns = Array.from({ length: ART_W }, () => this.primaryRgb)
+    // Dissolve/particle glyph color: brand gold on dark; a darkened bronze on
+    // light so the scattered glyphs stay legible against the cream base.
+    this.glyphRgb = this.scheme === "light" ? mix(this.primaryRgb, this.textRgb, 0.72) : this.primaryRgb
   }
 
   render(frameBuffer: OptimizedBuffer, options: { deltaTime?: number } = {}) {
@@ -279,7 +281,7 @@ export class HomeHeroPainter {
       chars[index] = cell.charCode
       let color = this.columns[cell.x - ART_X] ?? this.textRgb
       const wave = 0.5 + 0.5 * Math.sin((2 * Math.PI * t) / BREATHE_PERIOD - cell.x * 0.45 + cell.y * 0.2)
-      color = mix(color, this.warmRgb, wave * BREATHE_MIX * this.shineScale)
+      color = mix(color, this.shineRgb, wave * BREATHE_MIX)
       const raw = 1 - Math.abs(cell.x + cell.y * 0.7 - glintX) / GLINT_WIDTH
       const glint = raw <= 0 ? 0 : raw * raw * (3 - 2 * raw) * GLINT_STRENGTH
       const slot = Math.floor(t / TWINKLE_SLOT_MS)
@@ -287,7 +289,7 @@ export class HomeHeroPainter {
         hash(cell.x, cell.y, slot) < TWINKLE_CHANCE
           ? Math.sin(Math.PI * ((t % TWINKLE_SLOT_MS) / TWINKLE_SLOT_MS)) * TWINKLE_MIX
           : 0
-      color = mix(color, this.warmRgb, clamp01((glint + twinkle) * this.shineScale))
+      color = mix(color, this.shineRgb, clamp01(glint + twinkle))
       write(fg, offset, mix(base, color, edge))
       attrs[index] = TextAttributes.BOLD
     }

@@ -20,7 +20,6 @@ const REVEAL_MS = 700
 const GLINT_MS = 520
 const GLINT_WIDTH = 4
 const GLINT_STRENGTH = 0.9
-const GRADIENT_END = 0.85
 const REVEAL_SKEW = 0.6
 export const MIN_ART_WIDTH = 76
 // The 10-row wordmark band plus the prompt block needs vertical headroom;
@@ -131,13 +130,10 @@ export function Logo() {
     return -6 + (elapsed / GLINT_MS) * (sweep() + 6)
   })
 
-  const columns = createMemo(() =>
-    Array.from({ length: ART_W }, (_, x) => tint(theme.primary, theme.text, (x / (ART_W - 1)) * GRADIENT_END)),
-  )
+  // Solid brand color across the wordmark (no gradient), matching HomeHero.
+  const columns = createMemo(() => Array.from({ length: ART_W }, () => theme.primary))
 
-  const wordGradient = createMemo(() =>
-    WORDMARK.split("").map((_, i) => tint(theme.primary, theme.text, (i / (WORDMARK.length - 1)) * GRADIENT_END)),
-  )
+  const wordGradient = createMemo(() => WORDMARK.split("").map(() => theme.primary))
 
   const renderLine = (cells: Cell[]): JSX.Element[] =>
     cells.map((cell) => {
@@ -170,10 +166,10 @@ export function Logo() {
             : cell.kind === "word"
               ? (wordGradient()[cell.wordIndex] ?? theme.text)
               : theme.textMuted
-        // Full-strength warm-white glint converges dark blocks into a light
-        // background and erases the wordmark; damp it in light mode.
-        const shine = mode() === "light" ? 0.45 : 1
-        return tint(tint(theme.background, base, fade), RGBA.fromInts(255, 250, 235), glint() * shine * fade)
+        // Dark mode shines toward warm-white; on a light background white
+        // erases the glyph, so light mode shines toward a dark ink instead.
+        const shine = mode() === "light" ? tint(theme.text, RGBA.fromInts(0, 0, 0), 0.7) : RGBA.fromInts(255, 250, 235)
+        return tint(tint(theme.background, base, fade), shine, glint() * fade)
       })
       const content = createMemo(() => (edge() <= 0 ? " " : cell.char))
       return (
