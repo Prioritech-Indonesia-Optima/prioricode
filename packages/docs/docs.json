@@ -15,7 +15,64 @@
         "groups": [
           {
             "group": "Getting started",
-            "pages": ["index", "quickstart"]
+            "pages": ["index", "quickstart", "getting-started/install", "getting-started/providers"]
+          },
+          {
+            "group": "Using PrioriCode",
+            "pages": [
+              "using/tui",
+              "using/sessions",
+              "using/agents",
+              "using/permissions",
+              "using/context",
+              "using/headless",
+              "using/sharing",
+              "using/coordination"
+            ]
+          },
+          {
+            "group": "Extending PrioriCode",
+            "pages": [
+              "extending/skills",
+              "extending/commands",
+              "extending/mcp",
+              "extending/hooks",
+              "extending/plugins",
+              "extending/custom-tools",
+              "extending/formatters",
+              "extending/lsp",
+              "extending/editors"
+            ]
+          },
+          {
+            "group": "Configure",
+            "pages": ["configure/files", "configure/tui"]
+          },
+          {
+            "group": "Platforms",
+            "pages": ["platforms/server", "platforms/desktop", "platforms/github", "platforms/enterprise"]
+          },
+          {
+            "group": "Support",
+            "pages": ["support/troubleshooting"]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Reference",
+            "pages": [
+              "reference/overview",
+              "reference/cli",
+              "reference/slash-commands",
+              "reference/keybinds",
+              "reference/config",
+              "reference/environment-variables",
+              "reference/tools",
+              "reference/providers"
+            ]
           }
         ]
       },
