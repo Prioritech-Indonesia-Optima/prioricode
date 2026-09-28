@@ -167,6 +167,7 @@ const setup = Effect.gen(function* () {
       .pipe(Effect.orDie)
 })
 
+const turnRequests = () => requests.filter((request) => !JSON.stringify(request.messages).includes("completion judge"))
 const systemTexts = (request: LLMRequest) =>
   ((request as unknown as { readonly system?: ReadonlyArray<{ readonly text?: string }> }).system ?? []).flatMap(
     (part) => (part.text === undefined ? [] : [part.text]),
@@ -192,12 +193,12 @@ describe("session goal", () => {
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Work" }), resume: false })
       responses = [[LLMEvent.stepStart({ index: 0 }), LLMEvent.stepFinish({ index: 0, reason: "stop" }), LLMEvent.finish({ reason: "stop" })]]
       yield* session.resume(sessionID)
-      expect(requests).toHaveLength(1)
-      expect(systemTexts(requests[0]!).join("\n")).toContain("durable goal for this session")
-      expect(systemTexts(requests[0]!).join("\n")).toContain("Ship phase 4 with green tests")
+      expect(turnRequests()).toHaveLength(1)
+      expect(systemTexts(turnRequests()[0]!).join("\n")).toContain("durable goal for this session")
+      expect(systemTexts(turnRequests()[0]!).join("\n")).toContain("Ship phase 4 with green tests")
       const context = yield* session.context(sessionID)
       expect(context.some((message) => message.type === "goal-set")).toBe(true)
-      expect(JSON.stringify(requests[0]!.messages)).not.toContain("goal-set")
+      expect(JSON.stringify(turnRequests()[0]!.messages)).not.toContain("goal-set")
     }),
   )
 
@@ -269,8 +270,8 @@ describe("session goal", () => {
         [LLMEvent.stepStart({ index: 0 }), LLMEvent.stepFinish({ index: 0, reason: "stop" }), LLMEvent.finish({ reason: "stop" })],
       ]
       yield* session.resume(sessionID)
-      expect(requests).toHaveLength(2)
-      expect(JSON.stringify(requests[1]!.messages)).toContain("Mid-drain objective")
+      expect(turnRequests()).toHaveLength(2)
+      expect(JSON.stringify(turnRequests()[1]!.messages)).toContain("Mid-drain objective")
       expect((yield* session.get(sessionID)).goal).toBe("Mid-drain objective")
     }),
   )

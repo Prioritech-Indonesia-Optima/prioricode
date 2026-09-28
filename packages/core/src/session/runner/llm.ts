@@ -19,6 +19,7 @@ import { FSUtil } from "../../fs-util"
 import { AppProcess } from "../../process"
 import { SessionVerify } from "./verify"
 import { SessionGate } from "./gate"
+import { SessionGoalGate } from "./goal-gate"
 import { EventV2 } from "../../event"
 import { Location } from "../../location"
 import { ModelV2 } from "../../model"
@@ -602,6 +603,17 @@ const layer = Layer.effect(
             directory: location.directory,
             sessionID: input.sessionID,
             config: Config.latest(entries, "verify"),
+          }),
+          SessionGoalGate.asGate({
+            db,
+            events,
+            store,
+            process: appProcess,
+            judge: (request) => llm.stream(request),
+            models,
+            directory: location.directory,
+            sessionID: input.sessionID,
+            config: Config.latest(entries, "goal"),
           }),
         ],
         maxRounds: loop?.gate_max_rounds ?? 6,

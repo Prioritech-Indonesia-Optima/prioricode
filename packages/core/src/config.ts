@@ -16,6 +16,7 @@ import { ConfigCompaction } from "./config/compaction"
 import { ConfigCommand } from "./config/command"
 import { ConfigExperimental } from "./config/experimental"
 import { ConfigFormatter } from "./config/formatter"
+import { ConfigGoal } from "./config/goal"
 import { ConfigHooks } from "./config/hooks"
 import { ConfigLoop } from "./config/loop"
 import { ConfigLSP } from "./config/lsp"
@@ -95,6 +96,9 @@ export class Info extends Schema.Class<Info>("Config.Info")({
   }),
   verify: ConfigVerify.Info.pipe(Schema.optional).annotate({
     description: "Automatic verification pass before the agent may finish after mutating files",
+  }),
+  goal: ConfigGoal.Info.pipe(Schema.optional).annotate({
+    description: "Finish gate that verifies work against the durable session goal before the drain may end",
   }),
   hooks: ConfigHooks.Info.pipe(Schema.optional).annotate({
     description: "Deterministic lifecycle shell hooks (PreToolUse/PostToolUse/Stop/SessionStart) that run regardless of model instructions",
