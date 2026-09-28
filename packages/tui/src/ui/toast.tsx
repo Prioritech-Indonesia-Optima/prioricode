@@ -36,7 +36,7 @@ export function Toast() {
         gap={1}
         top={2}
         right={2}
-        maxWidth={Math.min(60, dimensions().width - 6)}
+        maxWidth={Math.max(1, Math.min(60, dimensions().width - 6))}
         zIndex={4000}
       >
         <For each={toast.queue()}>

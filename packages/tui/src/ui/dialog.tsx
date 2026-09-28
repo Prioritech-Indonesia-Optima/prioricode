@@ -56,7 +56,7 @@ export function Dialog(
           e.stopPropagation()
         }}
         width={width()}
-        maxWidth={dimensions().width - 2}
+        maxWidth={Math.max(20, dimensions().width - 2)}
         backgroundColor={theme.backgroundPanel}
         paddingTop={1}
       >

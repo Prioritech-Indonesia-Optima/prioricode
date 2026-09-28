@@ -335,7 +335,7 @@ export function Autocomplete(props: {
       // Add file options. Trust the order returned by fff (frecency, fuzzy
       // score, filename bonus, etc. are already factored in).
       if (!result.error && result.data) {
-        const width = props.anchor().width - 4
+        const width = Math.max(8, props.anchor().width - 4)
         options.push(
           ...result.data.data.map((item): AutocompleteOption => {
             const { filename, part } = createFilePart(
@@ -367,7 +367,7 @@ export function Autocomplete(props: {
     if (!store.visible || store.visible === "/") return []
 
     const options: AutocompleteOption[] = []
-    const width = props.anchor().width - 4
+    const width = Math.max(8, props.anchor().width - 4)
 
     for (const res of Object.values(sync.data.mcp_resource)) {
       options.push({
@@ -723,7 +723,7 @@ export function Autocomplete(props: {
     <box
       visible={store.visible !== false}
       position="absolute"
-      top={position().y - height()}
+      top={Math.max(0, position().y - height())}
       left={position().x}
       width={position().width}
       zIndex={100}

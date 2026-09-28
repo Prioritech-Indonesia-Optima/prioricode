@@ -639,10 +639,16 @@ function Prompt<const T extends Record<string, string>>(props: {
       borderColor={theme.warning}
       customBorderChars={SplitBorder.customBorderChars}
       {...(store.expanded
-        ? { top: dimensions().height * -1 + 1, bottom: 1, left: 2, right: 2, position: "absolute" }
+        ? {
+            top: Math.min(-1, dimensions().height * -1 + 1),
+            bottom: 1,
+            left: 2,
+            right: 2,
+            position: "absolute",
+          }
         : {
             top: 0,
-            maxHeight: 15,
+            maxHeight: Math.max(1, Math.min(15, Math.floor(dimensions().height / 2))),
             bottom: 0,
             left: 0,
             right: 0,

@@ -12,7 +12,7 @@ import { TuiConfigProvider } from "../../src/config"
 import { ThemeProvider } from "../../src/context/theme"
 import { Toast, ToastProvider, useToast, type ToastContext } from "../../src/ui/toast"
 
-async function harness() {
+async function harness(width = 80) {
   const rootDir = await tmpdir()
   const root = rootDir.path
   const state = path.join(root, "state")
@@ -42,7 +42,7 @@ async function harness() {
         </ArgsProvider>
       </TestTuiContexts>
     ),
-    { width: 80, height: 16 },
+    { width, height: 16 },
   )
   const start = Date.now()
   while (!toast) {
@@ -54,7 +54,7 @@ async function harness() {
 }
 
 test("toasts stack newest last, cap at four, and dismiss individually", async () => {
-  const { app, toast, cleanup } = await harness()
+  const { app, toast, cleanup } = await harness(80)
   try {
     await app.renderOnce()
     toast().show({ message: "first notice", variant: "info", duration: 60000 })
@@ -85,6 +85,24 @@ test("toasts stack newest last, cap at four, and dismiss individually", async ()
     await app.renderOnce()
     frame = app.captureCharFrame()
     expect(frame).not.toContain("fourth notice")
+  } finally {
+    app.renderer.destroy()
+    await cleanup()
+  }
+})
+
+test("toast survives a 10-column terminal without collapsing to vertical text", async () => {
+  const { app, toast, cleanup } = await harness(10)
+  try {
+    toast().show({ message: "hello world toast", variant: "info", duration: 60000 })
+    await app.renderOnce()
+    await Bun.sleep(30)
+    await app.renderOnce()
+    expect(toast().queue().length).toBe(1)
+    const frame = app.captureCharFrame()
+    // No single-character lines: the maxWidth floor keeps text horizontal.
+    const vertical = frame.split("\n").filter((line) => line.trim().length === 1 && /^[a-z]$/.test(line.trim()))
+    expect(vertical).toEqual([])
   } finally {
     app.renderer.destroy()
     await cleanup()
