@@ -1,6 +1,6 @@
 ---
 title: "PrioriCode"
-description: "The open source AI coding agent by Prioritech."
+description: "The open source AI coding agent by Prioritech — terminal-native, model-agnostic, fully hackable."
 ---
 
 <div className="flex items-center gap-3 mb-2">
@@ -10,20 +10,38 @@ description: "The open source AI coding agent by Prioritech."
 
 PrioriCode is the open source AI coding agent built by [Prioritech Indonesia Optima](https://prioritech.co.id). It lives in your terminal, reads your codebase, runs your tools, and ships your code — one conversation at a time.
 
+<Note>
+  PrioriCode is a fork of [OpenCode](https://github.com/anomalyco/opencode). It keeps the full core — TUI, agents, providers, plugins, MCP, GitHub integration — and adds features like cross-session coordination and tunable context compaction.
+</Note>
+
 <CardGroup cols={2}>
-  <Card title="Terminal-native" icon="terminal" href="/quickstart">
-    No IDE lock-in, no context switch. Run `prioricode` anywhere you already work.
+  <Card title="Quickstart" icon="rocket" href="/quickstart">
+    Install, connect a provider, and ship your first change in about two minutes.
   </Card>
-  <Card title="Model-agnostic" icon="microchip" href="/quickstart#connect-a-provider">
-    Anthropic, OpenAI, Google, local models — switch per session, bring your own keys.
+  <Card title="The terminal UI" icon="terminal" href="/using/tui">
+    @-mentions, slash commands, a command palette, and a leader key. The whole agent at your fingertips.
   </Card>
-  <Card title="Open source" icon="github" href="https://github.com/Prioritech-Indonesia-Optima/prioricode">
-    The full agent, tools, and context engine. Read it, fork it, ship it.
+  <Card title="Agents & permissions" icon="user-shield" href="/using/agents">
+    build, plan, and auto modes plus custom agents — with a permission system that keeps edits yours to approve.
+  </Card>
+  <Card title="Skills, MCP, plugins" icon="puzzle-piece" href="/extending/skills">
+    Teach the agent your workflows, wire in external tools, or write your own plugins.
+  </Card>
+  <Card title="Cross-session coordination" icon="comments" href="/using/coordination">
+    Several PrioriCode sessions on one repo can message each other, claim files, and avoid stepping on toes.
   </Card>
   <Card title="TypeScript SDK" icon="code" href="/sdk">
     Drive the agent programmatically from your apps, scripts, and CI.
   </Card>
 </CardGroup>
+
+## What you get
+
+- **Terminal-native.** Run `prioricode` anywhere you already work. No IDE lock-in — though [editors](/extending/editors) can host it too.
+- **Model-agnostic.** Anthropic, OpenAI, Google, Bedrock, OpenRouter, local endpoints — switch per session, bring your own keys. See [providers](/getting-started/providers).
+- **Safe by default.** Every edit, command, and network call goes through a [permission system](/using/permissions) you configure — or a sandbox you can require.
+- **Scriptable.** `prioricode run --format json` turns the agent into a pipe-friendly build step. See [headless mode](/using/headless).
+- **Open source.** Read it, fork it, ship it on [GitHub](https://github.com/Prioritech-Indonesia-Optima/prioricode).
 
 ## Install
 
@@ -36,4 +54,4 @@ PrioriCode is the open source AI coding agent built by [Prioritech Indonesia Opt
   </Tab>
 </Tabs>
 
-Or grab a binary from the [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases). Ready to go? Head to the [quickstart](/quickstart).
+Or grab a binary from the [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases), or read the full [installation guide](/getting-started/install). Ready to go? Head to the [quickstart](/quickstart).

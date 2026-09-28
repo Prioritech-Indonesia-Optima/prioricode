@@ -1,0 +1,137 @@
+---
+title: "Providers & models"
+description: "Connect Anthropic, OpenAI, Google, Bedrock, OpenRouter, or a local endpoint — login flows, API keys, model selection, and custom providers."
+---
+
+PrioriCode doesn't ship a brain; it borrows one. Any provider with a compatible API works — you point, it prompts.
+
+## The menu: `prioricode providers`
+
+```bash
+prioricode providers login        # interactive: pick provider, pick method, done
+prioricode providers login --provider anthropic
+prioricode providers list         # what's connected, and which env vars are set
+prioricode providers logout openai
+```
+
+`providers` is also aliased as `prioricode auth`. The login picker puts the hosted **PrioriCode** provider first (get a key at [prioricode.ai/auth](https://prioricode.ai/auth), or set `PRIORICODE_API_KEY`), then OpenAI, GitHub Copilot, Google, Anthropic, OpenRouter, and Vercel — each with the credentials they actually accept.
+
+Three ways a credential can arrive:
+
+<Tabs>
+  <Tab title="OAuth / device flow">
+    One browser hop, no copy-paste. Supported for ChatGPT-plan OpenAI logins, GitHub Copilot, xAI (device code), Azure, Cloudflare, DigitalOcean, Snowflake Cortex, and Modal — the login list marks these as `plugin` methods. Some flows offer **auto** (open a browser) or **code** (paste a code you got elsewhere) — handy on a headless box.
+
+    Refresh tokens and access tokens land in the credential store; PrioriCode renews them for you.
+  </Tab>
+  <Tab title="API key">
+    The classic. Pick a provider, paste the key, it's stored locally. Works for Anthropic, Google, OpenRouter, Mistral, Groq, xAI, Cerebras, and anything else with a key-based API.
+  </Tab>
+  <Tab title="Environment variable">
+    Skip the flow entirely: standard SDK env vars are detected automatically — `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, and the rest of each provider's `env` list from the model catalog. `prioricode providers list` shows which ones it currently sees under the **Environment** heading.
+
+    Bedrock reads the whole AWS chain (`AWS_PROFILE`, `AWS_REGION`, `AWS_BEARER_TOKEN_BEDROCK`, web-identity and container-credential files). Azure wants `AZURE_RESOURCE_NAME`; the Cloudflare AI Gateway wants `CLOUDFLARE_GATEWAY_ID`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_API_TOKEN`.
+  </Tab>
+</Tabs>
+
+### Enterprise gateways
+
+If your org sits behind an OpenAI-compatible proxy, point PrioriCode at it:
+
+```bash
+prioricode providers login https://llm.example.com
+```
+
+This fetches `<url>/.well-known/prioricode`, runs the advertised auth command, and stores the result — one URL can hand out auth *and* configuration (see [config files](/configure/files)).
+
+## Where credentials live
+
+Connected credentials are stored at `<data>/auth.json` — `~/.local/share/prioricode/auth.json` on Linux (XDG data dir; macOS/Windows follow the same convention) — with file mode `0600`. It holds your API keys and OAuth tokens. Treat it like an SSH key: don't share it, don't commit it, don't `--share` a session that contains one (see [sharing](/using/sharing)).
+
+## Picking models
+
+A model is `provider/model` — `anthropic/claude-sonnet-4-5`, `openai/gpt-5.4`, `google/gemini-2.5-pro`. The string splits on the **first** slash, so IDs that contain slashes (like Bedrock ARNs) still work.
+
+Where to set one:
+
+| Scope | How |
+| --- | --- |
+| Per prompt/session | `/models` in the TUI, or `--model provider/model` on the CLI |
+| Cycle favorites | `f2` / `shift+f2` cycle recently used models without leaving the prompt |
+| Every session | `model` in `prioricode.json` |
+| Cheap background work | `small_model` — used for titles and summaries; leave it unset and PrioriCode picks a fast small model from whichever providers you have |
+| Per agent | `agent.<name>.model` — e.g. plan mode on a thinker, subagents on something quick |
+
+```jsonc
+{
+  "model": "anthropic/claude-sonnet-4-5",
+  "small_model": "google/gemini-3.5-flash-lite",
+}
+```
+
+If nothing is configured, the first available provider wins, using a built-in priority list — currently `gpt-5`, `claude-sonnet-4`, `big-pickle`, `gemini-3-pro`. Reasonable defaults, then your keys.
+
+Some models expose **variants** — reasoning-effort levels like `high`, `minimal`, or thinking budgets. `/variants` cycles them in the TUI; `--variant high` sets one in `run` mode.
+
+### What's available?
+
+The model catalog (context limits, costs, attachments, reasoning flags) comes from a models.dev-compatible feed. Ask the CLI directly:
+
+```bash
+prioricode models                  # all: provider/model lines
+prioricode models anthropic        # one provider
+prioricode models --verbose        # full JSON metadata per model
+prioricode models --refresh        # re-fetch the catalog
+```
+
+## Custom & local providers
+
+OpenAI-compatible local servers (Ollama, vLLM, LM Studio, llama.cpp's server) and unlisted gateways fit through the `provider` config key. Declare the endpoint, the npm package to load, and the models you care about:
+
+```jsonc
+{
+  "provider": {
+    "ollama": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Ollama (local)",
+      "options": {
+        "baseURL": "http://127.0.0.1:11434/v1",
+      },
+      "models": {
+        "qwen3-coder": {
+          "name": "Qwen3 Coder",
+          "limit": { "context": 131072, "output": 16384 },
+        },
+      },
+    },
+  },
+}
+```
+
+Model entries are optional — the minimum is enough for PrioriCode to talk to it — but declaring `limit.context` keeps the compaction math honest. Selecting **Other** in `providers login` takes any provider ID but reminds you that the config block above is still required. Per-provider `options` (like `apiKey`, `baseURL`, timeouts, `setCacheKey`) and per-model `cost`/`limit`/`modalities`/`headers` are documented in the [config reference](/reference/config).
+
+To keep the picker tidy: `disabled_providers` and `enabled_providers` are allow/deny lists of provider IDs.
+
+## Troubleshooting
+
+- `/status` in the TUI shows what connected — and `/connect` jumps straight to the provider list when something's missing.
+- `prioricode providers list` distinguishes *stored* credentials from *environment* ones.
+- After changing provider config, start a new session; model metadata is loaded per session.
+- Full playbook on the [troubleshooting page](/support/troubleshooting).
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Configuration" icon="sliders" href="/configure/files">
+    `model`, `small_model`, `provider`, and the rest of the keys.
+  </Card>
+  <Card title="Agents" icon="robot" href="/using/agents">
+    Give each agent its own model.
+  </Card>
+  <Card title="Reference: providers" icon="table" href="/reference/providers">
+    Auth method and env vars per provider at a glance.
+  </Card>
+  <Card title="Enterprise" icon="building" href="/platforms/enterprise">
+    Gateways, managed config, and org-wide keys.
+  </Card>
+</CardGroup>

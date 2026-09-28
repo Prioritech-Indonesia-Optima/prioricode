@@ -1,9 +1,9 @@
 ---
 title: "Quickstart"
-description: "Install PrioriCode, connect a provider, and ship your first change."
+description: "Install PrioriCode, connect a provider, and ship your first change in about two minutes."
 ---
 
-Get from zero to a working agent in about two minutes.
+Two minutes, four steps, one shipped change. Longer version: see [installation](/getting-started/install) and [providers](/getting-started/providers).
 
 ## 1. Install
 
@@ -16,16 +16,16 @@ Get from zero to a working agent in about two minutes.
   </Tab>
 </Tabs>
 
-<Note>
-  Remove PrioriCode versions older than `0.1.x` before installing. The script respects `PRIORICODE_INSTALL_DIR`, then
-  `$XDG_BIN_DIR`, then `$HOME/bin`.
-</Note>
-
 Verify the install:
 
 ```bash
 prioricode --version
 ```
+
+<Note>
+  Remove PrioriCode versions older than `0.1.x` before installing. The script respects `PRIORICODE_INSTALL_DIR`, then
+  `$XDG_BIN_DIR`, then `$HOME/bin`. Nix, Docker, and manual options are on the [installation page](/getting-started/install).
+</Note>
 
 ## 2. Connect a provider
 
@@ -33,33 +33,53 @@ prioricode --version
 prioricode providers login
 ```
 
-Pick a provider and follow the prompts. PrioriCode also reads standard environment variables
-(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, ...) if you prefer to skip the login flow.
+Pick a provider and follow the prompts — some support full OAuth (ChatGPT plans, GitHub Copilot, xAI), the rest take an API key. PrioriCode also reads standard environment variables (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, …) if you'd rather skip the login flow. See [providers & models](/getting-started/providers).
 
-## 3. Run
-
-Open any project and start the agent:
+## 3. Open a session
 
 ```bash
 cd my-project
 prioricode
 ```
 
-The TUI opens with the Prioritech mark. Ask it anything — "fix the failing tests", "add retry
-logic to the HTTP client" — and it will read your codebase, propose changes, and run tools with
-your approval.
+The TUI opens. Ask it anything — "fix the failing tests", "add retry logic to the HTTP client" — and it will read your codebase, propose changes, and run commands, asking for permission as it goes.
+
+The first time it wants to edit a file you'll see a permission panel with the diff: **Allow once**, **Allow always**, or **Reject**. Your call, every time, until you say otherwise.
+
+## 4. Learn three moves
+
+That's enough to be productive. Everything below is optional, but it's where PrioriCode stops being a chatbot and starts being a coworker:
+
+| Move | Keys | What it does |
+| --- | --- | --- |
+| Switch agent | `tab` / `shift+tab`, or `/agents` | Cycle between `build` (full access), `plan` (read-only), and `auto` (unattended). |
+| Change model | `<leader>m` (leader is `ctrl+x`), `f2` | Pick a model, or cycle your recently used ones. |
+| Everything else | `ctrl+p`, `/help` | The command palette lists every command; `/help` shows keybindings. |
 
 <Tip>
-  Use <code>/help</code> inside the TUI to see available commands, and <code>tab</code> to switch agents.
+  Type `@` in the prompt to attach files from your project (with line ranges: `@src/api.ts#10-42`), and start an
+  empty prompt with `!` to run a plain shell command without involving the model.
 </Tip>
 
-## 4. Keep going
+## Keep going
 
 <CardGroup cols={2}>
-  <Card title="TypeScript SDK" icon="code" href="/sdk">
-    Embed the agent in your own apps and CI pipelines.
+  <Card title="The terminal UI" icon="terminal" href="/using/tui">
+    Sessions, attachments, shell mode, and the queue — the full TUI tour.
   </Card>
-  <Card title="GitHub" icon="github" href="https://github.com/Prioritech-Indonesia-Optima/prioricode">
-    Star the repo, file issues, and read the source.
+  <Card title="Teach it your project" icon="file-lines" href="/using/context">
+    `AGENTS.md`, instructions, and rules so the agent already knows your conventions.
+  </Card>
+  <Card title="Permissions" icon="user-shield" href="/using/permissions">
+    Decide exactly what the agent may touch — per tool, per pattern, per session.
+  </Card>
+  <Card title="Agents" icon="robot" href="/using/agents">
+    Built-in modes and custom agents, including subagents that fan out work.
+  </Card>
+  <Card title="Configuration" icon="sliders" href="/configure/files">
+    One `prioricode.json` (or `.jsonc`) to rule them all — plus themes in `tui.json`.
+  </Card>
+  <Card title="TypeScript SDK" icon="code-brackets" href="/sdk">
+    Embed the agent in your own apps and CI pipelines.
   </Card>
 </CardGroup>
