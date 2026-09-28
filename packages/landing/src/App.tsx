@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 import { ascii, Mark, tone } from "./brand"
 
 const GITHUB = "https://github.com/Prioritech-Indonesia-Optima/prioricode"
@@ -12,6 +12,84 @@ function useTheme() {
     } catch {}
   }, [theme])
   return [theme, () => setTheme((t) => (t === "dark" ? "light" : "dark"))] as const
+}
+
+function prefersReducedMotion() {
+  return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+}
+
+function useScrollProgress() {
+  const [p, setP] = useState(0)
+  useEffect(() => {
+    let raf = 0
+    const update = () => {
+      const h = document.documentElement
+      const max = h.scrollHeight - h.clientHeight
+      setP(max > 0 ? Math.min(1, Math.max(0, h.scrollTop / max)) : 0)
+    }
+    const onScroll = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(update)
+    }
+    update()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", onScroll)
+    return () => {
+      window.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", onScroll)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
+  return p
+}
+
+function useReveal<T extends HTMLElement>(threshold = 0.25) {
+  const ref = useRef<T | null>(null)
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (prefersReducedMotion()) {
+      setShown(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            setShown(true)
+            io.disconnect()
+          }
+        }
+      },
+      { threshold },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [threshold])
+  return [ref, shown] as const
+}
+
+function useParallax() {
+  const ref = useRef<SVGSVGElement | null>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || prefersReducedMotion()) return
+    let raf = 0
+    const onScroll = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        el.style.transform = `translateY(${window.scrollY * 0.18}px)`
+      })
+    }
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => {
+      window.removeEventListener("scroll", onScroll)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
+  return ref
 }
 
 function AsciiLogo() {
@@ -108,6 +186,79 @@ function Version() {
   )
 }
 
+function ProgressBar() {
+  const p = useScrollProgress()
+  return (
+    <div className="progress" aria-hidden="true">
+      <div className="progress-bar" style={{ transform: `scaleX(${p})` }} />
+    </div>
+  )
+}
+
+const TERM_LINES = [
+  "$ prioricode",
+  "> fix the failing auth test",
+  "  ✓ read 14 files",
+  "  ✓ ran 3 commands",
+  "  ✓ 2 files changed — tests green",
+]
+
+function TerminalMock() {
+  const [ref, shown] = useReveal<HTMLDivElement>(0.4)
+  const [line, setLine] = useState(0)
+  useEffect(() => {
+    if (!shown) return
+    if (prefersReducedMotion()) {
+      setLine(TERM_LINES.length)
+      return
+    }
+    const id = setInterval(() => setLine((n) => (n < TERM_LINES.length ? n + 1 : n)), 620)
+    return () => clearInterval(id)
+  }, [shown])
+  return (
+    <div className="term" ref={ref}>
+      <div className="term-bar">
+        <span />
+        <span />
+        <span />
+        <span className="term-title">prioricode — session</span>
+      </div>
+      <div className="term-body">
+        {TERM_LINES.slice(0, line).map((l, i) => (
+          <div className={"term-line" + (i === line - 1 ? " last" : "")} key={i}>
+            {l}
+            {i === line - 1 && line < TERM_LINES.length && <span className="caret" />}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Act({
+  id,
+  kicker,
+  title,
+  body,
+  children,
+}: {
+  id: string
+  kicker: string
+  title: string
+  body: string
+  children?: ReactNode
+}) {
+  const [ref, shown] = useReveal<HTMLElement>(0.2)
+  return (
+    <section id={id} className={"act" + (shown ? " in" : "")} ref={ref}>
+      <span className="act-kicker">{kicker}</span>
+      <h2>{title}</h2>
+      <p>{body}</p>
+      {children}
+    </section>
+  )
+}
+
 const FEATURES = [
   {
     title: "Terminal-native",
@@ -153,10 +304,11 @@ const FEATURES = [
 
 export function App() {
   const [theme, flip] = useTheme()
+  const cometRef = useParallax()
   return (
     <>
       <div className="backdrop" aria-hidden="true">
-        <svg className="comet" viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
+        <svg className="comet" ref={cometRef} viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
           <defs>
             <linearGradient id="cometGrad" x1="0" y1="0" x2="1" y2="1">
               <stop offset="0" stopColor="#f9b110" stopOpacity="0" />
@@ -168,6 +320,8 @@ export function App() {
           <path className="spark" d="M940 668 L948 692 L972 700 L948 708 L940 732 L932 708 L908 700 L932 692 Z" />
         </svg>
       </div>
+
+      <ProgressBar />
 
       <div className="wrap">
         <header>
@@ -245,14 +399,57 @@ export function App() {
             </div>
           </section>
 
-          <section className="features">
-            {FEATURES.map((f) => (
-              <div className="feature" key={f.title}>
-                <div className="icon">{f.icon}</div>
-                <h2>{f.title}</h2>
-                <p>{f.body}</p>
-              </div>
-            ))}
+          <Act
+            id="drag"
+            kicker="Act I — The drag"
+            title="Every context switch is a tax on momentum."
+            body="You bounce between the editor, the terminal, the browser, and the docs. Each jump snaps the thread. PrioriCode removes the bouncing: one place, the terminal, where the agent does the reading, the running, and the shipping."
+          />
+
+          <Act
+            id="agent"
+            kicker="Act II — The agent"
+            title="It reads your codebase, runs your tools, ships your code."
+            body="Point it at a task and watch it work: it explores the repo, executes the commands, and lands the change — a single conversation, no context switch."
+          >
+            <TerminalMock />
+          </Act>
+
+          <Act
+            id="freedom"
+            kicker="Act III — The freedom"
+            title="Your agent, your keys, no lock-in."
+            body="Model-agnostic and fully open source. Switch providers per session, read the whole engine, fork it, ship it. One command installs it."
+          >
+            <div className="features">
+              {FEATURES.map((f) => (
+                <div className="feature" key={f.title}>
+                  <div className="icon">{f.icon}</div>
+                  <h2>{f.title}</h2>
+                  <p>{f.body}</p>
+                </div>
+              ))}
+            </div>
+          </Act>
+
+          <section className="closing">
+            <h2>
+              Ready to code at the <span className="stroke">speed of a shooting star?</span>
+            </h2>
+            <div className="cta">
+              <a className="primary" href={`${GITHUB}/releases/latest`}>
+                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <path d="M8 1a.75.75 0 0 1 .75.75v6.44l1.97-1.97a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 1.06-1.06l1.97 1.97V1.75A.75.75 0 0 1 8 1ZM2 13.25A.75.75 0 0 1 2.75 12.5h10.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" />
+                </svg>
+                Download latest
+              </a>
+              <a href={GITHUB}>
+                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                  <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.53.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .75-.24 2.48.92a6.9 6.9 0 0 1 2.27-.3c.77 0 1.54.2 2.27.6 1.72-1.16 2.48-.92 2.48-.92.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+                </svg>
+                Star on GitHub
+              </a>
+            </div>
           </section>
         </main>
 
