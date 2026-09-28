@@ -256,7 +256,7 @@ posixOnly("hook engine", () => {
   scoped.live("project hooks only run when trusted", () =>
     Effect.gen(function* () {
       const hook = yield* Hook.Service
-      expect(hook.hasProjectHooks()).toBe(true)
+      expect(yield* hook.hasProjectHooks()).toBe(true)
       expect(yield* hook.stop({ ...base, allowProject: false })).toEqual({ _tag: "Allow" })
       expect(yield* hook.stop({ ...base, allowProject: true })).toMatchObject({ _tag: "Continue" })
     }),
@@ -272,8 +272,8 @@ posixOnly("hook engine", () => {
   onlyGlobal.live("global-only config reports no project hooks", () =>
     Effect.gen(function* () {
       const hook = yield* Hook.Service
-      expect(hook.hasProjectHooks()).toBe(false)
-      expect(hook.projectHash()).toBe(Hook.projectHookHash([]))
+      expect(yield* hook.hasProjectHooks()).toBe(false)
+      expect(yield* hook.projectHash()).toBe(Hook.projectHookHash([]))
     }),
   )
 

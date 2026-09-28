@@ -13,6 +13,7 @@ import {
 import { Cause, DateTime, Duration, Effect, FiberSet, Layer, Option, Semaphore, Stream } from "effect"
 import { AgentV2 } from "../../agent"
 import { Config } from "../../config"
+import { Hook } from "../../hook"
 import { Database } from "../../database/database"
 import { FSUtil } from "../../fs-util"
 import { AppProcess } from "../../process"
@@ -35,6 +36,8 @@ import { SessionCompaction } from "../compaction"
 import { SessionEvent } from "../event"
 import { SessionHistory } from "../history"
 import { SessionInput } from "../input"
+import { SessionMessage } from "../message"
+import { Prompt } from "../prompt"
 import { SessionSchema } from "../schema"
 import { SessionStore } from "../store"
 import { type RunError, Service } from "./index"
@@ -115,6 +118,8 @@ const layer = Layer.effect(
     const snapshots = yield* Snapshot.Service
     const fs = yield* FSUtil.Service
     const appProcess = yield* AppProcess.Service
+    const hooks = yield* Hook.Service
+    const permissions = yield* PermissionV2.Service
     const db = (yield* Database.Service).db
     const compaction = SessionCompaction.make({ events, llm, config: yield* config.entries() })
     const getSession = Effect.fn("SessionRunner.getSession")(function* (sessionID: SessionSchema.ID) {
@@ -176,6 +181,7 @@ const layer = Layer.effect(
       readonly guard: ToolGuard.Guard
       readonly gates: SessionGate.Pipeline
       readonly retry: ProviderRetry.Settings
+      readonly allowProjectHooks: boolean
     }
 
     class TurnTransitionError extends Error {
@@ -195,6 +201,9 @@ const layer = Layer.effect(
         concurrency: "unbounded",
       }).pipe(Effect.map(SystemContext.combine))
 
+    const hookResultText = (result: ToolResultValue) =>
+      typeof result.value === "string" ? result.value : JSON.stringify(result.value)
+
     const settlementBytes = (settlement: { readonly result: ToolResultValue; readonly output?: ToolOutput }) => {
       try {
         return Buffer.byteLength(JSON.stringify(settlement.output ?? settlement.result), "utf8")
@@ -205,12 +214,15 @@ const layer = Layer.effect(
 
     const warnedOutput = (
       settlement: { readonly result: ToolResultValue; readonly output?: ToolOutput },
-      warning: string,
+      ...notes: ReadonlyArray<string | undefined>
     ): ToolOutput | undefined => {
       if (settlement.result.type === "error") return settlement.output
       const base = settlement.output ?? ToolOutput.fromResultValue(settlement.result)
+      const additions = notes.filter((note): note is string => note !== undefined && note !== "")
       if (!base) return settlement.output
-      return { ...base, content: [...base.content, { type: "text", text: warning }] }
+      return additions.length === 0
+        ? base
+        : { ...base, content: [...base.content, ...additions.map((text) => ({ type: "text" as const, text }))] }
     }
 
     const runTurnAttempt = Effect.fn("SessionRunner.runTurn")(function* (
@@ -245,6 +257,14 @@ const layer = Layer.effect(
       const model = yield* models.resolve(session)
       const entries = yield* SessionHistory.entriesForRunner(db, session.id, system.baselineSeq)
       const context = entries.map((entry) => entry.message)
+      if (
+        context.length > 0 &&
+        !context.some((message) => message.type === "assistant") &&
+        !sessionStartFired.has(session.id)
+      ) {
+        sessionStartFired.add(session.id)
+        yield* hooks.sessionStart({ sessionID: session.id, allowProject: policy.allowProjectHooks })
+      }
       const isLastStep = agent.info?.steps !== undefined && currentStep >= agent.info.steps
       const toolMaterialization = isLastStep ? undefined : yield* tools.materialize(agent.info?.permissions)
       const promptCacheKey = /^ses_[0-9a-f]{64}$/.test(session.id) ? session.id.slice(4) : session.id
@@ -311,6 +331,23 @@ const layer = Layer.effect(
               )
               return
             }
+            const preHook = yield* hooks.preToolUse({
+              sessionID: session.id,
+              allowProject: policy.allowProjectHooks,
+              tool: event.name,
+              callID: event.id,
+              toolInput: event.input,
+            })
+            if (preHook._tag === "Block") {
+              yield* publish(
+                LLMEvent.toolResult({
+                  id: event.id,
+                  name: event.name,
+                  result: { type: "error", value: preHook.reason },
+                }),
+              )
+              return
+            }
             yield* Effect.uninterruptibleMask((restore) =>
               restore(
                 toolMaterialization.settle({
@@ -320,19 +357,33 @@ const layer = Layer.effect(
                   call: event,
                 }),
               ).pipe(
-                Effect.flatMap((settlement) => {
-                  policy.guard.recordOutput(settlementBytes(settlement))
-                  policy.gates.observe(event.name, settlement.result.type !== "error")
-                  return publish(
-                    LLMEvent.toolResult({
-                      id: event.id,
-                      name: event.name,
-                      result: settlement.result,
-                      output: verdict.type === "warn" ? warnedOutput(settlement, verdict.warning) : settlement.output,
-                    }),
-                    settlement.outputPaths ?? [],
-                  )
-                }),
+                Effect.flatMap((settlement) =>
+                  Effect.gen(function* () {
+                    policy.guard.recordOutput(settlementBytes(settlement))
+                    policy.gates.observe(event.name, settlement.result.type !== "error")
+                    const postHook = yield* hooks.postToolUse({
+                      sessionID: session.id,
+                      allowProject: policy.allowProjectHooks,
+                      tool: event.name,
+                      callID: event.id,
+                      toolInput: event.input,
+                      toolOutput: hookResultText(settlement.result),
+                    })
+                    return yield* publish(
+                      LLMEvent.toolResult({
+                        id: event.id,
+                        name: event.name,
+                        result: settlement.result,
+                        output: warnedOutput(
+                          settlement,
+                          verdict.type === "warn" ? verdict.warning : undefined,
+                          postHook._tag === "Note" ? postHook.note : undefined,
+                        ),
+                      }),
+                      settlement.outputPaths ?? [],
+                    )
+                  }),
+                ),
               ),
             ).pipe(FiberSet.run(toolFibers))
           }),
@@ -483,14 +534,61 @@ const layer = Layer.effect(
       )
     })
 
+    const sessionStartFired = new Set<string>()
+
+    const stopHookGate = (
+      sessionID: SessionSchema.ID,
+      allowProjectHooks: boolean,
+    ): SessionGate.Gate => {
+      let fired = false
+      return {
+        id: "stop-hook",
+        observe: () => {},
+        beforeFinish: () =>
+          hooks
+            .stop({ sessionID, allowProject: allowProjectHooks, stopHookActive: fired })
+            .pipe(
+              Effect.flatMap((outcome) => {
+                if (outcome._tag !== "Continue") return Effect.succeed(SessionGate.pass)
+                fired = true
+                return SessionInput.admit(db, events, {
+                  id: SessionMessage.ID.create(),
+                  sessionID,
+                  prompt: Prompt.make({
+                    text: [
+                      `A configured Stop hook prevented completion:\n${outcome.reason}`,
+                      "Address the hook's requirement before ending the task; the drain will not finish while it blocks.",
+                    ].join("\n"),
+                  }),
+                  delivery: "steer",
+                }).pipe(
+                  Effect.map(() => SessionGate.continued),
+                  Effect.catch(() => Effect.succeed(SessionGate.pass)),
+                )
+              }),
+            ),
+      }
+    }
+
     const run = Effect.fn("SessionRunner.run")(function* (input: {
       readonly sessionID: SessionSchema.ID
       readonly force: boolean
     }) {
       const entries = yield* config.entries()
       const loop = Config.latest(entries, "loop")
+      let allowProjectHooks = true
+      if (yield* hooks.hasProjectHooks()) {
+        const hash = yield* hooks.projectHash()
+        allowProjectHooks = yield* permissions
+          .assert({ sessionID: input.sessionID, action: "hooks.project", resources: [hash], save: [hash] })
+          .pipe(
+            Effect.map(() => true),
+            Effect.catch(() => Effect.succeed(false)),
+          )
+      }
       const gates = SessionGate.makePipeline({
         gates: [
+          stopHookGate(input.sessionID, allowProjectHooks),
           yield* SessionVerify.asGate({
             db,
             events,
@@ -507,6 +605,7 @@ const layer = Layer.effect(
         guard: ToolGuard.make(ToolGuard.settings(loop)),
         retry: ProviderRetry.settings(loop?.retry),
         gates,
+        allowProjectHooks,
       }
       const hasSteer = yield* SessionInput.hasPending(db, input.sessionID, "steer")
       const hasQueue = hasSteer ? false : yield* SessionInput.hasPending(db, input.sessionID, "queue")
@@ -555,5 +654,7 @@ export const node = makeLocationNode({
     Database.node,
     FSUtil.node,
     AppProcess.node,
+    Hook.node,
+    PermissionV2.node,
   ],
 })

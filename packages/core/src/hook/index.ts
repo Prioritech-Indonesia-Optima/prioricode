@@ -15,6 +15,9 @@
  *   plus PRIORICODE_HOOK_* passthrough; re-entrancy depth cap
  * - command as argv array spawns directly (Windows-safe); as a string runs via
  *   the configured shell; detached process groups are killed whole on timeout
+ * - project-scope hooks only run when the caller grants allowProject after a
+ *   one-time approval for the current project hook set (see projectHash)
+ * - config is re-read per event so edits apply without reopening the Location
  */
 export * as Hook from "./index"
 
@@ -89,8 +92,8 @@ export interface EventInput {
 }
 
 export interface Interface {
-  readonly hasProjectHooks: () => boolean
-  readonly projectHash: () => string
+  readonly hasProjectHooks: () => Effect.Effect<boolean>
+  readonly projectHash: () => Effect.Effect<string>
   readonly preToolUse: (input: EventInput) => Effect.Effect<PreOutcome>
   readonly postToolUse: (input: EventInput) => Effect.Effect<PostOutcome>
   readonly stop: (input: EventInput) => Effect.Effect<StopOutcome>
@@ -125,20 +128,25 @@ const layer = Layer.effect(
     const location = yield* Location.Service
     const appProcess = yield* AppProcess.Service
 
-    const documents = (yield* config.entries()).filter((entry): entry is Config.Document => entry.type === "document")
-    const hooks = ConfigHooks.merged(documents, location.project.directory)
-    const shell = Config.latest(documents, "shell")
+    const current = Effect.suspend(() => Effect.map(config.entries(), (entries) => {
+      const documents = entries.filter((entry): entry is Config.Document => entry.type === "document")
+      return {
+        hooks: ConfigHooks.merged(documents, location.project.directory),
+        shell: Config.latest(documents, "shell"),
+      }
+    }))
 
     // evaluated per call, not per layer: an escaping hook must die at the next
     // event without requiring the Location to reopen
     const depthBlocked = () => hookDepth() >= MAX_DEPTH
 
-    const run = (entry: ConfigHooks.Entry, event: ConfigHooks.Event, payload: Record<string, unknown>) => {
-      const input = {
-        hook_event_name: event,
-        cwd: location.directory,
-        ...payload,
-      }
+    const run = (
+      source: { readonly hooks: Record<ConfigHooks.Event, ConfigHooks.Entry[]>; readonly shell?: string },
+      entry: ConfigHooks.Entry,
+      event: ConfigHooks.Event,
+      payload: Record<string, unknown>,
+    ) => {
+      const input = { hook_event_name: event, cwd: location.directory, ...payload }
       const options = {
         cwd: location.directory,
         env: hookEnvironment(),
@@ -151,7 +159,7 @@ const layer = Layer.effect(
         typeof entry.command === "string"
           ? ChildProcess.make(entry.command, [], {
               ...options,
-              shell: shell ?? (process.platform === "win32" ? (process.env["COMSPEC"] ?? "cmd.exe") : "/bin/sh"),
+              shell: source.shell ?? (process.platform === "win32" ? (process.env["COMSPEC"] ?? "cmd.exe") : "/bin/sh"),
             })
           : ChildProcess.make(entry.command[0] ?? "", entry.command.slice(1), options)
       const seconds = entry.timeout ?? (event === "Stop" ? DEFAULT_STOP_TIMEOUT_SECONDS : DEFAULT_TOOL_TIMEOUT_SECONDS)
@@ -176,7 +184,11 @@ const layer = Layer.effect(
         )
     }
 
-    const matching = (event: ConfigHooks.Event, input: EventInput) =>
+    const matching = (
+      hooks: Record<ConfigHooks.Event, ConfigHooks.Entry[]>,
+      event: ConfigHooks.Event,
+      input: EventInput,
+    ) =>
       hooks[event].filter(
         (entry) =>
           (entry.scope === "global" || input.allowProject) &&
@@ -189,8 +201,9 @@ const layer = Layer.effect(
 
     const preToolUse = Effect.fn("Hook.preToolUse")(function* (input: EventInput) {
       if (depthBlocked()) return { _tag: "Allow" } as PreOutcome
-      for (const entry of matching("PreToolUse", input)) {
-        const result = yield* run(entry, "PreToolUse", {
+      const source = yield* current
+      for (const entry of matching(source.hooks, "PreToolUse", input)) {
+        const result = yield* run(source, entry, "PreToolUse", {
           session_id: input.sessionID,
           tool_name: input.tool ?? "",
           tool_input: input.toolInput ?? null,
@@ -207,11 +220,12 @@ const layer = Layer.effect(
 
     const postToolUse = Effect.fn("Hook.postToolUse")(function* (input: EventInput) {
       if (depthBlocked()) return { _tag: "Observed" } as PostOutcome
-      const entries = matching("PostToolUse", input)
+      const source = yield* current
+      const entries = matching(source.hooks, "PostToolUse", input)
       if (entries.length === 0) return { _tag: "Observed" } as PostOutcome
       const notes: string[] = []
       for (const entry of entries) {
-        const result = yield* run(entry, "PostToolUse", {
+        const result = yield* run(source, entry, "PostToolUse", {
           session_id: input.sessionID,
           tool_name: input.tool ?? "",
           tool_input: input.toolInput ?? null,
@@ -229,13 +243,15 @@ const layer = Layer.effect(
 
     const stop = Effect.fn("Hook.stop")(function* (input: EventInput) {
       if (depthBlocked()) return { _tag: "Allow" } as StopOutcome
+      const source = yield* current
       const reasons: string[] = []
-      for (const entry of matching("Stop", input)) {
-        const result = yield* run(entry, "Stop", {
+      for (const entry of matching(source.hooks, "Stop", input)) {
+        const result = yield* run(source, entry, "Stop", {
           session_id: input.sessionID,
           stop_hook_active: input.stopHookActive === true,
         })
-        if (result?.exitCode === 2) reasons.push(result.stderr || result.stdout || "Blocked by a configured Stop hook.")
+        if (result?.exitCode === 2)
+          reasons.push(result.stderr || result.stdout || "Blocked by a configured Stop hook.")
       }
       if (reasons.length === 0) return { _tag: "Allow" } as StopOutcome
       return { _tag: "Continue", reason: reasons.join("\n\n").slice(0, MAX_NOTE_CHARS * 2) } satisfies StopOutcome
@@ -243,21 +259,29 @@ const layer = Layer.effect(
 
     const sessionStart = Effect.fn("Hook.sessionStart")(function* (input: EventInput) {
       if (depthBlocked()) return
-      for (const entry of matching("SessionStart", input)) {
-        yield* run(entry, "SessionStart", { session_id: input.sessionID, source: "new" })
+      const source = yield* current
+      for (const entry of matching(source.hooks, "SessionStart", input)) {
+        yield* run(source, entry, "SessionStart", { session_id: input.sessionID, source: "new" })
       }
     })
 
     return Service.of({
       hasProjectHooks: () =>
-        hooks.PreToolUse.some((e) => e.scope === "project") ||
-        hooks.PostToolUse.some((e) => e.scope === "project") ||
-        hooks.Stop.some((e) => e.scope === "project") ||
-        hooks.SessionStart.some((e) => e.scope === "project"),
+        Effect.map(current, (source) =>
+          source.hooks.PreToolUse.some((entry) => entry.scope === "project") ||
+          source.hooks.PostToolUse.some((entry) => entry.scope === "project") ||
+          source.hooks.Stop.some((entry) => entry.scope === "project") ||
+          source.hooks.SessionStart.some((entry) => entry.scope === "project"),
+        ),
       projectHash: () =>
-        projectHookHash(
-          [...hooks.PreToolUse, ...hooks.PostToolUse, ...hooks.Stop, ...hooks.SessionStart].filter(
-            (entry) => entry.scope === "project",
+        Effect.map(current, (source) =>
+          projectHookHash(
+            [
+              ...source.hooks.PreToolUse,
+              ...source.hooks.PostToolUse,
+              ...source.hooks.Stop,
+              ...source.hooks.SessionStart,
+            ].filter((entry) => entry.scope === "project"),
           ),
         ),
       preToolUse,
@@ -276,8 +300,8 @@ export const node = makeLocationNode({
 
 export const noop = () =>
   Service.of({
-    hasProjectHooks: () => false,
-    projectHash: () => "none",
+    hasProjectHooks: () => Effect.succeed(false),
+    projectHash: () => Effect.succeed("none"),
     preToolUse: () => Effect.succeed({ _tag: "Allow" } as PreOutcome),
     postToolUse: () => Effect.succeed({ _tag: "Observed" } as PostOutcome),
     stop: () => Effect.succeed({ _tag: "Allow" } as StopOutcome),
