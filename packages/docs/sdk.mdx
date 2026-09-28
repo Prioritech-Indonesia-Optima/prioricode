@@ -53,7 +53,7 @@ await client.session.prompt({
 })
 ```
 
-The full request/response surface — `session.list`, messages, revert, fork, share (`POST`/`DELETE /session/{id}/share`), MCP, providers, TUI control — is in the **API** section of this tab, generated live from the spec with an interactive playground.
+The full request/response surface — `session.list`, messages, revert, fork, share (`POST`/`DELETE /session/{id}/share`), MCP, providers, TUI control — is defined by the OpenAPI spec served at [`/openapi.json`](/openapi.json); docs hosts that support it render that spec as an interactive playground.
 
 ## Listening: the event stream
 
@@ -93,12 +93,12 @@ That's the entire contract for policy engines: subscribe, evaluate the ask again
 
 ## Reference
 
-<Card title="API reference (OpenAPI playground)" icon="brackets-curly" href="/sdk">
-  The "API" group under this tab lists every endpoint with typed request/response schemas and live try-it.
+<Card title="OpenAPI specification" icon="brackets-curly" href="/openapi.json">
+  Every endpoint with typed request/response schemas — machine-readable, the same document the playground and SDK are generated from.
 </Card>
 
 <Note>
-  The spec at `packages/sdk/openapi.json` is generated — after HttpApi route changes, regenerate with `bun run build` in `packages/sdk/js` (repo convention). Docs never hand-copy endpoint tables; they link to the generated section.
+  The spec at `packages/sdk/openapi.json` is generated — after HttpApi route changes, regenerate with `bun run build` in `packages/sdk/js` (repo convention). Docs never hand-copy endpoint tables; they link to the spec.
   npm availability note: like the CLI, `@prioricode/sdk` publishes when registry credentials are configured; if npm 404s, vendor it from the repo.
 </Note>
 

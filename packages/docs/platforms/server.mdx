@@ -53,12 +53,12 @@ Basic auth covers every client: attach, `run --attach`, the SDK, the web UI. The
 
 ## Under the hood: one API, many clients
 
-The server speaks a documented HTTP API (163 endpoints — the full interactive surface: sessions, prompts, permissions, questions, providers, MCP auth, files, TUI control). Two event streams keep clients live:
+The server speaks a documented HTTP API — the full interactive surface: sessions, prompts, permissions, questions, providers, MCP auth, files, TUI control (every route is enumerated in the OpenAPI spec). Two event streams keep clients live:
 
 - `GET /global/event` — the firehose every official client (TUI, web, attach) subscribes to.
 - `GET /api/session/{sessionID}/event` — scoped to one session, for your own dashboards.
 
-Everything else is exactly what the TUI calls, so anything the interface can do is scriptable. The TypeScript SDK is the typed wrapper: see the [SDK page](/sdk) and the generated [API reference](/sdk#reference) in the SDK tab.
+Everything else is exactly what the TUI calls, so anything the interface can do is scriptable. The TypeScript SDK is the typed wrapper: see the [SDK page](/sdk) and the OpenAPI spec it is generated from.
 
 ```bash
 # a session, via plain curl, with auth

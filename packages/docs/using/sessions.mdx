@@ -49,7 +49,7 @@ Every model has a context window; long sessions fill it. When you approach the l
 /compact        # or /summarize — do it yourself, before you have to
 ```
 
-The `compaction` config block tunes the whole system — automatic vs manual, the threshold at which it fires, how much recent context survives (`tail_turns`, `preserve_recent_tokens`, `reserved`), and `prune`, which drops old tool output (the defaults keep everything; pruning saves tokens once a session gets chatty). Details in the [config reference](/reference/config#compaction).
+The `compaction` config block tunes the whole system — automatic vs manual, the threshold at which it fires, how much recent context survives (`tail_turns`, `preserve_recent_tokens`, `reserved`), and `prune`, which drops old tool output (the defaults keep everything; pruning saves tokens once a session gets chatty). Details in the [config reference](/reference/config).
 
 ## Sharing & export
 

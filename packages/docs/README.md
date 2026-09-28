@@ -25,6 +25,22 @@ Root content always tracks the latest line. When a new minor/major line ships: c
 `<line>/` folder (e.g. `v0.1/`), add a non-default `navigation.versions` entry pointing at those paths,
 and make the root the new default line. Snapshots are never edited afterwards.
 
+## Published mirror
+
+This directory is the canonical authoring source. The public site at `https://code.prioritech.co.id/docs/`
+is a VitePress mirror in the `prioricode-dist` repo (local clone: `prioricode-dist/` at this repo root),
+generated mechanically from these pages:
+
+```bash
+cd prioricode-dist/docs-src
+bun scripts/sync-from-source.mjs   # converts packages/docs MDX -> VitePress markdown + sidebar/banner
+bun run build                      # regenerates ../docs (commit source and output together)
+```
+
+Because of the port, pages must stay host-agnostic: no Mintlify-only references ("this tab", the playground
+as a UI), no endpoint/feature counts, and links as root-relative `/paths` (the sync script rewrites them;
+`/openapi.json` resolves from each site's public/symlinked spec).
+
 ## Development
 
 ```bash
