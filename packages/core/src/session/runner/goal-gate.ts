@@ -75,7 +75,7 @@ const parseVerdict = (text: string): Verdict | undefined => {
   return undefined
 }
 
-const transcriptOf = (deps: Dependencies) =>
+export const transcriptOf = (deps: Pick<Dependencies, "db" | "sessionID">) =>
   Effect.gen(function* () {
     const entries = yield* SessionHistory.entriesForRunner(deps.db, deps.sessionID, 0).pipe(
       Effect.catch(() => Effect.succeed([])),
