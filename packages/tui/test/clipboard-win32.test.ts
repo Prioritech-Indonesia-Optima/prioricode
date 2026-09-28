@@ -1,6 +1,18 @@
 import { expect, test } from "bun:test"
 import { inflateSync } from "node:zlib"
-import { dibToPng, encodePng, parseFileDrop, pickDroppedFile } from "../src/clipboard-win32"
+import { createWin32Clipboard, dibToPng, encodePng, parseFileDrop, pickDroppedFile } from "../src/clipboard-win32"
+
+// Runs only on Windows runners (CI's unit-windows matrix): proves the FFI
+// signatures actually bind against user32.dll/kernel32.dll there.
+test("win32 clipboard binds to native DLLs on Windows", () => {
+  if (process.platform !== "win32") return
+  const clipboard = createWin32Clipboard()
+  expect(clipboard).toBeDefined()
+  const image = clipboard!.readImage()
+  expect(image === undefined || image.mime.startsWith("image/")).toBeTrue()
+  expect([undefined, "string"]).toContain(typeof clipboard!.readText())
+  expect([undefined, "string"]).toContain(typeof clipboard!.readDroppedFile())
+})
 
 function crc32(data: Buffer): number {
   let c = 0xffffffff
