@@ -1,0 +1,87 @@
+---
+title: "Skills"
+description: "SKILL.md files that teach PrioriCode procedures on demand — format, discovery paths, remote skill packs, and how the model invokes skills."
+---
+
+A skill is a folder with a `SKILL.md` inside: instructions for one procedure, loaded *when needed* instead of permanently bloating every prompt. It's the difference between a poster on the wall and a laminated card the agent pulls out for the job.
+
+## The format
+
+```
+.prioricode/skills/release-checklist/
+├── SKILL.md
+├── changelog-template.md      ← sibling files: resources the skill points at
+└── scripts/verify.sh
+```
+
+```markdown
+---
+name: release-checklist
+description: Run the pre-release checklist for this repo — lint, typecheck, smoke-test, changelog.
+---
+
+# Release checklist
+
+1. Run `bun run lint` and `bun run typecheck`; stop on failure and report which one broke.
+2. Start `bun run dev`, exercise the changed flow, paste what you saw.
+3. Draft the changelog entry using [changelog-template.md](changelog-template.md) — read it with the Read tool.
+4. Never push to main yourself; leave that human.
+```
+
+Only two frontmatter fields are recognized: `name` (required) and `description`. The **description is the advertisement** — every skill's name+description lands in the system prompt, and the model decides from that one line whether to load the body. Make it say *when to use*, not just *what it is* (this repo's own skills are written that way; inspect `~/.local/share/prioricode` equivalents with `/skills`).
+
+The body becomes the loaded content, delivered with the skill's directory and a sampled file list, so relative references (`changelog-template.md`) resolve for the agent.
+
+## Where skills are found
+
+Scanned at startup, in this order:
+
+1. `~/.claude/skills/**/SKILL.md` and `~/.agents/skills/**/SKILL.md` — external skill homes, so skills from other agent ecosystems just work. Turn them off with `PRIORICODE_DISABLE_EXTERNAL_SKILLS=1` (or the broader `PRIORICODE_DISABLE_CLAUDE_CODE=1`).
+2. Every PrioriCode config directory — `~/.config/prioricode`, `~/.prioricode`, and `.prioricode/` from your cwd up to the worktree root — under `{skill,skills}/**/SKILL.md`.
+3. Extra paths from config:
+
+```jsonc
+{ "skills": { "paths": ["../shared-skills", "~/work/skills"] } }
+```
+
+4. Remote packs: `skills.urls` —
+
+```jsonc
+{ "skills": { "urls": ["https://skills.example.com/acme"] } }
+```
+
+Each URL must serve `index.json` shaped as `{ "skills": [{ "name", "files": ["SKILL.md", …], "version"? }] }`. Files are cached under the cache dir with atomic version-swaps, so an updated pack lands whole or not at all.
+
+Duplicate names: last one wins and you get a warning — intentional, project skills override global ones. A built-in skill (`customize-prioricode`, for editing PrioriCode's own config) ships with the binary and can be overridden on disk.
+
+## Using them
+
+- **`/skills`** in the TUI lists discovered skills and inserts the chosen one into your prompt.
+- **The model loads them itself** via the `skill` tool when a task matches a description — the tool injects that skill's full body into the conversation.
+- **Permissions:** skill loading asks under the `skill` permission with the skill name as pattern — `"skill": { "my-*": "allow", "*": "ask" }` tunes the noise.
+
+<Tip>
+  Skill bodies can include shell snippets as *instructions*, but the skill file itself is just prompt material — it runs nothing. Anything executable happens because the agent decides to run it, which means it still passes through [permissions](/using/permissions). That's by design.
+</Tip>
+
+## Skills vs commands vs agents
+
+| Want | Build |
+| --- | --- |
+| The agent should know *how* to do procedure X when relevant | skill |
+| *You* want to trigger a canned prompt by name | [custom command](/extending/commands) |
+| A whole different persona with its own tools/model | [custom agent](/using/agents) |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Context" icon="file-lines" href="/using/context">
+    AGENTS.md vs skills: standing knowledge vs on-demand procedures.
+  </Card>
+  <Card title="Config reference" icon="sliders" href="/reference/config">
+    `skills.paths` / `skills.urls`.
+  </Card>
+  <Card title="Tools reference" icon="screwdriver-wrench" href="/reference/tools">
+    The `skill` tool contract.
+  </Card>
+</CardGroup>

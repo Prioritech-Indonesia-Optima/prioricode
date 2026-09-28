@@ -1,0 +1,95 @@
+---
+title: "MCP servers"
+description: "Connect Model Context Protocol servers — local stdio and remote HTTP, OAuth, tool naming, resources, and the mcp CLI."
+---
+
+MCP is the USB-C of agent tooling: any server that speaks it hands PrioriCode extra tools — databases, browsers, design systems, internal APIs. This page is the whole wiring diagram.
+
+## Adding one
+
+The wizard knows the shapes:
+
+```bash
+prioricode mcp add linear --url https://mcp.linear.app/sse --header "X-Team=platform"
+prioricode mcp add fs -- npx -y @modelcontextprotocol/server-filesystem /path
+```
+
+Ask for it interactively (`prioricode mcp add`) and it walks you through project-vs-global scope (project = your `.prioricode/prioricode.json`, global = your config file — edits preserve comments) and local-vs-remote, with optional OAuth client credentials.
+
+Or write the config directly — `mcp` maps a name to a local or remote definition:
+
+```jsonc
+{
+  "mcp": {
+    "playwright": {
+      "type": "local",
+      "command": ["npx", "-y", "@playwright/mcp"],
+      "environment": { "BROWSER": "chromium" },
+      "cwd": ".",
+      "timeout": 20000
+    },
+    "linear": {
+      "type": "remote",
+      "url": "https://mcp.linear.app/sse",
+      "headers": { "X-Team": "platform" },
+      "oauth": { "scope": "read write" },
+      "enabled": true
+    }
+  }
+}
+```
+
+- **Local** servers spawn from the `command` array (argv; no shell), stdio transport, with `environment` merged over your process env.
+- **Remote** servers are tried as **Streamable HTTP first, then SSE** — you don't pick; both are spoken.
+- `enabled: false` keeps the definition but stays disconnected; a shorthand `{ "enabled": true }` entry can toggle a server defined in another file.
+
+## Managing them
+
+```bash
+prioricode mcp list                     # status per server: connected, disabled, needs_auth, failed…
+prioricode mcp auth [name]              # run the OAuth flow (browser or paste-code)
+prioricode mcp auth list                # which servers hold tokens
+prioricode mcp logout <name>            # forget tokens
+prioricode mcp debug <name>             # probe a remote: discovery, client registration, token state
+```
+
+In the TUI, `/mcps` is the live toggle board (`space` flips servers without editing JSON), and `/status` shows what's actually connected.
+
+## OAuth, for the remote ones
+
+Remote servers that want auth are auto-detected (unless you set `"oauth": false`). PrioriCode does the full dance — authorization-server discovery, **dynamic client registration** when no `clientId` is configured, browser consent, then a loopback callback to `http://127.0.0.1:19876/mcp/oauth/callback` (both port and redirect are overridable). Tokens + client registrations persist in `<data>/mcp-auth.json` and refresh quietly. If registration is required before auth can work, the status says `needs_client_registration` instead of failing silently.
+
+## What the agent actually sees
+
+- **Tools:** each server tool is exposed as `<server>_<tool>` (non-alphanumerics folded into `_`). That name is also its permission key — `playwright_navigate: allow` works like any other [tool permission](/using/permissions).
+- **Resources:** a server advertising resources gets three meta-tools — `list_mcp_resources`, `list_mcp_resource_templates`, `read_mcp_resource` — with `mcp:<server>:<uri>` permission patterns. Images and PDFs read through them arrive as attachments.
+- **Prompts:** exposed as `/name:mcp` slash commands.
+- **Liveness:** tool lists refresh when a server sends `changes`, without a restart.
+
+Server info gets a roots handshake too: PrioriCode advertises your project directory, so well-behaved servers scope their own file access to it.
+
+## Timeouts
+
+Three places to tune, in resolution order: live `mcp.<name>.timeout`, static config timeout, and the `experimental.mcp_timeout` catch-all. Remote connection and tool-listing have their own generous defaults; local stdio init is the one people notice on slow machines — set `timeout` explicitly for anything you start cold.
+
+<Note>
+  A misbehaving server is quarantined, not trusted: connect/list failures surface in `mcp list` status and `/status`, and calls fail with the server named. You're never silently downgraded to half a toolset.
+</Note>
+
+## Code mode (experimental)
+
+With `PRIORICODE_EXPERIMENTAL_CODE_MODE=1`, individual MCP tools stop appearing as separate tools. Instead the agent gets one `execute` tool for writing a small confined script that calls your MCP catalog programmatically (`server.tool(...)` with JSON values) — batching fan-out work without a model round-trip per call. Each embedded call still passes permission checks and hooks. Off by default; the catalog is MCP-specific and may change shape between releases.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Permissions" icon="user-shield" href="/using/permissions">
+    How MCP tools get gated, per name.
+  </Card>
+  <Card title="Plugins" icon="puzzle-piece" href="/extending/plugins">
+    Deeper extensions in TypeScript, no protocol round-trip.
+  </Card>
+  <Card title="Config reference" icon="sliders" href="/reference/config">
+    The full `mcp` key schema.
+  </Card>
+</CardGroup>

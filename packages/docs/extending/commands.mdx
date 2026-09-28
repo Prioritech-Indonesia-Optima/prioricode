@@ -1,0 +1,99 @@
+---
+title: "Custom slash commands"
+description: "Markdown commands for prioricode's slash palette — arguments ($1, $ARGUMENTS), embedded shell output, per-command model and agent, built-in /init and /review."
+---
+
+You type `/deploy staging`. PrioriCode expands a markdown template — with arguments slotted in and live shell output baked in — and sends it as a prompt. Custom commands are prompt macros: your team's repeated asks, named.
+
+## The file
+
+Drop markdown into `.prioricode/commands/` (project) or `~/.config/prioricode/commands/` (global) — both `command/` and `commands/` work, subfolders are fine, and the path becomes the command name (`git/commit.md` → `/commit` from that folder's scan root).
+
+```markdown
+---
+description: Summarize a branch's changes against main
+model: anthropic/claude-sonnet-4-5
+agent: plan
+---
+
+Summarize what `$1` changes relative to `main`.
+
+Current diff stat:
+!`git diff main...$1 --stat`
+
+Cover: features added, risks, and anything that looks accidentally included.
+```
+
+`/branch-summary feature/auth` then arrives as a fully-realized prompt.
+
+## Arguments
+
+| Pattern | Behavior |
+| --- | --- |
+| `$1`, `$2`, … | Positional arguments, split on whitespace (quote with `"…"`/`'…'` to group). The **highest-numbered** placeholder swallows the rest — `$3` in a two-`$` template gets everything after arg 2. |
+| `$ARGUMENTS` | The raw argument string, verbatim. |
+| *(neither present)* | Your arguments are appended after the template, separated by a blank line. |
+
+The palette shows the placeholders each command expects (they're harvested from the template), so `/deploy` tells you it wants `$1 $2` before you guess.
+
+## ``!`shell` `` interpolation
+
+Backtick expressions of the form ``!`command` `` run **before** the prompt is sent, and their stdout replaces them — the model sees the output, not the command. It's the difference between "check the test failures" and a prompt that already contains them:
+
+```markdown
+---
+description: Triage the latest failing tests
+---
+Here's what broke:
+!`bun test 2>&1 | tail -50`
+
+Rank by severity and start with any that touch `src/billing/`.
+```
+
+Shell commands run in your config `shell` (or `$SHELL`). This is prompt-time execution, so: keep it deterministic, keep it fast, and never write secrets into the output you're pasting into a session.
+
+## Frontmatter fields
+
+| Key | Effect |
+| --- | --- |
+| `description` | Shown in autocomplete |
+| `agent` | Run as this agent (its model/permissions apply) |
+| `model` | Override model for this command, `provider/model` |
+| `variant` | Model variant (reasoning effort) |
+| `subtask` | `true` → dispatch as a subagent task instead of steering the session |
+
+## From the CLI
+
+Commands are first-class in headless mode:
+
+```bash
+prioricode run --command branch-summary feature/auth -- "extra, quoted args work too"
+```
+
+That's what makes them CI-legitimate: a reviewed, versioned prompt template with argument hygiene, callable from a pipeline.
+
+## Built right alongside your own
+
+Two ship with the binary:
+
+- **`/init`** — guided `AGENTS.md` setup: PrioriCode studies the project and walks you into a good context file. The fastest way to bootstrap [project context](/using/context).
+- **`/review`** — review changes (commit, branch, or PR; defaults to uncommitted) as a subtask.
+
+[Skills](/extending/skills) also surface as commands, and remote MCP servers expose their prompts as `/name:mcp` entries — autocomplete labels the difference.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Skills" icon="wand-magic-sparkles" href="/extending/skills">
+    Procedures chosen by the agent instead of typed by you.
+  </Card>
+  <Card title="Agents" icon="robot" href="/using/agents">
+    The `agent`/`model` fields point at these.
+  </Card>
+  <Card title="Headless" icon="robot" href="/using/headless">
+    `run --command` in pipelines.
+  </Card>
+  <Card title="Slash-command reference" icon="list" href="/reference/slash-commands">
+    The full built-in list.
+  </Card>
+</CardGroup>

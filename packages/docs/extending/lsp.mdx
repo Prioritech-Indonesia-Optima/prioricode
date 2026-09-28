@@ -1,0 +1,69 @@
+---
+title: "LSP integration"
+description: "Language servers in prioricode — 38 built-in servers with auto-provisioning, custom server config, LSP diagnostics on edits, and the lsp tool."
+---
+
+PrioriCode reads errors the way you do — from the language server, not vibes. Every `edit` and `write` comes back with diagnostics from the real server, so the agent fixes type errors before you've switched windows.
+
+## What turns on automatically
+
+The LSP layer ships with server definitions for a wide set of languages, and servers are **provisioned on demand** — downloaded, `go install`'d, `gem install`'d, or resolved through npm depending on what the language wants. First use may download; after that it's cached.
+
+Coverage includes: TypeScript/deno (plus vue, svelte, astro), eslint/biome/oxlint, gopls, ruby-lsp, pyright (or **ty**, `PRIORICODE_EXPERIMENTAL_LSP_TY`), elixir-ls, zls, csharp/razor/fsharp, sourcekit-lsp, rust-analyzer, clangd, jdtls, kotlin-ls, yaml-ls, lua-ls, php intelephense, prisma, dart, ocaml-lsp, bash, terraform, texlab/tinymist, dockerfile, gleam, clojure-lsp, nixd, julials, haskell-language-server.
+
+Config is three-way:
+
+```jsonc
+{
+  // 1. off entirely
+  "lsp": false,
+
+  // 2. on (default posture): built-ins, auto-provisioned
+  "lsp": true,
+
+  // 3. surgical
+  "lsp": {
+    "typescript": { "disabled": true },
+    "my-linter": {
+      "command": ["my-lsp", "--stdio"],
+      "extensions": [".tl"],          // required for custom servers
+      "env": { "MODE": "check" },
+      "initialization": { "settings": { "strict": true } }
+    }
+  }
+}
+```
+
+Custom servers **must** declare `extensions` — that's how files get routed. Built-in entries accept the same fields to override spawn command, environment, or initialization options.
+
+## What it does for the agent
+
+- **`edit` / `write` responses end with the server's diagnostics** for the touched file — and after a write, up to five other open files' errors too (cross-file fallout is where agents get caught).
+- **`read` warms the server** so the first edit of a file you just read has instant diagnostics.
+- **`/status`** lists running servers per project; `prioricode debug lsp` shows the full inventory, `prioricode debug lsp diagnostics <file>` prints raw diagnostics.
+
+## The `lsp` tool (experimental)
+
+Off by default. With `PRIORICODE_EXPERIMENTAL_LSP_TOOL=1`, the model gets a navigation tool with nine operations — `goToDefinition`, `findReferences`, `hover`, `documentSymbol`, `workspaceSymbol`, `goToImplementation`, `prepareCallHierarchy`, `incomingCalls`, `outgoingCalls` — on `filePath` + 1-based `line`/`character`. It turns "who calls this?" from a grep hunt into a precise jump. If no server matches the file type, the tool says so rather than guessing.
+
+## Turning pieces off
+
+| Want | Switch |
+| --- | --- |
+| No language servers at all | `"lsp": false` |
+| No downloads (CI, airgapped, paranoia) | `PRIORICODE_DISABLE_LSP_DOWNLOAD=1` (servers still work if already present) |
+| One noisy server gone | `"lsp": { "<id>": { "disabled": true } }` |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Tools" icon="screwdriver-wrench" href="/reference/tools">
+    What edit/write return, in full.
+  </Card>
+  <Card title="Formatters" icon="broom" href="/extending/formatters">
+    Style after correctness.
+  </Card>
+  <Card title="Config reference" icon="sliders" href="/reference/config">
+    The `lsp` key.
+  </Card>
+</CardGroup>

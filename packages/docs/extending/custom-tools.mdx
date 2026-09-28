@@ -1,0 +1,67 @@
+---
+title: "Custom file tools"
+description: "Drop a .js/.ts file in {tool,tools}/ to add a tool to prioricode — description, args (Zod or JSON Schema), execute, permissions, and attachments."
+---
+
+The smallest extensibility unit that exists: one file, one tool. No package, no plugin declaration — PrioriCode scans your config directories and the tool appears.
+
+## The file
+
+`<config-dir>/tool/weather.ts` (or `tools/`; either project `.prioricode/` or global config):
+
+```ts
+import { z } from "zod"
+
+export default {
+  description: "Current temperature for a city",
+  args: {
+    city: z.string().describe("City name"),
+  },
+  async execute(args, ctx) {
+    const res = await fetch(`https://wttr.in/${encodeURIComponent(args.city)}?format=3`)
+    const text = await res.text()
+    return { title: args.city, output: text, metadata: { source: "wttr.in" } }
+  },
+}
+```
+
+The tool is named after the file (`weather`); additional named exports register as `weather_<export>`, so one file can ship a family of related tools. TypeScript runs through the same loader as everything else — dependencies resolve from the config directory's package context, so run `bun i` next to your tool files when you need libraries.
+
+## The contract
+
+- **`args`** — either a Zod shape (preferred; `describe()` lands in the model's schema) or plain JSON-Schema property objects (legacy: every declared property becomes required).
+- **`execute(args, ctx)`** — returns a string, or `{ title?, output, metadata?, attachments? }`. `output` is what the model reads; `title` is the row in the TUI; `metadata` survives into the session for later tools; `attachments` accepts image/file payloads the model can actually see.
+- **`ctx`** gives you `sessionID`, `messageID`, the current `agent`, the `directory`/`worktree`, an `abort` signal (user hit escape-twice), a `metadata()` setter for live progress while you work, and `ask()` to request a permission from inside.
+
+## Permissions, naturally
+
+The tool's name is its permission key. It asks before running (default `ask`), and your rules treat it like any built-in:
+
+```jsonc
+{ "permission": { "weather": "allow" } }
+```
+
+That's not a formality: your `execute` runs with your process's full privileges. Whatever you would guard in a shell script — paths, tokens, destructive verbs — guard here too.
+
+## When to use this instead of…
+
+| Better tool | When |
+| --- | --- |
+| **File tool (this)** | A single callable action; a weekend of glue; prototyping a capability. |
+| [Plugin](/extending/plugins) | Several tools, events, transforms, auth, or anything you'll publish. |
+| [MCP](/extending/mcp) | The capability should be shared across agent products, over a protocol, or in another language. |
+| [Custom command](/extending/commands) | The "capability" is really a better prompt, not code. |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Plugins" icon="puzzle-piece" href="/extending/plugins">
+    The same API, plus hooks over the whole session.
+  </Card>
+  <Card title="Tools reference" icon="screwdriver-wrench" href="/reference/tools">
+    How built-ins behave — your tool should behave likewise.
+  </Card>
+  <Card title="Permissions" icon="user-shield" href="/using/permissions">
+    Gating your tool by pattern.
+  </Card>
+</CardGroup>

@@ -1,0 +1,84 @@
+---
+title: "Editors & IDEs"
+description: "Use prioricode inside editors — the VS Code extension, ACP (Agent Client Protocol) for Zed/JetBrains/Neovim, terminal $EDITOR integration, and Zed selection context."
+---
+
+PrioriCode is happiest in a terminal — including the terminal *docked in your IDE*. But it also speaks two protocols that put it natively inside editors: ACP, and plain `$EDITOR` handoffs.
+
+## The terminal is the integration
+
+Run `prioricode` in VS Code, Cursor, Windsurf, VSCodium, or any IDE's integrated terminal and two things happen: PrioriCode detects the environment (the `TERM_PROGRAM`/`PRIORICODE_CALLER` handshake), and the companion extension can auto-install for tighter wiring.
+
+**The VS Code companion** (published as "PrioriCode" on the VS Code Marketplace and Open VSX) adds:
+
+| Keys | Action |
+| --- | --- |
+| `Cmd/Ctrl+Esc` | Open a PrioriCode terminal (focused / new) |
+| `Cmd/Ctrl+Option+K` | Insert the current file — with a line range, `@File#L37-42` — into the agent's prompt |
+
+It's context-aware: your selection and active file travel with the reference. If auto-install is restricted in your setup (enterprise policy, airgapped), grab `prioricode.vsix` from the releases and install manually.
+
+## ACP: PrioriCode as an editor-native agent
+
+```bash
+prioricode acp
+```
+
+That starts the **Agent Client Protocol** server over stdio (JSON-RPC, newline-delimited) — full agent inside the editor's own UI: sessions, tool renders, permission prompts, streamed updates, even usage/token counts. It's not a bridge to the TUI; it's a second face on the same server (which it spawns locally — network flags and `--cwd` apply).
+
+Register it wherever ACP is supported:
+
+<Tabs>
+  <Tab title="Zed">
+    ```json title="~/.config/zed/settings.json"
+    {
+      "agent_servers": {
+        "PrioriCode": {
+          "type": "custom",
+          "command": "prioricode",
+          "args": ["acp"]
+        }
+      }
+    }
+    ```
+
+    Open with the `agent: new thread` action. Zed's ACP registry may also offer a one-click entry when PrioriCode is listed there — same engine either way.
+  </Tab>
+  <Tab title="JetBrains">
+    ACP support lands in recent JetBrains IDEs via an `acp.json` agent definition pointing at the same `prioricode acp` command — see the ACP docs for your IDE build.
+  </Tab>
+  <Tab title="Neovim">
+    Plugins that speak ACP — `avante.nvim`, `CodeCompanion.nvim` — accept a `prioricode` agent config the same way; both take the `{ command = "prioricode", args = { "acp" } }` shape.
+  </Tab>
+</Tabs>
+
+Feature parity through ACP: built-in tools, custom tools/commands, MCP servers, `AGENTS.md` rules, formatters/LSP, and agents-with-permissions all apply — it's the same engine. One known gap: `/undo`/`/redo` (transcript time travel) isn't surfaced through the protocol.
+
+## `$EDITOR`, properly
+
+- **`/editor`** (or `<leader>e`) opens your `$VISUAL`/`$EDITOR` to compose the next prompt — multi-prompt-in-one-file territory. `EDITOR="code --wait"` works exactly like you'd expect.
+- **`/export`** pipes a transcript through the editor too, with toggles for thinking blocks, tool details, and metadata before the file lands.
+- **Zed selection context:** run the TUI with Zed open and it can pick up your current selection as attached context on submit (`clear` it via the editor-context command if it's not what you meant).
+
+## Which do I want?
+
+| Situation | Use |
+| --- | --- |
+| Live in a terminal already; want zero protocol | Integrated terminal + the VS Code extension |
+| Want the agent inside the editor's UI chrome | ACP (`prioricode acp`) |
+| Just need to compose a long prompt | `/editor` / `<leader>e` |
+| Neovim without ACP plugins | Terminal is genuinely the integration |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Terminal UI" icon="terminal" href="/using/tui">
+    The full keyboard-driven experience ACP competes with.
+  </Card>
+  <Card title="Server & remote" icon="network" href="/platforms/server">
+    ACP's sibling: the same server over HTTP.
+  </Card>
+  <Card title="Keybinds" icon="keyboard" href="/reference/keybinds">
+    The terminal-side chord table — every TUI default, rebindable.
+  </Card>
+</CardGroup>

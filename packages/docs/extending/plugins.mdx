@@ -1,0 +1,123 @@
+---
+title: "Plugins"
+description: "TypeScript plugins for prioricode — v1 Hooks API and v2 define(), custom tools, auth and provider extensions, TUI plugins, install and config."
+---
+
+A plugin is TypeScript running *inside* the agent — not beside it. It can add tools, register auth flows, rewrite prompts, decorate the TUI, or watch every event. When hooks are too far from the process and forks are too far from upstream, this is the layer.
+
+## Install a plugin
+
+```bash
+prioricode plugin @acme/prioricode-notify          # into project config
+prioricode plugin acme-theme --global               # into global config
+```
+
+The command installs the npm package where PrioriCode can resolve it and adds it to the `plugin` config list (manifest expectations: an `./tui` or `./server` export, `package.json` main, or the legacy `prioricode-themes` list). `--force` reinstalls.
+
+Or declare it yourself — `plugin` takes npm specs (with options), local paths, or URLs:
+
+```jsonc
+{
+  "plugin": [
+    "@acme/prioricode-tokens",
+    ["@acme/audit", { "endpoint": "https://audit.acme.dev" }],
+    "file:./plugins/my-local-experiment.ts"
+  ]
+}
+```
+
+Anything in `{plugin,plugins}/*.ts|js` inside a config directory is auto-discovered — no install step, perfect for development. Specs resolve relative to the config file that declares them.
+
+**Mechanics that keep you safe:** npm plugins install on demand (bun's package cache), `engines.prioricode` in the plugin's package.json gates version compatibility, loading is sequential so hook order is deterministic, and failures surface as visible session errors rather than silent missing features. `--pure` runs the CLI without external plugins — the first thing to try when a plugin is being bad.
+
+## The v1 API
+
+A plugin is an async function; the runtime hands it a client and context, you return hooks:
+
+```ts
+import type { Plugin } from "@prioricode/plugin"
+import { z } from "zod"
+
+export const NotifyComplete: Plugin = async ({ client, project, directory, $ }) => {
+  return {
+    // Custom tool, typed with Zod, permissioned by its name
+    tool: {
+      changelog: {
+        description: "Draft a changelog entry from commits since a tag",
+        args: { tag: z.string(), limit: z.number().optional() },
+        async execute(args, ctx) {
+          const log = await $`git log ${args.tag}..HEAD --oneline`.text()
+          return { title: "Changelog draft", output: log }
+        },
+      },
+    },
+
+    // React to events — session.updated, message.part.updated, permission.*, …
+    // (every event on the bus is enumerable through the SDK)
+    event: async ({ event }) => {
+      if (event.type === "session.updated") {
+        await fetch("https://ntfy.acme.dev/agent-progress", {
+          method: "POST",
+          body: JSON.stringify(event.properties),
+        })
+      }
+    },
+  }
+}
+```
+
+`args` accepts Zod shapes (converted to JSON Schema at the boundary) or plain JSON-Schema entries. `execute` returns a string or `{title, output, metadata?, attachments?}`; the context gives `sessionID`, `agent`, an `abort` signal, `metadata()` for live progress, and `ask()` to request permissions from inside the tool.
+
+The hook surface, by name: `config`, `event`, `auth`, `provider`, `tool`, `chat.message`, `chat.params` (temperature/topP/maxOutputTokens), `chat.headers`, `permission.ask` (flip a decision before you see it), `command.execute.before`, `tool.execute.before` (rewrite args or `output.block` to veto), `tool.execute.after`, `shell.env` (inject env into every bash call), `tool.definition` (rewrite a tool's description/params), plus `experimental.*` transforms for message/system-prompt rewriting, small-model routing, compaction, and direct text completion.
+
+## The v2 API
+
+`define()` with a setup callback and typed domain contexts:
+
+```ts
+import { define } from "@prioricode/plugin/v2/promise"
+
+export default define({
+  id: "acme-commands",
+  setup(context) {
+    context.command.register({
+      name: "acme-triage",
+      description: "triage the backlog",
+      template: "List open issues touching $ARGUMENTS and rank by blast radius.",
+    })
+    context.agent.register({ name: "auditor", mode: "subagent", /* … */ })
+    // domains: agent, aisdk, catalog, command, integration, plugin, reference, skill
+  },
+})
+```
+
+v2 is the actively-growing side (register + remove + reload per domain); v1 remains fully supported and is what most published plugins use today.
+
+## TUI plugins
+
+Plugins can ship a `./tui` export that renders into the terminal interface: new panels/commands and custom themes (installed themes land in the config dir's `themes/`, exactly like hand-written ones — see [themes](/configure/tui)). The theme catalogs you see in `/themes` are, mechanically, just this.
+
+## What ships built-in
+
+The binary carries its own plugins for provider auth (OpenAI/Codex OAuth, Copilot, xAI, Azure, Cloudflare, DigitalOcean, Snowflake, Modal, GitLab, Cerebras, the hosted PrioriCode provider and more). Two switches, for completeness: `PRIORICODE_DISABLE_DEFAULT_PLUGINS=1` unregisters the built-in auth plugins; `PRIORICODE_PURE=1` / `--pure` skips everything external.
+
+<Note>
+  The `@prioricode/plugin` package is auto-installed into `.prioricode/` so local file plugins can `import type` from it without you managing node_modules. Its types are the API contract — when in doubt, read them; they're the shortest path to "what's actually available".
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Hooks" icon="net-wide" href="/extending/hooks">
+    Script-level events, zero TypeScript.
+  </Card>
+  <Card title="Custom tools" icon="screwdriver-wrench" href="/extending/custom-tools">
+    One file, no plugin wrapper.
+  </Card>
+  <Card title="MCP" icon="plug" href="/extending/mcp">
+    Tools over a protocol instead of in-process.
+  </Card>
+  <Card title="SDK" icon="code" href="/sdk">
+    Driving the server from outside entirely.
+  </Card>
+</CardGroup>
