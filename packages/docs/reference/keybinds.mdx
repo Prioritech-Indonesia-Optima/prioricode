@@ -1,0 +1,144 @@
+---
+title: "Keybindings"
+description: "Every TUI keybind id with its default chord — leader, sessions, models, input editing, dialogs, diff viewer, which-key — plus override syntax for tui.json."
+---
+
+All rows below are the **defaults** from the keybind registry; override any by its id in `tui.json` → `keybinds` (see [themes & keybindings](/configure/tui) for syntax, and the `Unrecognized keybind…` guard for typos). `<leader>` = `ctrl+x` by default (`leader` id, `leader_timeout` 2000 ms). `"none"` = shipped unbound; `"false"`/`"none"` = you unbinding it.
+
+## Leader & app
+
+| Id | Default | Does |
+| --- | --- | --- |
+| `leader` | `ctrl+x` | leader prefix for all chords |
+| `app_exit` | `ctrl+c`, `ctrl+d`, `<leader>q` | exit the app |
+| `command_list` | `ctrl+p` | command palette |
+| `help_show` | none | open help (`/help`) |
+| `docs_open` | none | open docs |
+| `app_debug`, `app_console`, `app_heap_snapshot` | none | debug panel / console / heap snapshot |
+| `app_toggle_animations` / `_file_context` / `_diffwrap` / `_paste_summary` / `_session_directory_filter` | none | display toggles |
+| `editor_open` | `<leader>e` | external editor (`$VISUAL`/`$EDITOR`) |
+| `theme_list` | `<leader>t` | theme picker |
+| `theme_switch_mode` / `theme_mode_lock` | none | light/dark, lock |
+| `sidebar_toggle` | `<leader>b` | sidebar |
+| `scrollbar_toggle` | none | session scrollbar |
+| `status_view` | `<leader>s` | status dialog |
+| `debug_view` | none | debug info |
+| `terminal_suspend` | `ctrl+z` | suspend (non-Windows) |
+| `terminal_title_toggle` | none | terminal title writes |
+| `tips_toggle` | `<leader>h` | tips on home screen |
+| `plugin_manager` / `plugin_install` | none | plugin dialogs |
+
+## Diff viewer (`/diff`)
+
+| Id | Default |
+| --- | --- |
+| `diff_close` | `escape`, `q` |
+| `diff_toggle` | `enter`, `space` |
+| `diff_expand` / `diff_collapse` | `right` / `left` |
+| `diff_expand_all` | `E` |
+| `diff_switch_focus` | `tab` |
+| `diff_next_hunk` / `diff_previous_hunk` | `]` / `[` |
+| `diff_next_file` / `diff_previous_file` | `n` / `p` |
+| `diff_toggle_file_tree` | `b` |
+| `diff_single_patch` | `s` |
+| `diff_switch_source` | `d` |
+| `diff_toggle_view` | `v` (split/unified) |
+| `diff_help` | `?` |
+
+## Sessions
+
+| Id | Default | Does |
+| --- | --- | --- |
+| `session_new` | `<leader>n` | new session |
+| `session_list` | `<leader>l` | session list |
+| `session_timeline` | `<leader>g` | timeline |
+| `session_quick_switch_1..9` | `<leader>1`…`<leader>9` | quick slots |
+| `session_pin_toggle` | `ctrl+f` | pin in list |
+| `session_rename` / `session_delete` | `ctrl+r` / `ctrl+d` | list dialogs |
+| `session_interrupt` | `escape` | interrupt (twice within 5 s aborts) |
+| `session_background` | `ctrl+b` | background running subagents |
+| `session_compact` | `<leader>c` | compact |
+| `session_queued_prompts` | `<leader>q` | manage queued prompts |
+| `session_export` / `session_copy` / `session_move` | `<leader>x` / none / none | export, copy transcript, move |
+| `session_share` / `session_unshare` / `session_fork` | none | `/share` `/unshare` `/fork` equivalents |
+| `session_child_first` / `_cycle` / `_cycle_reverse` / `session_parent` | `<leader>down` / `right` / `left` / `up` | subagent-session navigation |
+| `session_toggle_timestamps` / `_generic_tool_output` | none | display toggles |
+| `messages_copy` | `<leader>y` | copy last assistant message |
+| `messages_undo` / `messages_redo` | `<leader>u` / `<leader>r` | undo/redo |
+| `messages_toggle_conceal` | `<leader>h` | hide code blocks |
+| `messages_page_up` / `_page_down` | `pageup` / `pagedown`, `ctrl+alt+b` / `ctrl+alt+f` | scroll |
+| `messages_line_up` / `_line_down` | `ctrl+alt+y` / `ctrl+alt+e` | |
+| `messages_half_page_up` / `_half_page_down` | `ctrl+alt+u` / `ctrl+alt+d` | |
+| `messages_first` / `messages_last` | `ctrl+g`, `home` / `ctrl+alt+g`, `end` | jump |
+| `messages_next` / `messages_previous` / `messages_last_user` | none | message jumps |
+| `tool_details` / `display_thinking` | none | toggle tool details / thinking |
+| `stash_delete` | `ctrl+d` | delete stash entry |
+
+## Models, agents, variants
+
+| Id | Default | Does |
+| --- | --- | --- |
+| `model_list` | `<leader>m` | model picker |
+| `model_cycle_recent` / `_reverse` | `f2` / `shift+f2` | cycle recent models |
+| `model_cycle_favorite` / `_reverse` | none | cycle favorites |
+| `model_provider_list` / `model_favorite_toggle` / `model_config_edit` | `ctrl+a` / `ctrl+f` / `ctrl+s` | inside model dialogs |
+| `agent_list` | `<leader>a` | agents dialog |
+| `agent_cycle` / `agent_cycle_reverse` | `tab` / `shift+tab` | switch primary agent |
+| `variant_cycle` / `variant_list` | `ctrl+t` / none | model variants |
+| `mcp_list` / `provider_connect` / `console_org_switch` | none | `/mcps`, `/connect`, `/org` |
+
+## Prompt & input editing
+
+| Id | Default | Does |
+| --- | --- | --- |
+| `input_submit` | `return` | submit |
+| `input_newline` | `shift+return`, `ctrl+return`, `alt+return`, `ctrl+j` | newline |
+| `input_clear` | `ctrl+c` | clear input |
+| `input_paste` | `ctrl+v` (`preventDefault: false`) | clipboard image/text/file |
+| move/select | `left`/`right`/`ctrl+b`/`ctrl+f`, `shift+*` select, `home`/`end`+`shift`, `alt+a`/`alt+e` visual-line | cursor |
+| word ops | `alt+f`/`alt+b` (+`ctrl+*`), `alt+shift+f`/`b` select | word motion |
+| delete | `ctrl+w`/`ctrl+backspace`/`alt+backspace` word-back, `alt+d`/`alt+delete`/`ctrl+delete` word-fwd, `ctrl+k`/`ctrl+u` to end/start, `ctrl+shift+d` line | erase |
+| `input_undo` / `input_redo` | `ctrl+-`, `super+z` / `ctrl+.`, `super+shift+z` | composer undo |
+| `input_select_all` | `super+a` | select all |
+| `input_backspace` / `input_delete` | `backspace` / `ctrl+d`, `delete` | basic |
+| `history_previous` / `history_next` | `up` / `down` | prompt history |
+| `prompt_submit`, `prompt_skills`, `prompt_stash`/`_pop`/`_list`, `prompt_editor_context_clear`, `workspace_set` | none | palette-triggered |
+| `dialog.select.prev` / `next` / `page_up` / `page_down` / `home` / `end` / `submit` | `up`,`ctrl+p` / `down`,`ctrl+n` / `pageup` / `pagedown` / `home` / `end` / `return` | list dialogs |
+| `dialog.prompt.submit` | `return` | prompt dialogs |
+| `dialog.mcp.toggle` / `plugins.toggle` / `dialog.plugins.install` | `space` / `space` / `shift+i` | toggles, install |
+| `dialog.move_session.new` / `_delete` / `_refresh` | `ctrl+m` / `ctrl+d` / `ctrl+r` | move-session dialog |
+| `prompt.autocomplete.prev` / `next` / `select` / `complete` / `hide` | `up`,`ctrl+p` / `down`,`ctrl+n` / `return` / `tab` / `escape` | `@`-mention and slash completion |
+
+## Which-key panel
+
+| Id | Default |
+| --- | --- |
+| `which_key_toggle` | `ctrl+alt+k` |
+| `which_key_layout_toggle` | `ctrl+alt+shift+k` |
+| `which_key_pending_toggle` | `ctrl+alt+shift+p` |
+| `which_key_group_previous` / `_next` | `ctrl+alt+left`,`[` / `ctrl+alt+right`,`]` |
+| `which_key_scroll_up` / `_down` | `ctrl+alt+up`,`p` / `ctrl+alt+down`,`n` |
+| `which_key_page_up` / `_down` / `home` / `end` | `ctrl+alt+pageup` / `pagedown` / `home` / `end` |
+
+## Fixed UI keys (not configurable)
+
+| Surface | Keys |
+| --- | --- |
+| Permission panel | `←`/`→`/`h`/`l` choose, `return` confirm, `escape` reject, `ctrl+f` fullscreen (`permission.prompt.fullscreen` is configurable) |
+| Question panel | `1`–`9` pick options, `j`/`k`/`↑`/`↓` move, `tab`/`←`/`→`/`h`/`l` switch questions, `return` submit, `escape` reject |
+| Shell mode | `!` on empty input enters, `escape`/leading-backspace exits |
+| Bare exits | typing `exit`, `quit`, `:q` as a whole prompt exits |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="TUI" icon="terminal" href="/using/tui">
+    What the keys operate on.
+  </Card>
+  <Card title="tui.json" icon="paintbrush" href="/configure/tui">
+    Override syntax with examples.
+  </Card>
+  <Card title="Slash commands" icon="bolt" href="/reference/slash-commands">
+    The typed equivalents.
+  </Card>
+</CardGroup>

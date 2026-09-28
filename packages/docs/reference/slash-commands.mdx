@@ -1,0 +1,82 @@
+---
+title: "Slash commands"
+description: "Every slash command in the prioricode TUI with aliases — app, session, prompt-scope commands, built-in /init and /review, and custom command lookup."
+---
+
+Typed at the start of a prompt line, `/name args…`. Aliases route through the same autocomplete (`/mo` finds `/models` on purpose). Commands are grouped by where they live: app-level (work anywhere), session-level (need a session open), and prompt-level (shape the next message).
+
+## App-level
+
+| Command | Aliases | Does |
+| --- | --- | --- |
+| `/sessions` | `/resume`, `/continue` | session picker — resume, pin (`ctrl+f`), rename (`ctrl+r`), delete (`ctrl+d`) |
+| `/new` | `/clear` | start a fresh session |
+| `/models` | `/mo` | model picker |
+| `/agents` | — | primary-agent picker |
+| `/permission` | `/permissions` | session permission mode: default / ask-first / always-allow |
+| `/variants` | — | model variant picker (hidden when the model has none) |
+| `/mcps` | — | toggle MCP servers (space flips entries) |
+| `/connect` | — | provider connection list |
+| `/org` | `/orgs`, `/switch-org` | switch console org (shown with 2+ orgs) |
+| `/workspaces` | — | *(experimental, flag-gated)* manage workspaces |
+| `/status` | — | inventory: providers, MCP, LSP, formatters, plugins |
+| `/coordination` | — | cross-session roster and inbox |
+| `/settings` | — | settings UI (writes `tui.json`) |
+| `/themes` | — | theme picker |
+| `/debug` | — | debug info dialog |
+| `/help` | — | keybinding help |
+| `/exit` | `/quit`, `/q` | leave (also: bare `exit`, `quit`, or `:q` as the whole prompt) |
+
+## Session-level
+
+| Command | Aliases | Does |
+| --- | --- | --- |
+| `/share` | — | share/copy link (needs consent once; hidden if `share: disabled`) |
+| `/unshare` | — | delete the share |
+| `/rename` | — | retitle the session |
+| `/timeline` | — | jump to any message |
+| `/fork` | — | fork from a timeline message |
+| `/compact` | `/summarize` | summarize history now |
+| `/undo` | — | revert last user message (+ restore it into the prompt) |
+| `/redo` | — | step reverts forward |
+| `/timestamps` | `/toggle-timestamps` | show/hide message timestamps |
+| `/thinking` | `/toggle-thinking` | cycle thinking-block visibility |
+| `/copy` | — | transcript to clipboard |
+| `/export` | — | transcript to file/editor (thinking, tool details, metadata toggles) |
+| `/diff` | — | open the diff viewer |
+
+## Prompt-level
+
+| Command | Does |
+| --- | --- |
+| `/editor` | compose next message in `$EDITOR` (expands pasted-text parts, re-syncs attachments) |
+| `/skills` | skill picker — inserts `/skill-name` into the prompt |
+| `/warp` | *(experimental)* change the session's workspace |
+| `/move` | relocate the session to another project directory |
+
+## Built-ins (server-side prompt commands)
+
+| Command | Does |
+| --- | --- |
+| `/init` | guided AGENTS.md setup — studies the project, writes the context file with you |
+| `/review` | review changes (commit / branch / PR; default: uncommitted) — runs as a subtask |
+
+Plus anything from your `command` config / `{command,commands}/*.md` files ([custom commands](/extending/commands)), skill names (see `/skills`), and remote MCP prompts surfaced as `/name:mcp`.
+
+## Mini mode
+
+`prioricode --mini` ships the minimal set: `/editor`, `/new`, `/exit`.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Terminal UI" icon="terminal" href="/using/tui">
+    What they feel like in use.
+  </Card>
+  <Card title="Keybinds" icon="keyboard" href="/reference/keybinds">
+    The non-slash path to the same commands.
+  </Card>
+  <Card title="Custom commands" icon="bolt" href="/extending/commands">
+    Add rows to the bottom of this table.
+  </Card>
+</CardGroup>

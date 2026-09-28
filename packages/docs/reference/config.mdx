@@ -1,0 +1,155 @@
+---
+title: "Config reference"
+description: "Every prioricode.json and tui.json configuration key with type, default, and behavior — agent, provider, mcp, permission, compaction, bashSandbox, hooks, skills, and more."
+---
+
+Product config: `prioricode.json` / `prioricode.jsonc` (merge rules on [this page](/configure/files)). Interface config: `tui.json` (on [this page](/configure/tui)). Types in shorthand: `bool`, `int`, `str`, `str[]`. Model refs are `"provider/model"` strings.
+
+## Top-level keys
+
+| Key | Type / values | Default | Notes |
+| --- | --- | --- | --- |
+| `$schema` | str | seeded | `https://prioricode.ai/config.json` for editor validation |
+| `shell` | str | `$SHELL` | shell used for commands, `!` mode, hook spawning |
+| `logLevel` | `DEBUG`/`INFO`/`WARN`/`ERROR` | `INFO` | also `--log-level` |
+| `username` | str | OS user | shown in the UI |
+| `default_agent` | str | `build` | must be a visible primary agent |
+| `subagent_depth` | int | `1` | how deep task-nested subagents may go |
+| `model` / `small_model` | str | auto-resolution | primary vs background (title/summary) models |
+| `autoupdate` | `bool`/`"notify"` | `true` | silent for patch bumps only ([install](/getting-started/install)) |
+| `share` | `"manual"`/`"auto"`/`"disabled"` | `manual` | `autoshare: true` (deprecated) ⇒ `auto` |
+| `enterprise` | `{ url? }` | — | self-hosted share service base ([enterprise](/platforms/enterprise)) |
+| `disabled_providers` / `enabled_providers` | str[] | all enabled | provider ID lists |
+| `instructions` | str[] | — | extra context files/globs/URLs ([context](/using/context)) |
+| `references` | obj (git/local) | — | additional project dirs (`reference` deprecated) |
+| `watcher.ignore` | str[] | — | file-watch exclusions |
+| `snapshot` | bool | `true` | file snapshots powering undo/diffs |
+| `plugin` | `(str \| [str, obj])[]` | — | plugin specs ([plugins](/extending/plugins)) |
+| `tools` | `{ <tool>: bool }` | all on | shorthand for blanket permission deny |
+| `layout` | `auto`/`stretch` | — | deprecated |
+
+### `server`
+
+| Key | Default | Notes |
+| --- | --- | --- |
+| `port` | `0` (random) | `--port` overrides |
+| `hostname` | `127.0.0.1` | `--mdns` forces `0.0.0.0` |
+| `mdns` / `mdnsDomain` | `false` / `prioricode.local` | discovery ([server](/platforms/server)) |
+| `cors` | `[]` | allowed browser origins |
+
+### `command`
+
+One entry per custom slash command: `{ description?, agent?, model?, variant?, subtask?, template }` — normally authored as markdown in `commands/` ([custom commands](/extending/commands)).
+
+### `agent`
+
+`agent.<name>` configures built-ins or adds custom ones:
+
+| Key | Values | Notes |
+| --- | --- | --- |
+| `description` | str | picker copy |
+| `mode` | `primary`/`subagent`/`all` | where it can live |
+| `model`, `variant` | str | overrides; subagents fall back to the caller's |
+| `temperature`, `top_p` | number | sampling |
+| `prompt` | str/inline | system prompt (markdown body elsewhere) |
+| `permission` | permission obj | ruleset for this agent ([grammar](/using/permissions)) |
+| `steps` | int | max agentic steps |
+| `hidden` | bool | out of pickers |
+| `color` | `#hex` or theme color name | UI accent |
+| `disable` | bool | remove the agent entirely |
+| `options` | obj | passthrough provider options |
+
+### `provider`
+
+`provider.<id>` — `{ api?, name?, env?[], npm?, whitelist?[], blacklist?[], options{ apiKey, baseURL, timeout(s), enterpriseUrl, setCacheKey, … }, models{ <id>{ name, limit{ context, output }, cost{ input, output, cache_read, cache_write }, attachment, reasoning, tool_call, interleaved, modalities, status, variants, headers, options, provider{ npm, api } } } }`. Anything the catalog doesn't know becomes true here ([providers](/getting-started/providers)).
+
+### `mcp`
+
+| Shape | Fields |
+| --- | --- |
+| local | `{ type: "local", command: str[], cwd?, environment?, enabled?, timeout? }` |
+| remote | `{ type: "remote", url, headers?, oauth?{ clientId, clientSecret, scope, callbackPort (19876), redirectUri } \| false, enabled?, timeout? }` |
+| toggle | `{ enabled: bool }` against a name defined elsewhere |
+
+Full behavior on the [MCP page](/extending/mcp).
+
+### `permission`
+
+`"allow" | "ask" | "deny"` blanket, or `{ "<tool>": action }`, or `{ "<tool>": { "<glob-pattern>": action } }`. Known tools: `read, edit, glob, grep, list, bash, task, external_directory, todowrite, question, webfetch, websearch, lsp, skill, doom_loop` + plan tools + arbitrary. Last match wins; `~`/`$HOME` expand. Also: `PRIORICODE_PERMISSION` (JSON, merged over file).
+
+### `bashSandbox`
+
+| Key | Values | Default |
+| --- | --- | --- |
+| `mode` | `off` / `best-effort` / `require` | `off` |
+| `network` | `allow` / `deny` | `allow` |
+| `writablePaths` | str[] | project, worktree, git dir, data dir, tmp, npm/bun caches + these |
+
+### `hooks`
+
+`hooks.{PreToolUse,PostToolUse,SessionStart,Stop,Notification}` — arrays of `{ matcher? (wildcard tool name), command, timeout? seconds (30) }` ([hooks](/extending/hooks)).
+
+### `skills`
+
+`skills.paths` (dirs scanned for `**/SKILL.md`, `~`-expanded) + `skills.urls` (hosted packs via `index.json`) ([skills](/extending/skills)).
+
+### `formatter` / `lsp`
+
+`bool` or `{ "<id>": { disabled?, command[], environment?, extensions? (required for custom), initialization? } }` ([formatters](/extending/formatters), [LSP](/extending/lsp)).
+
+### `attachment` / `tool_output` / `compaction`
+
+| Key | Default | Notes |
+| --- | --- | --- |
+| `attachment.image.auto_resize` | `true` | downscale before send |
+| `attachment.image.max_width` / `max_height` | `2000` | px |
+| `attachment.image.max_base64_bytes` | `5242880` | 5 MB |
+| `tool_output.max_lines` | `2000` | truncation ([tools](/reference/tools)) |
+| `tool_output.max_bytes` | `51200` | 50 KB |
+| `compaction.auto` | `true` | summarize near context limit |
+| `compaction.prune` | `false` | drop stale tool output |
+| `compaction.threshold` | — | percent trigger 1–100 |
+| `compaction.default_context` | `128000` | fallback window |
+| `compaction.tail_turns` / `preserve_recent_tokens` / `reserved` | — | how much survives verbatim |
+
+### `experimental`
+
+| Key | Notes |
+| --- | --- |
+| `disable_paste_summary` | no `[Pasted ~N]` collapsing |
+| `batch_tool` | batched tool availability |
+| `openTelemetry` | AI SDK spans for your OTLP collector |
+| `primary_tools[]` | tools forced into the primary set |
+| `continue_loop_on_deny` | keep looping after denials |
+| `mcp_timeout` | MCP fallback timeout |
+| `policies[]` | policy definitions (v2 surface) |
+
+## `tui.json` keys
+
+| Key | Type/values | Default | Notes |
+| --- | --- | --- | --- |
+| `theme` | str (theme name) | `prioricode` | custom via `themes/*.json`; `system` follows terminal colors |
+| `keybinds` | map id → binding | registry defaults | [keybind reference](/reference/keybinds) |
+| `leader_timeout` | ms | `2000` | leader chord window |
+| `attention` | `{ enabled(false), notifications(true), sound(true), volume(0.4), sound_pack, sounds{default,question,permission,error,done,subagent_done} }` | as marked | opt-in attention layer |
+| `prompt` | `{ max_height?, max_width? \| "auto" }` | auto | composer bounds |
+| `scroll_speed` | number ≥0.001 | built-in | wheel feel |
+| `scroll_acceleration` | `{ enabled }` | — | trackpad acceleration |
+| `diff_style` | `auto`/`stacked` | `auto` | diff layout |
+| `cursor` | `{ style: block/underline/line/default, blinking }` | terminal | prompt cursor |
+| `mouse` | bool | `true` | mouse capture (env override exists) |
+| `plugin` / `plugin_enabled` | str[] / map | — | TUI-side plugins ([plugins](/extending/plugins)) |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Config discovery" icon="file-code" href="/configure/files">
+    Merge order, substitution, managed layers.
+  </Card>
+  <Card title="Permissions" icon="user-shield" href="/using/permissions">
+    The rules engine behind `permission`.
+  </Card>
+  <Card title="Env vars" icon="list" href="/reference/environment-variables">
+    Runtime switches config can't reach.
+  </Card>
+</CardGroup>

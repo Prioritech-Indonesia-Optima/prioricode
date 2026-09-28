@@ -1,0 +1,34 @@
+---
+title: "Reference"
+description: "Single-source tables for everything enumerable in PrioriCode: CLI, slash commands, keybinds, config keys, environment variables, tools, providers."
+---
+
+Concept pages explain; these pages enumerate. Every flag, key, default, and name lives in exactly one table — linked from wherever it's mentioned. When a default changes, a single row changes.
+
+<CardGroup cols={2}>
+  <Card title="CLI commands" icon="terminal" href="/reference/cli">
+    Every command, subcommand, flag, and default of the `prioricode` binary.
+  </Card>
+  <Card title="Slash commands" icon="bolt" href="/reference/slash-commands">
+    Every `/command` in the TUI, with aliases and scope.
+  </Card>
+  <Card title="Keybindings" icon="keyboard" href="/reference/keybinds">
+    Every bindable id with its default chord; override syntax.
+  </Card>
+  <Card title="Config keys" icon="sliders" href="/reference/config">
+    `prioricode.json` and `tui.json` — every key, type, and default.
+  </Card>
+  <Card title="Environment variables" icon="list" href="/reference/environment-variables">
+    Every `PRIORICODE_*` switch and the third-party vars honored.
+  </Card>
+  <Card title="Agent tools" icon="screwdriver-wrench" href="/reference/tools">
+    The tools the model can call — parameters, caps, gates.
+  </Card>
+  <Card title="Providers" icon="microchip" href="/reference/providers">
+    Auth routes and env vars for known providers.
+  </Card>
+</CardGroup>
+
+<Note>
+  Tables describe the **latest release** of the tracked line (`v0.1`). Experimental entries carry an explicit marker; their existence is source-verified but their behavior may move between releases. See [docs versioning](/support/versions).
+</Note>
