@@ -42,12 +42,12 @@ function AsciiLogo() {
 
 function Install() {
   const [target, setTarget] = useState<"sh" | "ps">(() =>
-    /win/i.test(navigator.userAgent + " " + (navigator as { platform?: string }).platform) ? "ps" : "sh",
+    /win/i.test(navigator.userAgent) ? "ps" : "sh",
   )
   const [copied, setCopied] = useState(false)
   const commands = {
-    sh: "curl -fsSL https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install | bash",
-    ps: "irm https://github.com/Prioritech-Indonesia-Optima/prioricode/raw/main/install.ps1 | iex",
+    sh: "curl -fsSL https://code.prioritech.co.id/install | bash",
+    ps: "irm https://code.prioritech.co.id/install.ps1 | iex",
   }
   return (
     <div className="install" id="install">
@@ -87,14 +87,14 @@ function Install() {
         </button>
       </div>
       <p className="hint">
-        Installs the latest release. Pin a version with <code>-- --version 0.1.1</code>.
+        Installs the latest release. Pin a version with <code>bash -s -- --version 0.1.2</code>.
       </p>
     </div>
   )
 }
 
 function Version() {
-  const [tag, setTag] = useState("v0.1.1")
+  const [tag, setTag] = useState("0.1.2")
   useEffect(() => {
     fetch(`${GITHUB.replace("github.com", "api.github.com/repos")}/releases/latest`, { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
