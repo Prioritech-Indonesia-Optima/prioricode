@@ -1,18 +1,43 @@
-import { execFile, spawn } from "node:child_process"
+import { spawn } from "node:child_process"
 import { readFile, rm } from "node:fs/promises"
 import { platform, release, tmpdir } from "node:os"
 import path from "node:path"
-import { promisify } from "node:util"
+import { createWin32Clipboard, type Win32Clipboard } from "./clipboard-win32"
 
-const exec = promisify(execFile)
+export type Content = Readonly<{ data: string; mime: string }>
 
-function command(command: string, args: string[] = [], input?: string) {
+export type ClipboardEnvironment = Readonly<{
+  platform: string
+  wsl: boolean
+  tmp: string
+  run(command: string, args?: readonly string[], input?: string, timeoutMs?: number): Promise<Buffer>
+  has(name: string): boolean
+  read(file: string): Promise<Buffer>
+  remove(file: string): Promise<void>
+  win32?: Win32Clipboard
+}>
+
+function command(command: string, args: readonly string[] = [], input?: string, timeoutMs = 3000) {
   return new Promise<Buffer>((resolve, reject) => {
-    const child = spawn(command, args, { stdio: [input === undefined ? "ignore" : "pipe", "pipe", "ignore"] })
+    // Write calls pipe stdin but must not hold a stdout pipe: clipboard owners
+    // (xclip/wl-copy daemons) inherit it and keep it open while serving the
+    // selection, which would delay `close` until the kill timer.
+    const child = spawn(command, Array.from(args), {
+      stdio: [input === undefined ? "ignore" : "pipe", input === undefined ? "pipe" : "ignore", "ignore"],
+    })
     const output: Buffer[] = []
-    child.on("error", reject)
+    const timer = setTimeout(() => {
+      child.kill("SIGKILL")
+      reject(new Error(`${command} timed out after ${timeoutMs}ms`))
+    }, timeoutMs)
+    timer.unref?.()
+    child.on("error", (error) => {
+      clearTimeout(timer)
+      reject(error)
+    })
     child.stdout?.on("data", (chunk: Buffer) => output.push(chunk))
     child.on("close", (code) => {
+      clearTimeout(timer)
       if (code === 0) return resolve(Buffer.concat(output))
       reject(new Error(`${command} exited with code ${code}`))
     })
@@ -27,51 +52,147 @@ function writeOsc52(text: string) {
   process.stdout.write(process.env.TMUX ? sequence + passthrough : process.env.STY ? passthrough : sequence)
 }
 
-export async function read() {
-  if (platform() === "darwin") {
-    const file = path.join(tmpdir(), "prioricode-clipboard.png")
-    try {
-      await exec("osascript", [
-        "-e",
-        'set imageData to the clipboard as "PNGf"',
-        "-e",
-        `set fileRef to open for access POSIX file "${file}" with write permission`,
-        "-e",
-        "set eof fileRef to 0",
-        "-e",
-        "write imageData to fileRef",
-        "-e",
-        "close access fileRef",
-      ])
-      return { data: (await readFile(file)).toString("base64"), mime: "image/png" }
-    } catch {
-      // Fall through to text clipboard.
-    } finally {
-      await rm(file, { force: true }).catch(() => {})
+export const WINDOWS_CLIPBOARD_SCRIPT =
+  "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; " +
+  "Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; " +
+  "try { " +
+  "$img = [System.Windows.Forms.Clipboard]::GetImage(); " +
+  "if ($img) { " +
+  "$ms = New-Object System.IO.MemoryStream; " +
+  "$img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); " +
+  'Write-Output ("IMG " + [System.Convert]::ToBase64String($ms.ToArray())); exit 0 } ' +
+  "$files = [System.Windows.Forms.Clipboard]::GetFileDrop(); " +
+  "if ($files -and $files.Length -gt 0) { Write-Output (\"DROP \" + $files[0].FullName); exit 0 } " +
+  "$text = [System.Windows.Forms.Clipboard]::GetText(); " +
+  'if ($text) { Write-Output ("TEXT " + $text) } ' +
+  "} catch { exit 1 }"
+
+export function parseWindowsClipboardOutput(output: string): Content | undefined {
+  const text = output.trim()
+  if (text.startsWith("IMG ")) return { data: text.slice(4).replace(/\s+/g, ""), mime: "image/png" }
+  if (text.startsWith("DROP ")) return { data: text.slice(5).trim(), mime: "text/plain" }
+  if (text.startsWith("TEXT ")) return { data: text.slice(5), mime: "text/plain" }
+}
+
+function osascriptClipboard(file: string, type: string) {
+  return [
+    "-e",
+    `set imageData to the clipboard as "${type}"`,
+    "-e",
+    `set fileRef to open for access POSIX file "${file}" with write permission`,
+    "-e",
+    "set eof fileRef to 0",
+    "-e",
+    "write imageData to fileRef",
+    "-e",
+    "close access fileRef",
+  ]
+}
+
+async function readDarwin(env: ClipboardEnvironment): Promise<Content | undefined> {
+  const png = path.join(env.tmp, "prioricode-clipboard.png")
+  const tiff = path.join(env.tmp, "prioricode-clipboard.tiff")
+  try {
+    // Screenshots land on the macOS clipboard as TIFF, so a plain "PNGf" read
+    // must fall back to TIFF with a built-in (sips) conversion.
+    for (const attempt of [
+      { type: "PNGf", convert: false },
+      { type: "TIFF", convert: true },
+    ]) {
+      try {
+        await env.run("osascript", osascriptClipboard(attempt.convert ? tiff : png, attempt.type), undefined, 8000)
+        if (attempt.convert) await env.run("sips", ["-s", "format", "png", tiff, "--out", png], undefined, 8000)
+        const data = await env.read(png)
+        if (data.length) return { data: data.toString("base64"), mime: "image/png" }
+      } catch {
+        // Try the next clipboard representation.
+      }
     }
+  } finally {
+    await env.remove(png).catch(() => {})
+    await env.remove(tiff).catch(() => {})
   }
+  const text = await env.run("pbpaste", [], undefined, 6000).catch(() => Buffer.alloc(0))
+  if (text.length) return { data: text.toString(), mime: "text/plain" }
+}
 
-  if (platform() === "win32" || release().includes("WSL")) {
-    const script =
-      "Add-Type -AssemblyName System.Windows.Forms; $img = [System.Windows.Forms.Clipboard]::GetImage(); if ($img) { $ms = New-Object System.IO.MemoryStream; $img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); [System.Convert]::ToBase64String($ms.ToArray()) }"
-    const image = await command("powershell.exe", ["-NonInteractive", "-NoProfile", "-command", script]).catch(() =>
-      Buffer.alloc(0),
-    )
-    if (image.length) return { data: image.toString().trim(), mime: "image/png" }
-  }
+async function readPowershell(env: ClipboardEnvironment): Promise<Content | undefined> {
+  const output = await env
+    .run("powershell.exe", ["-NonInteractive", "-NoProfile", "-command", WINDOWS_CLIPBOARD_SCRIPT], undefined, 15000)
+    .catch(() => Buffer.alloc(0))
+  return parseWindowsClipboardOutput(output.toString())
+}
 
-  if (platform() === "linux") {
-    const wayland = await command("wl-paste", ["-t", "image/png"]).catch(() => Buffer.alloc(0))
-    if (wayland.length) return { data: wayland.toString("base64"), mime: "image/png" }
-    const x11 = await command("xclip", ["-selection", "clipboard", "-t", "image/png", "-o"]).catch(() =>
-      Buffer.alloc(0),
-    )
-    if (x11.length) return { data: x11.toString("base64"), mime: "image/png" }
-  }
-
-  const { default: clipboardy } = await import("clipboardy")
-  const text = await clipboardy.read().catch(() => undefined)
+async function readWindows(env: ClipboardEnvironment): Promise<Content | undefined> {
+  const image = env.win32?.readImage()
+  if (image) return { data: image.data, mime: image.mime }
+  const dropped = env.win32?.readDroppedFile()
+  if (dropped) return { data: dropped, mime: "text/plain" }
+  const text = env.win32?.readText()
   if (text) return { data: text, mime: "text/plain" }
+  // PowerShell stays as fallback: it also covers bitmap-only clipboards
+  // (CF_BITMAP without CF_DIB) which need GDI conversion we do not do in FFI.
+  return readPowershell(env)
+}
+
+// Clipboard owners answer a `-t image/png` request with whatever they hold, so
+// raw bytes must still prove they are a real image before we treat them as one.
+export function sniffImageMime(bytes: Buffer): string | undefined {
+  if (bytes.length < 12) return
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47 &&
+    bytes.toString("latin1", 12, 16) === "IHDR"
+  )
+    return "image/png"
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg"
+  const head = bytes.toString("latin1", 0, 10)
+  if (head === "GIF87a" || head === "GIF89a") return "image/gif"
+  if (head.startsWith("RIFF") && bytes.toString("latin1", 8, 12) === "WEBP") return "image/webp"
+  if (bytes.toString("latin1", 4, 12) === "ftypavif") return "image/avif"
+  if (bytes[0] === 0x42 && bytes[1] === 0x4d) return "image/bmp"
+  if ((bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2a) || (bytes[0] === 0x4d && bytes[1] === 0x4d && bytes[3] === 0x2a))
+    return "image/tiff"
+}
+
+function imageData(bytes: Buffer): Content | undefined {
+  const mime = sniffImageMime(bytes)
+  if (!mime) return
+  return { data: bytes.toString("base64"), mime }
+}
+
+async function readLinux(env: ClipboardEnvironment): Promise<Content | undefined> {
+  if (env.has("wl-paste")) {
+    const image = await env.run("wl-paste", ["-t", "image/png"]).catch(() => Buffer.alloc(0))
+    const sniffed = imageData(image)
+    if (sniffed) return sniffed
+  }
+  if (env.has("xclip")) {
+    const image = await env.run("xclip", ["-selection", "clipboard", "-t", "image/png", "-o"]).catch(() =>
+      Buffer.alloc(0),
+    )
+    const sniffed = imageData(image)
+    if (sniffed) return sniffed
+  }
+  for (const [name, args] of [
+    ["wl-paste", []],
+    ["xclip", ["-selection", "clipboard", "-o"]],
+    ["xsel", ["--clipboard", "--output"]],
+  ] as const) {
+    if (!env.has(name)) continue
+    const text = await env.run(name, args).catch(() => Buffer.alloc(0))
+    if (text.length) return { data: text.toString(), mime: "text/plain" }
+  }
+}
+
+export async function readClipboard(env: ClipboardEnvironment): Promise<Content | undefined> {
+  if (env.platform === "darwin") return readDarwin(env)
+  if (env.platform === "win32") return readWindows(env)
+  const local = await readLinux(env)
+  if (local) return local
+  if (env.wsl) return readPowershell(env)
 }
 
 export function copyCommand(
@@ -89,37 +210,62 @@ export function copyCommand(
       "-NonInteractive",
       "-NoProfile",
       "-Command",
-      "[Console]::InputEncoding = [System.Text.Encoding]::UTF8; Set-Clipboard -Value ([Console]::In.ReadToEnd())",
+      "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Set-Clipboard -Value ([Console]::In.ReadToEnd())",
     ]
   }
 }
 
-let copyMethod: Promise<(text: string) => Promise<void>> | undefined
+export async function writeClipboard(env: ClipboardEnvironment, text: string) {
+  if (env.platform === "win32" && env.win32?.writeText(text)) return
+  const os = env.platform as NodeJS.Platform
+  const native = copyCommand(os, Boolean(process.env.WAYLAND_DISPLAY), env.has)
+  if (native?.[0] === "osascript") {
+    const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+    await env.run("osascript", ["-e", `set the clipboard to "${escaped}"`], undefined, 8000).catch(() => undefined)
+    return
+  }
+  if (native) {
+    await env.run(native[0]!, native.slice(1), text, 8000).catch(() => undefined)
+    return
+  }
+  if (env.platform === "win32" || env.wsl) {
+    await env
+      .run(
+        "powershell.exe",
+        ["-NonInteractive", "-NoProfile", "-command", `Set-Clipboard -Value ([Console]::In.ReadToEnd())`],
+        text,
+        15000,
+      )
+      .catch(() => undefined)
+  }
+}
 
-function getCopyMethod() {
-  return (copyMethod ??= (async () => {
+let live: Promise<ClipboardEnvironment> | undefined
+
+function liveEnvironment() {
+  return (live ??= (async () => {
     const { which } = await import("@prioricode/core/util/which")
-    const native = copyCommand(platform(), Boolean(process.env.WAYLAND_DISPLAY), (name) => Boolean(which(name)))
-    if (native?.[0] === "osascript") {
-      return async (text: string) => {
-        const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
-        await command("osascript", ["-e", `set the clipboard to "${escaped}"`]).catch(() => undefined)
-      }
+    const windows = platform() === "win32" ? createWin32Clipboard() : undefined
+    const env: ClipboardEnvironment = {
+      platform: platform(),
+      wsl: release().includes("WSL"),
+      tmp: tmpdir(),
+      run: command,
+      has: (name) => Boolean(which(name)),
+      read: (file) => readFile(file),
+      remove: (file) => rm(file, { force: true }),
+      win32: windows,
     }
-    if (native) {
-      return async (text: string) => {
-        await command(native[0], native.slice(1), text).catch(() => undefined)
-      }
-    }
-    return async (text: string) => {
-      const { default: clipboardy } = await import("clipboardy")
-      await clipboardy.write(text).catch(() => undefined)
-    }
+    return env
   })())
+}
+
+export async function read() {
+  return readClipboard(await liveEnvironment())
 }
 
 export async function write(text: string) {
   writeOsc52(text)
-  const method = await getCopyMethod()
-  await method(text)
+  const env = await liveEnvironment()
+  await writeClipboard(env, text)
 }

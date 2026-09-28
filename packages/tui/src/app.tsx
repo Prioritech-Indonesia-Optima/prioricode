@@ -203,7 +203,9 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
               targetFps: 60,
               gatherStats: false,
               exitOnCtrlC: false,
-              useKittyKeyboard: {},
+              // Windows Terminal 1.25+ consumes Ctrl+V on keydown but still reports the
+              // kitty key-release event, which the prompt uses to detect image pastes.
+              useKittyKeyboard: process.platform === "win32" ? { events: true } : {},
               autoFocus: false,
               openConsoleOnError: false,
               useMouse: !Flag.PRIORICODE_DISABLE_MOUSE && input.config.mouse,
