@@ -18,6 +18,7 @@ import { ConfigExperimental } from "./config/experimental"
 import { ConfigFormatter } from "./config/formatter"
 import { ConfigGoal } from "./config/goal"
 import { ConfigHooks } from "./config/hooks"
+import { ConfigPrune } from "./config/prune"
 import { ConfigLoop } from "./config/loop"
 import { ConfigLSP } from "./config/lsp"
 import { ConfigMCP } from "./config/mcp"
@@ -99,6 +100,9 @@ export class Info extends Schema.Class<Info>("Config.Info")({
   }),
   goal: ConfigGoal.Info.pipe(Schema.optional).annotate({
     description: "Finish gate that verifies work against the durable session goal before the drain may end",
+  }),
+  prune: ConfigPrune.Info.pipe(Schema.optional).annotate({
+    description: "Context-economics projection of stale tool output when provider requests approach the context window",
   }),
   hooks: ConfigHooks.Info.pipe(Schema.optional).annotate({
     description: "Deterministic lifecycle shell hooks (PreToolUse/PostToolUse/Stop/SessionStart) that run regardless of model instructions",

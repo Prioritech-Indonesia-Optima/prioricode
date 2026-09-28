@@ -19,6 +19,7 @@ import { FSUtil } from "../../fs-util"
 import { AppProcess } from "../../process"
 import { SessionVerify } from "./verify"
 import { SessionGate } from "./gate"
+import { Token } from "../../util/token"
 import { SessionGoalGate } from "./goal-gate"
 import { EventV2 } from "../../event"
 import { Location } from "../../location"
@@ -27,6 +28,7 @@ import { PermissionV2 } from "../../permission"
 import { ProviderV2 } from "../../provider"
 import { QuestionV2 } from "../../question"
 import { SystemContext } from "../../system-context/index"
+import { SystemContextBudget } from "../../system-context/budget"
 import { SystemContextRegistry } from "../../system-context/registry"
 import { SkillGuidance } from "../../skill/guidance"
 import { ReferenceGuidance } from "../../reference/guidance"
@@ -49,6 +51,7 @@ import { toLLMMessages } from "./to-llm-message"
 import { MAX_STEPS_PROMPT } from "./max-steps"
 import { ProviderRetry } from "./provider-retry"
 import { ToolGuard } from "./tool-guard"
+import { SessionPrune } from "./prune"
 import { Snapshot } from "../../snapshot"
 import { makeLocationNode } from "../../effect/app-node"
 import { llmClient } from "../../effect/app-node-platform"
@@ -198,12 +201,18 @@ const layer = Layer.effect(
     const retryProviderTurn = (step: number, attempt: number, delayMs: number) =>
       new TurnTransitionError({ _tag: "RetryProviderTurn", step, attempt, delayMs })
 
-    const loadSystemContext = (sessionID: SessionSchema.ID, agent: AgentV2.Selection) =>
+    const loadSystemContext = (sessionID: SessionSchema.ID, agent: AgentV2.Selection, usagePercent: number) =>
       Effect.all([systemContext.load(), skillGuidance.load(agent), referenceGuidance.load(), store.get(sessionID)], {
         concurrency: "unbounded",
       }).pipe(
         Effect.map(([environment, skills, references, session]) =>
-          SystemContext.combine([environment, skills, references, SessionGoal.context(session?.goal)]),
+          SystemContext.combine([
+            environment,
+            skills,
+            references,
+            SessionGoal.context(session?.goal),
+            SystemContextBudget.context(usagePercent),
+          ]),
         ),
       )
 
@@ -243,7 +252,11 @@ const layer = Layer.effect(
       if (session.location.directory !== location.directory || session.location.workspaceID !== location.workspaceID)
         return yield* Effect.interrupt
       const agent = yield* agents.select(session.agent)
-      const initialized = yield* SessionContextEpoch.initialize(db, loadSystemContext(session.id, agent), session.id)
+      const model = yield* models.resolve(session)
+      const contextLimit = model.route.defaults.limits?.context ?? DEFAULT_CONTEXT_TOKENS
+      const usagePercent = contextLimit > 0 ? (session.tokens.input / contextLimit) * 100 : 0
+      const loadContext = () => loadSystemContext(session.id, agent, usagePercent)
+      const initialized = yield* SessionContextEpoch.initialize(db, loadContext(), session.id)
       const toolFibers = yield* FiberSet.make<void, ToolOutputStore.Error>()
       policy.guard.beginTurn()
       let needsContinuation = false
@@ -259,8 +272,7 @@ const layer = Layer.effect(
         if (promoted > 0) currentStep = 1
       }
       const system =
-        initialized ?? (yield* SessionContextEpoch.prepare(db, events, loadSystemContext(session.id, agent), session.id))
-      const model = yield* models.resolve(session)
+        initialized ?? (yield* SessionContextEpoch.prepare(db, events, loadContext(), session.id))
       const entries = yield* SessionHistory.entriesForRunner(db, session.id, system.baselineSeq)
       const context = entries.map((entry) => entry.message)
       if (
@@ -274,6 +286,15 @@ const layer = Layer.effect(
       const isLastStep = agent.info?.steps !== undefined && currentStep >= agent.info.steps
       const toolMaterialization = isLastStep ? undefined : yield* tools.materialize(agent.info?.permissions)
       const promptCacheKey = /^ses_[0-9a-f]{64}$/.test(session.id) ? session.id.slice(4) : session.id
+      const pruneConfig = Config.latest(yield* config.entries(), "prune")
+      const fullMessages = [...toLLMMessages(context, model), ...(isLastStep ? [Message.assistant(MAX_STEPS_PROMPT)] : [])]
+      const systemParts = [agent.info?.system, system.baseline].filter(
+        (part): part is string => part !== undefined && part.length > 0,
+      )
+      const pressure =
+        contextLimit > 0 &&
+        Token.estimate(JSON.stringify({ system: systemParts, messages: fullMessages, tools: toolMaterialization?.definitions ?? [] })) >=
+          Math.floor((contextLimit * (pruneConfig?.pressure_percent ?? 70)) / 100)
       const request = LLM.request({
         model,
         http: {
@@ -284,10 +305,12 @@ const layer = Layer.effect(
           },
         },
         providerOptions: { openai: { promptCacheKey } },
-        system: [agent.info?.system, system.baseline]
-          .filter((part): part is string => part !== undefined && part.length > 0)
-          .map(SystemPart.make),
-        messages: [...toLLMMessages(context, model), ...(isLastStep ? [Message.assistant(MAX_STEPS_PROMPT)] : [])],
+        system: systemParts.map(SystemPart.make),
+        messages: SessionPrune.projectForRequest(fullMessages, {
+          pressure,
+          keepRecentSteps: pruneConfig?.keep_recent_steps ?? 15,
+          minBytes: pruneConfig?.min_bytes ?? 8_000,
+        }),
         tools: toolMaterialization?.definitions ?? [],
         toolChoice: isLastStep ? "none" : undefined,
       })
@@ -540,6 +563,7 @@ const layer = Layer.effect(
       )
     })
 
+    const DEFAULT_CONTEXT_TOKENS = 128_000
     const sessionStartFired = new Set<string>()
 
     const stopHookGate = (
