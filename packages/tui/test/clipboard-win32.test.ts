@@ -54,9 +54,14 @@ function decodePng(png: Buffer) {
   return { width, height, rgba }
 }
 
-function header(
-  fields: { width: number; height: number; bitCount: number; compression?: number; size?: number; colorsUsed?: number },
-) {
+function header(fields: {
+  width: number
+  height: number
+  bitCount: number
+  compression?: number
+  size?: number
+  colorsUsed?: number
+}) {
   const buffer = Buffer.alloc(40)
   buffer.writeUInt32LE(fields.size ?? 40, 0)
   buffer.writeInt32LE(fields.width, 4)
@@ -98,8 +103,22 @@ test("honors top-down negative height", () => {
   const dib = Buffer.concat([
     header({ width: 2, height: -2, bitCount: 24 }),
     Buffer.from([
-      0, 0, 255, 0, 255, 0, 0, 0, // stored first = top row: red, green
-      0, 0, 0, 255, 255, 255, 0, 0, // bottom row: black, white
+      0,
+      0,
+      255,
+      0,
+      255,
+      0,
+      0,
+      0, // stored first = top row: red, green
+      0,
+      0,
+      0,
+      255,
+      255,
+      255,
+      0,
+      0, // bottom row: black, white
     ]),
   ])
   const image = decodePng(dibToPng(dib)!.data)
@@ -107,10 +126,7 @@ test("honors top-down negative height", () => {
 })
 
 test("treats 32-bit BI_RGB as opaque", () => {
-  const dib = Buffer.concat([
-    header({ width: 1, height: 1, bitCount: 32 }),
-    Buffer.from([10, 20, 30, 0]),
-  ])
+  const dib = Buffer.concat([header({ width: 1, height: 1, bitCount: 32 }), Buffer.from([10, 20, 30, 0])])
   const image = decodePng(dibToPng(dib)!.data)
   expect([...image.rgba]).toEqual([30, 20, 10, 255])
 })
@@ -171,10 +187,7 @@ function dropfiles(files: string[]) {
 }
 
 test("parses CF_HDROP wide file lists", () => {
-  expect(parseFileDrop(dropfiles(["C:\\shots\\a.png", "C:\\notes.txt"]))).toEqual([
-    "C:\\shots\\a.png",
-    "C:\\notes.txt",
-  ])
+  expect(parseFileDrop(dropfiles(["C:\\shots\\a.png", "C:\\notes.txt"]))).toEqual(["C:\\shots\\a.png", "C:\\notes.txt"])
   expect(parseFileDrop(Buffer.alloc(0))).toEqual([])
 })
 

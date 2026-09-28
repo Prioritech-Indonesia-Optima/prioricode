@@ -62,7 +62,7 @@ export const WINDOWS_CLIPBOARD_SCRIPT =
   "$img.Save($ms, [System.Drawing.Imaging.ImageFormat]::Png); " +
   'Write-Output ("IMG " + [System.Convert]::ToBase64String($ms.ToArray())); exit 0 } ' +
   "$files = [System.Windows.Forms.Clipboard]::GetFileDrop(); " +
-  "if ($files -and $files.Length -gt 0) { Write-Output (\"DROP \" + $files[0].FullName); exit 0 } " +
+  'if ($files -and $files.Length -gt 0) { Write-Output ("DROP " + $files[0].FullName); exit 0 } ' +
   "$text = [System.Windows.Forms.Clipboard]::GetText(); " +
   'if ($text) { Write-Output ("TEXT " + $text) } ' +
   "} catch { exit 1 }"
@@ -153,7 +153,10 @@ export function sniffImageMime(bytes: Buffer): string | undefined {
   if (head.startsWith("RIFF") && bytes.toString("latin1", 8, 12) === "WEBP") return "image/webp"
   if (bytes.toString("latin1", 4, 12) === "ftypavif") return "image/avif"
   if (bytes[0] === 0x42 && bytes[1] === 0x4d) return "image/bmp"
-  if ((bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2a) || (bytes[0] === 0x4d && bytes[1] === 0x4d && bytes[3] === 0x2a))
+  if (
+    (bytes[0] === 0x49 && bytes[1] === 0x49 && bytes[2] === 0x2a) ||
+    (bytes[0] === 0x4d && bytes[1] === 0x4d && bytes[3] === 0x2a)
+  )
     return "image/tiff"
 }
 
@@ -170,9 +173,9 @@ async function readLinux(env: ClipboardEnvironment): Promise<Content | undefined
     if (sniffed) return sniffed
   }
   if (env.has("xclip")) {
-    const image = await env.run("xclip", ["-selection", "clipboard", "-t", "image/png", "-o"]).catch(() =>
-      Buffer.alloc(0),
-    )
+    const image = await env
+      .run("xclip", ["-selection", "clipboard", "-t", "image/png", "-o"])
+      .catch(() => Buffer.alloc(0))
     const sniffed = imageData(image)
     if (sniffed) return sniffed
   }

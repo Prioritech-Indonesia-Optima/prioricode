@@ -1,10 +1,5 @@
 import { expect, test } from "bun:test"
-import {
-  parseWindowsClipboardOutput,
-  readClipboard,
-  writeClipboard,
-  type ClipboardEnvironment,
-} from "../src/clipboard"
+import { parseWindowsClipboardOutput, readClipboard, writeClipboard, type ClipboardEnvironment } from "../src/clipboard"
 
 type Call = { command: string; args: readonly string[]; input?: string }
 
@@ -81,7 +76,10 @@ test("wsl: reads the Windows clipboard through powershell interop", async () => 
   wsl.runners.set("powershell.exe", () => Buffer.from("IMG dGV4dA=="))
   expect(await readClipboard(wsl.env)).toEqual({ data: "dGV4dA==", mime: "image/png" })
 
-  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64")
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+    "base64",
+  )
   const nativeFirst = fakeEnv({ platform: "linux", wsl: true, has: (name) => name === "wl-paste" })
   nativeFirst.runners.set("wl-paste", (args) => (args.includes("-t") ? png : Buffer.from("hi")))
   expect(await readClipboard(nativeFirst.env)).toEqual({ data: png.toString("base64"), mime: "image/png" })
@@ -91,7 +89,10 @@ test("macos: PNGf first, then TIFF converted with built-in sips", async () => {
   const pngHit = fakeEnv({ platform: "darwin" })
   pngHit.runners.set("osascript", () => Buffer.alloc(0))
   pngHit.files.set("/tmp/prioricode-clipboard.png", Buffer.from("png-bytes"))
-  expect(await readClipboard(pngHit.env)).toEqual({ data: Buffer.from("png-bytes").toString("base64"), mime: "image/png" })
+  expect(await readClipboard(pngHit.env)).toEqual({
+    data: Buffer.from("png-bytes").toString("base64"),
+    mime: "image/png",
+  })
   expect(pngHit.calls.filter((call) => call.command === "sips")).toEqual([])
 
   const screenshot = fakeEnv({ platform: "darwin" })
@@ -122,9 +123,7 @@ const png = Buffer.from(
 
 test("linux: wl-clipboard then xclip images, then text from whichever tool exists", async () => {
   const x11 = fakeEnv({ platform: "linux", has: (name) => name === "xclip" })
-  x11.runners.set("xclip", (args) =>
-    args.includes("image/png") ? png : Promise.reject(new Error("no text")),
-  )
+  x11.runners.set("xclip", (args) => (args.includes("image/png") ? png : Promise.reject(new Error("no text"))))
   expect(await readClipboard(x11.env)).toEqual({ data: png.toString("base64"), mime: "image/png" })
 
   const text = fakeEnv({ platform: "linux", has: (name) => name === "xclip" })
