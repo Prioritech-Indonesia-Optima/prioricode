@@ -373,6 +373,12 @@ export function Prompt(props: PromptProps) {
     interrupt: 0,
   })
 
+  // The session route renders a persistent StatusBar that already shows the
+  // agent, permission mode, and context/cost. In that context the prompt meta
+  // row drops those duplicates and keeps only model/provider/variant; on home
+  // (no sessionID) and in shell mode the meta row stays self-contained.
+  const sessionChrome = createMemo(() => !!props.sessionID && store.mode === "normal")
+
   createEffect(
     on(
       () => props.sessionID,
@@ -1533,15 +1539,19 @@ export function Prompt(props: PromptProps) {
                 <Show when={local.agent.current()} fallback={<box height={1} />}>
                   {(agent) => (
                     <>
-                      <text fg={fadeColor(highlight(), agentMetaAlpha())}>
-                        {store.mode === "shell" ? "Shell" : Locale.titlecase(agent().name)}
-                      </text>
-                      <Show when={store.mode === "normal" && local.permission.mode !== "default"}>
+                      <Show when={!sessionChrome()}>
+                        <text fg={fadeColor(highlight(), agentMetaAlpha())}>
+                          {store.mode === "shell" ? "Shell" : Locale.titlecase(agent().name)}
+                        </text>
+                      </Show>
+                      <Show when={store.mode === "normal" && local.permission.mode !== "default" && !sessionChrome()}>
                         <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>{local.permission.mode}</text>
                       </Show>
                       <Show when={store.mode === "normal"}>
                         <box flexDirection="row" gap={1}>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                          <Show when={!sessionChrome()}>
+                            <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                          </Show>
                           <text
                             flexShrink={0}
                             fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
@@ -1758,7 +1768,7 @@ export function Prompt(props: PromptProps) {
               <Switch>
                 <Match when={store.mode === "normal"}>
                   <Switch>
-                    <Match when={usage()}>
+                    <Match when={sessionChrome() ? undefined : usage()}>
                       {(item) => (
                         <text fg={theme.textMuted} wrapMode="none">
                           {[item().context, item().cost].filter(Boolean).join(" · ")}
