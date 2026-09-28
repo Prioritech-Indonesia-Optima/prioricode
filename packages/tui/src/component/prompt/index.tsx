@@ -89,13 +89,22 @@ export type PromptProps = {
 }
 
 function pastedFilepath(value: string, platform: string) {
-  const raw = value.replace(/^['"]+|['"]+$/g, "")
+  const first = value.split(/\r?\n/)[0]?.trim() ?? value
+  const raw = first.replace(/^['"]+|['"]+$/g, "")
   if (raw.startsWith("file://")) {
     try {
       return fileURLToPath(raw)
     } catch {}
   }
-  if (platform === "win32") return raw
+  if (platform === "win32") {
+    // Windows terminals can paste several quoted paths at once
+    // (`"C:\shots\a.png" "C:\shots\b.png"`); use the first file.
+    if (raw.startsWith('"')) {
+      const end = raw.indexOf('"', 1)
+      if (end > 0) return raw.slice(1, end)
+    }
+    return raw
+  }
   return raw.replace(/\\(.)/g, "$1")
 }
 
@@ -288,7 +297,28 @@ export function Prompt(props: PromptProps) {
   const agentStyleId = syntax().getStyleId("extmark.agent")!
   const pasteStyleId = syntax().getStyleId("extmark.paste")!
   let promptPartTypeId = 0
+  let lastPasteProbe = 0
   const event = useEvent()
+
+  // Windows Terminal 1.25+ handles Ctrl+V on keydown itself, so the press never
+  // reaches the app; it still reports the kitty key-release event when the
+  // renderer requests event reporting. Probe releases on Windows only.
+  let pasteImageOnlyRequest = false
+  onMount(() => {
+    if (process.platform !== "win32") return
+    const listener = (probe: KeyEvent) => {
+      if (props.disabled) return
+      if (!input || input.isDestroyed || !input.focused) return
+      if (probe.name === "v" && probe.ctrl && !probe.shift && !probe.meta && !probe.option) {
+        // The terminal has already pasted any clipboard text itself, so this
+        // probe only looks for clipboard images.
+        pasteImageOnlyRequest = true
+        keymap.dispatchCommand("prompt.paste")
+      }
+    }
+    renderer.keyInput.on("keyrelease", listener)
+    onCleanup(() => renderer.keyInput.off("keyrelease", listener))
+  })
 
   event.on("tui.prompt.append", (evt, { workspace }) => {
     if (workspace !== project.workspace.current()) return
@@ -420,6 +450,13 @@ export function Prompt(props: PromptProps) {
         run: async (ctx: CommandContext<Renderable, KeyEvent>) => {
           ctx.event.preventDefault()
           ctx.event.stopPropagation()
+          // Terminals may surface one Ctrl+V as both a press and a release
+          // (kitty protocol); collapse bursts into a single paste attempt.
+          const now = Date.now()
+          if (now - lastPasteProbe < 250) return
+          lastPasteProbe = now
+          const imageOnly = pasteImageOnlyRequest
+          pasteImageOnlyRequest = false
           const content = await clipboard.read?.()
           if (content?.mime.startsWith("image/")) {
             await pasteAttachment({
@@ -429,9 +466,14 @@ export function Prompt(props: PromptProps) {
             })
             return
           }
+          // A key-release probe must not re-paste text Windows Terminal already
+          // delivered through its own Ctrl+V bracketed paste.
           if (content?.mime === "text/plain") {
+            if (imageOnly) return
             await pasteInputText(content.data)
+            return
           }
+          if (!imageOnly) toast.show({ message: "Clipboard has nothing pasteable", variant: "info" })
         },
       },
       {
