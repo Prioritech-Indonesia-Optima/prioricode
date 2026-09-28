@@ -1,0 +1,66 @@
+---
+title: "Docs versions & release policy"
+description: "How PrioriCode documentation maps to releases: living docs on the latest line, versioned snapshots per release line, and how to tell what your build matches."
+---
+
+Short answer: **the docs you're reading track the latest release of PrioriCode, always.** The version selector in the header exists for when you're stuck on an older line — or need to check what changed between lines.
+
+## The model
+
+PrioriCode ships small and often: every release is a **+1 patch** (`v0.1.11 → v0.1.12 → …`), cut automatically when verified work lands on `main`. Documentation follows a matching discipline:
+
+| Thing | Where it lives | Cadence |
+| --- | --- | --- |
+| **These docs** | This site (`packages/docs`) | Updated in the *same commit* as the change they describe — feature, flag, default, all of it. |
+| **Release notes** | [GitHub Releases](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) | Generated per release: the raw list of what shipped, newest first. |
+| **Versioned doc lines** | The header version switcher | One entry per **minor release line** (`v0.1`, later `v0.2`, `v1.0`). Snapshots of the whole site at the moment a line ends. |
+
+Patch releases don't get their own docs version — a dropdown with forty near-identical entries isn't granularity, it's noise. The living docs *are* the patch history, kept honest by the same-commit rule.
+
+## Am I reading the right docs for my build?
+
+Check your build:
+
+```bash
+prioricode --version
+```
+
+Compare against the latest release on GitHub (or let the updater tell you — it pings within seconds of launching when something newer exists). If your build is older than the docs you're quoting:
+
+```bash
+prioricode upgrade          # or: prioricode upgrade <target>
+```
+
+Rules of thumb:
+
+- **Something in the docs doesn't exist in your build** → you're behind, or the feature is experimental (those pages say so loudly, flag included).
+- **Your build does something the docs don't mention** → that's a docs bug. We hold this repo to the same-commit rule; open an issue and it counts.
+- **You're pinned to an old release line on purpose** → pick it from the version switcher; the snapshot from the end of that line is what you'll read.
+
+## How a line gets archived
+
+When `v0.1.x` ends and a new line (`v0.2`) begins:
+
+1. The current docs tree is copied into a version folder (`v0.1/`) in the docs source.
+2. A `v0.1` entry joins the version switcher pointing at that snapshot, no longer `default`.
+3. Root docs continue as the living `v0.2` line.
+
+Nothing in a snapshot is edited afterward; corrections happen on the living line. That way "what did the docs say back then" stays answerable, and "what is true now" stays single-sourced.
+
+<Note>
+  Release lines move when *you* decide they should: patch is automatic, minor/major bumps are explicitly requested in this project's publish pipeline. The docs switcher follows the same rule.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/getting-started/install">
+    Upgrade, pin a version, or install by hand.
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/support/troubleshooting">
+    When reality and docs disagree.
+  </Card>
+  <Card title="CLI reference" icon="list" href="/reference/cli">
+    What ships in this release line, exactly.
+  </Card>
+</CardGroup>

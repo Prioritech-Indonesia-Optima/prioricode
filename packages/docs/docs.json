@@ -8,86 +8,114 @@
     "dark": "#B57A00"
   },
   "favicon": "/favicon.svg",
+  "banner": {
+    "content": "Docs track the latest `v0.1` release and update with every merge. Older build? [prioricode upgrade](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases/latest) or see the [version policy](/support/versions).",
+    "dismissible": true
+  },
   "navigation": {
-    "tabs": [
+    "versions": [
       {
-        "tab": "Documentation",
-        "groups": [
+        "version": "v0.1",
+        "tag": "Latest",
+        "default": true,
+        "tabs": [
           {
-            "group": "Getting started",
-            "pages": ["index", "quickstart", "getting-started/install", "getting-started/providers"]
-          },
-          {
-            "group": "Using PrioriCode",
-            "pages": [
-              "using/tui",
-              "using/sessions",
-              "using/agents",
-              "using/permissions",
-              "using/context",
-              "using/headless",
-              "using/sharing",
-              "using/coordination"
+            "tab": "Documentation",
+            "groups": [
+              {
+                "group": "Getting started",
+                "pages": [
+                  "index",
+                  "quickstart",
+                  "getting-started/install",
+                  "getting-started/providers"
+                ]
+              },
+              {
+                "group": "Using PrioriCode",
+                "pages": [
+                  "using/tui",
+                  "using/sessions",
+                  "using/agents",
+                  "using/permissions",
+                  "using/context",
+                  "using/headless",
+                  "using/sharing",
+                  "using/coordination"
+                ]
+              },
+              {
+                "group": "Extending PrioriCode",
+                "pages": [
+                  "extending/skills",
+                  "extending/commands",
+                  "extending/mcp",
+                  "extending/hooks",
+                  "extending/plugins",
+                  "extending/custom-tools",
+                  "extending/formatters",
+                  "extending/lsp",
+                  "extending/editors"
+                ]
+              },
+              {
+                "group": "Configure",
+                "pages": [
+                  "configure/files",
+                  "configure/tui"
+                ]
+              },
+              {
+                "group": "Platforms",
+                "pages": [
+                  "platforms/server",
+                  "platforms/desktop",
+                  "platforms/github",
+                  "platforms/enterprise"
+                ]
+              },
+              {
+                "group": "Support",
+                "pages": [
+                  "support/troubleshooting",
+                  "support/versions"
+                ]
+              }
             ]
           },
           {
-            "group": "Extending PrioriCode",
-            "pages": [
-              "extending/skills",
-              "extending/commands",
-              "extending/mcp",
-              "extending/hooks",
-              "extending/plugins",
-              "extending/custom-tools",
-              "extending/formatters",
-              "extending/lsp",
-              "extending/editors"
+            "tab": "Reference",
+            "groups": [
+              {
+                "group": "Reference",
+                "pages": [
+                  "reference/overview",
+                  "reference/cli",
+                  "reference/slash-commands",
+                  "reference/keybinds",
+                  "reference/config",
+                  "reference/environment-variables",
+                  "reference/tools",
+                  "reference/providers"
+                ]
+              }
             ]
           },
           {
-            "group": "Configure",
-            "pages": ["configure/files", "configure/tui"]
-          },
-          {
-            "group": "Platforms",
-            "pages": ["platforms/server", "platforms/desktop", "platforms/github", "platforms/enterprise"]
-          },
-          {
-            "group": "Support",
-            "pages": ["support/troubleshooting"]
-          }
-        ]
-      },
-      {
-        "tab": "Reference",
-        "groups": [
-          {
-            "group": "Reference",
-            "pages": [
-              "reference/overview",
-              "reference/cli",
-              "reference/slash-commands",
-              "reference/keybinds",
-              "reference/config",
-              "reference/environment-variables",
-              "reference/tools",
-              "reference/providers"
+            "tab": "SDK",
+            "groups": [
+              {
+                "group": "Getting started",
+                "pages": [
+                  "sdk"
+                ],
+                "openapi": "https://prioricode.ai/openapi.json"
+              }
             ]
-          }
-        ]
-      },
-      {
-        "tab": "SDK",
-        "groups": [
-          {
-            "group": "Getting started",
-            "pages": ["sdk"],
-            "openapi": "https://prioricode.ai/openapi.json"
           }
         ]
       }
-    ],
-    "global": {}
+    ]
   },
   "logo": {
     "light": "/logo/light.svg",
@@ -107,7 +135,16 @@
     }
   },
   "contextual": {
-    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "cursor", "vscode"]
+    "options": [
+      "copy",
+      "view",
+      "chatgpt",
+      "claude",
+      "perplexity",
+      "mcp",
+      "cursor",
+      "vscode"
+    ]
   },
   "footer": {
     "socials": {

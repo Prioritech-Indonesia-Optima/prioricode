@@ -1,0 +1,77 @@
+---
+title: "Sharing & export"
+description: "Share a session as a web page, automate sharing with share:auto, take links back down with /unshare, and move sessions with export/import."
+---
+
+Sometimes the most useful thing an agent produced is the story of how it worked. Sharing publishes that story — and this page is honest about what that means.
+
+## Manual sharing
+
+```
+/share      # in the TUI → creates the link, copies it to your clipboard
+/unshare    # deletes it; the link stops working immediately
+```
+
+The first time you share in a session group, PrioriCode shows a consent prompt explaining what leaves your machine. Read it — it's the one screen where you decide what a share is.
+
+A share is a **read-only transcript page**: messages, tool calls, diffs, rendered by the hosted share service. The default backend is `https://opncd.ai`; point it at your own deployment with the `enterprise.url` config (self-hostable — see [enterprise](/platforms/enterprise)). Share URLs look like `https://<host>/share/<slug>`.
+
+<Warning>
+  Assume every share is public and permanent-until-deleted. Transcripts contain your prompts and file contents the agent read. If secrets were in context, they're in the page. `/unshare` is the undo; `PRIORICODE_DISABLE_SHARE=1` is the insurance policy; `"share": "disabled"` in config removes `/share` from the TUI entirely.
+</Warning>
+
+## Automatic sharing
+
+```jsonc
+// prioricode.json
+{ "share": "auto" }
+```
+
+| Value | Behavior |
+| --- | --- |
+| `"manual"` (default) | Links exist only when you `/share`. |
+| `"auto"` | Every session gets shared as it runs — for teams who review sessions openly. |
+| `"disabled"` | No sharing anywhere: TUI entry hidden, server routes off. |
+
+Equivalent one-offs: the `PRIORICODE_AUTO_SHARE=1` env, `autoshare: true` (legacy spelling of `share: auto`), and `prioricode run --share`.
+
+Live updates: a shared session streams its ongoing changes to the page — your colleague watches the agent work, not just the result.
+
+## Export & import: sessions as files
+
+Sharing is for eyeballs; export/import is for machines and archives.
+
+```bash
+prioricode export                      # pick a session interactively
+prioricode export ses_… > session.json # or grab a specific one
+prioricode export --sanitize ses_…     # redact transcript + file data for bug reports
+prioricode import session.json         # back into a local session
+prioricode import https://opncd.ai/share/abc123   # or straight from a share link
+```
+
+The export is the full record — session, messages, parts, todos. `--sanitize` replaces sensitive payloads with `[redacted:kind:id]` markers so you can attach an export to an issue without turning it into a data leak. Importing a sanitized export keeps the structure; the agent just can't see what you redacted.
+
+For CI archaeology: `prioricode session list --format json` gives IDs programmatically, `run --session <id> --continue` resumes them, and `stats` tallies them. See [headless](/using/headless).
+
+## What sharing is not
+
+- Not a sync mechanism — for two machines, use the [server](/platforms/server).
+- Not collaboration — viewers can't reply or steer; the page is a recording.
+- Not scoped to a subset — you share the whole session, not a message. Copy what you need (`/copy`) for smaller pieces.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Sessions" icon="clock-rotate-left" href="/using/sessions">
+    The thing being shared.
+  </Card>
+  <Card title="Security model" icon="shield" href="/support/troubleshooting">
+    Threat model and hardening notes.
+  </Card>
+  <Card title="Enterprise" icon="building" href="/platforms/enterprise">
+    Self-hosting share pages.
+  </Card>
+  <Card title="Config reference" icon="sliders" href="/reference/config">
+    `share`, `enterprise.url`, and friends.
+  </Card>
+</CardGroup>

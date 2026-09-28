@@ -1,0 +1,114 @@
+---
+title: "Headless & scripting"
+description: "prioricode run for CI and pipes — message arguments, --format json events, file attachments, attach mode, and non-interactive permission behavior."
+---
+
+`prioricode run` is the agent without the theater. One prompt in, work done, exit code out. It's the same engine as the TUI — same sessions, same database, same tools — with nobody to approve things, which is exactly the part you need to understand.
+
+## The basic move
+
+```bash
+prioricode run "summarize what changed since the last release"
+```
+
+Output streams to stdout as the agent works; the process exits when the session goes idle. Piped stdin is appended to the message, so:
+
+```bash
+cat build.log | prioricode run "why did this fail?"
+prioricode run -- "explain this" file-notes.txt      # everything after -- is passthrough args
+```
+
+Run a custom [slash command](/extending/commands) instead of a raw prompt with `--command` (the message becomes its arguments):
+
+```bash
+prioricode run --command review "the auth module"
+```
+
+## Options that matter
+
+| Flag | What it does |
+| --- | --- |
+| `-m, --model provider/model` | override the configured model |
+| `--agent <name>` | run as that agent (`plan`, `auto`, yours) |
+| `--variant` | model variant / reasoning effort, e.g. `high` |
+| `--thinking` | show model reasoning — on by default in interactive mini mode, off in `run` |
+| `-c, --continue` / `-s, --session <id>` | keep talking in an existing session |
+| `--fork` | branch instead of continuing (needs `--continue` or `--session`) |
+| `-f, --file <path>` | attach files (repeatable; ≤10 MiB each) |
+| `--title <name>` | name the session; empty means "first 50 chars of the prompt" |
+| `--share` | auto-share the session when it's done |
+| `--command` | run a registered command with the message as args |
+| `--format default\|json` | raw JSONL events instead of prose |
+| `--dir` | run in another project directory |
+| `--auto` | approve anything that would ask (see below) |
+| `--attach <url>` | drive a remote server instead of running locally |
+| `--username/-u`, `--password/-p` | basic auth for `--attach` (env: `PRIORICODE_SERVER_USERNAME`/`PASSWORD`) |
+
+## JSON output for pipelines
+
+`--format json` emits one JSON object per line — `tool_use`, `step_start`, `step_finish`, `text`, `reasoning`, `error` — each with its `sessionID` and timestamp. Parse it, pipe it, alert on it:
+
+```bash
+prioricode run --format json "bump all package versions" | jq -r 'select(.type=="text") | .part.text'
+```
+
+## The permission contract (read this twice)
+
+There is no human in a CI run. Anything that would ask is **denied** — `question`, `plan_enter`, and `plan_exit` are denied up front, and other asks are rejected the moment they appear. So either:
+
+1. **Pre-approve in config** — narrow allow patterns (`"bash": { "bun run *": "allow" }`) committed with the repo, or passed at runtime via `PRIORICODE_PERMISSION` (a JSON ruleset); or
+2. **Say `--auto`** — every non-denied permission is approved once, automatically. The flag's own help text calls it dangerous; believe it. The `auto` agent ([agents](/using/agents)) is the curated version of this: no interaction, commits per verified phase.
+
+A CI job that needs no approvals on its own config is the goal. `--auto` is the shortcut, not the architecture.
+
+## Mini mode: human, but small
+
+```bash
+prioricode --mini                    # split-footer interactive session
+prioricode --mini --no-replay        # skip replaying history into the new footer
+```
+
+Same server, same sessions — a minimal interface for tmux panes and thin SSH. It speaks `/editor` (compose in `$EDITOR`), `/new`, and `/exit`. Replay controls: `--replay-limit <n>` caps how many past messages get rendered. Mini mode refuses network flags (`--port` etc.) and JSON output — it's a screen, not a pipe. (Note the spelling: `--mini` goes on the default command, not `run`.)
+
+## Drive a remote agent locally
+
+```bash
+# machine A
+prioricode serve --hostname 0.0.0.0 --port 4096
+export PRIORICODE_SERVER_PASSWORD=correct-horse-battery   # before starting!
+
+# machine B
+prioricode attach http://machine-a:4096                   # full TUI against A's sessions
+prioricode run --attach http://machine-a:4096 "triage the queue"
+```
+
+The TUI on B renders, the server on A computes — tools run where the code lives. See [server & remote](/platforms/server) for auth, mDNS, and CORS.
+
+## Practical patterns
+
+```bash
+# nightly dependency triage, in a clean checkout, as its own project
+prioricode run --title "deps $(date +%F)" --agent auto "update lockfiles, run tests, revert on failure"
+
+# feed a failure to plan mode, get a written plan, no edits touched
+prioricode run --agent plan --continue --session "$SID" "propose a fix for: $(tail -40 err.log)"
+```
+
+Each `run` creates or continues a real session — find it later with `prioricode session list`, inspect with the [TUI](/using/tui) or `/sessions`, and judge its work after the fact. Headless doesn't mean invisible.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Permissions" icon="user-shield" href="/using/permissions">
+    The full rules engine behind every decision.
+  </Card>
+  <Card title="Server" icon="network" href="/platforms/server">
+    Long-lived servers and the API.
+  </Card>
+  <Card title="CLI reference" icon="list" href="/reference/cli">
+    Every `run` flag in one table.
+  </Card>
+  <Card title="Custom commands" icon="terminal" href="/extending/commands">
+    Reusable prompts the pipeline can call by name.
+  </Card>
+</CardGroup>

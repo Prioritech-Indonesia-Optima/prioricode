@@ -1,0 +1,95 @@
+---
+title: "Server & remote"
+description: "prioricode serve, web, and attach — running the agent as an HTTP server, the browser UI, basic auth, mDNS discovery, and the event stream."
+---
+
+The TUI is a client. Underneath, PrioriCode is a session server with a nice face. That means you can run it headless, serve the browser UI from it, drive it from another machine, or skip the face entirely and script it.
+
+## Three commands, one server
+
+| Command | What it does |
+| --- | --- |
+| `prioricode serve` | Headless HTTP server. No UI, just the API. |
+| `prioricode web` | Server **plus** the embedded browser UI; prints the URL and opens your browser. |
+| `prioricode attach <url>` | Point a local TUI at an already-running server. Rendering here, execution there. |
+
+`serve` and `web` share the same network options (and the `server` block in `prioricode.json`):
+
+```bash
+prioricode web --port 4096 --hostname 0.0.0.0 \
+  --mdns --mdns-domain prioricode.local \
+  --cors https://myapp.example
+```
+
+| Flag | Default | Notes |
+| --- | --- | --- |
+| `--port` | `0` (random) | Pin it for firewall/SSH plans; the TUI picks its own port automatically. |
+| `--hostname` | `127.0.0.1` | Loopback by default. `0.0.0.0` to expose — with intent, not by accident. |
+| `--mdns` | `false` | Advertises the server on the local network (forces `0.0.0.0`). |
+| `--mdns-domain` | `prioricode.local` | The name peers discover you under. |
+| `--cors` | none | Extra origins allowed to hit the API from browsers. |
+
+## The web interface
+
+`prioricode web` serves the full app UI (the same SolidJS interface as the desktop app): session home, active sessions, project folders, settings for servers/providers/keybinds. Bind `--hostname 0.0.0.0` and browse from any device on the network — or SSH-port-forward and pretend it's local, which is nicer for the firewall.
+
+If the embedded UI is disabled (`PRIORICODE_DISABLE_EMBEDDED_WEB_UI=1` — what the desktop app does for its sidecar server), the routes proxy to the hosted app instead.
+
+## Authenticating (don't skip this)
+
+<Warning>
+  A server with no password is a server with no login. `serve`/`web` say it out loud at startup: *"PRIORICODE_SERVER_PASSWORD is not set; server is unsecured."* On loopback that's defensible; on `0.0.0.0` it is a data leak with a friendly face.
+</Warning>
+
+```bash
+export PRIORICODE_SERVER_PASSWORD='pick-a-real-one'
+prioricode serve                      # username defaults to `prioricode` / PRIORICODE_SERVER_USERNAME
+
+prioricode attach http://box:4096 \
+  --username alice --password "$PW"   # or env vars; defaults apply
+```
+
+Basic auth covers every client: attach, `run --attach`, the SDK, the web UI. The server itself is opt-in infrastructure — securing it is documented as the user's responsibility in [SECURITY.md](https://github.com/Prioritech-Indonesia-Optima/prioricode/blob/main/SECURITY.md), and the defaults respect that: loopback only, no password implied, loud warnings emitted.
+
+## Under the hood: one API, many clients
+
+The server speaks a documented HTTP API (163 endpoints — the full interactive surface: sessions, prompts, permissions, questions, providers, MCP auth, files, TUI control). Two event streams keep clients live:
+
+- `GET /global/event` — the firehose every official client (TUI, web, attach) subscribes to.
+- `GET /api/session/{sessionID}/event` — scoped to one session, for your own dashboards.
+
+Everything else is exactly what the TUI calls, so anything the interface can do is scriptable. The TypeScript SDK is the typed wrapper: see the [SDK page](/sdk) and the generated [API reference](/sdk#reference) in the SDK tab.
+
+```bash
+# a session, via plain curl, with auth
+curl -u "prioricode:$PRIORICODE_SERVER_PASSWORD" \
+  -X POST http://127.0.0.1:4096/session \
+  -H 'content-type: application/json' -d '{}'
+```
+
+Permissions and questions that surface on the server reply through `POST /permission/{requestID}/reply` and `/question/{requestID}/reply` — that's how a scripted client becomes the human: intercept an ask, decide, answer.
+
+## Slack, for the social kind of automation
+
+`packages/slack` ships a small bot ([@prioricode/slack](https://github.com/Prioritech-Indonesia-Optima/prioricode/tree/main/packages/slack)): mention it in a channel, and it boots an in-process PrioriCode server, keeps one session per thread, and posts tool activity back into the conversation. Setup is classic Slack-app: create an app with Socket Mode, scopes `chat:write`, `app_mentions:read`, `channels:history`, `groups:history`; then run it with `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_APP_TOKEN` set. It's a package in the repo rather than a hosted integration — bring your own runner.
+
+<Note>
+  The Slack bot is a thin example of what the API enables, not a supported product surface. Treat it as reference code you deploy — review it before pointing it at production channels.
+</Note>
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="TypeScript SDK" icon="code" href="/sdk">
+    The typed way to use all of the above.
+  </Card>
+  <Card title="Headless" icon="robot" href="/using/headless">
+    run/attach patterns for CI.
+  </Card>
+  <Card title="Config files" icon="sliders" href="/configure/files">
+    The `server` block and config precedence.
+  </Card>
+  <Card title="Enterprise" icon="building" href="/platforms/enterprise">
+    Org-managed servers and gateways.
+  </Card>
+</CardGroup>
