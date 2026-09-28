@@ -1739,8 +1739,10 @@ export function Prompt(props: PromptProps) {
             <Match when={true}>
               {props.hint ?? (
                 <Show when={props.sessionID} fallback={<text />}>
-                  <box marginLeft={1}>
-                    <text fg={theme.textMuted}>{location()?.directory ?? paths.cwd}</text>
+                  <box marginLeft={1} minWidth={0}>
+                    <text fg={theme.textMuted} wrapMode="none">
+                      {Locale.truncateMiddle(location()?.directory ?? paths.cwd, Math.max(16, dimensions().width - 12))}
+                    </text>
                   </box>
                 </Show>
               )}

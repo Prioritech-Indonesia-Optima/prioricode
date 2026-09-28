@@ -544,12 +544,17 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         onMouseUp={() => triggerAction(item)}
       >
         <text
+          flexShrink={0}
+          wrapMode="none"
           fg={disabled() ? theme.textMuted : active() ? fg() : theme.text}
           attributes={active() ? TextAttributes.BOLD : undefined}
         >
           {item.title}
         </text>
-        <text fg={disabled() ? theme.textMuted : active() ? fg() : theme.textMuted}> {item.label}</text>
+        <text flexShrink={0} wrapMode="none" fg={disabled() ? theme.textMuted : active() ? fg() : theme.textMuted}>
+          {" "}
+          {item.label}
+        </text>
       </box>
     )
   }
@@ -559,11 +564,11 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
       <box paddingLeft={4} paddingRight={4}>
         <box flexDirection="row" justifyContent="space-between">
           {props.titleView ?? (
-            <text fg={theme.text} attributes={TextAttributes.BOLD}>
+            <text flexShrink={0} wrapMode="none" fg={theme.text} attributes={TextAttributes.BOLD}>
               {props.title}
             </text>
           )}
-          <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
+          <text flexShrink={0} wrapMode="none" fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
             esc
           </text>
         </box>
@@ -666,6 +671,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                         >
                           <box
                             flexDirection="row"
+                            minWidth={0}
                             paddingLeft={current() || option.gutter ? 1 : 3}
                             paddingRight={3}
                             gap={1}
@@ -783,7 +789,9 @@ function Option(props: {
       </text>
       <Show when={props.footer}>
         <box flexShrink={0}>
-          <text fg={props.active && !props.muted ? fg() : theme.textMuted}>{props.footer}</text>
+          <text wrapMode="none" fg={props.active && !props.muted ? fg() : theme.textMuted}>
+            {props.footer}
+          </text>
         </box>
       </Show>
     </>

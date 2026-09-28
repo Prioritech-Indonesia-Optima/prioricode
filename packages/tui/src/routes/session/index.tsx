@@ -1462,7 +1462,10 @@ function UserMessage(props: {
                         <span style={{ bg: theme.secondary, fg: selectedForeground(theme, theme.secondary) }}>
                           {directory ? " Directory " : " File "}
                         </span>
-                        <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
+                        <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}>
+                          {" "}
+                          {Locale.truncateMiddle(file.filename ?? "", 60)}{" "}
+                        </span>
                       </text>
                     )
                   }}

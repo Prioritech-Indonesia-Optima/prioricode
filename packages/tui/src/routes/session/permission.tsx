@@ -677,12 +677,13 @@ function Prompt<const T extends Record<string, string>>(props: {
         justifyContent={narrow() ? "flex-start" : "space-between"}
         alignItems={narrow() ? "flex-start" : "center"}
       >
-        <box flexDirection="row" gap={1} flexShrink={0}>
+        <box flexDirection="row" gap={1} flexShrink={0} overflow="hidden">
           <For each={keys}>
             {(option) => (
               <box
                 paddingLeft={1}
                 paddingRight={1}
+                flexShrink={0}
                 backgroundColor={option === store.selected ? theme.warning : theme.backgroundMenu}
                 onMouseOver={() => setStore("selected", option)}
                 onMouseUp={() => {
@@ -690,7 +691,7 @@ function Prompt<const T extends Record<string, string>>(props: {
                   props.onSelect(option)
                 }}
               >
-                <text fg={option === store.selected ? selectedForeground(theme, theme.warning) : theme.textMuted}>
+                <text wrapMode="none" fg={option === store.selected ? selectedForeground(theme, theme.warning) : theme.textMuted}>
                   {props.options[option]}
                 </text>
               </box>

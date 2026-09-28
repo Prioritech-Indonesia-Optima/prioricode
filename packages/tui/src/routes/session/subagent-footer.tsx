@@ -76,12 +76,12 @@ export function SubagentFooter() {
         backgroundColor={theme.backgroundPanel}
       >
         <box flexDirection="row" justifyContent="space-between" gap={1}>
-          <box flexDirection="row" gap={1}>
-            <text fg={theme.text}>
+          <box flexDirection="row" gap={1} minWidth={0} flexShrink={1}>
+            <text fg={theme.text} wrapMode="none">
               <b>{subagentInfo().label}</b>
             </text>
             <Show when={subagentInfo().total > 0}>
-              <text style={{ fg: theme.textMuted }}>
+              <text style={{ fg: theme.textMuted }} flexShrink={0} wrapMode="none">
                 ({subagentInfo().index} of {subagentInfo().total})
               </text>
             </Show>
@@ -93,7 +93,7 @@ export function SubagentFooter() {
               )}
             </Show>
           </box>
-          <box flexDirection="row" gap={2}>
+          <box flexDirection="row" gap={2} flexShrink={0}>
             <box
               onMouseOver={() => setHover("parent")}
               onMouseOut={() => setHover(null)}
