@@ -721,12 +721,14 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         </Show>
       </box>
       <Show when={props.footer || visibleActions().length} fallback={<box flexShrink={0} />}>
-        <box paddingRight={2} paddingLeft={4} flexDirection="row" justifyContent="space-between" flexShrink={0}>
-          <box flexDirection="row" gap={2}>
+        {/* space-between with two over-wide shrink-0 groups overlaps (Yoga parks
+            the right group under the left one); wrapping keeps both readable. */}
+        <box paddingRight={2} paddingLeft={4} flexDirection="row" justifyContent="space-between" flexWrap="wrap" flexShrink={0}>
+          <box flexDirection="row" gap={2} flexWrap="wrap" minWidth={0}>
             {props.footer}
             <For each={left()}>{(item) => <FooterAction item={item} />}</For>
           </box>
-          <box flexDirection="row" gap={2}>
+          <box flexDirection="row" gap={2} flexWrap="wrap" justifyContent="flex-end" minWidth={0}>
             <For each={right()}>{(item) => <FooterAction item={item} />}</For>
           </box>
         </box>

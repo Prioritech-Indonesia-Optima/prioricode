@@ -1540,12 +1540,12 @@ export function Prompt(props: PromptProps) {
                   {(agent) => (
                     <>
                       <Show when={!sessionChrome()}>
-                        <text fg={fadeColor(highlight(), agentMetaAlpha())}>
+                        <text flexShrink={0} wrapMode="none" fg={fadeColor(highlight(), agentMetaAlpha())}>
                           {store.mode === "shell" ? "Shell" : Locale.titlecase(agent().name)}
                         </text>
                       </Show>
                       <Show when={store.mode === "normal" && local.permission.mode !== "default" && !sessionChrome()}>
-                        <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>{local.permission.mode}</text>
+                        <text flexShrink={0} wrapMode="none" fg={fadeColor(theme.textMuted, agentMetaAlpha())}>{local.permission.mode}</text>
                       </Show>
                       <Show when={store.mode === "normal"}>
                         <box flexDirection="row" gap={1}>
@@ -1554,11 +1554,12 @@ export function Prompt(props: PromptProps) {
                           </Show>
                           <text
                             flexShrink={0}
+                            wrapMode="none"
                             fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
                           >
                             {local.model.parsed().model}
                           </text>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
+                          <text flexShrink={0} wrapMode="none" fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
                           <Show when={showVariant()}>
                             <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
                             <text>
@@ -1776,12 +1777,12 @@ export function Prompt(props: PromptProps) {
                       )}
                     </Match>
                     <Match when={true}>
-                      <text fg={theme.text}>
+                      <text flexShrink={0} wrapMode="none" fg={theme.text}>
                         {agentShortcut()} <span style={{ fg: theme.textMuted }}>agents</span>
                       </text>
                     </Match>
                   </Switch>
-                  <text fg={theme.text}>
+                  <text flexShrink={0} wrapMode="none" fg={theme.text}>
                     {paletteShortcut()} <span style={{ fg: theme.textMuted }}>commands</span>
                   </text>
                 </Match>
