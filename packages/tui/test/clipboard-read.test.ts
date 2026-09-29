@@ -1,5 +1,11 @@
 import { expect, test } from "bun:test"
-import { parseWindowsClipboardOutput, readClipboard, writeClipboard, type ClipboardEnvironment } from "../src/clipboard"
+import {
+  parseUriList,
+  parseWindowsClipboardOutput,
+  readClipboard,
+  writeClipboard,
+  type ClipboardEnvironment,
+} from "../src/clipboard"
 
 type Call = { command: string; args: readonly string[]; input?: string }
 
@@ -168,4 +174,72 @@ test("write prefers native windows FFI, else native commands", async () => {
   } finally {
     delete process.env.WAYLAND_DISPLAY
   }
+})
+
+test("linux: copied image files attach through uri-list targets", async () => {
+  const x11 = fakeEnv({ platform: "linux", has: (name) => name === "xclip" })
+  x11.runners.set("xclip", (args) => {
+    if (args.includes("image/png")) return Promise.reject(new Error("Target image/png does not exist"))
+    if (args.includes("text/uri-list")) return Buffer.from("file:///home/u/work/app/image.png\r\n")
+    return Promise.reject(new Error("no text"))
+  })
+  expect(await readClipboard(x11.env)).toEqual({
+    data: "file:///home/u/work/app/image.png",
+    mime: "text/plain",
+  })
+
+  const gnome = fakeEnv({ platform: "linux", has: (name) => name === "wl-paste" })
+  gnome.runners.set("wl-paste", (args) => {
+    if (args.includes("image/png")) return Promise.reject(new Error("target unavailable"))
+    if (args.includes("text/uri-list")) return Promise.reject(new Error("target unavailable"))
+    if (args.includes("x-special/gnome-copied-files")) return Buffer.from("copy\nfile:///home/u/Pictures/shot.png\n")
+    return Promise.reject(new Error("no text"))
+  })
+  expect(await readClipboard(gnome.env)).toEqual({
+    data: "file:///home/u/Pictures/shot.png",
+    mime: "text/plain",
+  })
+
+  const imageFirst = fakeEnv({ platform: "linux", has: (name) => name === "wl-paste" })
+  imageFirst.runners.set("wl-paste", (args) =>
+    args.includes("image/png") ? png : Buffer.from("file:///home/u/work/app/image.png"),
+  )
+  expect(await readClipboard(imageFirst.env)).toEqual({ data: png.toString("base64"), mime: "image/png" })
+
+  const remoteOnly = fakeEnv({ platform: "linux", has: (name) => name === "xclip" })
+  remoteOnly.runners.set("xclip", (args) =>
+    args.includes("image/png") || args.includes("uri-list") || args.includes("gnome-copied-files")
+      ? Buffer.from("https://example.com/a.png")
+      : Buffer.from("halo"),
+  )
+  expect(await readClipboard(remoteOnly.env)).toEqual({ data: "halo", mime: "text/plain" })
+})
+
+test("parseUriList: skips comments and non-file entries", () => {
+  expect(parseUriList("# comment\r\nfile:///home/u/a%20b.png\r\nfile:///other")).toBe("file:///home/u/a%20b.png")
+  expect(parseUriList("copy\nfile:///home/u/Pictures/shot.png")).toBe("file:///home/u/Pictures/shot.png")
+  expect(parseUriList("https://example.com/a.png")).toBeUndefined()
+  expect(parseUriList("")).toBeUndefined()
+})
+
+test("macos: Finder file copies surface the dropped path as a file URL", async () => {
+  const finder = fakeEnv({ platform: "darwin" })
+  finder.runners.set("osascript", (args) => {
+    if (args.some((arg) => arg.includes("clipboard info"))) return Buffer.from("/Users/me/Pictures/shot.png\n")
+    return Promise.reject(new Error("no image"))
+  })
+  finder.runners.set("pbpaste", () => Promise.reject(new Error("no text")))
+  expect(await readClipboard(finder.env)).toEqual({
+    data: "file:///Users/me/Pictures/shot.png",
+    mime: "text/plain",
+  })
+
+  const textOnly = fakeEnv({ platform: "darwin" })
+  textOnly.runners.set("osascript", (args) =>
+    args.some((arg) => arg.includes("clipboard info"))
+      ? Promise.reject(new Error("no file"))
+      : Promise.reject(new Error("no image")),
+  )
+  textOnly.runners.set("pbpaste", () => Buffer.from("sometext"))
+  expect(await readClipboard(textOnly.env)).toEqual({ data: "sometext", mime: "text/plain" })
 })

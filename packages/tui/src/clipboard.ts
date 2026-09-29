@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process"
 import { readFile, rm } from "node:fs/promises"
 import { platform, release, tmpdir } from "node:os"
+import { pathToFileURL } from "node:url"
 import path from "node:path"
 import { createWin32Clipboard, type Win32Clipboard } from "./clipboard-win32"
 
@@ -89,6 +90,16 @@ function osascriptClipboard(file: string, type: string) {
   ]
 }
 
+// File managers copy files as URI lists, not image bytes. Return the first
+// local file so the prompt pipeline can attach it like a dropped path.
+export function parseUriList(text: string): string | undefined {
+  for (const line of text.split(/\r?\n/)) {
+    const entry = line.trim()
+    if (!entry || entry.startsWith("#")) continue
+    if (entry.startsWith("file://")) return entry
+  }
+}
+
 async function readDarwin(env: ClipboardEnvironment): Promise<Content | undefined> {
   const png = path.join(env.tmp, "prioricode-clipboard.png")
   const tiff = path.join(env.tmp, "prioricode-clipboard.tiff")
@@ -112,6 +123,27 @@ async function readDarwin(env: ClipboardEnvironment): Promise<Content | undefine
     await env.remove(png).catch(() => {})
     await env.remove(tiff).catch(() => {})
   }
+  // Finder copies put a file reference («class:furl») on the pasteboard, not
+  // image data; surface the first copied file's path for the attach pipeline.
+  const dropped = await env
+    .run(
+      "osascript",
+      [
+        "-e",
+        'if ((clipboard info) as text) contains "class furl" then',
+        "-e",
+        "POSIX path of (the clipboard as \u00abclass:furl\u00bb)",
+        "-e",
+        'else error "no file"',
+        "-e",
+        "end if",
+      ],
+      undefined,
+      6000,
+    )
+    .catch(() => Buffer.alloc(0))
+  const file = dropped.toString().trim()
+  if (file) return { data: pathToFileURL(file).href, mime: "text/plain" }
   const text = await env.run("pbpaste", [], undefined, 6000).catch(() => Buffer.alloc(0))
   if (text.length) return { data: text.toString(), mime: "text/plain" }
 }
@@ -178,6 +210,23 @@ async function readLinux(env: ClipboardEnvironment): Promise<Content | undefined
       .catch(() => Buffer.alloc(0))
     const sniffed = imageData(image)
     if (sniffed) return sniffed
+  }
+  // File managers (Nautilus, Dolphin, Thunar, ...) copy files as URI lists, so
+  // a copied screenshot has no image/png target at all. Surface the first
+  // copied file for the attach pipeline before falling back to plain text.
+  for (const target of ["text/uri-list", "x-special/gnome-copied-files"]) {
+    if (env.has("wl-paste")) {
+      const uris = await env.run("wl-paste", ["-t", target]).catch(() => Buffer.alloc(0))
+      const dropped = parseUriList(uris.toString())
+      if (dropped) return { data: dropped, mime: "text/plain" }
+    }
+    if (env.has("xclip")) {
+      const uris = await env
+        .run("xclip", ["-selection", "clipboard", "-t", target, "-o"])
+        .catch(() => Buffer.alloc(0))
+      const dropped = parseUriList(uris.toString())
+      if (dropped) return { data: dropped, mime: "text/plain" }
+    }
   }
   for (const [name, args] of [
     ["wl-paste", []],
