@@ -221,9 +221,7 @@ async function readLinux(env: ClipboardEnvironment): Promise<Content | undefined
       if (dropped) return { data: dropped, mime: "text/plain" }
     }
     if (env.has("xclip")) {
-      const uris = await env
-        .run("xclip", ["-selection", "clipboard", "-t", target, "-o"])
-        .catch(() => Buffer.alloc(0))
+      const uris = await env.run("xclip", ["-selection", "clipboard", "-t", target, "-o"]).catch(() => Buffer.alloc(0))
       const dropped = parseUriList(uris.toString())
       if (dropped) return { data: dropped, mime: "text/plain" }
     }
