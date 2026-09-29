@@ -41,13 +41,13 @@ export type ConflictError = {
 export const isConflictError = (value: unknown): value is ConflictError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ConflictError"
 
-export type ServiceUnavailableError = {
-  readonly _tag: "ServiceUnavailableError"
+export type SessionBusyError = {
+  readonly _tag: "SessionBusyError"
+  readonly sessionID: string
   readonly message: string
-  readonly service?: string | undefined
 }
-export const isServiceUnavailableError = (value: unknown): value is ServiceUnavailableError =>
-  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ServiceUnavailableError"
+export const isSessionBusyError = (value: unknown): value is SessionBusyError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "SessionBusyError"
 
 export type MessageNotFoundError = {
   readonly _tag: "MessageNotFoundError"
@@ -57,6 +57,14 @@ export type MessageNotFoundError = {
 }
 export const isMessageNotFoundError = (value: unknown): value is MessageNotFoundError =>
   typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "MessageNotFoundError"
+
+export type ServiceUnavailableError = {
+  readonly _tag: "ServiceUnavailableError"
+  readonly message: string
+  readonly service?: string | undefined
+}
+export const isServiceUnavailableError = (value: unknown): value is ServiceUnavailableError =>
+  typeof value === "object" && value !== null && "_tag" in value && value["_tag"] === "ServiceUnavailableError"
 
 export type UnknownError = {
   readonly _tag: "UnknownError"
@@ -238,6 +246,7 @@ export type SessionsListOutput = {
     readonly projectID: string
     readonly agent?: string
     readonly model?: { readonly id: string; readonly providerID: string; readonly variant?: string }
+    readonly goal?: string
     readonly cost: number
     readonly tokens: {
       readonly input: number
@@ -262,6 +271,7 @@ export type SessionsListOutput = {
         readonly patch: string
       }>
     }
+    readonly permissionMode?: "default" | "ask-first" | "always-allow"
   }>
   readonly cursor: { readonly previous?: string | null; readonly next?: string | null }
 }
@@ -300,6 +310,7 @@ export type SessionsCreateOutput = {
     readonly projectID: string
     readonly agent?: string
     readonly model?: { readonly id: string; readonly providerID: string; readonly variant?: string }
+    readonly goal?: string
     readonly cost: number
     readonly tokens: {
       readonly input: number
@@ -324,6 +335,7 @@ export type SessionsCreateOutput = {
         readonly patch: string
       }>
     }
+    readonly permissionMode?: "default" | "ask-first" | "always-allow"
   }
 }["data"]
 
@@ -338,6 +350,7 @@ export type SessionsGetOutput = {
     readonly projectID: string
     readonly agent?: string
     readonly model?: { readonly id: string; readonly providerID: string; readonly variant?: string }
+    readonly goal?: string
     readonly cost: number
     readonly tokens: {
       readonly input: number
@@ -362,6 +375,7 @@ export type SessionsGetOutput = {
         readonly patch: string
       }>
     }
+    readonly permissionMode?: "default" | "ask-first" | "always-allow"
   }
 }["data"]
 
@@ -380,6 +394,13 @@ export type SessionsSwitchModelInput = {
 }
 
 export type SessionsSwitchModelOutput = void
+
+export type SessionsSetGoalInput = {
+  readonly sessionID: { readonly sessionID: string }["sessionID"]
+  readonly goal: { readonly goal: string }["goal"]
+}
+
+export type SessionsSetGoalOutput = void
 
 export type SessionsPromptInput = {
   readonly sessionID: { readonly sessionID: string }["sessionID"]
@@ -482,7 +503,14 @@ export type SessionsPromptOutput = {
   }
 }["data"]
 
-export type SessionsCompactInput = { readonly sessionID: { readonly sessionID: string }["sessionID"] }
+export type SessionsCompactInput = {
+  readonly sessionID: { readonly sessionID: string }["sessionID"]
+  readonly anchor?: { readonly anchor?: string | undefined; readonly instructions?: string | undefined }["anchor"]
+  readonly instructions?: {
+    readonly anchor?: string | undefined
+    readonly instructions?: string | undefined
+  }["instructions"]
+}
 
 export type SessionsCompactOutput = void
 
@@ -537,6 +565,13 @@ export type SessionsContextOutput = {
         readonly time: { readonly created: number }
         readonly type: "model-switched"
         readonly model: { readonly id: string; readonly providerID: string; readonly variant?: string }
+      }
+    | {
+        readonly id: string
+        readonly metadata?: { readonly [x: string]: JsonValue }
+        readonly time: { readonly created: number }
+        readonly type: "goal-set"
+        readonly goal: string
       }
     | {
         readonly id: string
@@ -1132,6 +1167,19 @@ export type SessionsHistoryOutput = {
         readonly location?: { readonly directory: string; readonly workspaceID?: string }
         readonly data: { readonly timestamp: number; readonly sessionID: string; readonly messageID: string }
       }
+    | {
+        readonly id: string
+        readonly metadata?: { readonly [x: string]: JsonValue }
+        readonly type: "session.next.goal.set"
+        readonly durable?: { readonly aggregateID: string; readonly seq: number; readonly version: number }
+        readonly location?: { readonly directory: string; readonly workspaceID?: string }
+        readonly data: {
+          readonly timestamp: number
+          readonly sessionID: string
+          readonly messageID: string
+          readonly goal: string
+        }
+      }
   >
   readonly hasMore: boolean
 }
@@ -1590,6 +1638,19 @@ export type SessionsEventsOutput =
       readonly location?: { readonly directory: string; readonly workspaceID?: string }
       readonly data: { readonly timestamp: number; readonly sessionID: string; readonly messageID: string }
     }
+  | {
+      readonly id: string
+      readonly metadata?: { readonly [x: string]: unknown }
+      readonly type: "session.next.goal.set"
+      readonly durable?: { readonly aggregateID: string; readonly seq: number; readonly version: number }
+      readonly location?: { readonly directory: string; readonly workspaceID?: string }
+      readonly data: {
+        readonly timestamp: number
+        readonly sessionID: string
+        readonly messageID: string
+        readonly goal: string
+      }
+    }
 
 export type SessionsInterruptInput = { readonly sessionID: { readonly sessionID: string }["sessionID"] }
 
@@ -1615,6 +1676,13 @@ export type SessionsMessageOutput = {
         readonly time: { readonly created: number }
         readonly type: "model-switched"
         readonly model: { readonly id: string; readonly providerID: string; readonly variant?: string }
+      }
+    | {
+        readonly id: string
+        readonly metadata?: { readonly [x: string]: JsonValue }
+        readonly time: { readonly created: number }
+        readonly type: "goal-set"
+        readonly goal: string
       }
     | {
         readonly id: string
@@ -1787,6 +1855,13 @@ export type MessagesListOutput = {
         readonly time: { readonly created: number }
         readonly type: "model-switched"
         readonly model: { readonly id: string; readonly providerID: string; readonly variant?: string }
+      }
+    | {
+        readonly id: string
+        readonly metadata?: { readonly [x: string]: JsonValue }
+        readonly time: { readonly created: number }
+        readonly type: "goal-set"
+        readonly goal: string
       }
     | {
         readonly id: string
