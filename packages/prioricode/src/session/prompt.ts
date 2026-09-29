@@ -60,12 +60,32 @@ import { SessionTools } from "./tools"
 import { LLMEvent } from "@prioricode/llm"
 import { triggerPoint } from "./overflow"
 import { Token } from "@/util/token"
+import { SessionRetry } from "./retry"
+import { isMedia } from "@/util/media"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
 
 const decodeMessageInfo = Schema.decodeUnknownExit(SessionV1.Info)
 const decodeMessagePart = Schema.decodeUnknownExit(SessionV1.Part)
+
+// Sessions whose provider endpoint has rejected a request because of its
+// image/PDF payloads (e.g. gateways failing with "Download multimodal file
+// timed out"). Media is stripped from every later request in these sessions
+// so history containing the rejected attachment cannot wedge the session.
+// Process-local by design: a restart re-attempts media once.
+const mediaRejectedSessions = new Set<string>()
+
+const historyHasMedia = (msgs: SessionV1.WithParts[]) =>
+  msgs.some((message) =>
+    message.parts.some((part) => {
+      if (part.type === "file") return isMedia(part.mime)
+      if (part.type !== "tool") return false
+      return (
+        part.state.status === "completed" && (part.state.attachments ?? []).some((a) => isMedia(a.mime))
+      )
+    }),
+  )
 const MAX_MCP_RESOURCE_BLOB_BYTES = 10 * 1024 * 1024
 const SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES = new Set([
   "application/pdf",
@@ -1278,7 +1298,11 @@ const layer = Layer.effect(
               sys.environment(model),
               instruction.system().pipe(Effect.orDie),
               sys.mcp(agent, session.permission),
-              MessageV2.toModelMessagesEffect(msgs, model),
+              MessageV2.toModelMessagesEffect(
+                msgs,
+                model,
+                mediaRejectedSessions.has(sessionID) ? { stripMedia: true } : undefined,
+              ),
             ])
             // Surface coordination notes from peer sessions once, at the step boundary. The
             // atomic claim marks them read (injected) and stamps this step's assistant
@@ -1397,6 +1421,20 @@ const layer = Layer.effect(
                 yield* sessions.updateMessage(handle.message)
                 return "break" as const
               }
+            }
+
+            if (
+              handle.message.error &&
+              !mediaRejectedSessions.has(sessionID) &&
+              SessionRetry.isMediaRejection(handle.message.error) &&
+              historyHasMedia(msgs)
+            ) {
+              mediaRejectedSessions.add(sessionID)
+              yield* Effect.logWarning("provider rejected request media; retrying step without image/pdf attachments", {
+                "session.id": sessionID,
+                messageID: handle.message.id,
+              })
+              return "continue" as const
             }
 
             if (result === "stop") return "break" as const

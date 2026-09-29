@@ -4084,3 +4084,69 @@ describe("sessions tool receipts and delegation", () => {
     20_000,
   )
 })
+
+it.instance("provider media rejection replays the step with attachments stripped", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig((url) => {
+      const base = providerCfg(url)
+      const model = base.provider.test.models["test-model"]
+      return {
+        ...base,
+        provider: {
+          ...base.provider,
+          test: {
+            ...base.provider.test,
+            models: {
+              "test-model": {
+                ...model,
+                attachment: true,
+                modalities: { input: ["text", "image"], output: ["text"] },
+              },
+            },
+          },
+        },
+      }
+    })
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const session = yield* sessions.create({
+      title: "Media rejection",
+      permission: [{ permission: "*", pattern: "*", action: "allow" }],
+    })
+
+    yield* llm.error(400, {
+      error: {
+        code: "invalid_parameter_error",
+        message: "Image download failed",
+        type: "invalid_request_error",
+      },
+    })
+    yield* llm.text("recovered")
+
+    yield* prompt.prompt({
+      sessionID: session.id,
+      agent: "build",
+      noReply: true,
+      parts: [
+        { type: "text", text: "look at this" },
+        {
+          type: "file",
+          mime: "image/png",
+          filename: "shot.png",
+          url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        },
+      ],
+    })
+
+    const result = yield* prompt.loop({ sessionID: session.id })
+    if (result.info.role === "assistant") expect(result.info.error).toBeUndefined()
+    expect(result.parts.some((part) => part.type === "text" && part.text === "recovered")).toBe(true)
+
+    const hits = yield* llm.hits
+    expect(hits).toHaveLength(2)
+    expect(JSON.stringify(hits[0].body)).toContain("data:image/png;base64")
+    const replayed = JSON.stringify(hits[1].body)
+    expect(replayed).not.toContain("data:image/png")
+    expect(replayed).toContain("[Attached image/png: shot.png]")
+  }),
+)
