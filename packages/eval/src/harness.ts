@@ -224,6 +224,7 @@ export const provideHarness = <A, E, R>(
             resume: coordinator.run,
             wake: coordinator.wake,
             interrupt: coordinator.interrupt,
+            compact: (input) => sessionRunner.compact(input),
           })
         }),
       ).pipe(Layer.provide(runnerLayer))
