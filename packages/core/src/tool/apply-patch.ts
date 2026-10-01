@@ -11,6 +11,7 @@ import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
 import { Patch } from "../patch"
 import { PermissionV2 } from "../permission"
+import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
@@ -114,21 +115,25 @@ const layer = Layer.effectDiscard(
                   if (external) externalDirectories.set(external.resource, external)
                 }
                 for (const external of externalDirectories.values()) {
-                  yield* permission.assert({
-                    ...LocationMutation.externalDirectoryPermission(external),
+                  yield* permission
+                    .assert({
+                      ...LocationMutation.externalDirectoryPermission(external),
+                      sessionID: context.sessionID,
+                      agent: context.agent,
+                      source,
+                    })
+                    .pipe(Effect.mapError(PermissionFailure.fromError))
+                }
+                yield* permission
+                  .assert({
+                    action: "edit",
+                    resources: [...new Set(targets.map(({ target }) => target.resource))],
+                    save: ["*"],
                     sessionID: context.sessionID,
                     agent: context.agent,
                     source,
                   })
-                }
-                yield* permission.assert({
-                  action: "edit",
-                  resources: [...new Set(targets.map(({ target }) => target.resource))],
-                  save: ["*"],
-                  sessionID: context.sessionID,
-                  agent: context.agent,
-                  source,
-                })
+                  .pipe(Effect.mapError(PermissionFailure.fromError))
 
                 const prepared: Prepared[] = []
                 for (const { hunk, target } of targets) {
