@@ -3,6 +3,8 @@ export function deactivate() {}
 
 import * as vscode from "vscode"
 import { spawnSync } from "child_process"
+import { pickClipboardImageViaPanel } from "./pastePanel"
+import { readClipboardImage, type ClipboardImage } from "./clipboard"
 
 const TERMINAL_NAME = "prioricode"
 
@@ -14,6 +16,20 @@ function hasCli() {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+  // The server's base64 image ceiling is 5 MiB; keep raw bytes well under it.
+  const MAX_CLIPBOARD_IMAGE_BYTES = 3_500_000
+
+  function portOf(terminal: vscode.Terminal | undefined) {
+    if (!terminal) return undefined
+    // @ts-ignore
+    const port = Number(terminal.creationOptions?.env?.["_EXTENSION_PRIORICODE_PORT"])
+    return Number.isInteger(port) && port > 0 ? port : undefined
+  }
+
+  const setPasteContext = (terminal: vscode.Terminal | undefined) =>
+    void vscode.commands.executeCommand("setContext", "prioricodeTerminalFocused", portOf(terminal) !== undefined)
+  setPasteContext(vscode.window.activeTerminal)
+
   const openNewTerminalDisposable = vscode.commands.registerCommand("prioricode.openNewTerminal", async () => {
     await openTerminal()
   })
@@ -48,7 +64,58 @@ export function activate(context: vscode.ExtensionContext) {
     }
   })
 
-  context.subscriptions.push(openNewTerminalDisposable, openTerminalDisposable, addFilepathDisposable)
+  async function attachToTerminal(port: number, image: ClipboardImage) {
+    if (Buffer.from(image.data, "base64").byteLength > MAX_CLIPBOARD_IMAGE_BYTES) {
+      await vscode.window.showWarningMessage(
+        "Clipboard image is too large for PrioriCode (max ~3.5 MB). Paste a file path instead.",
+      )
+      return
+    }
+    const body = JSON.stringify({ filename: "clipboard", mime: image.mime, data: image.data })
+    try {
+      const response = await fetch(`http://localhost:${port}/tui/attach`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      })
+      if (response.status === 404) {
+        await vscode.window.showWarningMessage("Update prioricode to enable clipboard image paste in terminals.")
+        return
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    } catch (error) {
+      await vscode.window.showWarningMessage(
+        `Could not reach the prioricode terminal server (${String(error)}). Is prioricode running in this terminal?`,
+      )
+    }
+  }
+
+  const pasteIntoTerminalDisposable = vscode.commands.registerCommand("prioricode.pasteIntoTerminal", async () => {
+    const terminal = vscode.window.activeTerminal
+    const port = portOf(terminal)
+    if (!port) {
+      await vscode.commands.executeCommand("workbench.action.terminal.paste")
+      return
+    }
+    // Local windows can read the real clipboard directly (the extension host
+    // runs on the user's machine). Remote windows cannot — their host is the
+    // remote box — so a small local webview panel captures the native paste
+    // event and hands the bytes back. The stable API has no clipboard image.
+    const image = vscode.env.remoteName ? await pickClipboardImageViaPanel() : await readClipboardImage()
+    if (!image) {
+      await vscode.commands.executeCommand("workbench.action.terminal.paste")
+      return
+    }
+    await attachToTerminal(port, image)
+  })
+
+  context.subscriptions.push(
+    openNewTerminalDisposable,
+    openTerminalDisposable,
+    addFilepathDisposable,
+    pasteIntoTerminalDisposable,
+    vscode.window.onDidChangeActiveTerminal((terminal) => setPasteContext(terminal)),
+  )
 
   async function openTerminal() {
     if (!hasCli()) {

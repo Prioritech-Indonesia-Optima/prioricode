@@ -2,7 +2,7 @@
   "name": "prioricode",
   "displayName": "prioricode",
   "description": "prioricode for VS Code",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "publisher": "Prioritech-Indonesia-Optima",
   "repository": {
     "type": "git",
@@ -20,7 +20,9 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -43,6 +45,10 @@
       {
         "command": "prioricode.addFilepathToTerminal",
         "title": "Add Filepath to Terminal"
+      },
+      {
+        "command": "prioricode.pasteIntoTerminal",
+        "title": "Paste Clipboard (Image or Text) into prioricode Terminal"
       }
     ],
     "menus": {
@@ -77,6 +83,20 @@
         "mac": "cmd+alt+k",
         "win": "ctrl+alt+K",
         "linux": "ctrl+alt+K"
+      },
+      {
+        "command": "prioricode.pasteIntoTerminal",
+        "title": "prioricode: Paste Clipboard into Terminal",
+        "key": "ctrl+v",
+        "mac": "cmd+v",
+        "when": "terminalFocus && prioricodeTerminalFocused"
+      },
+      {
+        "command": "prioricode.pasteIntoTerminal",
+        "title": "prioricode: Paste Clipboard into Terminal",
+        "key": "ctrl+alt+v",
+        "mac": "cmd+alt+v",
+        "when": "terminalFocus"
       }
     ]
   },
@@ -94,15 +114,15 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.94.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/vscode": "^1.99.0",
     "@typescript-eslint/eslint-plugin": "^8.31.1",
     "@typescript-eslint/parser": "^8.31.1",
-    "eslint": "^9.25.1",
-    "esbuild": "^0.25.3",
-    "typescript": "^5.8.3",
     "@vscode/test-cli": "^0.0.11",
-    "@vscode/test-electron": "^2.5.2"
+    "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.3",
+    "eslint": "^9.25.1",
+    "typescript": "^5.8.3"
   }
 }
