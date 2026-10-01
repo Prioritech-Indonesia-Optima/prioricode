@@ -12,7 +12,6 @@ import type { CommandContext } from "@opentui/keymap"
 import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match } from "solid-js"
 import { registerPrioricodeSpinner } from "../register-spinner"
 import path from "path"
-import { fileURLToPath } from "url"
 import { useLocal } from "../../context/local"
 import { Flag } from "@prioricode/core/flag/flag"
 import { tint, useTheme } from "../../context/theme"
@@ -69,6 +68,7 @@ import { useTuiConfig } from "../../config"
 import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
+import { pastedFilepath } from "./pasted-filepath"
 import { useLocation } from "../../context/location"
 
 registerPrioricodeSpinner()
@@ -86,26 +86,6 @@ export type PromptProps = {
     normal?: string[]
     shell?: string[]
   }
-}
-
-function pastedFilepath(value: string, platform: string) {
-  const first = value.split(/\r?\n/)[0]?.trim() ?? value
-  const raw = first.replace(/^['"]+|['"]+$/g, "")
-  if (raw.startsWith("file://")) {
-    try {
-      return fileURLToPath(raw)
-    } catch {}
-  }
-  if (platform === "win32") {
-    // Windows terminals can paste several quoted paths at once
-    // (`"C:\shots\a.png" "C:\shots\b.png"`); use the first file.
-    if (raw.startsWith('"')) {
-      const end = raw.indexOf('"', 1)
-      if (end > 0) return raw.slice(1, end)
-    }
-    return raw
-  }
-  return raw.replace(/\\(.)/g, "$1")
 }
 
 export type PromptRef = {
@@ -1277,8 +1257,7 @@ export function Prompt(props: PromptProps) {
     const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
     const pastedContent = normalizedText.trim()
     const filepath = pastedFilepath(pastedContent, terminalEnvironment.platform)
-    const isUrl = /^(https?):\/\//.test(filepath)
-    if (!isUrl) {
+    if (filepath) {
       const attachment = await readLocalAttachment(filepath)
       const filename = path.basename(filepath)
       if (attachment?.type === "text") {
