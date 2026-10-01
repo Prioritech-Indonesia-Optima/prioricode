@@ -258,10 +258,31 @@ function readMemory(handle: number, consume: (bytes: Buffer) => string | undefin
   }
 }
 
+function sleepSync(ms: number) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
+}
+
+/**
+ * OpenClipboard fails while another process owns the clipboard; a short
+ * bounded retry covers transient ownership without blocking the UI
+ * meaningfully (5 attempts x 30ms worst case).
+ */
+export function openClipboardRetry(
+  open: () => number,
+  wait: (ms: number) => void = sleepSync,
+  attempts = 5,
+): boolean {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    if (open()) return true
+    if (attempt + 1 < attempts) wait(30)
+  }
+  return false
+}
+
 function withClipboard<T>(run: () => T | undefined): T | undefined {
   const k = bind()
   if (!k) return
-  if (!k.user.symbols.OpenClipboard(0)) return
+  if (!openClipboardRetry(() => k.user.symbols.OpenClipboard(0))) return
   try {
     return run()
   } finally {
@@ -320,7 +341,7 @@ export function createWin32Clipboard(): Win32Clipboard | undefined {
         } finally {
           symbols.kernel.symbols.GlobalUnlock(memory)
         }
-        if (!symbols.user.symbols.OpenClipboard(0)) return false
+        if (!openClipboardRetry(() => symbols.user.symbols.OpenClipboard(0))) return false
         let handled = false
         try {
           symbols.user.symbols.EmptyClipboard()

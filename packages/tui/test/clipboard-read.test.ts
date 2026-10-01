@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test"
 import {
+  detectWsl,
   parseUriList,
   parseWindowsClipboardOutput,
   readClipboard,
@@ -7,7 +8,7 @@ import {
   type ClipboardEnvironment,
 } from "../src/clipboard"
 
-type Call = { command: string; args: readonly string[]; input?: string }
+type Call = { command: string; args: readonly string[]; input?: string; timeoutMs?: number }
 
 function fakeEnv(overrides: Partial<ClipboardEnvironment> & { platform: string }) {
   const calls: Call[] = []
@@ -19,8 +20,8 @@ function fakeEnv(overrides: Partial<ClipboardEnvironment> & { platform: string }
     has: () => false,
     read: async (file) => files.get(file) ?? Buffer.alloc(0),
     remove: async () => {},
-    run: async (command, args = [], input) => {
-      calls.push({ command, args, input })
+    run: async (command, args = [], input, timeoutMs) => {
+      calls.push({ command, args, input, timeoutMs })
       const runner = runners.get(command)
       if (!runner) throw new Error(`${command} missing`)
       const result = runner(args, input)
@@ -30,6 +31,14 @@ function fakeEnv(overrides: Partial<ClipboardEnvironment> & { platform: string }
   }
   return { env, calls, files, runners }
 }
+
+test("detectWsl covers WSL1, WSL2, and env markers", () => {
+  expect(detectWsl("4.4.0-19041-Microsoft", {})).toBe(true)
+  expect(detectWsl("5.15.153.1-microsoft-standard-WSL2", {})).toBe(true)
+  expect(detectWsl("6.8.0-139-generic", { WSL_DISTRO_NAME: "Ubuntu" })).toBe(true)
+  expect(detectWsl("6.8.0-139-generic", { WSL_INTEROP: "/run/WSL/12_interop" })).toBe(true)
+  expect(detectWsl("6.8.0-139-generic (buildd@lcy02-amd64-036)", {})).toBe(false)
+})
 
 test("windows: native FFI image wins without touching the shell", async () => {
   const { env, calls } = fakeEnv({
@@ -62,6 +71,7 @@ test("windows: text then powershell fallback for bitmap-only clipboards", async 
   const powershell = fakeEnv({ platform: "win32" })
   powershell.runners.set("powershell.exe", () => Buffer.from("IMG YWJj\nZGVm\n"))
   expect(await readClipboard(powershell.env)).toEqual({ data: "YWJjZGVm", mime: "image/png" })
+  expect(powershell.calls.find((call) => call.command === "powershell.exe")?.timeoutMs).toBe(6000)
 
   expect(parseWindowsClipboardOutput('DROP "C:\\shots\\a.png"\r\n')).toEqual({
     data: '"C:\\shots\\a.png"',

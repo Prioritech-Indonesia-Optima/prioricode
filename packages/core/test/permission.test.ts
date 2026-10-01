@@ -346,6 +346,71 @@ describe("PermissionV2", () => {
     }),
   )
 
+  it.effect("characterization: a saved wildcard read allow defeats a configured specific ask", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "read", resource: "*.env", effect: "ask" }])
+      const saved = yield* PermissionSaved.Service
+      yield* saved.add({ projectID: Project.ID.global, action: "read", resources: ["*"] })
+
+      const service = yield* PermissionV2.Service
+      // Phase 6 flips this: saved allows are appended after configured rules and findLast-wins,
+      // so one "always" on any read currently defeats the more-specific configured ask forever.
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_char_env"), resources: ["project.env"] })),
+      ).toEqual({ id: PermissionV2.ID.create("per_char_env"), effect: "allow" })
+      expect(yield* service.list()).toEqual([])
+    }),
+  )
+
+  it.effect("characterization: a configured deny still defeats a saved wildcard allow", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "read", resource: "*", effect: "deny" }])
+      const saved = yield* PermissionSaved.Service
+      yield* saved.add({ projectID: Project.ID.global, action: "read", resources: ["*"] })
+
+      const service = yield* PermissionV2.Service
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_char_deny"), resources: ["src/index.ts"] })),
+      ).toEqual({ id: PermissionV2.ID.create("per_char_deny"), effect: "deny" })
+    }),
+  )
+
+  it.effect("characterization: the always-reply fan-out auto-approves siblings with the same saved precedence", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "read", resource: "*.env", effect: "ask" }])
+      const service = yield* PermissionV2.Service
+      const events = yield* EventV2.Service
+      const askedFor = (requestID: PermissionV2.ID) =>
+        Effect.gen(function* () {
+          const asked = yield* Deferred.make<PermissionV2.Request>()
+          const unsubscribe = yield* events.listen((event) =>
+            event.type === PermissionV2.Event.Asked.type && (event.data as PermissionV2.Request).id === requestID
+              ? Deferred.succeed(asked, event.data as PermissionV2.Request).pipe(Effect.asVoid)
+              : Effect.void,
+          )
+          yield* Effect.addFinalizer(() => unsubscribe)
+          return asked
+        })
+      const wideAsked = yield* askedFor(PermissionV2.ID.create("per_char_src"))
+      const envAsked = yield* askedFor(PermissionV2.ID.create("per_char_env2"))
+      const envFiber = yield* service
+        .assert(assertion({ id: PermissionV2.ID.create("per_char_env2"), resources: ["project.env"] }))
+        .pipe(Effect.forkScoped)
+      const srcFiber = yield* service
+        .assert(assertion({ id: PermissionV2.ID.create("per_char_src"), resources: ["src/index.ts"], save: ["*"] }))
+        .pipe(Effect.forkScoped)
+
+      const srcRequest = yield* Deferred.await(wideAsked)
+      expect(yield* Deferred.await(envAsked)).toMatchObject({ resources: ["project.env"] })
+      yield* service.reply({ requestID: srcRequest.id, reply: "always" })
+      yield* Fiber.join(srcFiber)
+      // Characterization of the reply fan-out ordering: approving one read with save ["*"]
+      // auto-approves the already-pending more-specific .env ask in the same session.
+      yield* Fiber.join(envFiber)
+      expect(yield* service.list()).toEqual([])
+    }),
+  )
+
   it.effect("ask-first mode prompts for modifying actions but not reads", () =>
     Effect.gen(function* () {
       yield* setup([{ action: "*", resource: "*", effect: "allow" }])

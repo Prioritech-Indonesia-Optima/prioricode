@@ -148,9 +148,13 @@ async function readDarwin(env: ClipboardEnvironment): Promise<Content | undefine
   if (text.length) return { data: text.toString(), mime: "text/plain" }
 }
 
+export function detectWsl(releaseString: string, env: Readonly<Record<string, string | undefined>>): boolean {
+  return /microsoft/i.test(releaseString) || Boolean(env.WSL_DISTRO_NAME || env.WSL_INTEROP)
+}
+
 async function readPowershell(env: ClipboardEnvironment): Promise<Content | undefined> {
   const output = await env
-    .run("powershell.exe", ["-NonInteractive", "-NoProfile", "-command", WINDOWS_CLIPBOARD_SCRIPT], undefined, 15000)
+    .run("powershell.exe", ["-NonInteractive", "-NoProfile", "-command", WINDOWS_CLIPBOARD_SCRIPT], undefined, 6000)
     .catch(() => Buffer.alloc(0))
   return parseWindowsClipboardOutput(output.toString())
 }
@@ -300,7 +304,7 @@ function liveEnvironment() {
     const windows = platform() === "win32" ? createWin32Clipboard() : undefined
     const env: ClipboardEnvironment = {
       platform: platform(),
-      wsl: release().includes("WSL"),
+      wsl: detectWsl(release(), process.env),
       tmp: tmpdir(),
       run: command,
       has: (name) => Boolean(which(name)),

@@ -1,6 +1,32 @@
 import { expect, test } from "bun:test"
 import { inflateSync } from "node:zlib"
-import { createWin32Clipboard, dibToPng, encodePng, parseFileDrop, pickDroppedFile } from "../src/clipboard-win32"
+import {
+  createWin32Clipboard,
+  dibToPng,
+  encodePng,
+  openClipboardRetry,
+  parseFileDrop,
+  pickDroppedFile,
+} from "../src/clipboard-win32"
+
+test("openClipboardRetry survives transient clipboard ownership", () => {
+  const waits: number[] = []
+  let attempts = 0
+  const opened = openClipboardRetry(
+    () => (attempts++ < 2 ? 0 : 1),
+    (ms) => waits.push(ms),
+  )
+  expect(opened).toBe(true)
+  expect(attempts).toBe(3)
+  expect(waits).toEqual([30, 30])
+
+  const exhausted = openClipboardRetry(
+    () => 0,
+    () => {},
+    4,
+  )
+  expect(exhausted).toBe(false)
+})
 
 // Runs only on Windows runners (CI's unit-windows matrix): proves the FFI
 // signatures actually bind against user32.dll/kernel32.dll there.
