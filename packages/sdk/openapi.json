@@ -8770,6 +8770,91 @@
         ]
       }
     },
+    "/tui/attach": {
+      "post": {
+        "tags": ["tui"],
+        "operationId": "tui.attachPrompt",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attachment queued successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Attachment queued successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Attach a base64 file (image or PDF clipboard payload) to the TUI prompt.",
+        "summary": "Attach clipboard file to TUI prompt",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": {
+                    "type": "string"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "string",
+                    "description": "Base64-encoded file contents"
+                  }
+                },
+                "required": ["mime", "data"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createPrioricodeClient } from \"@prioricode/sdk\n\nconst client = createPrioricodeClient()\nawait client.tui.attachPrompt({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/tui/open-help": {
       "post": {
         "tags": ["tui"],
@@ -9321,6 +9406,9 @@
                 "anyOf": [
                   {
                     "$ref": "#/components/schemas/EventTuiPromptAppend"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EventTuiPromptAttach"
                   },
                   {
                     "$ref": "#/components/schemas/EventTuiCommandExecute"
@@ -15957,6 +16045,9 @@
             "$ref": "#/components/schemas/Event.tui.prompt.append"
           },
           {
+            "$ref": "#/components/schemas/Event.tui.prompt.attach"
+          },
+          {
             "$ref": "#/components/schemas/Event.tui.command.execute"
           },
           {
@@ -20391,6 +20482,38 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["tui.prompt.attach"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "filename": {
+                        "type": "string"
+                      },
+                      "mime": {
+                        "type": "string"
+                      },
+                      "data": {
+                        "type": "string",
+                        "description": "Base64-encoded file contents"
+                      }
+                    },
+                    "required": ["mime", "data"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["tui.command.execute"]
                   },
                   "properties": {
@@ -23969,6 +24092,34 @@
         "required": ["type", "properties"],
         "additionalProperties": false
       },
+      "EventTuiPromptAttach": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["tui.prompt.attach"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "mime": {
+                "type": "string"
+              },
+              "data": {
+                "type": "string",
+                "description": "Base64-encoded file contents"
+              }
+            },
+            "required": ["mime", "data"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["type", "properties"],
+        "additionalProperties": false
+      },
       "EventTuiCommandExecute": {
         "type": "object",
         "properties": {
@@ -24920,6 +25071,9 @@
             "$ref": "#/components/schemas/TuiPromptAppend"
           },
           {
+            "$ref": "#/components/schemas/TuiPromptAttach"
+          },
+          {
             "$ref": "#/components/schemas/TuiCommandExecute"
           },
           {
@@ -25059,6 +25213,38 @@
               }
             },
             "required": ["text"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "Event.tui.prompt.attach": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["tui.prompt.attach"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "mime": {
+                "type": "string"
+              },
+              "data": {
+                "type": "string",
+                "description": "Base64-encoded file contents"
+              }
+            },
+            "required": ["mime", "data"],
             "additionalProperties": false
           }
         },
@@ -33740,6 +33926,60 @@
               }
             },
             "required": ["text"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
+      "TuiPromptAttach": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["tui.prompt.attach"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "mime": {
+                "type": "string"
+              },
+              "data": {
+                "type": "string",
+                "description": "Base64-encoded file contents"
+              }
+            },
+            "required": ["mime", "data"],
             "additionalProperties": false
           }
         },

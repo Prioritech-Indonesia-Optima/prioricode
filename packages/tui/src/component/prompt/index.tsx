@@ -101,6 +101,8 @@ export type PromptRef = {
 }
 
 const DRAFT_RETENTION_MIN_CHARS = 20
+// Matches the server image pipeline ceiling (packages/prioricode/src/image/image.ts).
+const MAX_CLIPBOARD_BASE64_BYTES = 5 * 1024 * 1024
 
 function randomIndex(count: number) {
   if (count <= 0) return 0
@@ -313,6 +315,19 @@ export function Prompt(props: PromptProps) {
       input.gotoBufferEnd()
       renderer.requestRender()
     }, 0)
+  })
+
+  // Companion channels (VS Code extension Ctrl+V bridge) hand clipboard files
+  // to the running TUI over the event bus; attach them like a local paste.
+  event.on("tui.prompt.attach", (evt, { workspace }) => {
+    if (workspace !== project.workspace.current()) return
+    const file = evt.properties
+    if (!file.mime.startsWith("image/") && file.mime !== "application/pdf") return
+    if (file.data.length > MAX_CLIPBOARD_BASE64_BYTES) {
+      toast.show({ message: "Clipboard image is too large (5 MB limit)", variant: "error" })
+      return
+    }
+    void pasteAttachment({ filename: file.filename ?? "clipboard", mime: file.mime, content: file.data })
   })
 
   createEffect(() => {

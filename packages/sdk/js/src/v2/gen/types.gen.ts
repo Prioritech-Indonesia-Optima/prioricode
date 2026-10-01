@@ -75,6 +75,7 @@ export type Event =
   | EventPermissionAsked
   | EventPermissionReplied
   | EventTuiPromptAppend2
+  | EventTuiPromptAttach2
   | EventTuiCommandExecute2
   | EventTuiToastShow2
   | EventTuiSessionSelect2
@@ -1441,6 +1442,18 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "tui.prompt.attach"
+        properties: {
+          filename?: string
+          mime: string
+          /**
+           * Base64-encoded file contents
+           */
+          data: string
+        }
+      }
+    | {
+        id: string
         type: "tui.command.execute"
         properties: {
           command:
@@ -2671,6 +2684,18 @@ export type EventTuiPromptAppend = {
   }
 }
 
+export type EventTuiPromptAttach = {
+  type: "tui.prompt.attach"
+  properties: {
+    filename?: string
+    mime: string
+    /**
+     * Base64-encoded file contents
+     */
+    data: string
+  }
+}
+
 export type EventTuiCommandExecute = {
   type: "tui.command.execute"
   properties: {
@@ -2987,6 +3012,7 @@ export type V2Event =
   | PermissionAsked
   | PermissionReplied
   | TuiPromptAppend
+  | TuiPromptAttach
   | TuiCommandExecute
   | TuiToastShow
   | TuiSessionSelect
@@ -3033,6 +3059,19 @@ export type EventTuiPromptAppend2 = {
   type: "tui.prompt.append"
   properties: {
     text: string
+  }
+}
+
+export type EventTuiPromptAttach2 = {
+  id: string
+  type: "tui.prompt.attach"
+  properties: {
+    filename?: string
+    mime: string
+    /**
+     * Base64-encoded file contents
+     */
+    data: string
   }
 }
 
@@ -5912,6 +5951,28 @@ export type TuiPromptAppend = {
   location?: LocationRef
   data: {
     text: string
+  }
+}
+
+export type TuiPromptAttach = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "tui.prompt.attach"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    filename?: string
+    mime: string
+    /**
+     * Base64-encoded file contents
+     */
+    data: string
   }
 }
 
@@ -10895,6 +10956,41 @@ export type TuiAppendPromptResponses = {
 
 export type TuiAppendPromptResponse = TuiAppendPromptResponses[keyof TuiAppendPromptResponses]
 
+export type TuiAttachPromptData = {
+  body?: {
+    filename?: string
+    mime: string
+    /**
+     * Base64-encoded file contents
+     */
+    data: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/tui/attach"
+}
+
+export type TuiAttachPromptErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type TuiAttachPromptError = TuiAttachPromptErrors[keyof TuiAttachPromptErrors]
+
+export type TuiAttachPromptResponses = {
+  /**
+   * Attachment queued successfully
+   */
+  200: boolean
+}
+
+export type TuiAttachPromptResponse = TuiAttachPromptResponses[keyof TuiAttachPromptResponses]
+
 export type TuiOpenHelpData = {
   body?: never
   path?: never
@@ -11127,7 +11223,12 @@ export type TuiShowToastResponses = {
 export type TuiShowToastResponse = TuiShowToastResponses[keyof TuiShowToastResponses]
 
 export type TuiPublishData = {
-  body?: EventTuiPromptAppend | EventTuiCommandExecute | EventTuiToastShow | EventTuiSessionSelect
+  body?:
+    | EventTuiPromptAppend
+    | EventTuiPromptAttach
+    | EventTuiCommandExecute
+    | EventTuiToastShow
+    | EventTuiSessionSelect
   path?: never
   query?: {
     directory?: string

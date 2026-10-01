@@ -27,6 +27,7 @@ import type {
   EventSubscribeResponses,
   EventTuiCommandExecute,
   EventTuiPromptAppend,
+  EventTuiPromptAttach,
   EventTuiSessionSelect,
   EventTuiToastShow,
   ExperimentalCapabilitiesGetErrors,
@@ -242,6 +243,8 @@ import type {
   ToolListResponses,
   TuiAppendPromptErrors,
   TuiAppendPromptResponses,
+  TuiAttachPromptErrors,
+  TuiAttachPromptResponses,
   TuiClearPromptErrors,
   TuiClearPromptResponses,
   TuiControlNextErrors,
@@ -4721,6 +4724,47 @@ export class Tui extends HeyApiClient {
   }
 
   /**
+   * Attach clipboard file to TUI prompt
+   *
+   * Attach a base64 file (image or PDF clipboard payload) to the TUI prompt.
+   */
+  public attachPrompt<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      filename?: string
+      mime?: string
+      data?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "filename" },
+            { in: "body", key: "mime" },
+            { in: "body", key: "data" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TuiAttachPromptResponses, TuiAttachPromptErrors, ThrowOnError>({
+      url: "/tui/attach",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Open help dialog
    *
    * Open the help dialog in the TUI to display user assistance information.
@@ -4989,7 +5033,12 @@ export class Tui extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      body?: EventTuiPromptAppend | EventTuiCommandExecute | EventTuiToastShow | EventTuiSessionSelect
+      body?:
+        | EventTuiPromptAppend
+        | EventTuiPromptAttach
+        | EventTuiCommandExecute
+        | EventTuiToastShow
+        | EventTuiSessionSelect
     },
     options?: Options<never, ThrowOnError>,
   ) {
