@@ -67,9 +67,8 @@ it.instance("a subagent of an autonomous session inherits self-answering", () =>
       sessions.create({ title: "unattended-parent", metadata: { autonomous: true } }),
       (info) => sessions.remove(info.id).pipe(Effect.ignore),
     )
-    const child = yield* Effect.acquireRelease(
-      sessions.create({ title: "child", parentID: parent.id }),
-      (info) => sessions.remove(info.id).pipe(Effect.ignore),
+    const child = yield* Effect.acquireRelease(sessions.create({ title: "child", parentID: parent.id }), (info) =>
+      sessions.remove(info.id).pipe(Effect.ignore),
     )
 
     expect(yield* sessions.effectiveAutonomous(child.id)).toBe(true)

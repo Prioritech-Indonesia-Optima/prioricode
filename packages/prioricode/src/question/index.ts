@@ -122,9 +122,9 @@ const layer = Layer.effect(
       const fallback = fallbackAnswers(questions)
       const session = yield* sessions.get(sessionID).pipe(Effect.catch(() => Effect.succeed(undefined)))
       if (!session) return fallback
-      const msgs = yield* sessions.messages({ sessionID, limit: 60 }).pipe(
-        Effect.catch(() => Effect.succeed([] as SessionV1.WithParts[])),
-      )
+      const msgs = yield* sessions
+        .messages({ sessionID, limit: 60 })
+        .pipe(Effect.catch(() => Effect.succeed([] as SessionV1.WithParts[])))
       const lastUser = msgs.findLast((msg) => msg.info.role === "user")
       if (!lastUser || lastUser.info.role !== "user") return fallback
       const agent = yield* agents.get(session.agent ?? "build").pipe(Effect.catch(() => Effect.succeed(undefined)))

@@ -20,10 +20,7 @@ export function fallbackAnswers(questions: ReadonlyArray<ConsultQuestion>): Read
   return questions.map((question) => [question.options[0]?.label ?? "yes"])
 }
 
-export function buildConsultPrompt(
-  questions: ReadonlyArray<ConsultQuestion>,
-  context: string,
-): string {
+export function buildConsultPrompt(questions: ReadonlyArray<ConsultQuestion>, context: string): string {
   const block = questions
     .map((question, index) => {
       const options = question.options
@@ -56,7 +53,12 @@ export function parseConsult(text: string, questions: ReadonlyArray<ConsultQuest
     if (!raw) return fallback[index]
     const wanted = raw
       .split(/\s*,\s*/)
-      .map((label) => label.trim().replace(/[.!]+$/, "").toLowerCase())
+      .map((label) =>
+        label
+          .trim()
+          .replace(/[.!]+$/, "")
+          .toLowerCase(),
+      )
       .filter((label) => label.length > 0)
     const matched: string[] = []
     for (const option of question.options) {
