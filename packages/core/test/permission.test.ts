@@ -87,6 +87,27 @@ function setMode(mode: "default" | "ask-first" | "always-allow" | null) {
   })
 }
 
+function insertSession(id: string, input: { parentID?: string; mode?: "default" | "ask-first" | "always-allow" } = {}) {
+  return Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    yield* db
+      .insert(SessionTable)
+      .values({
+        id: SessionV2.ID.make(id),
+        project_id: Project.ID.global,
+        slug: id,
+        directory: "/project",
+        title: id,
+        version: "test",
+        agent: "test",
+        parent_id: input.parentID === undefined ? undefined : SessionV2.ID.make(input.parentID),
+        permission_mode: input.mode,
+      })
+      .run()
+      .pipe(Effect.orDie)
+  })
+}
+
 function assertion(input: Partial<PermissionV2.AssertInput> = {}) {
   return {
     id: PermissionV2.ID.create("per_test"),
@@ -374,6 +395,54 @@ describe("PermissionV2", () => {
           assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["mkfs.ext4 /dev/sda1"] }),
         ),
       ).toMatchObject({ effect: "ask" })
+    }),
+  )
+
+  it.effect("child session follows the nearest ancestor's permission mode", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "*", resource: "*", effect: "deny" }])
+      yield* setMode("always-allow")
+      yield* insertSession("ses_child", { parentID: "ses_test" })
+      const service = yield* PermissionV2.Service
+      expect(
+        yield* service.ask(
+          assertion({ id: PermissionV2.ID.create(), sessionID: SessionV2.ID.make("ses_child"), action: "edit", resources: ["src/index.ts"] }),
+        ),
+      ).toMatchObject({ effect: "allow" })
+    }),
+  )
+
+  it.effect("explicit child mode overrides the ancestor mode", () =>
+    Effect.gen(function* () {
+      yield* setup([])
+      yield* setMode("always-allow")
+      yield* insertSession("ses_child", { parentID: "ses_test", mode: "ask-first" })
+      const service = yield* PermissionV2.Service
+      expect(
+        yield* service.ask(
+          assertion({ id: PermissionV2.ID.create(), sessionID: SessionV2.ID.make("ses_child"), action: "edit", resources: ["src/index.ts"] }),
+        ),
+      ).toMatchObject({ effect: "ask" })
+    }),
+  )
+
+  it.effect("mode resolves through an unset middle ancestor", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "*", resource: "*", effect: "deny" }])
+      yield* setMode("ask-first")
+      yield* insertSession("ses_mid", { parentID: "ses_test" })
+      yield* insertSession("ses_leaf", { parentID: "ses_mid" })
+      const service = yield* PermissionV2.Service
+      expect(
+        yield* service.ask(
+          assertion({ id: PermissionV2.ID.create(), sessionID: SessionV2.ID.make("ses_leaf"), action: "edit", resources: ["src/index.ts"] }),
+        ),
+      ).toMatchObject({ effect: "ask" })
+      expect(
+        yield* service.ask(
+          assertion({ id: PermissionV2.ID.create(), sessionID: SessionV2.ID.make("ses_leaf"), action: "read", resources: ["src/index.ts"] }),
+        ),
+      ).toMatchObject({ effect: "deny" })
     }),
   )
 

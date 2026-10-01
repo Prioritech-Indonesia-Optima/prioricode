@@ -156,6 +156,25 @@ const layer = Layer.effect(
       )
     })
 
+    const effectiveMode = EffectRuntime.fnUntraced(function* (session: SessionV2.Info) {
+      // An explicit mode on this Session always wins; the parent walk only
+      // applies when its own mode is unset.
+      if (session.permissionMode !== undefined) return session.permissionMode
+      if (session.parentID === undefined) return undefined
+      const visited = new Set<SessionV2.ID>([session.id])
+      let current = session
+      for (;;) {
+        const parentID = current.parentID
+        if (parentID === undefined || visited.has(parentID)) break
+        visited.add(parentID)
+        const parent = yield* sessions.get(parentID)
+        if (!parent) break
+        if (parent.permissionMode !== undefined) return parent.permissionMode
+        current = parent
+      }
+      return session.permissionMode
+    })
+
     const configured = EffectRuntime.fn("PermissionV2.configured")(function* (
       sessionID: SessionV2.ID,
       agentID?: AgentV2.ID,
@@ -164,7 +183,11 @@ const layer = Layer.effect(
       if (!session) return yield* new SessionV2.NotFoundError({ sessionID })
       const agent = yield* agents.resolve(agentID ?? session.agent)
       const base = agent?.permissions ?? missingAgentPermissions
-      const mode = session.permissionMode
+      // A subagent (child) Session has no explicit mode of its own; it follows
+      // the nearest ancestor Session that does. Without this walk a parent set
+      // to `always-allow` or `ask-first` would leave its subagents on the unset
+      // default mode, silently escaping the main Session's permission posture.
+      const mode = yield* effectiveMode(session)
       return { rules: [...base, ...modeRulesFor(mode)], mode }
     })
 
