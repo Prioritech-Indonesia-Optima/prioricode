@@ -7,6 +7,7 @@ import TurndownService from "turndown"
 import { makeLocationNode } from "../effect/app-node"
 import { LayerNodePlatform } from "../effect/app-node-platform"
 import { PermissionV2 } from "../permission"
+import { PermissionFailure } from "./permission-failure"
 import { collectBoundedResponseBody } from "./http-body"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
@@ -174,7 +175,11 @@ const layer = Layer.effectDiscard(
                 format: input.format,
                 output,
               }
-            }).pipe(Effect.mapError((error) => Tool.failure(`Unable to fetch ${input.url}`, error))),
+            }).pipe(
+              Effect.mapError((error) =>
+                error instanceof Tool.Failure ? error : Tool.failure(`Unable to fetch ${input.url}`, error),
+              ),
+            ),
         }),
       })
       .pipe(Effect.orDie)
