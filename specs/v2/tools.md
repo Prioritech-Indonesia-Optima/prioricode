@@ -169,6 +169,39 @@ Outcomes remain distinct:
 
 Leaf tools translate only errors they deliberately classify as recoverable. Broad cause-catching around an executor is invalid because it consumes interruption and defects.
 
+Because `execute`'s error channel is currently `ToolFailure`-only, leaves end with `Effect.mapError` over their typed domain errors. The operative convention:
+
+- `PermissionV2.assert` failures are translated explicitly through `tool/permission-failure.ts` (`PermissionFailure.fromError`) at the assert site, producing model-actionable text (the user's correction feedback verbatim, or the governing rules). A trailing generic catch must never be the only translation for permission outcomes.
+- The trailing generic `Tool.failure(prefix, error)` covers domain errors only and must pass existing `ToolFailure` values through unchanged.
+- `Tool.failure` cause rendering keeps payload fields of message-less typed errors visible (`{"feedback":...}` rather than the bare tag name).
+- A bare permission decline stays a halt: `DeclinedError` is deliberately raised as a defect that stops the Session drain (V1 parity). Surfacing declines as model-visible failures is not part of this contract.
+
+## Approval Prompt Metadata
+
+`metadata` is the UI contract for approval dialogs (`resources`/`save` remain the policy contract). Shipped keys:
+
+| Action | metadata keys |
+|---|---|
+| `edit` (edit/write/apply_patch) | `{ filepath, diff? }` — diff is the prepared replacement preview |
+| `external_directory` | `{ parentDir, filepath }` |
+| `read` | `{ path }` |
+| `bash` | `{ command }` |
+| `grep`, `glob` | `{ pattern, root, path?, include?, limit? }` |
+| `webfetch` | the tool input (`{ url, format, timeout? }`) |
+| `websearch` | `{ ...input, provider }` |
+
+Built-ins that mutate only Session state (`goal`, `todowrite`, `plan_enter`, `plan_exit`, `task`, `question`) assert nothing or gate through the question flow; their availability is governed by definition filtering. File content for the `edit`/`apply_patch` diff preview is read before approval, but a denied call always settles as the permission outcome: read, match, and preparation state stay model-invisible until an approval decision.
+
+## Permission Precedence
+
+`PermissionV2` resolves one effect per resource from configured rules (agent ruleset then Session/ancestor mode) and durable saved approvals:
+
+1. A configured `deny` always wins. Saved approvals are never consulted for a resource a configured rule denies.
+2. A configured `allow` wins outright.
+3. A configured `ask` (explicit, or the implicit wildcard default) is satisfied by a saved approval only when that saved rule is at least as specific. Specificity is `resource === "*" ? 0 : endsWith("*") ? 1 : 2`.
+
+Consequences: one "always" on a broad read (`save: ["*"]`) stops future generic reads but can never silently defeat a shipped `read *.env ask`; the `ask-first` mode's broad `edit *`/`bash *` asks remain satisfiable by concrete or prefix saved approvals. The reply "always" auto-approve fan-out evaluates every pending request through this same single `resolveEffect` path, so a saved wildcard never clears a sibling's more-specific ask. Saving an approval for a resource a configured deny governs is impossible; there is no saved `deny`.
+
 ## Laws
 
 - **Single executor:** `Tool.make(config)` can invoke only `config.execute`.

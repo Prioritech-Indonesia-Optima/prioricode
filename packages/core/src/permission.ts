@@ -191,9 +191,35 @@ const layer = Layer.effect(
       return { rules: [...base, ...modeRulesFor(mode)], mode }
     })
 
-    function denied(input: AssertInput, rules: Permission.Ruleset) {
-      return input.resources.some((resource) => evaluate(input.action, resource, rules).effect === "deny")
-    }
+// Saved approvals carry the resource granularity the user actually approved.
+// A saved allow satisfies an `ask` only when it is at least as specific as the
+// governing configured ask, so one "always" on a wildcard read can never
+// silently defeat a configured `read *.env ask`. A configured deny always
+// dominates (checked before saved rules are consulted).
+function resourceSpecificity(resource: string) {
+  if (resource === "*") return 0
+  return resource.endsWith("*") ? 1 : 2
+}
+
+function resolveEffect(
+  action: string,
+  resource: string,
+  configured: Permission.Ruleset,
+  saved: Permission.Ruleset,
+): Permission.Effect {
+  const governing = evaluate(action, resource, configured)
+  if (governing.effect !== "ask") return governing.effect
+  const remembered = saved.findLast(
+    (rule) => Wildcard.match(action, rule.action) && Wildcard.match(resource, rule.resource),
+  )
+  return remembered && resourceSpecificity(remembered.resource) >= resourceSpecificity(governing.resource)
+    ? "allow"
+    : "ask"
+}
+
+function denied(input: AssertInput, rules: Permission.Ruleset) {
+  return input.resources.some((resource) => evaluate(input.action, resource, rules).effect === "deny")
+}
 
     function relevant(input: AssertInput, rules: Permission.Ruleset) {
       return rules.filter((rule) => Wildcard.match(input.action, rule.action))
@@ -202,9 +228,10 @@ const layer = Layer.effect(
     const evaluateInput = EffectRuntime.fnUntraced(function* (input: AssertInput) {
       const { rules, mode } = yield* configured(input.sessionID, input.agent)
       if (denied(input, rules)) return { effect: "deny" as const, rules }
-      const all = [...rules, ...(yield* savedRules())]
+      const saved = yield* savedRules()
+      const all = [...rules, ...saved]
       const effects = input.resources.map((resource) => {
-        const effect = evaluate(input.action, resource, all).effect
+        const effect = resolveEffect(input.action, resource, rules, saved)
         if (
           mode === "always-allow" &&
           input.action === "bash" &&
@@ -326,16 +353,13 @@ const layer = Layer.effect(
 
           const rememberedRules = yield* savedRules()
           for (const [id, item] of pending) {
-            const input = { ...item.request }
             const result = yield* configured(item.request.sessionID, item.agent).pipe(
               EffectRuntime.catchTag("Session.NotFoundError", () => EffectRuntime.succeed(undefined)),
             )
             if (!result) continue
-            if (denied(input, result.rules)) continue
-            const effective = [...result.rules, ...rememberedRules]
             if (
               !item.request.resources.every(
-                (resource) => evaluate(item.request.action, resource, effective).effect === "allow",
+                (resource) => resolveEffect(item.request.action, resource, result.rules, rememberedRules) === "allow",
               )
             )
               continue

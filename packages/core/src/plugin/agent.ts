@@ -112,6 +112,9 @@ export const Plugin = define({
       { action: "plan_enter", resource: "*", effect: "deny" },
       { action: "plan_exit", resource: "*", effect: "deny" },
       { action: "read", resource: "*", effect: "allow" },
+      // These specific `ask` tripwires cannot be defeated by a saved wildcard approval: only an
+      // equally- or more-specific saved approval satisfies them (specs/v2/tools.md "Permission
+      // Precedence").
       { action: "read", resource: "*.env", effect: "ask" },
       { action: "read", resource: "*.env.*", effect: "ask" },
       { action: "read", resource: "*.env.example", effect: "allow" },

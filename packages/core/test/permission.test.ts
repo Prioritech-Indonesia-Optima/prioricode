@@ -346,23 +346,32 @@ describe("PermissionV2", () => {
     }),
   )
 
-  it.effect("characterization: a saved wildcard read allow defeats a configured specific ask", () =>
+  it.effect("a saved wildcard allow satisfies broad asks but never a configured specific ask", () =>
     Effect.gen(function* () {
       yield* setup([{ action: "read", resource: "*.env", effect: "ask" }])
       const saved = yield* PermissionSaved.Service
       yield* saved.add({ projectID: Project.ID.global, action: "read", resources: ["*"] })
 
       const service = yield* PermissionV2.Service
-      // Phase 6 flips this: saved allows are appended after configured rules and findLast-wins,
-      // so one "always" on any read currently defeats the more-specific configured ask forever.
+      // The default no-rule-matches ask (wildcard specificity) is satisfied by a saved wildcard.
       expect(
-        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_char_env"), resources: ["project.env"] })),
-      ).toEqual({ id: PermissionV2.ID.create("per_char_env"), effect: "allow" })
-      expect(yield* service.list()).toEqual([])
+        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_law_src"), resources: ["src/index.ts"] })),
+      ).toEqual({ id: PermissionV2.ID.create("per_law_src"), effect: "allow" })
+      // A more-specific configured ask (`read *.env`) outranks the saved wildcard.
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_law_env"), resources: ["project.env"] })),
+      ).toEqual({ id: PermissionV2.ID.create("per_law_env"), effect: "ask" })
+      expect(yield* service.list()).toMatchObject([{ id: PermissionV2.ID.create("per_law_env") }])
+
+      // An equally- or more-specific saved approval does satisfy the specific ask.
+      yield* saved.add({ projectID: Project.ID.global, action: "read", resources: ["project.env"] })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_law_env2"), resources: ["project.env"] })),
+      ).toEqual({ id: PermissionV2.ID.create("per_law_env2"), effect: "allow" })
     }),
   )
 
-  it.effect("characterization: a configured deny still defeats a saved wildcard allow", () =>
+  it.effect("a configured deny still defeats a saved wildcard allow", () =>
     Effect.gen(function* () {
       yield* setup([{ action: "read", resource: "*", effect: "deny" }])
       const saved = yield* PermissionSaved.Service
@@ -375,7 +384,7 @@ describe("PermissionV2", () => {
     }),
   )
 
-  it.effect("characterization: the always-reply fan-out auto-approves siblings with the same saved precedence", () =>
+  it.effect("the always-reply fan-out never auto-approves a request a configured specific ask governs", () =>
     Effect.gen(function* () {
       yield* setup([{ action: "read", resource: "*.env", effect: "ask" }])
       const service = yield* PermissionV2.Service
@@ -404,8 +413,10 @@ describe("PermissionV2", () => {
       expect(yield* Deferred.await(envAsked)).toMatchObject({ resources: ["project.env"] })
       yield* service.reply({ requestID: srcRequest.id, reply: "always" })
       yield* Fiber.join(srcFiber)
-      // Characterization of the reply fan-out ordering: approving one read with save ["*"]
-      // auto-approves the already-pending more-specific .env ask in the same session.
+      // The saved wildcard from the "always" reply is less specific than the configured
+      // `read *.env` ask, so the pending .env request stays pending.
+      expect(yield* service.list()).toMatchObject([{ id: PermissionV2.ID.create("per_char_env2") }])
+      yield* service.reply({ requestID: PermissionV2.ID.create("per_char_env2"), reply: "once" })
       yield* Fiber.join(envFiber)
       expect(yield* service.list()).toEqual([])
     }),

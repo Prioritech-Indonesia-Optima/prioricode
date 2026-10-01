@@ -27,6 +27,8 @@ const source = {
 
 Leaves own resolution, permission, and side-effect ordering. Translate only expected typed errors into `ToolFailure`; do not use `catchCause`, because interruption and defects must survive.
 
+`PermissionV2.assert` failures are translated at the assert site with `PermissionFailure.fromError` (`tool/permission-failure.ts`) so correction feedback and blocking rules reach the model verbatim; the trailing generic `Tool.failure(prefix, error)` covers domain errors only and passes existing `ToolFailure` values through. Permission metadata follows the UI key table in `specs/v2/tools.md` "Approval Prompt Metadata".
+
 ## Registration
 
 Built-ins register through `Tools.Service.register({ [name]: tool })`. Application tools register through `ApplicationTools.Service.register(...)`, exposed publicly as `prioricode.tools.register(...)`.
@@ -55,5 +57,6 @@ Producer capture limits are separate. For example, Bash keeps `AppProcess.maxOut
 ## Current Gaps
 
 - Plugin boot has not been redesigned to register canonical tools through `Tools.Service`; do not redesign it as part of leaf migrations.
-- MCP and future Session-scoped registrations still need an explicit canonical registration design.
+- MCP registration uses the canonical type today; future Session-scoped registrations still need an explicit canonical design.
+- `TaskTool` is defined and tested but not registered in any production graph: its `SessionExecution.node` dependency re-enters `SessionExecutionLocal` inside the `buildLocationServiceMap` LayerMap body. `PlanTool` no longer shares that blocker (map-free durable leaves; registered in `builtins.ts`). A TaskTool seam needs its own decision between a late-bound execution cell and a map-owned self-router, plus prerequisites: deny `task` for subagent-mode agents, add the subagent-list context source its description promises, and define background-task restart recovery.
 - The public Session result shape currently exposes managed `outputPaths`; full storage encapsulation requires a future opaque managed-output reference design.
