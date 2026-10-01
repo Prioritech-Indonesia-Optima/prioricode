@@ -414,22 +414,22 @@ describe("installation", () => {
         },
       )
 
-    testEffect(shellLayer((cmd) => (cmd === "powershell.exe" ? { code: 1, stderr: "spawn powershell.exe ENOENT" } : ""))).effect(
-      "uses the absolute System32 PowerShell when PATH powershell.exe is absent",
-      () =>
-        withPlatform(
-          "win32",
-          Effect.gen(function* () {
-            winSpawns.length = 0
-            yield* Installation.use.upgrade("curl", "9.9.9")
-            // PATH powershell.exe returned ENOENT, then the System32 absolute
-            // candidate ran (code 0) before pwsh could be attempted.
-            expect(winSpawns.map(([cmd]) => cmd).filter((cmd) => cmd.includes("powershell.exe"))).toEqual([
-              "powershell.exe",
-              "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-            ])
-          }),
-        ),
+    testEffect(
+      shellLayer((cmd) => (cmd === "powershell.exe" ? { code: 1, stderr: "spawn powershell.exe ENOENT" } : "")),
+    ).effect("uses the absolute System32 PowerShell when PATH powershell.exe is absent", () =>
+      withPlatform(
+        "win32",
+        Effect.gen(function* () {
+          winSpawns.length = 0
+          yield* Installation.use.upgrade("curl", "9.9.9")
+          // PATH powershell.exe returned ENOENT, then the System32 absolute
+          // candidate ran (code 0) before pwsh could be attempted.
+          expect(winSpawns.map(([cmd]) => cmd).filter((cmd) => cmd.includes("powershell.exe"))).toEqual([
+            "powershell.exe",
+            "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          ])
+        }),
+      ),
     )
 
     testEffect(
@@ -450,9 +450,7 @@ describe("installation", () => {
     )
 
     testEffect(
-      shellLayer((cmd) =>
-        cmd.includes("powershell") || cmd === "pwsh" ? { code: 1, stderr: "spawn ENOENT" } : "",
-      ),
+      shellLayer((cmd) => (cmd.includes("powershell") || cmd === "pwsh" ? { code: 1, stderr: "spawn ENOENT" } : "")),
     ).effect("reports shell-not-found when no windows installer shell exists", () =>
       withPlatform(
         "win32",
@@ -494,7 +492,8 @@ describe("installation", () => {
         () => jsonResponse({}),
         (cmd, args) => {
           if (cmd !== "npm") return ""
-          if (args.includes("install")) return { code: 1, stderr: "EBUSY: resource busy prioricode.exe being used by another process" }
+          if (args.includes("install"))
+            return { code: 1, stderr: "EBUSY: resource busy prioricode.exe being used by another process" }
           return ""
         },
       ),

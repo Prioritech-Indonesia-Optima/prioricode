@@ -91,7 +91,8 @@ describe("permission feedback survives real settlement", () => {
             Location.node,
             Layer.succeed(
               Location.Service,
-              Location.Service.of(location({ directory: AbsolutePath.make("/permission-failure-test") }))),
+              Location.Service.of(location({ directory: AbsolutePath.make("/permission-failure-test") })),
+            ),
           ],
           [PermissionV2.node, permission],
           [ToolOutputStore.node, ToolOutputStore.nodeWithoutConfig],
@@ -105,7 +106,8 @@ describe("permission feedback survives real settlement", () => {
       const result = yield* runWithDeniedPermission(new PermissionV2.CorrectedError({ feedback: "search src only" }))
       expect(result).toEqual({
         type: "error",
-        value: 'The user rejected this action with feedback: "search src only". Address the feedback before retrying or choosing another approach.',
+        value:
+          'The user rejected this action with feedback: "search src only". Address the feedback before retrying or choosing another approach.',
       })
     }),
   )
@@ -117,7 +119,8 @@ describe("permission feedback survives real settlement", () => {
       )
       expect(result).toEqual({
         type: "error",
-        value: "Blocked by permission rules: glob src/** (deny). Do not retry this action; explain or ask the user instead.",
+        value:
+          "Blocked by permission rules: glob src/** (deny). Do not retry this action; explain or ask the user instead.",
       })
     }),
   )

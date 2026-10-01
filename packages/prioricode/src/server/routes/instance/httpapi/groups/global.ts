@@ -63,7 +63,13 @@ const GlobalUpgradeResult = Schema.Union([
     success: Schema.Literal(false),
     error: Schema.String,
     cause: Schema.optional(
-      Schema.Literals(["command-failed", "shell-not-found", "locked-binary", "elevation-required", "verification-failed"]),
+      Schema.Literals([
+        "command-failed",
+        "shell-not-found",
+        "locked-binary",
+        "elevation-required",
+        "verification-failed",
+      ]),
     ),
   }),
 ])

@@ -100,7 +100,10 @@ const assistant = (message: SessionMessage.Assistant, model: Model) => {
     if (item.provider?.executed !== true) return [call]
     // Hosted calls carry provider-owned results; never synthesize one for an unsettled hosted part.
     if (item.state.status !== "completed" && item.state.status !== "error") return [call]
-    return [call, toolResult(item, reuseProviderMetadata ? (item.provider.resultMetadata ?? item.provider.metadata) : undefined)]
+    return [
+      call,
+      toolResult(item, reuseProviderMetadata ? (item.provider.resultMetadata ?? item.provider.metadata) : undefined),
+    ]
   })
   const meaningful = content.filter((part) => {
     if (part.type === "text") return part.text !== ""

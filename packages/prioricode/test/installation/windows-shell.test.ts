@@ -14,9 +14,7 @@ describe("windows shell resolution chain", () => {
     expect(windowsShellCandidates({ windir: "D:\\WinPE\\" })[1]).toBe(
       "D:\\WinPE\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
     )
-    expect(windowsShellCandidates({})[1]).toBe(
-      "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
-    )
+    expect(windowsShellCandidates({})[1]).toBe("C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe")
   })
 
   test("deduplicates when SystemRoot is C:\\Windows so PATH and absolute both resolve", () => {

@@ -123,9 +123,7 @@ const layer = Layer.effectDiscard(
                           target,
                           before: "",
                           after:
-                            hunk.contents.endsWith("\n") || hunk.contents === ""
-                              ? hunk.contents
-                              : `${hunk.contents}\n`,
+                            hunk.contents.endsWith("\n") || hunk.contents === "" ? hunk.contents : `${hunk.contents}\n`,
                         })
                         return
                       }
@@ -149,9 +147,7 @@ const layer = Layer.effectDiscard(
                         before,
                         after: update.content,
                       })
-                    }).pipe(
-                      Effect.mapError((error) => (error instanceof ToolFailure ? error : fail(hunk.path, error))),
-                    )
+                    }).pipe(Effect.mapError((error) => (error instanceof ToolFailure ? error : fail(hunk.path, error))))
                   }
                   return prepared
                 }).pipe(

@@ -9,9 +9,7 @@
 export function windowsShellCandidates(env: Readonly<Record<string, string | undefined>>): string[] {
   const systemRoot = (env.SystemRoot ?? env.windir ?? "C:\\Windows").replace(/[\\/]+$/, "")
   const absolute = `${systemRoot}\\System32\\WindowsPowerShell\\v1.0\\powershell.exe`
-  return ["powershell.exe", absolute, "pwsh"].filter(
-    (candidate, index, all) => all.indexOf(candidate) === index,
-  )
+  return ["powershell.exe", absolute, "pwsh"].filter((candidate, index, all) => all.indexOf(candidate) === index)
 }
 
 // ChildProcess spawn failures for a missing executable surface as ENOENT in

@@ -148,7 +148,10 @@ describe("GrepTool", () => {
           Effect.andThen(
             withTool(tmp.path, (registry) =>
               Effect.gen(function* () {
-                const settled = yield* settleTool(registry, call({ pattern: "needle", path: RelativePath.make("sub/c.ts") }))
+                const settled = yield* settleTool(
+                  registry,
+                  call({ pattern: "needle", path: RelativePath.make("sub/c.ts") }),
+                )
                 // Characterization: match text keeps its trailing newline, so formatted
                 // lines gain an extra blank line between consecutive matches.
                 expect(settled.result).toEqual({

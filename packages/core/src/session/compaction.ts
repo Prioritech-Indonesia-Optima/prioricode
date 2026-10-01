@@ -115,10 +115,7 @@ export const serialize = (message: SessionMessage.Message) => {
           ]
         if (part.state.status === "error")
           return [`[Assistant tool call]: ${part.name}(${input})`, `[Tool error]: ${part.state.error.message}`]
-        return [
-          `[Assistant tool call]: ${part.name}(${input})`,
-          `[Tool result]: [Tool execution interrupted]`,
-        ]
+        return [`[Assistant tool call]: ${part.name}(${input})`, `[Tool result]: [Tool execution interrupted]`]
       })
       .join("\n")
   }

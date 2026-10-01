@@ -267,11 +267,7 @@ function sleepSync(ms: number) {
  * bounded retry covers transient ownership without blocking the UI
  * meaningfully (5 attempts x 30ms worst case).
  */
-export function openClipboardRetry(
-  open: () => number,
-  wait: (ms: number) => void = sleepSync,
-  attempts = 5,
-): boolean {
+export function openClipboardRetry(open: () => number, wait: (ms: number) => void = sleepSync, attempts = 5): boolean {
   for (let attempt = 0; attempt < attempts; attempt++) {
     if (open()) return true
     if (attempt + 1 < attempts) wait(30)

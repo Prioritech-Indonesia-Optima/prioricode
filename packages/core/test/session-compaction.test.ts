@@ -61,10 +61,8 @@ test("compaction transcript pairs every tool call with a result line", () => {
       content,
       time: { created, completed: created },
     })
-  const tool = (
-    id: string,
-    state: SessionMessage.AssistantTool["state"],
-  ) => SessionMessage.AssistantTool.make({ type: "tool", id, name: "read", state, time: { created } })
+  const tool = (id: string, state: SessionMessage.AssistantTool["state"]) =>
+    SessionMessage.AssistantTool.make({ type: "tool", id, name: "read", state, time: { created } })
 
   const text = SessionCompaction.serialize(
     assistant([

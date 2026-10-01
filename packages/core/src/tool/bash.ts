@@ -203,7 +203,9 @@ const layer = Layer.effectDiscard(
               }
             }).pipe(
               Effect.mapError((error) =>
-                error instanceof Tool.Failure ? error : Tool.failure(`Unable to execute command: ${input.command}`, error),
+                error instanceof Tool.Failure
+                  ? error
+                  : Tool.failure(`Unable to execute command: ${input.command}`, error),
               ),
             ),
         }),

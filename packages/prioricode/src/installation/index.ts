@@ -217,19 +217,47 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
         const formula = m === "brew" ? yield* getBrewFormula() : undefined
         const probe: { command: string[]; pattern: RegExp; label: string } | undefined =
           m === "npm"
-            ? { command: ["npm", "list", "-g", "--depth=0", "prioricode-ai"], pattern: /prioricode-ai@(\d+\.\d+\.\d+[^\s()]*)/, label: "prioricode-ai" }
+            ? {
+                command: ["npm", "list", "-g", "--depth=0", "prioricode-ai"],
+                pattern: /prioricode-ai@(\d+\.\d+\.\d+[^\s()]*)/,
+                label: "prioricode-ai",
+              }
             : m === "pnpm"
-              ? { command: ["pnpm", "list", "-g", "prioricode-ai"], pattern: /prioricode-ai (\d+\.\d+\.\d+[^\s]*)/, label: "prioricode-ai" }
+              ? {
+                  command: ["pnpm", "list", "-g", "prioricode-ai"],
+                  pattern: /prioricode-ai (\d+\.\d+\.\d+[^\s]*)/,
+                  label: "prioricode-ai",
+                }
               : m === "bun"
-                ? { command: ["bun", "pm", "ls", "-g"], pattern: /prioricode-ai@(\d+\.\d+\.\d+[^\s]*)/, label: "prioricode-ai" }
+                ? {
+                    command: ["bun", "pm", "ls", "-g"],
+                    pattern: /prioricode-ai@(\d+\.\d+\.\d+[^\s]*)/,
+                    label: "prioricode-ai",
+                  }
                 : m === "yarn"
-                  ? { command: ["yarn", "global", "list"], pattern: /prioricode-ai@(\d+\.\d+\.\d+[^\s"]*)/, label: "prioricode-ai" }
+                  ? {
+                      command: ["yarn", "global", "list"],
+                      pattern: /prioricode-ai@(\d+\.\d+\.\d+[^\s"]*)/,
+                      label: "prioricode-ai",
+                    }
                   : m === "scoop"
-                    ? { command: ["scoop", "list", "prioricode"], pattern: /prioricode\s+v?(\d+\.\d+\.\d+[^\s]*)/, label: "prioricode" }
+                    ? {
+                        command: ["scoop", "list", "prioricode"],
+                        pattern: /prioricode\s+v?(\d+\.\d+\.\d+[^\s]*)/,
+                        label: "prioricode",
+                      }
                     : m === "choco"
-                      ? { command: ["choco", "list", "--limit-output", "prioricode"], pattern: /prioricode\|(\d+\.\d+\.\d+[^\s|]*)/, label: "prioricode" }
+                      ? {
+                          command: ["choco", "list", "--limit-output", "prioricode"],
+                          pattern: /prioricode\|(\d+\.\d+\.\d+[^\s|]*)/,
+                          label: "prioricode",
+                        }
                       : m === "brew" && formula
-                        ? { command: ["brew", "list", "--versions", formula], pattern: /prioricode\s+(\d+\.\d+\.\d+[^\s]*)/, label: formula }
+                        ? {
+                            command: ["brew", "list", "--versions", formula],
+                            pattern: /prioricode\s+(\d+\.\d+\.\d+[^\s]*)/,
+                            label: formula,
+                          }
                         : undefined
         if (!probe) return
         const output = yield* text(probe.command)
@@ -292,16 +320,20 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
             // installer runs while prioricode.exe is still executing —
             // install.ps1 handles the locked-image swap itself.
             const body = yield* fetchInstaller("install.ps1", target)
-            if (!installerBodyLooksValid(body)) return rejected("Upgrade failed for curl: fetched installer was empty or not a script.", "command-failed")
+            if (!installerBodyLooksValid(body))
+              return rejected("Upgrade failed for curl: fetched installer was empty or not a script.", "command-failed")
             const scriptPath = path.join(os.tmpdir(), `prioricode-install-${target}-${process.pid}.ps1`)
             let result = { code: 1, stdout: "", stderr: "no Windows PowerShell or pwsh installation was found" }
             const ran = yield* fs.writeFileString(scriptPath, body).pipe(
               Effect.andThen(
                 Effect.gen(function* () {
                   for (const shell of windowsShellCandidates(process.env)) {
-                    const spawned = yield* run([shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath], {
-                      env: installEnv,
-                    })
+                    const spawned = yield* run(
+                      [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath],
+                      {
+                        env: installEnv,
+                      },
+                    )
                     // ENOENT means this candidate is absent; a real nonzero
                     // exit is the installer's own verdict and must propagate.
                     if (isMissingShell(spawned.stderr)) continue

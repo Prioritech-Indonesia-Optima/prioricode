@@ -482,7 +482,12 @@ describe("PermissionV2", () => {
       const service = yield* PermissionV2.Service
       expect(
         yield* service.ask(
-          assertion({ id: PermissionV2.ID.create(), sessionID: SessionV2.ID.make("ses_child"), action: "edit", resources: ["src/index.ts"] }),
+          assertion({
+            id: PermissionV2.ID.create(),
+            sessionID: SessionV2.ID.make("ses_child"),
+            action: "edit",
+            resources: ["src/index.ts"],
+          }),
         ),
       ).toMatchObject({ effect: "allow" })
     }),
@@ -496,7 +501,12 @@ describe("PermissionV2", () => {
       const service = yield* PermissionV2.Service
       expect(
         yield* service.ask(
-          assertion({ id: PermissionV2.ID.create(), sessionID: SessionV2.ID.make("ses_child"), action: "edit", resources: ["src/index.ts"] }),
+          assertion({
+            id: PermissionV2.ID.create(),
+            sessionID: SessionV2.ID.make("ses_child"),
+            action: "edit",
+            resources: ["src/index.ts"],
+          }),
         ),
       ).toMatchObject({ effect: "ask" })
     }),
@@ -511,12 +521,22 @@ describe("PermissionV2", () => {
       const service = yield* PermissionV2.Service
       expect(
         yield* service.ask(
-          assertion({ id: PermissionV2.ID.create(), sessionID: SessionV2.ID.make("ses_leaf"), action: "edit", resources: ["src/index.ts"] }),
+          assertion({
+            id: PermissionV2.ID.create(),
+            sessionID: SessionV2.ID.make("ses_leaf"),
+            action: "edit",
+            resources: ["src/index.ts"],
+          }),
         ),
       ).toMatchObject({ effect: "ask" })
       expect(
         yield* service.ask(
-          assertion({ id: PermissionV2.ID.create(), sessionID: SessionV2.ID.make("ses_leaf"), action: "read", resources: ["src/index.ts"] }),
+          assertion({
+            id: PermissionV2.ID.create(),
+            sessionID: SessionV2.ID.make("ses_leaf"),
+            action: "read",
+            resources: ["src/index.ts"],
+          }),
         ),
       ).toMatchObject({ effect: "deny" })
     }),

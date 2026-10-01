@@ -80,7 +80,9 @@ describe("Image", () => {
   it.effect("fails undecodable images instead of passing unsupported mimes through", () =>
     Effect.gen(function* () {
       const image = yield* Image.Service
-      const exit = yield* image.normalize(part("image/tiff", Buffer.from("not-a-real-tiff").toString("base64"))).pipe(Effect.exit)
+      const exit = yield* image
+        .normalize(part("image/tiff", Buffer.from("not-a-real-tiff").toString("base64")))
+        .pipe(Effect.exit)
 
       expect(Exit.isFailure(exit)).toBe(true)
       if (Exit.isFailure(exit)) expect(Cause.pretty(exit.cause)).toContain("Image could not be decoded")

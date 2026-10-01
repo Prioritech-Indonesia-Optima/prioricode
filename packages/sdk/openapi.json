@@ -519,6 +519,16 @@
                         },
                         "error": {
                           "type": "string"
+                        },
+                        "cause": {
+                          "type": "string",
+                          "enum": [
+                            "command-failed",
+                            "shell-not-found",
+                            "locked-binary",
+                            "elevation-required",
+                            "verification-failed"
+                          ]
                         }
                       },
                       "required": ["success", "error"],

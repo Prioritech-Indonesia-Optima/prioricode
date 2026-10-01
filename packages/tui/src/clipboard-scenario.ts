@@ -94,7 +94,8 @@ export const SCENARIOS: Record<ScenarioId, Scenario> = {
   },
   "linux-local": {
     id: "linux-local",
-    pasteEmpty: "Clipboard has nothing pasteable — if paste keeps failing, install xclip (X11) or wl-clipboard (Wayland)",
+    pasteEmpty:
+      "Clipboard has nothing pasteable — if paste keeps failing, install xclip (X11) or wl-clipboard (Wayland)",
     copyOsc52: OSC52_COPY,
     copyFailed: REMOTE_COPY_FAILED,
   },

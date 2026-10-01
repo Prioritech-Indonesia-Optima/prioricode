@@ -223,9 +223,17 @@ describe("GlobTool", () => {
           Effect.andThen(
             withTool(tmp.path, (registry) =>
               Effect.gen(function* () {
-                const settled = yield* settleTool(registry, call({ pattern: "**/*.ts", path: RelativePath.make("sub") }))
+                const settled = yield* settleTool(
+                  registry,
+                  call({ pattern: "**/*.ts", path: RelativePath.make("sub") }),
+                )
                 expect(settled.output?.structured).toEqual([{ path: RelativePath.make("sub/c.ts"), type: "file" }])
-                expect(assertions[0]?.metadata).toEqual({ pattern: "**/*.ts", root: "sub", path: "sub", limit: undefined })
+                expect(assertions[0]?.metadata).toEqual({
+                  pattern: "**/*.ts",
+                  root: "sub",
+                  path: "sub",
+                  limit: undefined,
+                })
               }),
             ),
           ),
@@ -244,9 +252,13 @@ describe("GlobTool", () => {
           Effect.andThen(
             withTool(tmp.path, (registry) =>
               Effect.gen(function* () {
-                const result = yield* executeTool(registry, call({ pattern: "*.ts", path: RelativePath.make("missing") }))
+                const result = yield* executeTool(
+                  registry,
+                  call({ pattern: "*.ts", path: RelativePath.make("missing") }),
+                )
                 expect(result.type).toBe("error")
-                if (result.type === "error") expect(String(result.value)).toContain("Unable to find files matching *.ts")
+                if (result.type === "error")
+                  expect(String(result.value)).toContain("Unable to find files matching *.ts")
               }),
             ),
           ),

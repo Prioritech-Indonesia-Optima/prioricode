@@ -748,7 +748,8 @@ const layer: Layer.Layer<
         metadata: input?.metadata,
         permission: input?.permission,
         permissionMode:
-          input?.permissionMode ?? (input?.parentID === undefined ? yield* inheritedPermissionMode(ctx.directory) : undefined),
+          input?.permissionMode ??
+          (input?.parentID === undefined ? yield* inheritedPermissionMode(ctx.directory) : undefined),
         workspaceID: input?.workspaceID ?? workspace,
       })
     })

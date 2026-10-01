@@ -277,7 +277,10 @@ describe("EditTool", () => {
                   call({ path: "secret.txt", oldString: "not present", newString: "replacement" }),
                 )
 
-                expect(matching).toEqual({ type: "error", value: expect.stringContaining("Blocked by permission rules") })
+                expect(matching).toEqual({
+                  type: "error",
+                  value: expect.stringContaining("Blocked by permission rules"),
+                })
                 expect(missing).toEqual(matching)
                 expect(assertions.map((input) => input.action)).toEqual(["edit", "edit"])
                 expect(reads).toBe(2)

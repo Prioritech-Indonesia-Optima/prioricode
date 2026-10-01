@@ -50,7 +50,9 @@ it.instance("subagent permissions take precedence within the parent's deny ceili
     const effective = Permission.merge(generalAgent!.permission, subagentSessionPermission)
 
     expect(Permission.evaluate("edit", "/some/file.ts", effective).action).toBe("deny")
-    expect(Permission.disabled(["edit", "write", "apply_patch"], effective)).toEqual(new Set(["edit", "write", "apply_patch"]))
+    expect(Permission.disabled(["edit", "write", "apply_patch"], effective)).toEqual(
+      new Set(["edit", "write", "apply_patch"]),
+    )
     // The child keeps its own capabilities the parent does not deny.
     expect(Permission.evaluate("read", "README.md", effective).action).toBe("allow")
   }),

@@ -12,7 +12,9 @@ import { Tool } from "./tool"
  * text survive into the model's only self-correction channel. Bare declines
  * are `PermissionV2.DeclinedError` defects by design and never reach here.
  */
-const ruleText = (rules: ReadonlyArray<{ readonly action: string; readonly resource: string; readonly effect: string }>) =>
+const ruleText = (
+  rules: ReadonlyArray<{ readonly action: string; readonly resource: string; readonly effect: string }>,
+) =>
   rules.length === 0
     ? "the active permission policy"
     : rules.map((rule) => `${rule.action} ${rule.resource} (${rule.effect})`).join(", ")

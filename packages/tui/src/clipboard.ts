@@ -308,7 +308,11 @@ export async function writeClipboard(env: ClipboardEnvironment, text: string): P
       () => false,
     )
   }
-  if (native) return env.run(native[0]!, native.slice(1), text, 8000).then(() => true, () => false)
+  if (native)
+    return env.run(native[0]!, native.slice(1), text, 8000).then(
+      () => true,
+      () => false,
+    )
   if (env.platform === "win32" || env.wsl) {
     return env
       .run(
@@ -317,7 +321,10 @@ export async function writeClipboard(env: ClipboardEnvironment, text: string): P
         text,
         15000,
       )
-      .then(() => true, () => false)
+      .then(
+        () => true,
+        () => false,
+      )
   }
   return false
 }
