@@ -123,8 +123,13 @@ describe("GrepTool", () => {
                     callID: "call-grep",
                   },
                 })
-                // Characterization: current metadata carries no pattern key.
-                expect(assertions[0]?.metadata).toEqual({ root: ".", path: undefined, include: "*.ts", limit: 100 })
+                expect(assertions[0]?.metadata).toEqual({
+                  pattern: "needle",
+                  root: ".",
+                  path: undefined,
+                  include: "*.ts",
+                  limit: 100,
+                })
               }),
             ),
           ),

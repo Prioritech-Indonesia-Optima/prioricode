@@ -123,8 +123,12 @@ describe("GlobTool", () => {
                     callID: "call-glob",
                   },
                 })
-                // Characterization: current metadata carries no pattern key.
-                expect(assertions[0]?.metadata).toEqual({ root: ".", path: undefined, limit: undefined })
+                expect(assertions[0]?.metadata).toEqual({
+                  pattern: "**/*.ts",
+                  root: ".",
+                  path: undefined,
+                  limit: undefined,
+                })
               }),
             ),
           ),
@@ -200,7 +204,7 @@ describe("GlobTool", () => {
                 expect(settled.output?.structured).toHaveLength(1)
                 expect(settled.result.type).toBe("text")
                 expect(String(settled.result.value).split("\n")).toHaveLength(1)
-                expect(assertions[0]?.metadata).toEqual({ root: ".", path: undefined, limit: 1 })
+                expect(assertions[0]?.metadata).toEqual({ pattern: "**/*.ts", root: ".", path: undefined, limit: 1 })
               }),
             ),
           ),
@@ -221,7 +225,7 @@ describe("GlobTool", () => {
               Effect.gen(function* () {
                 const settled = yield* settleTool(registry, call({ pattern: "**/*.ts", path: RelativePath.make("sub") }))
                 expect(settled.output?.structured).toEqual([{ path: RelativePath.make("sub/c.ts"), type: "file" }])
-                expect(assertions[0]?.metadata).toEqual({ root: "sub", path: "sub", limit: undefined })
+                expect(assertions[0]?.metadata).toEqual({ pattern: "**/*.ts", root: "sub", path: "sub", limit: undefined })
               }),
             ),
           ),

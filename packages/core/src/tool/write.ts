@@ -87,6 +87,7 @@ const layer = Layer.effectDiscard(
                     action: "edit",
                     resources: [target.resource],
                     save: ["*"],
+                    metadata: { filepath: target.resource },
                     sessionID: context.sessionID,
                     agent: context.agent,
                     source,

@@ -149,6 +149,7 @@ const layer = Layer.effectDiscard(
                   resources: patterns.length > 0 ? patterns : [input.command],
                   save: patterns.length > 0 ? patterns : [input.command],
                   fullText: input.command,
+                  metadata: { command: input.command },
                   sessionID: context.sessionID,
                   agent: context.agent,
                   source,
