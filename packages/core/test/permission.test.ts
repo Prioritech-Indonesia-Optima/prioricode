@@ -75,7 +75,7 @@ function setRules(rules: PermissionV2.Ruleset) {
   })
 }
 
-function setMode(mode: "default" | "ask-first" | "always-allow" | null) {
+function setMode(mode: PermissionV2.Mode | null) {
   return Effect.gen(function* () {
     const { db } = yield* Database.Service
     yield* db
@@ -87,7 +87,7 @@ function setMode(mode: "default" | "ask-first" | "always-allow" | null) {
   })
 }
 
-function insertSession(id: string, input: { parentID?: string; mode?: "default" | "ask-first" | "always-allow" } = {}) {
+function insertSession(id: string, input: { parentID?: string; mode?: PermissionV2.Mode } = {}) {
   return Effect.gen(function* () {
     const { db } = yield* Database.Service
     yield* db

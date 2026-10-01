@@ -13,7 +13,7 @@ import { PermissionSaved } from "./permission/saved"
 import { DestructiveCommand } from "./permission/destructive"
 import { SafeCommand } from "./permission/safe"
 
-export { Effect, Rule, Ruleset } from "@prioricode/schema/permission"
+export { Effect, Mode, Rule, Ruleset } from "@prioricode/schema/permission"
 const missingAgentPermissions: Permission.Ruleset = [{ action: "*", resource: "*", effect: "deny" }]
 
 export const ID = Permission.ID
