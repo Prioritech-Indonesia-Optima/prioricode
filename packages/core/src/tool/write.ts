@@ -12,6 +12,7 @@ import { EditObserver } from "../edit-observer"
 import { FileMutation } from "../file-mutation"
 import { LocationMutation } from "../location-mutation"
 import { PermissionV2 } from "../permission"
+import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
@@ -73,24 +74,32 @@ const layer = Layer.effectDiscard(
                 const target = yield* mutation.resolve({ path: input.path, kind: "file" })
                 const external = target.externalDirectory
                 if (external)
-                  yield* permission.assert({
-                    ...LocationMutation.externalDirectoryPermission(external),
+                  yield* permission
+                    .assert({
+                      ...LocationMutation.externalDirectoryPermission(external),
+                      sessionID: context.sessionID,
+                      agent: context.agent,
+                      source,
+                    })
+                    .pipe(Effect.mapError(PermissionFailure.fromError))
+                yield* permission
+                  .assert({
+                    action: "edit",
+                    resources: [target.resource],
+                    save: ["*"],
                     sessionID: context.sessionID,
                     agent: context.agent,
                     source,
                   })
-                yield* permission.assert({
-                  action: "edit",
-                  resources: [target.resource],
-                  save: ["*"],
-                  sessionID: context.sessionID,
-                  agent: context.agent,
-                  source,
-                })
+                  .pipe(Effect.mapError(PermissionFailure.fromError))
                 const result = yield* files.writeTextPreservingBom({ target, content: input.content })
                 const observation = yield* observer.afterEdit([result.target])
                 return { ...result, ...observation }
-              }).pipe(Effect.mapError((error) => Tool.failure(`Unable to write ${input.path}`, error))),
+              }).pipe(
+                Effect.mapError((error) =>
+                  error instanceof Tool.Failure ? error : Tool.failure(`Unable to write ${input.path}`, error),
+                ),
+              ),
           }),
           "edit",
         ),

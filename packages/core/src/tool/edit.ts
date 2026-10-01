@@ -16,6 +16,7 @@ import { FileMutation } from "../file-mutation"
 import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
 import { PermissionV2 } from "../permission"
+import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
@@ -449,26 +450,26 @@ const layer = Layer.effectDiscard(
                 const target = yield* unableToEdit(mutation.resolve({ path: input.path, kind: "file" }))
                 const external = target.externalDirectory
                 if (external) {
-                  yield* unableToEdit(
-                    permission.assert({
+                  yield* permission
+                    .assert({
                       ...LocationMutation.externalDirectoryPermission(external),
                       sessionID: context.sessionID,
                       agent: context.agent,
                       source: permissionSource,
-                    }),
-                  )
+                    })
+                    .pipe(Effect.mapError(PermissionFailure.fromError))
                 }
 
-                yield* unableToEdit(
-                  permission.assert({
+                yield* permission
+                  .assert({
                     action: "edit",
                     resources: [target.resource],
                     save: ["*"],
                     sessionID: context.sessionID,
                     agent: context.agent,
                     source: permissionSource,
-                  }),
-                )
+                  })
+                  .pipe(Effect.mapError(PermissionFailure.fromError))
                 const source = decodeUtf8(yield* unableToEdit(fs.readFile(target.canonical)))
                 const ending = detectLineEnding(source.text)
                 const oldString = convertToLineEnding(input.oldString, ending)

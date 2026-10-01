@@ -41,7 +41,7 @@ export const failure = (message: string, error?: unknown) =>
   })
 
 function causeText(error: unknown) {
-  if (error instanceof Error) return error.message || error.name || String(error)
+  if (error instanceof Error) return error.message || errorPayloadText(error) || error.name || String(error)
   if (typeof error === "string") return error || "unknown error"
   if (typeof error === "object" && error !== null) {
     const message = (error as { message?: unknown }).message
@@ -53,6 +53,19 @@ function causeText(error: unknown) {
     }
   }
   return String(error)
+}
+
+// Message-less typed errors (Schema.TaggedErrorClass) carry their payload as
+// own enumerable fields; serializing them keeps that payload model-visible
+// instead of the bare tag name.
+function errorPayloadText(error: Error) {
+  const payload = Object.fromEntries(Object.entries(error).filter(([key]) => key !== "_tag"))
+  if (Object.keys(payload).length === 0) return ""
+  try {
+    return JSON.stringify(payload)
+  } catch {
+    return ""
+  }
 }
 
 export class RegistrationError extends Schema.TaggedErrorClass<RegistrationError>()("Tool.RegistrationError", {

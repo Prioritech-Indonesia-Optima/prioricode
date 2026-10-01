@@ -11,6 +11,7 @@ import { AppProcess } from "../process"
 import { CommandArity } from "../permission/arity"
 import { PermissionV2 } from "../permission"
 import { PositiveInt } from "../schema"
+import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
@@ -129,26 +130,30 @@ const layer = Layer.effectDiscard(
               const target = yield* mutation.resolve({ path: input.workdir ?? ".", kind: "directory" })
               const external = target.externalDirectory
               if (external)
-                yield* permission.assert({
-                  ...LocationMutation.externalDirectoryPermission(external),
-                  sessionID: context.sessionID,
-                  agent: context.agent,
-                  source,
-                })
+                yield* permission
+                  .assert({
+                    ...LocationMutation.externalDirectoryPermission(external),
+                    sessionID: context.sessionID,
+                    agent: context.agent,
+                    source,
+                  })
+                  .pipe(Effect.mapError(PermissionFailure.fromError))
               const warnings = (yield* externalCommandDirectories(fs, input.command, target.canonical)).map(
                 (directory) =>
                   `Command argument references external directory ${path.join(directory, "*").replaceAll("\\", "/")}. Bash runs with host-user filesystem, process, and network authority; this scan is advisory only.`,
               )
               const patterns = CommandArity.patterns(input.command)
-              yield* permission.assert({
-                action: name,
-                resources: patterns.length > 0 ? patterns : [input.command],
-                save: patterns.length > 0 ? patterns : [input.command],
-                fullText: input.command,
-                sessionID: context.sessionID,
-                agent: context.agent,
-                source,
-              })
+              yield* permission
+                .assert({
+                  action: name,
+                  resources: patterns.length > 0 ? patterns : [input.command],
+                  save: patterns.length > 0 ? patterns : [input.command],
+                  fullText: input.command,
+                  sessionID: context.sessionID,
+                  agent: context.agent,
+                  source,
+                })
+                .pipe(Effect.mapError(PermissionFailure.fromError))
 
               if ((yield* fs.stat(target.canonical)).type !== "Directory")
                 return yield* Effect.fail(new Error(`Working directory is not a directory: ${target.canonical}`))
@@ -195,7 +200,11 @@ const layer = Layer.effectDiscard(
                 truncated: result.outputTruncated === true,
                 ...(warnings.length ? { warnings } : {}),
               }
-            }).pipe(Effect.mapError((error) => Tool.failure(`Unable to execute command: ${input.command}`, error))),
+            }).pipe(
+              Effect.mapError((error) =>
+                error instanceof Tool.Failure ? error : Tool.failure(`Unable to execute command: ${input.command}`, error),
+              ),
+            ),
         }),
       })
       .pipe(Effect.orDie)

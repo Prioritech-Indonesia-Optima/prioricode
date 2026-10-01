@@ -8,6 +8,7 @@ import { Image } from "../image"
 import { LocationMutation } from "../location-mutation"
 import { PermissionV2 } from "../permission"
 import { AbsolutePath } from "../schema"
+import { PermissionFailure } from "./permission-failure"
 import { ReadToolFileSystem } from "./read-filesystem"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
@@ -60,23 +61,27 @@ const layer = Layer.effectDiscard(
               const target = yield* mutation.resolve({ path: input.path, kind: "directory" })
               const external = target.externalDirectory
               if (external)
-                yield* permission.assert({
-                  ...LocationMutation.externalDirectoryPermission(external),
+                yield* permission
+                  .assert({
+                    ...LocationMutation.externalDirectoryPermission(external),
+                    sessionID: context.sessionID,
+                    agent: context.agent,
+                    source,
+                  })
+                  .pipe(Effect.mapError(PermissionFailure.fromError))
+              const resource = target.resource
+              const absolute = AbsolutePath.make(target.canonical)
+              const type = yield* reader.inspect(absolute)
+              yield* permission
+                .assert({
+                  action: name,
+                  resources: [resource],
+                  save: ["*"],
                   sessionID: context.sessionID,
                   agent: context.agent,
                   source,
                 })
-              const resource = target.resource
-              const absolute = AbsolutePath.make(target.canonical)
-              const type = yield* reader.inspect(absolute)
-              yield* permission.assert({
-                action: name,
-                resources: [resource],
-                save: ["*"],
-                sessionID: context.sessionID,
-                agent: context.agent,
-                source,
-              })
+                .pipe(Effect.mapError(PermissionFailure.fromError))
               if (type === "directory")
                 return yield* reader.list(absolute, { offset: input.offset, limit: input.limit })
               const content = yield* reader.read(absolute, resource, {
@@ -93,6 +98,7 @@ const layer = Layer.effectDiscard(
               return content
             }).pipe(
               Effect.mapError((error) => {
+                if (error instanceof Tool.Failure) return error
                 if (
                   error instanceof ReadToolFileSystem.BinaryFileError ||
                   error instanceof ReadToolFileSystem.MediaIngestLimitError ||

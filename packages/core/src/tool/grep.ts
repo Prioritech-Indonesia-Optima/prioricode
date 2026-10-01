@@ -9,6 +9,7 @@ import { Location } from "../location"
 import { PermissionV2 } from "../permission"
 import { Ripgrep } from "../ripgrep"
 import { RelativePath } from "../schema"
+import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
@@ -77,20 +78,22 @@ const layer = Layer.effectDiscard(
           ],
           execute: (input, context) =>
             Effect.gen(function* () {
-              yield* permission.assert({
-                action: name,
-                resources: [input.pattern],
-                save: ["*"],
-                metadata: {
-                  root: ".",
-                  path: input.path,
-                  include: input.include,
-                  limit: input.limit,
-                },
-                sessionID: context.sessionID,
-                agent: context.agent,
-                source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
-              })
+              yield* permission
+                .assert({
+                  action: name,
+                  resources: [input.pattern],
+                  save: ["*"],
+                  metadata: {
+                    root: ".",
+                    path: input.path,
+                    include: input.include,
+                    limit: input.limit,
+                  },
+                  sessionID: context.sessionID,
+                  agent: context.agent,
+                  source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
+                })
+                .pipe(Effect.mapError(PermissionFailure.fromError))
               const target = path.resolve(location.directory, input.path ?? ".")
               const info = yield* fs.stat(target).pipe(Effect.catch(() => Effect.succeed(undefined)))
               return yield* ripgrep
@@ -122,7 +125,11 @@ const layer = Layer.effectDiscard(
                     ),
                   ),
                 )
-            }).pipe(Effect.mapError((error) => Tool.failure(`Unable to grep for ${input.pattern}`, error))),
+            }).pipe(
+              Effect.mapError((error) =>
+                error instanceof Tool.Failure ? error : Tool.failure(`Unable to grep for ${input.pattern}`, error),
+              ),
+            ),
         }),
       })
       .pipe(Effect.orDie)

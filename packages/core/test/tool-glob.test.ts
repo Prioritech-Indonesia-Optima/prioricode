@@ -146,7 +146,7 @@ describe("GlobTool", () => {
                 const settled = yield* settleTool(registry, call({ pattern: "**/*.ts" }))
                 // ripgrep traversal order is not contractual, so compare sorted.
                 if (settled.result.type !== "text") return yield* Effect.fail("expected text result")
-                expect(settled.result.value.split("\n").sort()).toEqual(
+                expect(String(settled.result.value).split("\n").sort()).toEqual(
                   [path.join(tmp.path, "a.ts"), path.join(tmp.path, "sub/c.ts")].sort(),
                 )
                 expect(
@@ -196,7 +196,7 @@ describe("GlobTool", () => {
               Effect.gen(function* () {
                 const settled = yield* settleTool(registry, call({ pattern: "**/*.ts", limit: 1 }))
                 expect((settled.output?.structured as unknown[]).length).toBe(1)
-                if (settled.result.type === "text") expect(settled.result.value.split("\n")).toHaveLength(1)
+                if (settled.result.type === "text") expect(String(settled.result.value).split("\n")).toHaveLength(1)
                 expect(assertions[0]?.metadata).toEqual({ root: ".", path: undefined, limit: 1 })
               }),
             ),
