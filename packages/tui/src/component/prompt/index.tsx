@@ -70,6 +70,7 @@ import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
 import { pastedFilepath } from "./pasted-filepath"
 import { pasteMissHint } from "../../clipboard-scenario"
+import { readTerminalClipboard } from "../../clipboard-terminal"
 import { useLocation } from "../../context/location"
 
 registerPrioricodeSpinner()
@@ -444,7 +445,18 @@ export function Prompt(props: PromptProps) {
           lastPasteProbe = now
           const imageOnly = pasteImageOnlyRequest
           pasteImageOnlyRequest = false
-          const content = await clipboard.read?.()
+          // In a remote session the host clipboard is empty by definition, so
+          // ask the user's terminal for its clipboard first (kitty OSC 5522
+          // protocol with an OSC 52 text fallback); tmux may block the reply
+          // round-trip, so stay on the host read there.
+          const terminalChannel =
+            terminalEnvironment.remote && !terminalEnvironment.multiplexer && kv.get("terminal_clipboard_enabled", true)
+          let content = terminalChannel
+            ? await readTerminalClipboard(renderer, {
+                write: (sequence) => void process.stdout.write(sequence),
+              })
+            : await clipboard.read?.()
+          if (!content && terminalChannel) content = await clipboard.read?.()
           if (content?.mime.startsWith("image/")) {
             await pasteAttachment({
               filename: "clipboard",

@@ -11,6 +11,8 @@ import { useBindings } from "../keymap"
 import { describeOS, describeTerminal } from "../util/system"
 import { probeClipboardTools } from "../clipboard"
 import { clipboardSignals, resolveScenario } from "../clipboard-scenario"
+import { terminalClipboardLastAttempt } from "../clipboard-terminal"
+import { useKV } from "../context/kv"
 
 export function DialogDebug() {
   const { theme } = useTheme()
@@ -18,6 +20,7 @@ export function DialogDebug() {
   const route = useRoute()
   const local = useLocal()
   const clipboard = useClipboard()
+  const kv = useKV()
   const toast = useToast()
   const [copied, setCopied] = createSignal(false)
 
@@ -41,6 +44,17 @@ export function DialogDebug() {
       { label: "WSL", value: flag(signals.wsl) },
       { label: "SSH env", value: flag(process.env.SSH_CONNECTION || process.env.SSH_TTY) },
       { label: "Win32 FFI", value: tools.loading ? "probing" : flag(tools()?.win32Ffi) },
+      {
+        label: "Term clip",
+        value: [
+          `enabled=${kv.get("terminal_clipboard_enabled", true) ? "y" : "n"}`,
+          `terminal=${signals.terminal ?? "unknown"}`,
+          (() => {
+            const attempt = terminalClipboardLastAttempt()
+            return attempt ? `last=${attempt.outcome}${attempt.mime ? `(${attempt.mime})` : ""}` : "last=none"
+          })(),
+        ].join(" "),
+      },
       {
         label: "Clip tools",
         value: tools.loading

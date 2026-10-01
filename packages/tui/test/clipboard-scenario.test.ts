@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { clipboardSignals, pasteMissHint, resolveScenario, SCENARIOS } from "../src/clipboard-scenario"
+import { clipboardSignals, detectTerminal, pasteMissHint, resolveScenario, SCENARIOS } from "../src/clipboard-scenario"
 
 test("resolveScenario covers the Windows/remote matrix", () => {
   expect(resolveScenario({ platform: "win32" })).toBe("win32-native")
@@ -25,9 +25,26 @@ test("clipboardSignals: SSH env alone means remote; display or WSL vetoes it", (
 test("remote paste miss names the exact remedy", () => {
   const message = pasteMissHint({ platform: "linux", remote: true })
   expect(message).toContain("Remote session")
-  expect(message).toContain("Images cannot cross SSH")
+  expect(message).toContain("does not hand clipboard images")
   expect(message).toContain("scp")
   expect(SCENARIOS["linux-remote"].copyOsc52).toContain("OSC 52")
+})
+
+test("terminal-aware remote guidance", () => {
+  expect(detectTerminal({ TERM_PROGRAM: "vscode" })).toBe("vscode")
+  expect(detectTerminal({ TERM_PROGRAM: "iTerm.app" })).toBe("iterm")
+  expect(detectTerminal({ WT_SESSION: "abc" })).toBe("windows-terminal")
+  expect(detectTerminal({})).toBeUndefined()
+  expect(pasteMissHint({ platform: "linux", remote: true, terminal: "vscode" })).toContain(
+    "PrioriCode VS Code extension",
+  )
+  const kitty = pasteMissHint({ platform: "linux", remote: true, terminal: "kitty" })
+  expect(kitty).toContain("permission popup")
+  expect(kitty).toContain("Ctrl+V can fetch the clipboard")
+  expect(pasteMissHint({ platform: "linux", remote: true, terminal: "kitty", multiplexer: "tmux" })).toContain(
+    "tmux may also block",
+  )
+  expect(clipboardSignals({ TERM_PROGRAM: "ghostty", SSH_TTY: "/dev/pts/1" }, "6.8.0").terminal).toBe("ghostty")
 })
 
 test("local scenarios keep the terse clipboard message", () => {

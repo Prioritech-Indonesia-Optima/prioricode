@@ -11,7 +11,10 @@ export type ClipboardSignals = Readonly<{
   remote?: boolean
   displayServer?: "wayland" | "x11"
   multiplexer?: "tmux" | "screen"
+  terminal?: TerminalName
 }>
+
+export type TerminalName = "vscode" | "kitty" | "wezterm" | "ghostty" | "iterm" | "windows-terminal"
 
 export type ScenarioId =
   | "win32-native"
@@ -29,6 +32,16 @@ export type Scenario = Readonly<{
   copyFailed: string
 }>
 
+export function detectTerminal(env: Readonly<Record<string, string | undefined>>): TerminalName | undefined {
+  if (env.WT_SESSION) return "windows-terminal"
+  const program = (env.TERM_PROGRAM ?? "").toLowerCase()
+  if (program === "vscode") return "vscode"
+  if (program === "kitty") return "kitty"
+  if (program === "wezterm") return "wezterm"
+  if (program === "ghostty") return "ghostty"
+  if (program.includes("iterm")) return "iterm"
+}
+
 // tmux servers keep stale SSH_* variables after the original client detaches,
 // so a display server or WSL marker vetoes "remote" even when SSH env is set.
 export function clipboardSignals(
@@ -43,6 +56,7 @@ export function clipboardSignals(
     remote: Boolean(env.SSH_CONNECTION || env.SSH_CLIENT || env.SSH_TTY) && !displayServer && !wsl,
     displayServer,
     multiplexer: env.TMUX ? "tmux" : env.STY ? "screen" : undefined,
+    terminal: detectTerminal(env),
   }
 }
 
@@ -59,14 +73,28 @@ export function resolveScenario(signals: ClipboardSignals): ScenarioId {
 
 const OSC52_COPY = "Copied via terminal escape sequence (OSC 52) — paste into apps on your own machine"
 
-function remotePasteEmpty(multiplexer?: "tmux" | "screen") {
-  return [
+// Terminals that implement the kitty clipboard protocol (OSC 5522): a remote
+// Ctrl+V can pull clipboard bytes — including images — back over the pty.
+export const PROTOCOL_CLIPBOARD_TERMINALS: readonly TerminalName[] = ["kitty", "wezterm", "ghostty"]
+
+function remotePasteEmpty(terminal?: TerminalName, multiplexer?: "tmux" | "screen") {
+  const parts = [
     "Remote session: your clipboard lives on the client machine, not this host.",
     multiplexer
-      ? "Text: paste through your terminal (Ctrl+Shift+V or right-click), possibly bypassing tmux."
+      ? "Text: paste through your terminal (Ctrl+Shift+V or right-click), possibly bypassing tmux — tmux may also block the clipboard protocol."
       : "Text: paste with your terminal itself (Ctrl+Shift+V or right-click).",
-    "Images cannot cross SSH: copy the file here (scp, WinSCP, MobaXterm drag) and paste its path to attach it.",
-  ].join(" ")
+  ]
+  if (terminal && PROTOCOL_CLIPBOARD_TERMINALS.includes(terminal)) {
+    parts.push(
+      "Ctrl+V can fetch the clipboard through your terminal (a one-time permission popup may appear); if it comes back empty, your terminal may not support the clipboard protocol.",
+    )
+  } else if (terminal === "vscode") {
+    parts.push("Install the PrioriCode VS Code extension: its Ctrl+V sends clipboard images into the terminal, locally and over Remote-SSH.")
+  } else {
+    parts.push("This terminal does not hand clipboard images to applications over SSH.")
+  }
+  parts.push("Always works: copy the file to the server (scp, WinSCP, MobaXterm drag) and paste its path to attach it.")
+  return parts.join(" ")
 }
 
 const REMOTE_COPY_FAILED =
@@ -124,7 +152,6 @@ export function scenarioFor(signals: ClipboardSignals): Scenario {
 }
 
 export function pasteMissHint(signals: ClipboardSignals): string {
-  const scenario = scenarioFor(signals)
-  if (signals.multiplexer && scenario.id === "linux-remote") return remotePasteEmpty(signals.multiplexer)
-  return scenario.pasteEmpty
+  if (signals.remote) return remotePasteEmpty(signals.terminal, signals.multiplexer)
+  return scenarioFor(signals).pasteEmpty
 }
