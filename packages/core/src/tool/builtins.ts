@@ -26,12 +26,14 @@ import { WriteTool } from "./write"
  * than this static list. The caller intentionally supplies shared Location
  * services once to this merged set.
  *
- * TaskTool and PlanTool are deliberately absent: Session-coordinating tools need
- * the run coordinator and SessionV2, and any Location-scoped node that captures
- * those services makes buildLocationServiceMap construct SessionExecutionLocal
- * inside its own LayerMap body (a detected layer cycle). They are registered
- * through the future Session-scoped canonical tool registration designed in
- * specs/v2/tools.md and tool/AGENTS.md "Current Gaps", not this static list.
+ * TaskTool is deliberately absent: it captures the run coordinator through
+ * SessionExecution, and any Location-scoped node that captures it makes
+ * buildLocationServiceMap construct SessionExecutionLocal inside its own
+ * LayerMap body (a detected layer cycle). It is registered through the future
+ * Session-scoped canonical tool registration designed in specs/v2/tools.md and
+ * tool/AGENTS.md "Current Gaps". PlanTool is not affected: its durable writes
+ * go through map-free leaves (Database, EventV2, SessionStore, QuestionV2), so
+ * it registers normally here.
  */
 export const node = makeLocationNode({
   name: "built-in-tools",
@@ -43,6 +45,7 @@ export const node = makeLocationNode({
     GlobTool.node,
     GoalTool.node,
     GrepTool.node,
+    PlanTool.node,
     QuestionTool.node,
     ReadTool.node,
     SkillTool.node,
