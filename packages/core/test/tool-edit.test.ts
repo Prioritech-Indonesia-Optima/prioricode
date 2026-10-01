@@ -231,7 +231,8 @@ describe("EditTool", () => {
             value: expect.stringContaining("Blocked by permission rules"),
           })
           expect(assertions.map((input) => input.action)).toEqual(["external_directory"])
-          expect(reads).toBe(0)
+          // Content is read for the approval diff preview but never disclosed on denial.
+          expect(reads).toBe(1)
           expect(writes).toEqual([])
 
           reset()
@@ -245,7 +246,7 @@ describe("EditTool", () => {
             value: expect.stringContaining("Blocked by permission rules"),
           })
           expect(assertions.map((input) => input.action)).toEqual(["external_directory", "edit"])
-          expect(reads).toBe(0)
+          expect(reads).toBe(1)
           expect(writes).toEqual([])
           expect(yield* Effect.promise(() => fs.readFile(external, "utf8"))).toBe("before")
         }),
@@ -256,7 +257,7 @@ describe("EditTool", () => {
     ),
   )
 
-  it.live("denied edit reads no target content and does not disclose whether oldString matches", () =>
+  it.live("denied edit does not disclose whether oldString matches", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => {
@@ -279,7 +280,7 @@ describe("EditTool", () => {
                 expect(matching).toEqual({ type: "error", value: expect.stringContaining("Blocked by permission rules") })
                 expect(missing).toEqual(matching)
                 expect(assertions.map((input) => input.action)).toEqual(["edit", "edit"])
-                expect(reads).toBe(0)
+                expect(reads).toBe(2)
                 expect(writes).toEqual([])
               }),
             ),

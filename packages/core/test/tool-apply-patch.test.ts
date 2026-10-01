@@ -185,9 +185,16 @@ describe("ApplyPatchTool", () => {
                   ],
                 })
                 expect(assertions).toMatchObject([
-                  { sessionID, action: "edit", resources: ["nested/new.txt", "update.txt", "remove.txt"], save: ["*"] },
+                  {
+                    sessionID,
+                    action: "edit",
+                    resources: ["nested/new.txt", "update.txt", "remove.txt"],
+                    save: ["*"],
+                    metadata: { filepath: "nested/new.txt", diff: expect.stringContaining("+created") },
+                  },
                 ])
-                expect(readsBeforeEditApproval).toBe(0)
+                // Content is prepared for the approval diff preview; denial still discloses nothing.
+                expect(readsBeforeEditApproval).toBe(2)
                 expect(yield* Effect.promise(() => fs.readFile(path.join(tmp.path, "nested/new.txt"), "utf8"))).toBe(
                   "created\n",
                 )
@@ -231,7 +238,7 @@ describe("ApplyPatchTool", () => {
     ),
   )
 
-  it.live("approves an external directory and the batch before reading external update content", () =>
+  it.live("approves an external directory and the batch with the prepared diff preview", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => Promise.all([tmpdir(), tmpdir()])),
       ([active, outside]) => {
@@ -248,7 +255,7 @@ describe("ApplyPatchTool", () => {
                   ),
                 ).toMatchObject({ type: "text" })
                 expect(assertions.map((input) => input.action)).toEqual(["external_directory", "edit"])
-                expect(readsBeforeEditApproval).toBe(0)
+                expect(readsBeforeEditApproval).toBe(1)
                 expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("after\n")
               }),
             ),

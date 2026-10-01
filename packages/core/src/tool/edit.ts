@@ -448,6 +448,58 @@ const layer = Layer.effectDiscard(
                 }
 
                 const target = yield* unableToEdit(mutation.resolve({ path: input.path, kind: "file" }))
+                // The replacement candidate and diff preview are computed before approval so the
+                // permission dialog can show them. A denied call always settles as the permission
+                // outcome: read or match state stays model-invisible until the approval decision.
+                const plan = yield* Effect.gen(function* () {
+                  const source = decodeUtf8(yield* fs.readFile(target.canonical))
+                  const ending = detectLineEnding(source.text)
+                  const oldString = convertToLineEnding(input.oldString, ending)
+                  const newString = convertToLineEnding(input.newString, ending)
+                  const exactCount = countOccurrences(source.text, oldString)
+                  const replaceAll = input.replaceAll === true
+                  const fuzzy =
+                    exactCount === 1 || replaceAll
+                      ? {
+                          text: replaceAll
+                            ? source.text.replaceAll(oldString, newString)
+                            : source.text.replace(oldString, newString),
+                        }
+                      : exactCount > 1
+                        ? {
+                            failure:
+                              "Found multiple exact matches for oldString. Provide more surrounding context or set replaceAll to true.",
+                          }
+                        : fuzzyReplace(source.text, oldString, newString, replaceAll)
+                  if (fuzzy.failure !== undefined) return yield* new ToolFailure({ message: fuzzy.failure })
+                  const replaced = fuzzy.text
+                  const replacements =
+                    exactCount === 1 || exactCount > 1 ? exactCount : source.text === replaced ? 0 : 1
+                  const counts = diffLines(source.text, replaced).reduce(
+                    (result, item) => ({
+                      additions: result.additions + (item.added ? (item.count ?? 0) : 0),
+                      deletions: result.deletions + (item.removed ? (item.count ?? 0) : 0),
+                    }),
+                    { additions: 0, deletions: 0 },
+                  )
+                  return {
+                    source,
+                    replaced,
+                    replacements,
+                    counts,
+                    preview: createTwoFilesPatch(target.resource, target.resource, source.text, replaced),
+                  }
+                }).pipe(
+                  Effect.map((ready) => ({ _tag: "ready" as const, ready })),
+                  Effect.catch((error) =>
+                    Effect.succeed({
+                      _tag: "failure" as const,
+                      failure:
+                        error instanceof ToolFailure ? error : Tool.failure(`Unable to edit ${input.path}`, error),
+                    }),
+                  ),
+                )
+
                 const external = target.externalDirectory
                 if (external) {
                   yield* permission
@@ -465,47 +517,23 @@ const layer = Layer.effectDiscard(
                     action: "edit",
                     resources: [target.resource],
                     save: ["*"],
-                    metadata: { filepath: target.resource },
+                    metadata:
+                      plan._tag === "ready"
+                        ? { filepath: target.resource, diff: plan.ready.preview }
+                        : { filepath: target.resource },
                     sessionID: context.sessionID,
                     agent: context.agent,
                     source: permissionSource,
                   })
                   .pipe(Effect.mapError(PermissionFailure.fromError))
-                const source = decodeUtf8(yield* unableToEdit(fs.readFile(target.canonical)))
-                const ending = detectLineEnding(source.text)
-                const oldString = convertToLineEnding(input.oldString, ending)
-                const newString = convertToLineEnding(input.newString, ending)
-                const exactCount = countOccurrences(source.text, oldString)
-                const replaceAll = input.replaceAll === true
-                const fuzzy =
-                  exactCount === 1 || replaceAll
-                    ? {
-                        text: replaceAll
-                          ? source.text.replaceAll(oldString, newString)
-                          : source.text.replace(oldString, newString),
-                      }
-                    : exactCount > 1
-                      ? {
-                          failure:
-                            "Found multiple exact matches for oldString. Provide more surrounding context or set replaceAll to true.",
-                        }
-                      : fuzzyReplace(source.text, oldString, newString, replaceAll)
-                if (fuzzy.failure !== undefined) return yield* new ToolFailure({ message: fuzzy.failure })
-                const replaced = fuzzy.text
-                const replacements = exactCount === 1 || exactCount > 1 ? exactCount : source.text === replaced ? 0 : 1
-                const counts = diffLines(source.text, replaced).reduce(
-                  (result, item) => ({
-                    additions: result.additions + (item.added ? (item.count ?? 0) : 0),
-                    deletions: result.deletions + (item.removed ? (item.count ?? 0) : 0),
-                  }),
-                  { additions: 0, deletions: 0 },
-                )
-                const next = splitBom(replaced)
+
+                if (plan._tag === "failure") return yield* plan.failure
+                const next = splitBom(plan.ready.replaced)
                 const result = yield* unableToEdit(
                   files.writeIfUnchanged({
                     target,
-                    expected: source.content,
-                    content: joinBom(next.text, source.bom || next.bom),
+                    expected: plan.ready.source.content,
+                    content: joinBom(next.text, plan.ready.source.bom || next.bom),
                   }),
                 )
                 const observation = yield* observer.afterEdit([result.target])
@@ -513,12 +541,17 @@ const layer = Layer.effectDiscard(
                   files: [
                     {
                       file: result.resource,
-                      patch: createTwoFilesPatch(result.resource, result.resource, source.text, replaced),
+                      patch: createTwoFilesPatch(
+                        result.resource,
+                        result.resource,
+                        plan.ready.source.text,
+                        plan.ready.replaced,
+                      ),
                       status: "modified" as const,
-                      ...counts,
+                      ...plan.ready.counts,
                     },
                   ],
-                  replacements,
+                  replacements: plan.ready.replacements,
                   ...observation,
                 } satisfies Output
               })
