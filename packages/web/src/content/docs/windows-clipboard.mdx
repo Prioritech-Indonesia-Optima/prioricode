@@ -1,0 +1,58 @@
+---
+title: Windows & remote clipboard
+description: How image paste, copy, and self-update behave on native Windows, WSL, and when you SSH from Windows into a Linux machine.
+---
+
+PrioriCode reads and writes the clipboard on **the machine it runs on**, not the machine you are physically typing on. That single fact explains almost every "paste doesn't work" report, especially when you connect from Windows to a remote Linux box. This page maps each setup to what actually happens, and how to upgrade safely on Windows.
+
+## Scenarios at a glance
+
+| Setup | Copy from PrioriCode | Paste image (Ctrl+V) | Paste text |
+| --- | --- | --- | --- |
+| Native Windows (Windows Terminal, cmd, PowerShell) | Native clipboard | Works (FFI DIB→PNG, PowerShell fallback, copied files attach by path) | Works |
+| WSL1 / WSL2 | Native clipboard via `powershell.exe` interop | Works when interop is available; copied Windows files attach through `/mnt/c/...` | Works |
+| Linux desktop (X11 / Wayland) | `xclip` / `wl-copy` / `xsel` | Works if a clipboard tool is installed | Works |
+| **SSH from Windows into headless Linux** | **OSC 52 escape → your local terminal** | **Does not work — image bytes cannot cross SSH** | Terminal-level paste (Ctrl+Shift+V / right-click) |
+| macOS | `osascript` / `pbpaste` | Works (PNG, TIFF via `sips`, copied files) | Works |
+
+:::note
+The TUI detects a remote session from your SSH environment (`SSH_CONNECTION`/`SSH_TTY`) with no local display server. In that case a failed paste shows the exact remedy instead of a dead end, and the **Debug** dialog lists the detected scenario, terminal, and clipboard tools.
+:::
+
+## Remote sessions: images cannot cross SSH
+
+A plain SSH connection carries keystrokes and terminal escape sequences, but **not clipboard image bytes**. Copy a screenshot on Windows, SSH into Linux, press Ctrl+V: the Linux host simply never received the image, so nothing PrioriCode does locally can read it. The text-only OSC 52 escape sequence that makes *copy* work remotely has no image equivalent that Windows Terminal answers.
+
+What to do instead:
+
+1. **Copy the file to the server, then paste its path.** Use `scp`, WinSCP, or a MobaXterm drag. Then type or paste the path (for example `/home/you/shot.png`) into the prompt — PrioriCode reads it and attaches the image exactly like a dropped file.
+2. **Paste text normally.** Your terminal sends pasted text straight over the connection (use Ctrl+Shift+V, right-click, or your terminal's paste binding), so code and paths arrive fine.
+3. **Run PrioriCode where your clipboard is.** Install natively on Windows or in WSL (see below) so Ctrl+V reaches the same clipboard you copied into.
+
+### A note on WSL
+
+WSL is not a remote session — the Linux side can call into the Windows clipboard through `powershell.exe`. Both WSL1 (`-Microsoft` kernel strings) and WSL2 (`-microsoft-standard-WSL2`) are detected. When you copy an image *file* in Explorer, PrioriCode translates the Windows path (`C:\shots\a.png`) onto the automount (`/mnt/c/shots/a.png`) and attaches it. This requires the default WSL automount to be enabled.
+
+## Self-update on Windows
+
+PrioriCode ships a real `prioricode.exe`, so "update" means replacing a binary that may be running.
+
+- **`prioricode upgrade` and the in-app update** run the release's own pinned `install.ps1` from a local file — never a remote one-liner — and `install.ps1` swaps the locked, in-use executable safely.
+- **PowerShell resolution** falls back from `powershell.exe` on PATH, to the absolute `System32` copy, to `pwsh`. If none is found you get a clear, actionable message rather than `exit code 1`.
+- **Failures are categorized** so the fix is obvious:
+
+| Cause you'll see | What it means | Fix |
+| --- | --- | --- |
+| locked-binary | A running `prioricode.exe` (or editor) holds the file | Close all PrioriCode terminals/editors and retry |
+| elevation-required | choco can't write without admin | Run the terminal as Administrator |
+| shell-not-found | No PowerShell/pwsh available | Install PowerShell 5.1 or pwsh 7, or update from GitHub Releases |
+| verification-failed | The manager reported success but the version didn't move | Re-run; if it repeats, reinstall from GitHub Releases |
+| command-failed | The upgrade tool itself errored | Read the printed command output |
+
+If the TUI shows an update failure, it now displays the real reason and the matching remediation instead of a bare "Update failed".
+
+## See also
+
+- [Windows (WSL) setup](/docs/windows-wsl)
+- [Troubleshooting](/docs/troubleshooting)
+- [Keybinds](/docs/keybinds)
