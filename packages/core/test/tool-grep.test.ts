@@ -190,9 +190,9 @@ describe("GrepTool", () => {
             withTool(tmp.path, (registry) =>
               Effect.gen(function* () {
                 const settled = yield* settleTool(registry, call({ pattern: "needle", include: "*.md" }))
-                if (settled.result.type !== "text") return yield* Effect.fail("expected text result")
-                expect(settled.result.value).toContain("Found 1 matches")
-                expect(settled.result.value).toContain(path.join(tmp.path, "sub/deep/d.md") + ":")
+                expect(settled.result.type).toBe("text")
+                expect(String(settled.result.value)).toContain("Found 1 matches")
+                expect(String(settled.result.value)).toContain(path.join(tmp.path, "sub/deep/d.md") + ":")
                 expect(settled.output?.structured).toEqual([
                   {
                     entry: { path: RelativePath.make("sub/deep/d.md"), type: "file" },
@@ -221,9 +221,15 @@ describe("GrepTool", () => {
             withTool(tmp.path, (registry) =>
               Effect.gen(function* () {
                 const settled = yield* settleTool(registry, call({ pattern: "hidden needle" }))
-                expect(
-                  (settled.output?.structured as Array<{ entry: { path: string } }>).map((match) => match.entry.path),
-                ).toEqual([".hidden/e.ts"])
+                expect(settled.output?.structured).toEqual([
+                  {
+                    entry: { path: RelativePath.make(".hidden/e.ts"), type: "file" },
+                    line: 1,
+                    offset: 0,
+                    text: "hidden needle\n",
+                    submatches: [{ text: "hidden needle", start: 0, end: 13 }],
+                  },
+                ])
               }),
             ),
           ),
@@ -265,7 +271,7 @@ describe("GrepTool", () => {
             withTool(tmp.path, (registry) =>
               Effect.gen(function* () {
                 const settled = yield* settleTool(registry, call({ pattern: "needle", limit: 1 }))
-                expect((settled.output?.structured as unknown[]).length).toBe(1)
+                expect(settled.output?.structured).toHaveLength(1)
               }),
             ),
           ),

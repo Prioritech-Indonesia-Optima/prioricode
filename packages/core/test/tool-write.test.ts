@@ -256,7 +256,7 @@ describe("WriteTool", () => {
             ),
           ).toEqual({
             type: "error",
-            value: expect.stringContaining(`Unable to write ${external}`),
+            value: expect.stringContaining("Blocked by permission rules"),
           })
           expect(assertions.map((input) => input.action)).toEqual(["external_directory"])
           expect(writes).toEqual([])
@@ -269,7 +269,7 @@ describe("WriteTool", () => {
             ),
           ).toEqual({
             type: "error",
-            value: expect.stringContaining("Unable to write denied.txt"),
+            value: expect.stringContaining("Blocked by permission rules"),
           })
           expect(assertions.map((input) => input.action)).toEqual(["edit"])
           expect(writes).toEqual([])

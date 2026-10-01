@@ -3,6 +3,7 @@ export * as QuestionTool from "./question"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
 import { PermissionV2 } from "../permission"
+import { PermissionFailure } from "./permission-failure"
 import { QuestionV2 } from "../question"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
@@ -68,7 +69,7 @@ const layer = Layer.effectDiscard(
                 source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
               })
               .pipe(
-                Effect.mapError((error) => Tool.failure("Permission denied: question", error)),
+                Effect.mapError(PermissionFailure.fromError),
                 Effect.andThen(
                   question
                     .ask({

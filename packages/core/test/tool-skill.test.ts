@@ -119,7 +119,7 @@ describe("SkillTool", () => {
                 ...toolIdentity,
                 call: { type: "tool-call", id: "call-denied-skill", name: "skill", input: { name: "effect" } },
               }),
-            ).toEqual({ type: "error", value: expect.stringContaining("Unable to load skill effect") })
+            ).toEqual({ type: "error", value: expect.stringContaining("Blocked by permission rules") })
             deny = false
             const flat = SkillV2.Info.make({
               name: "public",

@@ -6,6 +6,7 @@ import { makeLocationNode } from "../effect/app-node"
 import { FSUtil } from "../fs-util"
 import { SkillV2 } from "../skill"
 import { PermissionV2 } from "../permission"
+import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
@@ -71,14 +72,16 @@ const layer = Layer.effectDiscard(
               const skill = current.find((skill) => skill.name === input.name)
               if (!skill) return yield* unableToLoad(input.name)
               return yield* Effect.gen(function* () {
-                yield* permission.assert({
-                  action: name,
-                  resources: [skill.name],
-                  save: [skill.name],
-                  sessionID: context.sessionID,
-                  agent: context.agent,
-                  source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
-                })
+                yield* permission
+                  .assert({
+                    action: name,
+                    resources: [skill.name],
+                    save: [skill.name],
+                    sessionID: context.sessionID,
+                    agent: context.agent,
+                    source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
+                  })
+                  .pipe(Effect.mapError(PermissionFailure.fromError))
                 const directory = path.dirname(skill.location)
                 const files =
                   path.basename(skill.location) === "SKILL.md"
@@ -92,7 +95,9 @@ const layer = Layer.effectDiscard(
                   directory,
                   output: toModelOutput(skill, files),
                 }
-              }).pipe(Effect.mapError((error) => unableToLoad(input.name, error)))
+              }).pipe(
+                Effect.mapError((error) => (error instanceof Tool.Failure ? error : unableToLoad(input.name, error))),
+              )
             }),
         }),
       })

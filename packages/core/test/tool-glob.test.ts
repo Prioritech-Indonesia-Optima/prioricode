@@ -144,16 +144,18 @@ describe("GlobTool", () => {
             withTool(tmp.path, (registry) =>
               Effect.gen(function* () {
                 const settled = yield* settleTool(registry, call({ pattern: "**/*.ts" }))
+                expect(settled.result.type).toBe("text")
                 // ripgrep traversal order is not contractual, so compare sorted.
-                if (settled.result.type !== "text") return yield* Effect.fail("expected text result")
                 expect(String(settled.result.value).split("\n").sort()).toEqual(
                   [path.join(tmp.path, "a.ts"), path.join(tmp.path, "sub/c.ts")].sort(),
                 )
-                expect(
-                  (settled.output?.structured as Array<{ path: string; type: string }>)
-                    .map((entry) => `${entry.type}:${entry.path}`)
-                    .sort(),
-                ).toEqual(["file:a.ts", "file:sub/c.ts"])
+                expect(settled.output?.structured).toHaveLength(2)
+                expect(settled.output?.structured).toEqual(
+                  expect.arrayContaining([
+                    { path: RelativePath.make("a.ts"), type: "file" },
+                    { path: RelativePath.make("sub/c.ts"), type: "file" },
+                  ]),
+                )
               }),
             ),
           ),
@@ -195,8 +197,9 @@ describe("GlobTool", () => {
             withTool(tmp.path, (registry) =>
               Effect.gen(function* () {
                 const settled = yield* settleTool(registry, call({ pattern: "**/*.ts", limit: 1 }))
-                expect((settled.output?.structured as unknown[]).length).toBe(1)
-                if (settled.result.type === "text") expect(String(settled.result.value).split("\n")).toHaveLength(1)
+                expect(settled.output?.structured).toHaveLength(1)
+                expect(settled.result.type).toBe("text")
+                expect(String(settled.result.value).split("\n")).toHaveLength(1)
                 expect(assertions[0]?.metadata).toEqual({ root: ".", path: undefined, limit: 1 })
               }),
             ),

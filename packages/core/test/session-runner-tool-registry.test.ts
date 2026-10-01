@@ -4,6 +4,7 @@ import { AgentV2 } from "@prioricode/core/agent"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { ApplicationTools } from "@prioricode/core/tool/application-tools"
+import { PermissionV2 } from "@prioricode/core/permission"
 import { SessionV2 } from "@prioricode/core/session"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { ToolOutputStore } from "@prioricode/core/tool-output-store"
@@ -225,6 +226,32 @@ describe("ToolRegistry", () => {
       expect(result).toEqual({
         type: "error",
         value: "Unable to read missing.txt: ENOENT: no such file or directory, open 'missing.txt'",
+      })
+    }),
+  )
+
+  it.effect("renders payload fields of message-less typed errors instead of only the tag name", () =>
+    Effect.gen(function* () {
+      const service = yield* ToolRegistry.Service
+      yield* service.register({
+        tagged: Tool.make({
+          description: "Fails with a payload-only typed error",
+          input: Schema.Struct({}),
+          output: Schema.Struct({ ok: Schema.Boolean }),
+          execute: () =>
+            Effect.fail(new PermissionV2.CorrectedError({ feedback: "use double quotes" })).pipe(
+              Effect.mapError((error) => Tool.failure("Unable to edit src/a.ts", error)),
+            ),
+        }),
+      })
+      const result = yield* executeTool(service, {
+        sessionID,
+        ...identity,
+        call: { type: "tool-call", id: "tagged", name: "tagged", input: {} },
+      })
+      expect(result).toEqual({
+        type: "error",
+        value: 'Unable to edit src/a.ts: {"feedback":"use double quotes"}',
       })
     }),
   )
