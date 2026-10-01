@@ -101,10 +101,15 @@ export const globalHandlers = HttpApiBuilder.group(RootHttpApi, "global", (handl
           Effect.succeed({
             success: false as const,
             error: err instanceof Error ? err.message : String(err),
+            cause: err instanceof Installation.UpgradeFailedError ? err.cause : undefined,
           }),
         ),
       )
-      if (!result.success) return HttpServerResponse.jsonUnsafe(result, { status: 500 })
+      // The upgrade outcome is a tagged member of this endpoint's declared
+      // success union, so failures are returned as 200 with their cause
+      // rather than an undeclared 500 the client would drop.
+      if (!result.success)
+        return HttpServerResponse.jsonUnsafe({ success: false as const, error: result.error, cause: result.cause })
       GlobalBus.emit("event", {
         directory: "global",
         payload: {

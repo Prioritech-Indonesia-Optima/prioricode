@@ -402,5 +402,169 @@ describe("installation", () => {
         }),
       ),
     )
+
+    // winSpawns accumulates across these win32 tests; clear at the start of
+    // each effect body so per-test assertions only see this run's spawns.
+    const shellLayer = (onSpawn?: (cmd: string) => { code: number; stdout?: string; stderr?: string } | string) =>
+      testLayer(
+        () => new Response("installer body", { status: 200 }),
+        (cmd) => {
+          winSpawns.push([cmd, []])
+          return onSpawn ? onSpawn(cmd) : ""
+        },
+      )
+
+    testEffect(shellLayer((cmd) => (cmd === "powershell.exe" ? { code: 1, stderr: "spawn powershell.exe ENOENT" } : ""))).effect(
+      "uses the absolute System32 PowerShell when PATH powershell.exe is absent",
+      () =>
+        withPlatform(
+          "win32",
+          Effect.gen(function* () {
+            winSpawns.length = 0
+            yield* Installation.use.upgrade("curl", "9.9.9")
+            // PATH powershell.exe returned ENOENT, then the System32 absolute
+            // candidate ran (code 0) before pwsh could be attempted.
+            expect(winSpawns.map(([cmd]) => cmd).filter((cmd) => cmd.includes("powershell.exe"))).toEqual([
+              "powershell.exe",
+              "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+            ])
+          }),
+        ),
+    )
+
+    testEffect(
+      shellLayer((cmd) => {
+        if (cmd === "pwsh") return ""
+        if (cmd.includes("powershell")) return { code: 1, stderr: "spawn ENOENT" }
+        return ""
+      }),
+    ).effect("falls back to pwsh when neither Windows PowerShell variant exists", () =>
+      withPlatform(
+        "win32",
+        Effect.gen(function* () {
+          winSpawns.length = 0
+          yield* Installation.use.upgrade("curl", "9.9.9")
+          expect(winSpawns.map(([cmd]) => cmd)).toContain("pwsh")
+        }),
+      ),
+    )
+
+    testEffect(
+      shellLayer((cmd) =>
+        cmd.includes("powershell") || cmd === "pwsh" ? { code: 1, stderr: "spawn ENOENT" } : "",
+      ),
+    ).effect("reports shell-not-found when no windows installer shell exists", () =>
+      withPlatform(
+        "win32",
+        Effect.gen(function* () {
+          winSpawns.length = 0
+          const error = yield* Effect.flip(Installation.use.upgrade("curl", "9.9.9"))
+          expect(error).toBeInstanceOf(Installation.UpgradeFailedError)
+          expect(error.cause).toBe("shell-not-found")
+          expect(error.message).toContain("PowerShell")
+        }),
+      ),
+    )
+
+    testEffect(
+      testLayer(
+        () => new Response("<!doctype html><html><body>login</body></html>", { status: 200 }),
+        (cmd) => {
+          winSpawns.push([cmd, []])
+          return ""
+        },
+      ),
+    ).effect("refuses to pipe an HTML or empty body into the shell", () =>
+      withPlatform(
+        "win32",
+        Effect.gen(function* () {
+          winSpawns.length = 0
+          const error = yield* Effect.flip(Installation.use.upgrade("curl", "9.9.9"))
+          expect(error.cause).toBe("command-failed")
+          expect(error.stderr).toContain("not a script")
+          expect(winSpawns.length).toBe(0)
+        }),
+      ),
+    )
+  })
+
+  describe("upgrade causes and verification", () => {
+    testEffect(
+      testLayer(
+        () => jsonResponse({}),
+        (cmd, args) => {
+          if (cmd !== "npm") return ""
+          if (args.includes("install")) return { code: 1, stderr: "EBUSY: resource busy prioricode.exe being used by another process" }
+          return ""
+        },
+      ),
+    ).effect("tags a win32 locked-binary package failure with the close-instances remediation", () =>
+      withPlatform(
+        "win32",
+        Effect.gen(function* () {
+          const error = yield* Effect.flip(Installation.use.upgrade("npm", "9.9.9"))
+          expect(error.cause).toBe("locked-binary")
+          expect(error.stderr).toBe("Upgrade failed for npm (exit code 1).")
+          expect(error.message).toContain("Close all running PrioriCode terminals")
+        }),
+      ),
+    )
+
+    testEffect(
+      testLayer(
+        () => jsonResponse({}),
+        (cmd, args) => {
+          if (cmd === "choco" && args.includes("list")) return "prioricode|9.9.9\n"
+          if (cmd === "choco") return { code: 1, stderr: "Please run from an elevated command shell." }
+          return ""
+        },
+      ),
+    ).effect("classifies choco elevation failures by cause and appends remediation", () =>
+      withPlatform(
+        "win32",
+        Effect.gen(function* () {
+          const error = yield* Effect.flip(Installation.use.upgrade("choco", "9.9.9"))
+          expect(error.cause).toBe("elevation-required")
+          expect(error.message).toContain("Administrator")
+        }),
+      ),
+    )
+
+    testEffect(
+      testLayer(
+        () => jsonResponse({}),
+        (cmd, args) => {
+          if (cmd === "npm" && args.includes("list")) return "└── prioricode-ai@0.1.0\n"
+          return ""
+        },
+      ),
+    ).effect("flags a concrete package-manager version mismatch as verification-failed", () =>
+      withPlatform(
+        "linux",
+        Effect.gen(function* () {
+          const error = yield* Effect.flip(Installation.use.upgrade("npm", "9.9.9"))
+          expect(error.cause).toBe("verification-failed")
+          expect(error.stderr).toContain("0.1.0")
+          expect(error.stderr).toContain("9.9.9")
+        }),
+      ),
+    )
+
+    testEffect(
+      testLayer(
+        () => jsonResponse({}),
+        (cmd, args) => {
+          if (cmd === "npm" && args.includes("list")) return ""
+          return ""
+        },
+      ),
+    ).effect("treats empty package-manager output as unverifiable, not a failure", () =>
+      withPlatform(
+        "linux",
+        Effect.gen(function* () {
+          yield* Installation.use.upgrade("npm", "9.9.9")
+        }),
+      ),
+    )
   })
 })

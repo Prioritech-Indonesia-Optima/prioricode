@@ -7569,6 +7569,7 @@ export type GlobalUpgradeResponses = {
     | {
         success: false
         error: string
+        cause?: "command-failed" | "shell-not-found" | "locked-binary" | "elevation-required" | "verification-failed"
       }
 }
 

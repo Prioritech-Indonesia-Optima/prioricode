@@ -17,30 +17,35 @@ import { authorizationLayer } from "../../src/server/routes/instance/httpapi/mid
 import { schemaErrorLayer } from "../../src/server/routes/instance/httpapi/middleware/schema-error"
 import { testEffect } from "../lib/effect"
 
-const apiLayer = HttpRouter.serve(
-  HttpApiBuilder.layer(RootHttpApi).pipe(
-    Layer.provide([controlHandlers, controlPlaneHandlers, globalHandlers]),
-    Layer.provide([authorizationLayer, schemaErrorLayer]),
-    // Raw HttpApi routes expose an opaque handler context at the request boundary.
-    // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
-    HttpRouter.provideRequest(Layer.succeedContext(Context.empty() as Context.Context<unknown>)),
-  ),
-  { disableListenLog: true, disableLogger: true },
-).pipe(
-  Layer.provideMerge(NodeHttpServer.layerTest),
-  Layer.provide(Layer.mock(Auth.Service)({})),
-  Layer.provide(Layer.mock(Config.Service)({})),
-  Layer.provide(Layer.mock(MoveSession.Service)({})),
-  Layer.provide(
-    Layer.mock(Installation.Service)({
-      method: () => Effect.succeed("npm"),
-      latest: () => Effect.succeed("9.9.9"),
-      upgrade: () => Effect.void,
-    }),
-  ),
-  Layer.provide(ServerAuth.Config.configLayer({ password: Option.none(), username: "prioricode" })),
-)
-const it = testEffect(apiLayer)
+function buildLayer(
+  upgrade: (method: Installation.Method, target: string) => Effect.Effect<void, Installation.UpgradeFailedError>,
+) {
+  return HttpRouter.serve(
+    HttpApiBuilder.layer(RootHttpApi).pipe(
+      Layer.provide([controlHandlers, controlPlaneHandlers, globalHandlers]),
+      Layer.provide([authorizationLayer, schemaErrorLayer]),
+      // Raw HttpApi routes expose an opaque handler context at the request boundary.
+      // oxlint-disable-next-line typescript-eslint/no-unsafe-type-assertion
+      HttpRouter.provideRequest(Layer.succeedContext(Context.empty() as Context.Context<unknown>)),
+    ),
+    { disableListenLog: true, disableLogger: true },
+  ).pipe(
+    Layer.provideMerge(NodeHttpServer.layerTest),
+    Layer.provide(Layer.mock(Auth.Service)({})),
+    Layer.provide(Layer.mock(Config.Service)({})),
+    Layer.provide(Layer.mock(MoveSession.Service)({})),
+    Layer.provide(
+      Layer.mock(Installation.Service)({
+        method: () => Effect.succeed("npm"),
+        latest: () => Effect.succeed("9.9.9"),
+        upgrade,
+      }),
+    ),
+    Layer.provide(ServerAuth.Config.configLayer({ password: Option.none(), username: "prioricode" })),
+  )
+}
+
+const it = testEffect(buildLayer(() => Effect.void))
 
 describe("global HttpApi", () => {
   it.live("upgrades to the requested version", () =>
@@ -85,6 +90,34 @@ describe("global HttpApi", () => {
       )
 
       expect(response.status).toBe(415)
+    }),
+  )
+
+  const failureIt = testEffect(
+    buildLayer(() =>
+      Effect.fail(
+        new Installation.UpgradeFailedError({
+          stderr: "Upgrade failed for npm (exit code 1).",
+          cause: "locked-binary",
+          target: "9.9.9",
+        }),
+      ),
+    ),
+  )
+
+  failureIt.live("returns the tagged failure and its cause as 200 so the client keeps the message", () =>
+    Effect.gen(function* () {
+      const response = yield* HttpClientRequest.post(GlobalPaths.upgrade).pipe(
+        HttpClientRequest.bodyJsonUnsafe({ target: "9.9.9" }),
+        HttpClient.execute,
+      )
+
+      expect(response.status).toBe(200)
+      expect(yield* response.json).toEqual({
+        success: false,
+        error: "Upgrade failed for npm (exit code 1). Close all running PrioriCode terminals and editors, then retry.",
+        cause: "locked-binary",
+      })
     }),
   )
 })

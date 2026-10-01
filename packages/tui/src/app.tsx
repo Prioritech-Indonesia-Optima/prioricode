@@ -1110,12 +1110,13 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
     const result = await sdk.client.global.upgrade({ target: version })
 
     if (result.error || !result.data?.success) {
-      toast.show({
-        variant: "error",
-        title: "Update Failed",
-        message: "Update failed",
-        duration: 10000,
-      })
+      const detail =
+        (result.data && !result.data.success ? result.data.error : undefined) ||
+        (typeof result.error === "object" && result.error && "error" in result.error
+          ? String(result.error.error)
+          : undefined) ||
+        "The server did not report a reason."
+      await DialogAlert.show(dialog, "Update Failed", detail.slice(0, 400))
       return
     }
 
