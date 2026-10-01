@@ -152,11 +152,37 @@ export function detectWsl(releaseString: string, env: Readonly<Record<string, st
   return /microsoft/i.test(releaseString) || Boolean(env.WSL_DISTRO_NAME || env.WSL_INTEROP)
 }
 
+// Copied files arrive as Windows paths (`C:\…`) under WSL; translate them to
+// `file://` URIs over the automount so the attach pipeline resolves them
+// against the Linux filesystem, mirroring the Darwin Finder path.
+export async function wslDropToUri(
+  dropped: string,
+  env: Pick<ClipboardEnvironment, "has" | "run">,
+): Promise<string | undefined> {
+  const windowsPath = dropped.trim().replace(/^"(.*)"$/s, "$1")
+  if (!/^[A-Za-z]:[\\/]/.test(windowsPath) && !windowsPath.startsWith("\\\\")) return
+  if (env.has("wslpath")) {
+    const translated = await env
+      .run("wslpath", ["-u", windowsPath], undefined, 3000)
+      .then((buffer) => buffer.toString().trim())
+      .catch(() => undefined)
+    if (translated?.startsWith("/")) return pathToFileURL(translated).href
+  }
+  if (!/^[A-Za-z]:[\\/]/.test(windowsPath)) return
+  const rest = windowsPath.slice(2).replace(/\\/g, "/")
+  return pathToFileURL(`/mnt/${windowsPath[0]!.toLowerCase()}${rest}`).href
+}
+
 async function readPowershell(env: ClipboardEnvironment): Promise<Content | undefined> {
   const output = await env
     .run("powershell.exe", ["-NonInteractive", "-NoProfile", "-command", WINDOWS_CLIPBOARD_SCRIPT], undefined, 6000)
     .catch(() => Buffer.alloc(0))
-  return parseWindowsClipboardOutput(output.toString())
+  const parsed = parseWindowsClipboardOutput(output.toString())
+  if (env.wsl && parsed?.mime === "text/plain") {
+    const uri = await wslDropToUri(parsed.data, env)
+    if (uri) return { data: uri, mime: "text/plain" }
+  }
+  return parsed
 }
 
 async function readWindows(env: ClipboardEnvironment): Promise<Content | undefined> {

@@ -4,6 +4,7 @@ import {
   parseUriList,
   parseWindowsClipboardOutput,
   readClipboard,
+  wslDropToUri,
   writeClipboard,
   type ClipboardEnvironment,
 } from "../src/clipboard"
@@ -99,6 +100,25 @@ test("wsl: reads the Windows clipboard through powershell interop", async () => 
   const nativeFirst = fakeEnv({ platform: "linux", wsl: true, has: (name) => name === "wl-paste" })
   nativeFirst.runners.set("wl-paste", (args) => (args.includes("-t") ? png : Buffer.from("hi")))
   expect(await readClipboard(nativeFirst.env)).toEqual({ data: png.toString("base64"), mime: "image/png" })
+})
+
+test("wsl: dropped Windows paths become file:// URIs over the automount", async () => {
+  const drop = fakeEnv({ platform: "linux", wsl: true })
+  drop.runners.set("powershell.exe", () => Buffer.from('DROP "C:\\My Documents\\a.png"\r\n'))
+  expect(await readClipboard(drop.env)).toEqual({
+    data: "file:///mnt/c/My%20Documents/a.png",
+    mime: "text/plain",
+  })
+
+  const viaWslpath = fakeEnv({ platform: "linux", wsl: true, has: (name) => name === "wslpath" })
+  viaWslpath.runners.set("wslpath", () => Buffer.from("/mnt/d/relocated/a.png\n"))
+  expect(await wslDropToUri("D:\\relocated\\a.png", viaWslpath.env)).toBe("file:///mnt/d/relocated/a.png")
+
+  const unc = fakeEnv({ platform: "linux", wsl: true })
+  expect(await wslDropToUri("\\\\server\\share\\a.png", unc.env)).toBeUndefined()
+
+  const prose = fakeEnv({ platform: "linux", wsl: true })
+  expect(await wslDropToUri("just copied text", prose.env)).toBeUndefined()
 })
 
 test("macos: PNGf first, then TIFF converted with built-in sips", async () => {
