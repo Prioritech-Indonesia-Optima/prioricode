@@ -369,10 +369,7 @@ const layer = Layer.effect(
             }
 
             const agent = yield* agents.get(ctx.assistantMessage.agent)
-            const mode = yield* session.get(ctx.assistantMessage.sessionID).pipe(
-              Effect.map((item) => item.permissionMode),
-              Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)),
-            )
+            const mode = yield* session.effectivePermissionMode(ctx.assistantMessage.sessionID)
             yield* permission.ask({
               permission: "doom_loop",
               patterns: [value.name],

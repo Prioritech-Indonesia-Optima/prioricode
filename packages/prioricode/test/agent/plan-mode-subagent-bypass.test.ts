@@ -26,7 +26,7 @@ function testAgent(input: {
 // exercises the actual helper that task.ts uses to build the subagent's
 // session permission, so any regression in that helper trips this test.
 
-it.instance("subagent permissions take precedence over parent agent restrictions", () =>
+it.instance("subagent permissions take precedence within the parent's deny ceiling", () =>
   Effect.gen(function* () {
     const planAgent = yield* Agent.use.get("plan")
     const generalAgent = yield* Agent.use.get("general")
@@ -38,19 +38,21 @@ it.instance("subagent permissions take precedence over parent agent restrictions
     // tool layer — see Permission.disabled / EDIT_TOOLS.)
     expect(Permission.evaluate("edit", "/some/file.ts", planAgent!.permission).action).toBe("deny")
 
-    const parentSessionPermission: PermissionV1.Ruleset = []
-
+    // task.ts passes the parent agent's ruleset merged with the parent
+    // Session's ruleset, so plan-mode denies reach the child.
     const subagentSessionPermission = deriveSubagentSessionPermission({
-      parentSessionPermission,
+      parentSessionPermission: Permission.merge(planAgent!.permission, []),
       subagent: generalAgent!,
     })
 
-    // Mirror the runtime evaluation in session/prompt.ts (~line 410, 639):
-    //   ruleset: Permission.merge(agent.permission, session.permission ?? [])
+    // Mirror the runtime evaluation in session/tools.ts:
+    //   ruleset: Permission.merge(input.agent.permission, input.session.permission ?? [])
     const effective = Permission.merge(generalAgent!.permission, subagentSessionPermission)
 
-    expect(Permission.evaluate("edit", "/some/file.ts", effective).action).not.toBe("deny")
-    expect(Permission.disabled(["edit", "write", "apply_patch"], effective)).toEqual(new Set())
+    expect(Permission.evaluate("edit", "/some/file.ts", effective).action).toBe("deny")
+    expect(Permission.disabled(["edit", "write", "apply_patch"], effective)).toEqual(new Set(["edit", "write", "apply_patch"]))
+    // The child keeps its own capabilities the parent does not deny.
+    expect(Permission.evaluate("read", "README.md", effective).action).toBe("allow")
   }),
 )
 

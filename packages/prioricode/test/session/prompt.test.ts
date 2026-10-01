@@ -550,6 +550,81 @@ it.instance("loop exits without an LLM request for interrupted orphan tool calls
   }),
 )
 
+it.instance("loop settles stale running tool parts left by a lost drain", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "Pinned" })
+    const seeded = yield* seed(chat.id, { finish: "stop" })
+    const running = yield* sessions.updatePart({
+      id: PartID.ascending(),
+      messageID: seeded.assistant.id,
+      sessionID: chat.id,
+      type: "tool",
+      callID: "lost-drain-call",
+      tool: "task",
+      state: {
+        status: "running",
+        input: { description: "bg", prompt: "run" },
+        time: { start: 1 },
+      },
+    })
+
+    const result = yield* prompt.loop({ sessionID: chat.id })
+    expect(result.info.id).toBe(seeded.assistant.id)
+    expect(yield* llm.hits).toHaveLength(0)
+
+    const stored = yield* sessions.getPart({
+      sessionID: chat.id,
+      messageID: seeded.assistant.id,
+      partID: running.id,
+    })
+    expect(stored?.type).toBe("tool")
+    if (stored?.type === "tool" && stored.state.status === "error") {
+      expect(stored.state.error).toBe("Tool execution aborted")
+      expect(stored.state.metadata?.interrupted).toBe(true)
+      expect(stored.state.time.end).toBeGreaterThanOrEqual(stored.state.time.start)
+    } else {
+      throw new Error(`expected settled error state, got ${stored?.type}/${(stored as any)?.state?.status}`)
+    }
+  }),
+)
+
+it.instance("loop leaves provider-executed running parts untouched", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "Pinned" })
+    const seeded = yield* seed(chat.id, { finish: "stop" })
+    const hosted = yield* sessions.updatePart({
+      id: PartID.ascending(),
+      messageID: seeded.assistant.id,
+      sessionID: chat.id,
+      type: "tool",
+      callID: "hosted-call",
+      tool: "web_search",
+      metadata: { providerExecuted: true },
+      state: {
+        status: "running",
+        input: {},
+        time: { start: 1 },
+      },
+    })
+
+    yield* prompt.loop({ sessionID: chat.id })
+
+    const stored = yield* sessions.getPart({
+      sessionID: chat.id,
+      messageID: seeded.assistant.id,
+      partID: hosted.id,
+    })
+    if (stored?.type === "tool") expect(stored.state.status).toBe("running")
+    expect(yield* llm.hits).toHaveLength(0)
+  }),
+)
+
 it.instance("loop calls LLM and returns assistant message", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig(providerCfg)

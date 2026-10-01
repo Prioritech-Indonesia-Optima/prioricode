@@ -282,4 +282,77 @@ describe("Session", () => {
       expect(saved.metadata).toBeUndefined()
     }),
   )
+
+  describe("permission mode", () => {
+    const acquire = (session: SessionNs.Interface, input?: Parameters<SessionNs.Interface["create"]>[0]) =>
+      Effect.acquireRelease(session.create(input ?? {}), (info) => session.remove(info.id).pipe(Effect.ignore))
+
+    it.instance("a subagent Session follows the parent chain's explicit mode", () =>
+      Effect.gen(function* () {
+        const session = yield* SessionNs.Service
+        const parent = yield* acquire(session, { title: "mode-parent" })
+        const child = yield* acquire(session, { parentID: parent.id, title: "mode-child" })
+
+        expect(yield* session.effectivePermissionMode(child.id)).toBeUndefined()
+
+        yield* session.setPermissionMode({ sessionID: parent.id, mode: "always-allow" })
+        expect(yield* session.effectivePermissionMode(child.id)).toBe("always-allow")
+
+        yield* session.setPermissionMode({ sessionID: parent.id, mode: "ask-first" })
+        expect(yield* session.effectivePermissionMode(child.id)).toBe("ask-first")
+      }),
+    )
+
+    it.instance("an explicit child mode wins over the parent chain", () =>
+      Effect.gen(function* () {
+        const session = yield* SessionNs.Service
+        const parent = yield* acquire(session, { title: "override-parent" })
+        const child = yield* acquire(session, { parentID: parent.id, title: "override-child" })
+        yield* session.setPermissionMode({ sessionID: parent.id, mode: "always-allow" })
+        yield* session.setPermissionMode({ sessionID: child.id, mode: "ask-first" })
+        expect(yield* session.effectivePermissionMode(child.id)).toBe("ask-first")
+      }),
+    )
+
+    it.instance("mode resolves through an unset middle ancestor", () =>
+      Effect.gen(function* () {
+        const session = yield* SessionNs.Service
+        const root = yield* acquire(session, { title: "chain-root" })
+        const middle = yield* acquire(session, { parentID: root.id, title: "chain-middle" })
+        const leaf = yield* acquire(session, { parentID: middle.id, title: "chain-leaf" })
+        yield* session.setPermissionMode({ sessionID: root.id, mode: "always-allow" })
+        expect(yield* session.effectivePermissionMode(leaf.id)).toBe("always-allow")
+      }),
+    )
+
+    it.instance("a new root Session inherits the most recent root mode", () =>
+      Effect.gen(function* () {
+        const session = yield* SessionNs.Service
+        const first = yield* acquire(session, { title: "inherit-first" })
+        yield* session.setPermissionMode({ sessionID: first.id, mode: "always-allow" })
+        const second = yield* acquire(session, { title: "inherit-second" })
+        expect(second.permissionMode).toBe("always-allow")
+        const explicit = yield* acquire(session, { title: "inherit-explicit", permissionMode: "ask-first" })
+        expect(explicit.permissionMode).toBe("ask-first")
+        const child = yield* acquire(session, { parentID: second.id, title: "inherit-child" })
+        expect(child.permissionMode).toBeUndefined()
+      }),
+    )
+
+    it.instance("fork preserves permission ruleset and mode", () =>
+      Effect.gen(function* () {
+        const session = yield* SessionNs.Service
+        const created = yield* acquire(session, {
+          title: "fork-source",
+          permissionMode: "ask-first",
+          permission: [{ permission: "bash", pattern: "*", action: "deny" }],
+        })
+        const forked = yield* Effect.acquireRelease(session.fork({ sessionID: created.id }), (info) =>
+          session.remove(info.id).pipe(Effect.ignore),
+        )
+        expect(forked.permissionMode).toBe("ask-first")
+        expect(forked.permission).toEqual([{ permission: "bash", pattern: "*", action: "deny" }])
+      }),
+    )
+  })
 })

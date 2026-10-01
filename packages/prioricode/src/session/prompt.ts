@@ -288,6 +288,7 @@ const layer = Layer.effect(
     }) {
       const { task, model, lastUser, sessionID, session, msgs } = input
       const ctx = yield* InstanceState.context
+      const permissionMode = yield* sessions.effectivePermissionMode(sessionID)
       const promptOps = yield* ops()
       const { task: taskTool } = yield* registry.named()
       const taskModel = task.model ? yield* getModel(task.model.providerID, task.model.modelID, sessionID) : model
@@ -370,7 +371,7 @@ const layer = Layer.effect(
                 ...req,
                 sessionID,
                 ruleset: Permission.merge(taskAgent.permission, session.permission ?? []),
-                mode: session.permissionMode,
+                mode: permissionMode,
               })
               .pipe(Effect.orDie),
         })
@@ -1105,6 +1106,43 @@ const layer = Layer.effect(
       throw new Error("Impossible")
     })
 
+    // A tool part still pending/running in persisted history when a drain
+    // (re)starts has no live execution behind it: processor.cleanup settles
+    // graceful interrupts itself, so leftovers mean the process died
+    // mid-request or a lost background job never settled. Persist those
+    // orphans as interrupted errors (the same shape processor.cleanup
+    // writes) so durable transcripts — subagent tabs, compaction summaries,
+    // task_id resumes — match the paired interrupted tool_result that
+    // provider replay already synthesizes. Provider-executed calls are
+    // skipped: their results belong to the provider-native round trip.
+    const settleOrphanedToolParts = Effect.fnUntraced(function* (msgs: SessionV1.WithParts[]) {
+      const stale = msgs.flatMap((msg) =>
+        msg.info.role === "assistant"
+          ? msg.parts.filter(
+              (part): part is SessionV1.ToolPart =>
+                part.type === "tool" &&
+                !part.metadata?.providerExecuted &&
+                (part.state.status === "pending" || part.state.status === "running"),
+            )
+          : [],
+      )
+      for (const part of stale) {
+        const now = Date.now()
+        const meta = "metadata" in part.state ? (part.state.metadata ?? {}) : {}
+        yield* sessions.updatePart({
+          ...part,
+          state: {
+            status: "error",
+            error: "Tool execution aborted",
+            input: part.state.input,
+            time: { start: part.state.status === "running" ? part.state.time.start : now, end: now },
+            metadata: { ...meta, interrupted: true },
+          },
+        } satisfies SessionV1.ToolPart)
+      }
+      return stale.length
+    })
+
     const runLoop: (sessionID: SessionID) => Effect.Effect<SessionV1.WithParts> = Effect.fn("SessionPrompt.run")(
       function* (sessionID: SessionID) {
         const ctx = yield* InstanceState.context
@@ -1120,6 +1158,10 @@ const layer = Layer.effect(
           let msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
             Effect.provideService(Database.Service, database),
           )
+          if ((yield* settleOrphanedToolParts(msgs)) > 0)
+            msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
+              Effect.provideService(Database.Service, database),
+            )
 
           const { user: lastUser, assistant: lastAssistant, finished: lastFinished, tasks } = MessageV2.latest(msgs)
 
@@ -1277,6 +1319,7 @@ const layer = Layer.effect(
               Effect.provideService(Truncate.Service, truncate),
               Effect.provideService(RuntimeFlags.Service, flags),
               Effect.provideService(Hook.Service, hooks),
+              Effect.provideService(Session.Service, sessions),
             )
 
             if (lastUser.format?.type === "json_schema") {

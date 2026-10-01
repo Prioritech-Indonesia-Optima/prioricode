@@ -79,7 +79,11 @@ const serialize = (message: SessionV1.WithParts) => {
         return [call, `[Tool result]: ${output}`]
       }
       if (part.state.status === "error") return [call, `[Tool error]: ${part.state.error}`]
-      return [call]
+      // Unsettled (pending/running) tool calls from an interrupted or compacted
+      // turn must still carry a paired result marker, otherwise the serialized
+      // summary references a call whose result never existed (dangling tool_use
+      // in the subagent transcript after compaction/restart).
+      return [call, `[Tool result]: [Tool execution was interrupted]`]
     })
     .join("\n")
 }
