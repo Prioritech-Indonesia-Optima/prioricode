@@ -1,10 +1,18 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Deferred, Effect, Layer, Schema, Context } from "effect"
+import * as Stream from "effect/Stream"
+import { LLMEvent } from "@prioricode/llm"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "./schema"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { QuestionV1 } from "@prioricode/schema/question-v1"
+import { SessionV1 } from "@prioricode/core/v1/session"
+import { Session } from "@/session/session"
+import { Provider } from "@/provider/provider"
+import { Agent } from "@/agent/agent"
+import { LLM } from "@/session/llm"
+import { CONSULT_SYSTEM, buildConsultPrompt, fallbackAnswers, parseConsult } from "./consult"
 
 export const Option = QuestionV1.Option
 export type Option = typeof Option.Type
@@ -65,6 +73,10 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const events = yield* EventV2Bridge.Service
+    const sessions = yield* Session.Service
+    const provider = yield* Provider.Service
+    const agents = yield* Agent.Service
+    const llm = yield* LLM.Service
     const state = yield* InstanceState.make<State>(
       Effect.fn("Question.state")(function* () {
         const state = {
@@ -84,11 +96,83 @@ const layer = Layer.effect(
       }),
     )
 
+    const tailContext = (msgs: SessionV1.WithParts[]) =>
+      msgs
+        .slice(-10)
+        .flatMap((msg) =>
+          msg.parts
+            .filter(
+              (part): part is SessionV1.TextPart =>
+                part.type === "text" &&
+                !("synthetic" in part && part.synthetic) &&
+                !("ignored" in part && part.ignored),
+            )
+            .map((part) => `${msg.info.role === "user" ? "User" : "Assistant"}: ${part.text}`),
+        )
+        .join("\n")
+        .slice(-8000)
+
+    // A decision that would need a human is put to the model itself. Any
+    // consult failure degrades to the first option, so an autonomous run
+    // never blocks and never crashes on a missing provider/agent.
+    const consultAnswers = Effect.fn("Question.consultAnswers")(function* (
+      sessionID: SessionID,
+      questions: ReadonlyArray<Info>,
+    ) {
+      const fallback = fallbackAnswers(questions)
+      const session = yield* sessions.get(sessionID).pipe(Effect.catch(() => Effect.succeed(undefined)))
+      if (!session) return fallback
+      const msgs = yield* sessions.messages({ sessionID, limit: 60 }).pipe(
+        Effect.catch(() => Effect.succeed([] as SessionV1.WithParts[])),
+      )
+      const lastUser = msgs.findLast((msg) => msg.info.role === "user")
+      if (!lastUser || lastUser.info.role !== "user") return fallback
+      const agent = yield* agents.get(session.agent ?? "build").pipe(Effect.catch(() => Effect.succeed(undefined)))
+      if (!agent) return fallback
+      const model =
+        (yield* provider
+          .getSmallModel(lastUser.info.model.providerID)
+          .pipe(Effect.catch(() => Effect.succeed(undefined)))) ??
+        (yield* provider
+          .getModel(lastUser.info.model.providerID, lastUser.info.model.modelID)
+          .pipe(Effect.catch(() => Effect.succeed(undefined))))
+      if (!model) return fallback
+      const raw = yield* llm
+        .stream({
+          agent,
+          user: lastUser.info,
+          system: [CONSULT_SYSTEM],
+          small: true,
+          tools: {},
+          model,
+          sessionID,
+          retries: 2,
+          messages: [{ role: "user" as const, content: buildConsultPrompt(questions, tailContext(msgs)) }],
+        })
+        .pipe(
+          Stream.filter(LLMEvent.is.textDelta),
+          Stream.map((event) => event.text),
+          Stream.mkString,
+          Effect.timeout("30 seconds"),
+          Effect.catch(() => Effect.succeed(undefined)),
+        )
+      if (raw === undefined) return fallback
+      return parseConsult(raw, questions)
+    })
+
     const ask = Effect.fn("Question.ask")(function* (input: {
       sessionID: SessionID
       questions: ReadonlyArray<Info>
       tool?: Tool
     }) {
+      if (yield* sessions.effectiveAutonomous(input.sessionID)) {
+        const answers = yield* consultAnswers(input.sessionID, input.questions)
+        yield* Effect.logInfo("self-answered questions in autonomous session", {
+          "session.id": input.sessionID,
+          questions: input.questions.length,
+        })
+        return answers
+      }
       const pending = (yield* InstanceState.get(state)).pending
       const id = QuestionID.ascending()
       yield* Effect.logInfo("asking", { id, questions: input.questions.length })
@@ -156,6 +240,10 @@ const layer = Layer.effect(
   }),
 )
 
-export const node = LayerNode.make({ service: Service, layer: layer, deps: [EventV2Bridge.node] })
+export const node = LayerNode.make({
+  service: Service,
+  layer: layer,
+  deps: [EventV2Bridge.node, Session.node, Provider.node, Agent.node, LLM.node],
+})
 
 export * as Question from "."
