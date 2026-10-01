@@ -262,6 +262,35 @@ describe("ApplyPatchTool", () => {
     ),
   )
 
+  it.live("denied approval discloses only the permission outcome, not the preparation failure", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) => {
+        reset()
+        denyAction = "edit"
+        const target = path.join(tmp.path, "update.txt")
+        return Effect.promise(() => fs.writeFile(target, "before\n")).pipe(
+          Effect.andThen(
+            withTool(tmp.path, (registry) =>
+              Effect.gen(function* () {
+                const result = yield* executeTool(
+                  registry,
+                  call("*** Begin Patch\n*** Update File: update.txt\n@@\n-not present\n+after\n*** End Patch"),
+                )
+                expect(result.type).toBe("error")
+                const value = result.type === "error" ? String(result.value) : ""
+                expect(value).toContain("Blocked by permission rules")
+                expect(value).not.toContain("Unable to apply patch")
+                expect(yield* Effect.promise(() => fs.readFile(target, "utf8"))).toBe("before\n")
+              }),
+            ),
+          ),
+        )
+      },
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
+
   it.live("approves one external directory scope for multiple files under the same parent", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => Promise.all([tmpdir(), tmpdir()])),
