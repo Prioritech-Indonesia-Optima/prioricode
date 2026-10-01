@@ -65,6 +65,17 @@ const toolResult = (tool: SessionMessage.AssistantTool, providerMetadata: Provid
       providerMetadata,
     })
   }
+  // Unsettled local parts must still pair their tool call with a result: an
+  // orphan tool_call without a tool_result fails the provider request. This is
+  // a translation-boundary backstop behind the runner's resume-time sweep.
+  return ToolResultPart.make({
+    id: tool.id,
+    name: tool.name,
+    result: { error: { type: "unknown", message: "Tool execution interrupted" }, content: [], structured: {} },
+    resultType: "error",
+    providerExecuted: tool.provider?.executed,
+    providerMetadata,
+  })
 }
 
 const assistant = (message: SessionMessage.Assistant, model: Model) => {
@@ -87,11 +98,9 @@ const assistant = (message: SessionMessage.Assistant, model: Model) => {
           : []
     const call = toolCall(item, reuseProviderMetadata ? item.provider?.metadata : undefined)
     if (item.provider?.executed !== true) return [call]
-    const result = toolResult(
-      item,
-      reuseProviderMetadata ? (item.provider.resultMetadata ?? item.provider.metadata) : undefined,
-    )
-    return result ? [call, result] : [call]
+    // Hosted calls carry provider-owned results; never synthesize one for an unsettled hosted part.
+    if (item.state.status !== "completed" && item.state.status !== "error") return [call]
+    return [call, toolResult(item, reuseProviderMetadata ? (item.provider.resultMetadata ?? item.provider.metadata) : undefined)]
   })
   const meaningful = content.filter((part) => {
     if (part.type === "text") return part.text !== ""
