@@ -81,9 +81,7 @@ const historyHasMedia = (msgs: SessionV1.WithParts[]) =>
     message.parts.some((part) => {
       if (part.type === "file") return isMedia(part.mime)
       if (part.type !== "tool") return false
-      return (
-        part.state.status === "completed" && (part.state.attachments ?? []).some((a) => isMedia(a.mime))
-      )
+      return part.state.status === "completed" && (part.state.attachments ?? []).some((a) => isMedia(a.mime))
     }),
   )
 const MAX_MCP_RESOURCE_BLOB_BYTES = 10 * 1024 * 1024
