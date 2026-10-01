@@ -24,6 +24,7 @@ export function readLocalAttachment(file: string) {
 
 const mimeTypes: Record<string, string> = {
   ".avif": "image/avif",
+  ".bmp": "image/bmp",
   ".gif": "image/gif",
   ".jpeg": "image/jpeg",
   ".jpg": "image/jpeg",
@@ -32,6 +33,11 @@ const mimeTypes: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".webp": "image/webp",
 }
+
+// TIFF deliberately stays out of the extension map: the resizer cannot decode
+// it, so a copied .tif degrades to path text instead of failing the whole
+// submission. Raw tiff bytes from clipboard targets are still re-encoded or
+// rejected safely by server-side image normalization.
 
 export async function readLocalAttachmentWith(files: LocalFiles, path: string): Promise<LocalAttachment | undefined> {
   const mime = await files.mime(path).catch(() => undefined)

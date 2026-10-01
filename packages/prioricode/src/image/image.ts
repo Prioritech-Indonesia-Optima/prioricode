@@ -12,6 +12,10 @@ const MAX_WIDTH = 2000
 const MAX_HEIGHT = 2000
 const AUTO_RESIZE = true
 const JPEG_QUALITIES = [80, 85, 70, 55, 40]
+// Mirrors the llm protocol `IMAGE_MIMES` allow-list: a mime outside it fails
+// `validateMedia` locally on every provider turn and wedges the session, so
+// `normalize` must never pass one through unchanged.
+const PROVIDER_IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"])
 export class ResizerUnavailableError extends Schema.TaggedErrorClass<ResizerUnavailableError>()(
   "ImageResizerUnavailableError",
   {},
@@ -96,9 +100,10 @@ const layer = Layer.effect(
       try {
         const originalWidth = decoded.get_width()
         const originalHeight = decoded.get_height()
-        if (originalWidth <= info.maxWidth && originalHeight <= info.maxHeight && bytes <= info.maxBase64Bytes)
-          return input
-        if (!info.autoResize)
+        const withinLimits =
+          originalWidth <= info.maxWidth && originalHeight <= info.maxHeight && bytes <= info.maxBase64Bytes
+        if (withinLimits && PROVIDER_IMAGE_MIMES.has(input.mime)) return input
+        if (!withinLimits && !info.autoResize)
           return yield* new SizeError({
             bytes,
             max: info.maxBase64Bytes,
