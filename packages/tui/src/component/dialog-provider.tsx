@@ -15,6 +15,7 @@ import { isConsoleManagedProvider } from "../util/provider-origin"
 import { useConnected } from "./use-connected"
 import { useBindings } from "../keymap"
 import { useClipboard } from "../context/clipboard"
+import { copyWithToast } from "../util/copy-clipboard"
 
 const PROVIDER_PRIORITY: Record<string, number> = {
   prioricode: 0,

@@ -1,5 +1,5 @@
 import { TextAttributes } from "@opentui/core"
-import { createMemo, createSignal, For } from "solid-js"
+import { createMemo, createResource, createSignal, For } from "solid-js"
 import { InstallationChannel, InstallationVersion } from "@prioricode/core/installation/version"
 import { useTheme } from "../context/theme"
 import { useDialog } from "../ui/dialog"
@@ -9,6 +9,8 @@ import { useClipboard } from "../context/clipboard"
 import { useToast } from "../ui/toast"
 import { useBindings } from "../keymap"
 import { describeOS, describeTerminal } from "../util/system"
+import { probeClipboardTools } from "../clipboard"
+import { clipboardSignals, resolveScenario } from "../clipboard-scenario"
 
 export function DialogDebug() {
   const { theme } = useTheme()
@@ -21,6 +23,10 @@ export function DialogDebug() {
 
   dialog.setSize("large")
 
+  const signals = clipboardSignals()
+  const [tools] = createResource(probeClipboardTools)
+  const flag = (present?: string | boolean) => (present ? "present" : "absent")
+
   const entries = createMemo(() => {
     const model = local.model.current()
     return [
@@ -30,6 +36,20 @@ export function DialogDebug() {
       { label: "Terminal", value: describeTerminal() },
       { label: "Session ID", value: route.data.type === "session" ? route.data.sessionID : "n/a" },
       { label: "Model", value: model ? `${model.providerID}/${model.modelID}` : "n/a" },
+      { label: "Clipboard", value: resolveScenario(signals) },
+      { label: "Remote", value: flag(signals.remote) },
+      { label: "WSL", value: flag(signals.wsl) },
+      { label: "SSH env", value: flag(process.env.SSH_CONNECTION || process.env.SSH_TTY) },
+      { label: "Win32 FFI", value: tools.loading ? "probing" : flag(tools()?.win32Ffi) },
+      {
+        label: "Clip tools",
+        value: tools.loading
+          ? "probing"
+          : Object.entries(tools() ?? {})
+              .filter(([name]) => name !== "wsl" && name !== "win32Ffi")
+              .map(([name, present]) => `${name}=${present ? "y" : "n"}`)
+              .join(" ") || "none",
+      },
     ]
   })
 

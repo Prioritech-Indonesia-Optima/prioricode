@@ -11,6 +11,8 @@ export type TuiTerminalEnvironment = Readonly<{
   platform: string
   multiplexer?: "tmux" | "screen"
   displayServer?: "wayland" | "x11"
+  wsl?: boolean
+  remote?: boolean
 }>
 
 export type TuiStartup = Readonly<{

@@ -7,6 +7,7 @@ import { useToast } from "./toast"
 import { Flag } from "@prioricode/core/flag/flag"
 import { useBindings, usePrioricodeModeStack } from "../keymap"
 import { useClipboard } from "../context/clipboard"
+import { copyWithToast } from "../util/copy-clipboard"
 
 export function Dialog(
   props: ParentProps<{
@@ -188,10 +189,7 @@ export function DialogProvider(props: ParentProps) {
   function copySelection() {
     const text = renderer.getSelection()?.getSelectedText()
     if (!text || !clipboard.write) return false
-    void clipboard.write(text).then(
-      () => toast.show({ message: "Copied to clipboard", variant: "info" }),
-      (error) => toast.error(error),
-    )
+    void copyWithToast(clipboard, toast, text)
     renderer.clearSelection()
     return true
   }

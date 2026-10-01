@@ -6,6 +6,8 @@ import { Global } from "@prioricode/core/global"
 import { Flag } from "@prioricode/core/flag/flag"
 import { ProductVersion } from "@prioricode/core/installation/version"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
+import { clipboardSignals } from "./clipboard-scenario"
+import { copyWithToast } from "./util/copy-clipboard"
 import { ExitProvider, useExit } from "./context/exit"
 import { EpilogueProvider } from "./context/epilogue"
 import * as Selection from "./util/selection"
@@ -250,6 +252,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
         void renderer.getPalette({ size: 16 }).catch(() => undefined)
         const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
         if (renderer.isDestroyed) return
+        const terminalSignals = clipboardSignals()
 
         await render(() => {
           return (
@@ -270,17 +273,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                       worktree: global.data + "/worktree",
                     }}
                   >
-                    <TuiTerminalEnvironmentProvider
-                      value={{
-                        platform: process.platform,
-                        multiplexer: process.env.TMUX ? "tmux" : process.env.STY ? "screen" : undefined,
-                        displayServer: process.env.WAYLAND_DISPLAY
-                          ? "wayland"
-                          : process.env.DISPLAY
-                            ? "x11"
-                            : undefined,
-                      }}
-                    >
+                    <TuiTerminalEnvironmentProvider value={terminalSignals}>
                       <TuiStartupProvider
                         value={{
                           initialRoute: process.env.PRIORICODE_ROUTE
@@ -448,10 +441,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
   renderer.console.onCopySelection = async (text: string) => {
     if (!text || text.length === 0) return
 
-    await clipboard
-      .write?.(text)
-      .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
-      .catch(toast.error)
+    await copyWithToast(clipboard, toast, text)
 
     renderer.clearSelection()
   }

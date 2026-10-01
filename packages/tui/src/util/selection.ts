@@ -1,3 +1,4 @@
+import { copyWithToast } from "./copy-clipboard"
 import type { ClipboardService } from "../context/clipboard"
 
 type Toast = {
@@ -34,10 +35,7 @@ export function copy(renderer: Renderer, toast: Toast, clipboard: ClipboardServi
   const clipboardText =
     focus?.getClipboardText && selection.selectedRenderables.includes(focus) ? focus.getClipboardText(text) : text
 
-  clipboard
-    ?.write?.(clipboardText)
-    .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
-    .catch(toast.error)
+  void copyWithToast(clipboard, toast, clipboardText)
 
   renderer.clearSelection()
   return true

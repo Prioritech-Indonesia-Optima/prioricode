@@ -69,6 +69,7 @@ import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
 import { pastedFilepath } from "./pasted-filepath"
+import { pasteMissHint } from "../../clipboard-scenario"
 import { useLocation } from "../../context/location"
 
 registerPrioricodeSpinner()
@@ -459,7 +460,7 @@ export function Prompt(props: PromptProps) {
             await pasteInputText(content.data)
             return
           }
-          if (!imageOnly) toast.show({ message: "Clipboard has nothing pasteable", variant: "info" })
+          if (!imageOnly) toast.show({ message: pasteMissHint(terminalEnvironment), variant: "info" })
         },
       },
       {

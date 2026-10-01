@@ -46,11 +46,12 @@ function command(command: string, args: readonly string[] = [], input?: string, 
   })
 }
 
-function writeOsc52(text: string) {
-  if (!process.stdout.isTTY) return
+function writeOsc52(text: string): boolean {
+  if (!process.stdout.isTTY) return false
   const sequence = `\x1b]52;c;${Buffer.from(text).toString("base64")}\x07`
   const passthrough = `\x1bPtmux;\x1b${sequence}\x1b\\`
   process.stdout.write(process.env.TMUX ? sequence + passthrough : process.env.STY ? passthrough : sequence)
+  return true
 }
 
 export const WINDOWS_CLIPBOARD_SCRIPT =
@@ -297,30 +298,33 @@ export function copyCommand(
   }
 }
 
-export async function writeClipboard(env: ClipboardEnvironment, text: string) {
-  if (env.platform === "win32" && env.win32?.writeText(text)) return
+/** True when a host clipboard tool accepted the write; OSC 52 is tracked separately. */
+export async function writeClipboard(env: ClipboardEnvironment, text: string): Promise<boolean> {
+  if (env.platform === "win32" && env.win32?.writeText(text)) return true
   const os = env.platform as NodeJS.Platform
   const native = copyCommand(os, Boolean(process.env.WAYLAND_DISPLAY), env.has)
   if (native?.[0] === "osascript") {
     const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
-    await env.run("osascript", ["-e", `set the clipboard to "${escaped}"`], undefined, 8000).catch(() => undefined)
-    return
+    return env.run("osascript", ["-e", `set the clipboard to "${escaped}"`], undefined, 8000).then(
+      () => true,
+      () => false,
+    )
   }
-  if (native) {
-    await env.run(native[0]!, native.slice(1), text, 8000).catch(() => undefined)
-    return
-  }
+  if (native) return env.run(native[0]!, native.slice(1), text, 8000).then(() => true, () => false)
   if (env.platform === "win32" || env.wsl) {
-    await env
+    return env
       .run(
         "powershell.exe",
         ["-NonInteractive", "-NoProfile", "-command", `Set-Clipboard -Value ([Console]::In.ReadToEnd())`],
         text,
         15000,
       )
-      .catch(() => undefined)
+      .then(() => true, () => false)
   }
+  return false
 }
+
+export type CopyResult = "native" | "osc52" | "failed"
 
 let live: Promise<ClipboardEnvironment> | undefined
 
@@ -346,8 +350,21 @@ export async function read() {
   return readClipboard(await liveEnvironment())
 }
 
-export async function write(text: string) {
-  writeOsc52(text)
+export async function write(text: string): Promise<CopyResult> {
+  const osc52 = writeOsc52(text)
   const env = await liveEnvironment()
-  await writeClipboard(env, text)
+  if (await writeClipboard(env, text)) return "native"
+  return osc52 ? "osc52" : "failed"
+}
+
+export async function probeClipboardTools() {
+  const env = await liveEnvironment()
+  return {
+    wsl: env.wsl,
+    win32Ffi: Boolean(env.win32),
+    xclip: env.has("xclip"),
+    wlPaste: env.has("wl-paste"),
+    xsel: env.has("xsel"),
+    powershell: env.has("powershell.exe"),
+  }
 }
