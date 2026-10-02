@@ -96,7 +96,7 @@ function remotePasteEmpty(terminal?: TerminalName, multiplexer?: "tmux" | "scree
     parts.push("This terminal does not hand clipboard images to applications over SSH.")
   }
   parts.push(
-    "Ctrl+V with images on every terminal: run prioricode paste-serve on the machine you copy on, then add 'RemoteForward 48917 localhost:48917' to this host's ssh config (one time).",
+    "Ctrl+V with images on every terminal: run 'prioricode paste-serve --setup' ONCE on the machine you copy on (it wires the ssh forward and login start by itself); from then on plain ssh + prioricode just works.",
   )
   parts.push("Always works: copy the file to the server (scp, WinSCP, MobaXterm drag) and paste its path to attach it.")
   return parts.join(" ")
