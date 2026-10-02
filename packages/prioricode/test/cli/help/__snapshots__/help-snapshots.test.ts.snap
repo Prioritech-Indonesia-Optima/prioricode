@@ -16,7 +16,7 @@ Options:
       --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)
                                                                           [boolean] [default: false]
       --mdns-domain  custom domain name for mDNS service (default: prioricode.local)
-                                                                [string] [default: "prioricode.local"]
+                                                              [string] [default: "prioricode.local"]
       --cors         additional domains to allow for CORS                      [array] [default: []]
       --cwd          working directory [string] [default: "<HOME>"]"
 `;
@@ -28,7 +28,7 @@ manage MCP (Model Context Protocol) servers
 
 Commands:
   prioricode mcp add [name]     add an MCP server
-  prioricode mcp list           list MCP servers and their status                        [aliases: ls]
+  prioricode mcp list           list MCP servers and their status                      [aliases: ls]
   prioricode mcp auth [name]    authenticate with an OAuth-enabled MCP server
   prioricode mcp logout [name]  remove OAuth credentials for an MCP server
   prioricode mcp debug <name>   debug OAuth connection for an MCP server
@@ -59,7 +59,7 @@ Options:
   -c, --continue      continue the last session                                            [boolean]
   -s, --session       session id to continue                                                [string]
       --fork          fork the session when continuing (use with --continue or --session)  [boolean]
-  -p, --password      basic auth password (defaults to PRIORICODE_SERVER_PASSWORD)            [string]
+  -p, --password      basic auth password (defaults to PRIORICODE_SERVER_PASSWORD)          [string]
   -u, --username      basic auth username (defaults to PRIORICODE_SERVER_USERNAME or 'prioricode')
                                                                                             [string]
       --mini          start the minimal interactive interface             [boolean] [default: false]
@@ -92,8 +92,8 @@ Options:
                                           [string] [choices: "default", "json"] [default: "default"]
   -f, --file         file(s) to attach to message                                            [array]
       --title        title for the session (uses truncated prompt if no value provided)     [string]
-      --attach       attach to a running prioricode server (e.g., http://localhost:4096)      [string]
-  -p, --password     basic auth password (defaults to PRIORICODE_SERVER_PASSWORD)             [string]
+      --attach       attach to a running prioricode server (e.g., http://localhost:4096)    [string]
+  -p, --password     basic auth password (defaults to PRIORICODE_SERVER_PASSWORD)           [string]
   -u, --username     basic auth username (defaults to PRIORICODE_SERVER_USERNAME or 'prioricode')
                                                                                             [string]
       --dir          directory to run in, path on remote server if attaching                [string]
@@ -141,7 +141,7 @@ exports[`prioricode CLI help-text snapshots every documented command emits stabl
 manage AI providers and credentials
 
 Commands:
-  prioricode providers list               list providers and credentials                 [aliases: ls]
+  prioricode providers list               list providers and credentials               [aliases: ls]
   prioricode providers login [url]        log in to a provider
   prioricode providers logout [provider]  log out from a configured provider
 
@@ -221,7 +221,7 @@ Options:
       --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)
                                                                           [boolean] [default: false]
       --mdns-domain  custom domain name for mDNS service (default: prioricode.local)
-                                                                [string] [default: "prioricode.local"]
+                                                              [string] [default: "prioricode.local"]
       --cors         additional domains to allow for CORS                      [array] [default: []]"
 `;
 
@@ -241,7 +241,7 @@ Options:
       --mdns         enable mDNS service discovery (defaults hostname to 0.0.0.0)
                                                                           [boolean] [default: false]
       --mdns-domain  custom domain name for mDNS service (default: prioricode.local)
-                                                                [string] [default: "prioricode.local"]
+                                                              [string] [default: "prioricode.local"]
       --cors         additional domains to allow for CORS                      [array] [default: []]"
 `;
 
@@ -388,7 +388,7 @@ exports[`prioricode CLI help-text snapshots every documented command emits stabl
 database tools
 
 Commands:
-  prioricode db [query]     open an interactive sqlite3 shell or run a query                 [default]
+  prioricode db [query]     open an interactive sqlite3 shell or run a query               [default]
   prioricode db path        print the database path
 
 Positionals:
@@ -441,7 +441,7 @@ exports[`prioricode CLI help-text snapshots every documented command emits stabl
 authenticate with an OAuth-enabled MCP server
 
 Commands:
-  prioricode mcp auth list  list OAuth-capable MCP servers and their auth status         [aliases: ls]
+  prioricode mcp auth list  list OAuth-capable MCP servers and their auth status       [aliases: ls]
 
 Positionals:
   name  name of the MCP server                                                              [string]
@@ -489,7 +489,7 @@ exports[`prioricode CLI help-text snapshots every documented command emits stabl
 log in to a provider
 
 Positionals:
-  url  prioricode auth provider                                                               [string]
+  url  prioricode auth provider                                                             [string]
 
 Options:
   -h, --help        show help                                                              [boolean]
@@ -533,7 +533,7 @@ Options:
       --mode                  agent mode            [string] [choices: "all", "primary", "subagent"]
       --permissions, --tools  comma-separated list of permissions to allow (default: all).
                               Available: "bash, read, edit, glob, grep, webfetch, task, todowrite,
-                              websearch, lsp, skill"                                        [string]
+                              sessions, websearch, lsp, skill"                              [string]
   -m, --model                 model to use in the format of provider/model                  [string]"
 `;
 
