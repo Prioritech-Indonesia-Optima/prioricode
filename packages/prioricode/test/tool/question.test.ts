@@ -8,6 +8,7 @@ import { Agent } from "../../src/agent/agent"
 import { Truncate } from "@/tool/truncate"
 import { testEffect } from "../lib/effect"
 import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { Session } from "../../src/session/session"
 
 const ctx = {
   sessionID: SessionID.make("ses_test-session"),
@@ -21,7 +22,7 @@ const ctx = {
 }
 
 const it = testEffect(
-  LayerNode.compile(LayerNode.group([Question.node, EventV2Bridge.node, Truncate.node, Agent.node])),
+  LayerNode.compile(LayerNode.group([Question.node, Session.node, EventV2Bridge.node, Truncate.node, Agent.node])),
 )
 
 const pending = Effect.fn("QuestionToolTest.pending")(function* (question: Question.Interface) {

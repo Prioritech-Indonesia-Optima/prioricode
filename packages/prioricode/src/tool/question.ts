@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import { Question } from "../question"
+import { Session } from "@/session/session"
 import DESCRIPTION from "./question.txt"
 
 export const Parameters = Schema.Struct({
@@ -11,10 +12,11 @@ type Metadata = {
   answers: ReadonlyArray<Question.Answer>
 }
 
-export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Service>(
+export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Service | Session.Service>(
   "question",
   Effect.gen(function* () {
     const question = yield* Question.Service
+    const sessions = yield* Session.Service
 
     return {
       description: DESCRIPTION,
@@ -31,9 +33,16 @@ export const QuestionTool = Tool.define<typeof Parameters, Metadata, Question.Se
             .map((q, i) => `"${q.question}"="${answers[i]?.length ? answers[i].join(", ") : "Unanswered"}"`)
             .join(", ")
 
+          // In unattended (auto) Sessions the Question service resolves the
+          // prompts by consulting the model itself; report that honestly so
+          // the agent treats the answers as best-judgment assumptions rather
+          // than user instructions.
+          const autonomous = yield* sessions.effectiveAutonomous(ctx.sessionID)
           return {
             title: `Asked ${params.questions.length} question${params.questions.length > 1 ? "s" : ""}`,
-            output: `User has answered your questions: ${formatted}. You can now continue with the user's answers in mind.`,
+            output: autonomous
+              ? `No user was available to answer, so these questions were resolved by self-consultation: ${formatted}. Treat them as your own best-judgment decisions and state the key assumption when reporting results.`
+              : `User has answered your questions: ${formatted}. You can now continue with the user's answers in mind.`,
             metadata: {
               answers,
             },

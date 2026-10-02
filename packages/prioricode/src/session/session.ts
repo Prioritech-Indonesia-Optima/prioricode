@@ -434,6 +434,13 @@ export interface Interface {
    * subagents instead of leaving them on the unset default.
    */
   readonly effectivePermissionMode: (sessionID: SessionID) => Effect.Effect<Permission.Mode | undefined>
+  /**
+   * Whether this Session runs unattended (`--auto`/yolo): true when this
+   * Session or any ancestor carries `metadata.autonomous`. Autonomous
+   * Sessions resolve questions and permission asks themselves instead of
+   * waiting for a human who is not there.
+   */
+  readonly effectiveAutonomous: (sessionID: SessionID) => Effect.Effect<boolean>
   readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info, NotFound>
   readonly touch: (sessionID: SessionID) => Effect.Effect<void>
   readonly get: (id: SessionID) => Effect.Effect<Info, NotFound>
@@ -579,6 +586,21 @@ const layer: Layer.Layer<
         current = parent
       }
       return session.permissionMode
+    })
+
+    const effectiveAutonomous = Effect.fn("Session.effectiveAutonomous")(function* (sessionID: SessionID) {
+      const visited = new Set<SessionID>()
+      let current: SessionID | undefined = sessionID
+      while (current !== undefined && !visited.has(current)) {
+        visited.add(current)
+        const found: Info | undefined = yield* get(current).pipe(
+          Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)),
+        )
+        if (!found) return false
+        if (found.metadata?.autonomous === true) return true
+        current = found.parentID
+      }
+      return false
     })
 
     const list = Effect.fn("Session.list")(function* (input?: ListInput) {
@@ -986,6 +1008,7 @@ const layer: Layer.Layer<
       touch,
       get,
       effectivePermissionMode,
+      effectiveAutonomous,
       setTitle,
       setArchived,
       setMetadata,

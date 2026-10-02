@@ -50,9 +50,16 @@ export const { use: usePermission, provider: PermissionProvider } = createSimple
         if (!id || applied.has(id)) return
         const session = sync.data.session.find((item) => item.id === id)
         if (!session) return
-        if (session.permissionMode !== undefined && session.permissionMode !== null) return
+        if (session.metadata?.autonomous === true) return
         applied.add(id)
-        set("always-allow")
+        // Unattended run: server-side self-consult resolves questions, and
+        // permission prompts are governed by the always-allow mode below.
+        void sdk.client.session
+          .update({ sessionID: id, metadata: { ...(session.metadata ?? {}), autonomous: true } })
+          .catch((error: unknown) =>
+            toast.show({ message: `Failed to mark session unattended: ${errorMessage(error)}`, variant: "error" }),
+          )
+        if (session.permissionMode === undefined || session.permissionMode === null) set("always-allow")
       })
     }
 
