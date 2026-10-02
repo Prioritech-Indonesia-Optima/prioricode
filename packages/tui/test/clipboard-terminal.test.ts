@@ -40,7 +40,13 @@ test("wrapForMultiplexer doubles embedded escapes inside DCS passthrough", () =>
 })
 
 test("parseTerminalFrame handles 5522 units, terminators, and partials", () => {
-  expect(parseTerminalFrame(frame("i1", "OK"))).toEqual({ kind: "5522", id: "i1", status: "OK", mime: undefined, payload: undefined })
+  expect(parseTerminalFrame(frame("i1", "OK"))).toEqual({
+    kind: "5522",
+    id: "i1",
+    status: "OK",
+    mime: undefined,
+    payload: undefined,
+  })
   expect(parseTerminalFrame(`${ESC}]5522;type=read:status=DONE:id=i2\x07`)).toEqual({
     kind: "5522",
     id: "i2",
@@ -80,7 +86,10 @@ test("collector ignores foreign ids and unwanted mimes", () => {
   expect(collector.feed(frame("other", "DATA", { mime: "text/plain", payload: b64("nope") }))).toBeUndefined()
   expect(collector.feed(frame("mine", "DATA", { mime: "image/svg+xml", payload: b64("<svg/>") }))).toBeUndefined()
   expect(collector.feed(frame("mine", "DATA", { mime: "text/plain", payload: b64("yes ") }))).toBeUndefined()
-  expect(collector.feed(frame("mine", "DONE"))).toEqual({ status: "content", content: { data: "yes ", mime: "text/plain" } })
+  expect(collector.feed(frame("mine", "DONE"))).toEqual({
+    status: "content",
+    content: { data: "yes ", mime: "text/plain" },
+  })
 })
 
 test("collector decodes targets and errors", () => {
@@ -167,7 +176,11 @@ test("readTerminalClipboard: probe then image read over two requests", async () 
 test("readTerminalClipboard: empty clipboard resolves undefined without a second request", async () => {
   const terminal = fakeTerminal()
   const written: string[] = []
-  const promise = readTerminalClipboard(terminal, { write: (s) => void written.push(s), probeTimeoutMs: 50, timeoutMs: 300 })
+  const promise = readTerminalClipboard(terminal, {
+    write: (s) => void written.push(s),
+    probeTimeoutMs: 50,
+    timeoutMs: 300,
+  })
   await Bun.sleep(0)
   terminal.emit(frame(requestId(written[0]!), "DONE"))
   expect(await promise).toBeUndefined()
@@ -178,7 +191,11 @@ test("readTerminalClipboard: empty clipboard resolves undefined without a second
 test("readTerminalClipboard: denial surfaces as denied outcome", async () => {
   const terminal = fakeTerminal()
   const written: string[] = []
-  const promise = readTerminalClipboard(terminal, { write: (s) => void written.push(s), probeTimeoutMs: 50, timeoutMs: 300 })
+  const promise = readTerminalClipboard(terminal, {
+    write: (s) => void written.push(s),
+    probeTimeoutMs: 50,
+    timeoutMs: 300,
+  })
   await Bun.sleep(0)
   const probeId = requestId(written[0]!)
   terminal.emit(frame(probeId, "DATA", { mime: ".", payload: b64("image/png\n") }))
@@ -192,7 +209,11 @@ test("readTerminalClipboard: denial surfaces as denied outcome", async () => {
 test("readTerminalClipboard: unsupported terminal falls back to legacy text query", async () => {
   const terminal = fakeTerminal()
   const written: string[] = []
-  const promise = readTerminalClipboard(terminal, { write: (s) => void written.push(s), probeTimeoutMs: 20, timeoutMs: 300 })
+  const promise = readTerminalClipboard(terminal, {
+    write: (s) => void written.push(s),
+    probeTimeoutMs: 20,
+    timeoutMs: 300,
+  })
   await Bun.sleep(30)
   expect(written.length).toBe(2)
   expect(written[1]).toBe(encodeOsc52Query())
@@ -204,7 +225,11 @@ test("readTerminalClipboard: unsupported terminal falls back to legacy text quer
 test("readTerminalClipboard: silence ends as unsupported and cleans up handlers", async () => {
   const terminal = fakeTerminal()
   const written: string[] = []
-  const promise = readTerminalClipboard(terminal, { write: (s) => void written.push(s), probeTimeoutMs: 20, timeoutMs: 60 })
+  const promise = readTerminalClipboard(terminal, {
+    write: (s) => void written.push(s),
+    probeTimeoutMs: 20,
+    timeoutMs: 60,
+  })
   expect(await promise).toBeUndefined()
   expect(terminalClipboardLastAttempt()?.outcome).toBe("unsupported")
   expect(terminal.last()).toBe(false)

@@ -56,10 +56,15 @@ const html = (nonce: string) => `<!DOCTYPE html>
 
 export function pickClipboardImageViaPanel(): Promise<ClipboardImage | undefined> {
   return new Promise((resolve) => {
-    const panel = vscode.window.createWebviewPanel("prioricode.paste", "prioricode: Paste Image", vscode.ViewColumn.Beside, {
-      enableScripts: true,
-      retainContextWhenHidden: false,
-    })
+    const panel = vscode.window.createWebviewPanel(
+      "prioricode.paste",
+      "prioricode: Paste Image",
+      vscode.ViewColumn.Beside,
+      {
+        enableScripts: true,
+        retainContextWhenHidden: false,
+      },
+    )
     panel.webview.html = html(Math.random().toString(36).slice(2))
     let settled = false
     const finish = (image: ClipboardImage | undefined) => {

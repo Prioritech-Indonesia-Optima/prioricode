@@ -7,14 +7,14 @@ PrioriCode reads and writes the clipboard on **the machine it runs on**, not the
 
 ## Scenarios at a glance
 
-| Setup                                              | Copy from PrioriCode                          | Paste image (Ctrl+V)                                                                     | Paste text                                        |
-| -------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
-| Native Windows (Windows Terminal, cmd, PowerShell) | Native clipboard                              | Works (FFI DIB→PNG, PowerShell fallback, copied files attach by path)                     | Works                                             |
-| WSL1 / WSL2                                        | Native clipboard via `powershell.exe` interop | Works when interop is available; copied Windows files attach through `/mnt/c/...`         | Works                                             |
-| Linux desktop (X11 / Wayland)                      | `xclip` / `wl-copy` / `xsel`                  | Works if a clipboard tool is installed                                                   | Works                                             |
-| SSH from a modern terminal (kitty, WezTerm, Ghostty) | **OSC 52 escape → your local terminal**     | **Works over SSH via the terminal clipboard protocol** (permission prompt on first use)  | Works (also Ctrl+Shift+V via the terminal)        |
-| SSH into headless Linux from VS Code / others      | OSC 52 escape                                 | VS Code: use the **PrioriCode VS Code extension** (see below). Else: attach by file path | Terminal-level paste (Ctrl+Shift+V / right-click) |
-| macOS                                              | `osascript` / `pbpaste`                       | Works (PNG, TIFF via `sips`, copied files)                                               | Works                                             |
+| Setup                                                | Copy from PrioriCode                          | Paste image (Ctrl+V)                                                                     | Paste text                                        |
+| ---------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Native Windows (Windows Terminal, cmd, PowerShell)   | Native clipboard                              | Works (FFI DIB→PNG, PowerShell fallback, copied files attach by path)                    | Works                                             |
+| WSL1 / WSL2                                          | Native clipboard via `powershell.exe` interop | Works when interop is available; copied Windows files attach through `/mnt/c/...`        | Works                                             |
+| Linux desktop (X11 / Wayland)                        | `xclip` / `wl-copy` / `xsel`                  | Works if a clipboard tool is installed                                                   | Works                                             |
+| SSH from a modern terminal (kitty, WezTerm, Ghostty) | **OSC 52 escape → your local terminal**       | **Works over SSH via the terminal clipboard protocol** (permission prompt on first use)  | Works (also Ctrl+Shift+V via the terminal)        |
+| SSH into headless Linux from VS Code / others        | OSC 52 escape                                 | VS Code: use the **PrioriCode VS Code extension** (see below). Else: attach by file path | Terminal-level paste (Ctrl+Shift+V / right-click) |
+| macOS                                                | `osascript` / `pbpaste`                       | Works (PNG, TIFF via `sips`, copied files)                                               | Works                                             |
 
 :::note
 The TUI detects your environment (SSH env, display server, terminal, multiplexer) and the **Debug** dialog (`/debug`) lists the detected scenario, terminal, clipboard tools, and the last terminal-clipboard attempt.

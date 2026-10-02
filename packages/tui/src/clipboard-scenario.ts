@@ -89,7 +89,9 @@ function remotePasteEmpty(terminal?: TerminalName, multiplexer?: "tmux" | "scree
       "Ctrl+V can fetch the clipboard through your terminal (a one-time permission popup may appear); if it comes back empty, your terminal may not support the clipboard protocol.",
     )
   } else if (terminal === "vscode") {
-    parts.push("Install the PrioriCode VS Code extension: its Ctrl+V sends clipboard images into the terminal, locally and over Remote-SSH.")
+    parts.push(
+      "Install the PrioriCode VS Code extension: its Ctrl+V sends clipboard images into the terminal, locally and over Remote-SSH.",
+    )
   } else {
     parts.push("This terminal does not hand clipboard images to applications over SSH.")
   }

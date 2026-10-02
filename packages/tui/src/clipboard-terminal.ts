@@ -37,7 +37,9 @@ export type OscTerminal = Readonly<{
   removeInputHandler?(handler: (sequence: string) => boolean): void
 }>
 
-export function encodeOsc5522Read(input: Readonly<{ id: string; mimes: readonly string[]; humanName?: string }>): string {
+export function encodeOsc5522Read(
+  input: Readonly<{ id: string; mimes: readonly string[]; humanName?: string }>,
+): string {
   const records = [`type=read`, `id=${input.id}`]
   if (input.humanName) records.push(`name=${b64(input.humanName)}`)
   return `${ESC}]5522;${records.join(":")};${b64(input.mimes.join(" "))}${BEL}`
@@ -134,7 +136,9 @@ export function createReadCollector(
     if (!m.length || m === ".") return false
     if (mime) return m === mime
     const prefer = input.prefer ?? []
-    return !prefer.length || prefer.includes(m) || (m.startsWith("image/") && prefer.some((x) => x.startsWith("image/")))
+    return (
+      !prefer.length || prefer.includes(m) || (m.startsWith("image/") && prefer.some((x) => x.startsWith("image/")))
+    )
   }
 
   return {
@@ -229,7 +233,11 @@ export async function readTerminalClipboard(
     active = cancel
 
     function start(next: { id: string; targets?: boolean }, ms: number, onTimeout: () => void) {
-      const collector = createReadCollector({ id: next.id, prefer: next.targets ? undefined : prefer, targets: next.targets })
+      const collector = createReadCollector({
+        id: next.id,
+        prefer: next.targets ? undefined : prefer,
+        targets: next.targets,
+      })
       feed = (raw) => collector.feed(raw)
       if (timer) clearTimeout(timer)
       timer = setTimeout(() => {

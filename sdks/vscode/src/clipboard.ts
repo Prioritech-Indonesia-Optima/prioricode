@@ -19,15 +19,24 @@ const IMAGE_MIME_SCRIPT =
 
 function run(command: string, args: string[], timeoutMs = 8000): Promise<Buffer | undefined> {
   return new Promise((resolve) => {
-    execFile(command, args, { encoding: "buffer", maxBuffer: 24 * 1024 * 1024, timeout: timeoutMs }, (error, stdout) => {
-      resolve(error ? undefined : stdout)
-    })
+    execFile(
+      command,
+      args,
+      { encoding: "buffer", maxBuffer: 24 * 1024 * 1024, timeout: timeoutMs },
+      (error, stdout) => {
+        resolve(error ? undefined : stdout)
+      },
+    )
   })
 }
 
 export function sniffImageMime(bytes: Buffer): string | undefined {
   if (bytes.length < 12) return
-  if (bytes[0] === 0x89 && bytes.subarray(1, 4).toString("latin1") === "PNG" && bytes.toString("latin1", 12, 16) === "IHDR")
+  if (
+    bytes[0] === 0x89 &&
+    bytes.subarray(1, 4).toString("latin1") === "PNG" &&
+    bytes.toString("latin1", 12, 16) === "IHDR"
+  )
     return "image/png"
   if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg"
   const head = bytes.toString("latin1", 0, 10)
@@ -45,7 +54,9 @@ function base64Image(stdout: Buffer | undefined): ClipboardImage | undefined {
 }
 
 async function readWindows(): Promise<ClipboardImage | undefined> {
-  return base64Image(await run("powershell.exe", ["-NonInteractive", "-NoProfile", "-Command", IMAGE_MIME_SCRIPT], 10000))
+  return base64Image(
+    await run("powershell.exe", ["-NonInteractive", "-NoProfile", "-Command", IMAGE_MIME_SCRIPT], 10000),
+  )
 }
 
 function osascriptClipboard(file: string, type: string): string[] {
