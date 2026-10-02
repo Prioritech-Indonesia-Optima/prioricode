@@ -6,6 +6,7 @@ import os from "node:os"
 import path from "node:path"
 import { read, type Content } from "@prioricode/tui/clipboard"
 import { PASTE_BRIDGE_DEFAULT_PORT, type BridgePayload } from "@prioricode/tui/paste-bridge"
+import { writeMarker } from "../paste-marker"
 import { UI } from "../ui"
 
 export function clipboardPayload(content: Content | undefined): BridgePayload | undefined {
@@ -88,7 +89,7 @@ export function bridgeExecArgs(): string[] {
   return script ? [process.execPath, entry, "paste-serve"] : [process.execPath, "paste-serve"]
 }
 
-async function installRemoteForward(port: number): Promise<"added" | "updated" | "present" | "failed"> {
+export async function installRemoteForward(port: number): Promise<"added" | "updated" | "present" | "failed"> {
   const file = path.join(os.homedir(), ".ssh", "config")
   let existing = ""
   try {
@@ -111,7 +112,7 @@ async function installRemoteForward(port: number): Promise<"added" | "updated" |
   return hadMarker ? "updated" : "added"
 }
 
-async function installAutostart(): Promise<"installed" | "failed"> {
+export async function installAutostart(): Promise<"installed" | "failed"> {
   const target = autostartTarget(process.platform, os.homedir(), bridgeExecArgs())
   try {
     if (target.kind === "registry") {
@@ -156,6 +157,7 @@ export const PasteServeCommand = {
           ? "bridge will start automatically at login — you never need to run this again"
           : "could not install login autostart — add prioricode paste-serve to your startup apps",
       )
+      await writeMarker(bridgeExecArgs().join(" "), args.port).catch(() => undefined)
       UI.println("Reconnect existing ssh sessions so the forward is established.")
     }
     const server = http.createServer(async (request, response) => {
@@ -170,6 +172,10 @@ export const PasteServeCommand = {
         return
       }
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(payload))
+    })
+    server.on("error", (error: NodeJS.ErrnoException) => {
+      if (error.code === "EADDRINUSE") UI.println(`a clipboard bridge is already running on port ${args.port}`)
+      else UI.println(`clipboard bridge failed to start: ${error.message}`)
     })
     server.listen(args.port, "127.0.0.1", () => {
       UI.println(`prioricode paste-serve: sharing this machine's clipboard on 127.0.0.1:${args.port}`)
@@ -187,6 +193,9 @@ export const PasteServeCommand = {
       })
     process.on("SIGINT", shutdown)
     process.on("SIGTERM", shutdown)
-    await new Promise<void>((resolve) => server.on("close", resolve))
+    await new Promise<void>((resolve) => {
+      server.on("close", resolve)
+      server.on("error", resolve)
+    })
   },
 }

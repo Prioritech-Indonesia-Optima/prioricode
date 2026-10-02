@@ -7,6 +7,7 @@ import { ProvidersCommand } from "./cli/cmd/providers"
 import { AgentCommand } from "./cli/cmd/agent"
 import { UpgradeCommand } from "./cli/cmd/upgrade"
 import { PasteServeCommand } from "./cli/cmd/paste-serve"
+import { ensurePasteBridge } from "./cli/paste-auto"
 import { UninstallCommand } from "./cli/cmd/uninstall"
 import { ModelsCommand } from "./cli/cmd/models"
 import { UI } from "./cli/ui"
@@ -118,6 +119,7 @@ const cli = yargs(args)
   .strict()
 
 try {
+  if (!args.includes("paste-serve")) await ensurePasteBridge()
   if (args.includes("-h") || args.includes("--help")) {
     await cli.parse(args, (err: Error | undefined, _argv: unknown, out: string) => {
       if (err) throw err
