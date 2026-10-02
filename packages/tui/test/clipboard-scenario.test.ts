@@ -26,6 +26,7 @@ test("remote paste miss names the exact remedy", () => {
   const message = pasteMissHint({ platform: "linux", remote: true })
   expect(message).toContain("Remote session")
   expect(message).toContain("does not hand clipboard images")
+  expect(message).toContain("paste-serve")
   expect(message).toContain("scp")
   expect(SCENARIOS["linux-remote"].copyOsc52).toContain("OSC 52")
 })

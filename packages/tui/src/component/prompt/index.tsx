@@ -71,6 +71,7 @@ import { readLocalAttachment } from "./local-attachment"
 import { pastedFilepath } from "./pasted-filepath"
 import { pasteMissHint } from "../../clipboard-scenario"
 import { readTerminalClipboard } from "../../clipboard-terminal"
+import { fetchBridgeClipboard } from "../../paste-bridge"
 import { useLocation } from "../../context/location"
 
 registerPrioricodeSpinner()
@@ -461,17 +462,23 @@ export function Prompt(props: PromptProps) {
           const imageOnly = pasteImageOnlyRequest
           pasteImageOnlyRequest = false
           // In a remote session the host clipboard is empty by definition, so
-          // ask the user's terminal for its clipboard first (kitty OSC 5522
-          // protocol with an OSC 52 text fallback); tmux may block the reply
-          // round-trip, so stay on the host read there.
+          // try the SSH bridge first (`prioricode paste-serve` + a one-time
+          // RemoteForward — works in every terminal, images included), then the
+          // terminal clipboard protocol (kitty OSC 5522 with an OSC 52 text
+          // fallback, which only some emulators answer; tmux may block the reply
+          // round-trip, so stay off it there), then the host read as last resort.
+          const bridge = terminalEnvironment.remote ? await fetchBridgeClipboard() : undefined
           const terminalChannel =
-            terminalEnvironment.remote && !terminalEnvironment.multiplexer && kv.get("terminal_clipboard_enabled", true)
-          let content = terminalChannel
-            ? await readTerminalClipboard(renderer, {
-                write: (sequence) => void process.stdout.write(sequence),
-              })
-            : await clipboard.read?.()
-          if (!content && terminalChannel) content = await clipboard.read?.()
+            terminalEnvironment.remote &&
+            bridge === undefined &&
+            !terminalEnvironment.multiplexer &&
+            kv.get("terminal_clipboard_enabled", true)
+          let content = bridge
+          if (!content && terminalChannel)
+            content = await readTerminalClipboard(renderer, {
+              write: (sequence) => void process.stdout.write(sequence),
+            })
+          if (!content) content = await clipboard.read?.()
           if (content?.mime.startsWith("image/")) {
             await pasteAttachment({
               filename: "clipboard",
