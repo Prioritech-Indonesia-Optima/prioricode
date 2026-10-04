@@ -1,0 +1,108 @@
+[data-component="dialog-v2"].dialog-saved-permissions [data-slot="dialog-container"] {
+  width: 520px;
+  max-width: calc(100vw - 32px);
+  height: auto;
+  align-items: stretch;
+}
+
+[data-component="dialog-v2"].dialog-saved-permissions [data-slot="dialog-content"] {
+  align-items: stretch;
+  width: 100%;
+  overflow: hidden;
+}
+
+[data-component="dialog-v2"].dialog-saved-permissions [data-slot="dialog-header"] {
+  align-items: center;
+  padding-block: 24px 0;
+  padding-inline: 16px;
+}
+
+[data-component="dialog-v2"].dialog-saved-permissions [data-slot="dialog-body"] {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+}
+
+.dialog-saved-permissions-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  box-sizing: border-box;
+  padding-block: 8px 16px;
+  padding-inline: 16px;
+}
+
+.dialog-saved-permissions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dialog-saved-permissions-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-block: 8px;
+  padding-inline: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--pc-border-base, transparent);
+}
+
+.dialog-saved-permissions-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.dialog-saved-permissions-rule {
+  font-size: var(--font-size-md, 14px);
+  font-weight: 500;
+  color: var(--pc-text-strong, currentColor);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dialog-saved-permissions-separator {
+  color: var(--pc-text-muted, currentColor);
+}
+
+.dialog-saved-permissions-project {
+  font-size: var(--font-size-sm, 12px);
+  color: var(--pc-text-muted, currentColor);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dialog-saved-permissions-empty {
+  padding-block: 16px;
+  padding-inline: 4px;
+  text-align: center;
+  font-size: var(--font-size-sm, 13px);
+  color: var(--pc-text-muted, currentColor);
+}
+
+.dialog-saved-permissions-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-block: 24px;
+}
+
+.dialog-saved-permissions-footer {
+  display: flex;
+  justify-content: flex-end;
+}

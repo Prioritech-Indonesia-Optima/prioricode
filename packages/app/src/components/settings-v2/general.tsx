@@ -9,6 +9,7 @@ import { useLanguage } from "@/context/language"
 import { usePlatform } from "@/context/platform"
 import { useUpdaterAction } from "../updater-action"
 import { useSettings } from "@/context/settings"
+import { useServerProtocol } from "@/context/server-sdk"
 import { ExternalLink } from "../external-link"
 import { SettingsListV2 } from "./parts/list"
 import { SettingsRowV2 } from "./parts/row"
@@ -25,7 +26,7 @@ import {
   type ShellSettingsController,
   type SoundSettingsController,
 } from "./general-controllers"
-import "./settings-v2.css"
+import { DialogSavedPermissions } from "@/components/dialog-saved-permissions"
 
 const schemeOptions: ("system" | "light" | "dark")[] = ["system", "light", "dark"]
 const fontSettings = {
@@ -281,6 +282,7 @@ export const SettingsGeneralV2: Component<{
   const mobile = createMediaQuery("(max-width: 767px)")
   const updater = useUpdaterAction()
   const permissionScope = createPermissionScopeController(() => props.sessionID)
+  const protocol = useServerProtocol()
   const shell = createShellSettingsController()
   const appearance = createAppearanceSettingsController()
   const sounds = createSoundSettingsController()
@@ -330,6 +332,19 @@ export const SettingsGeneralV2: Component<{
         <LanguageSetting />
 
         <PermissionScopeSetting controller={permissionScope} />
+
+        <Show when={protocol() === "v2"}>
+          <SettingsRowV2
+            title={language.t("settings.general.row.savedPermissions.title")}
+            description={language.t("settings.general.row.savedPermissions.description")}
+          >
+            <div data-action="settings-saved-permissions">
+              <ButtonV2 size="small" variant="neutral" onClick={() => dialog.push(() => <DialogSavedPermissions />)}>
+                {language.t("settings.general.row.savedPermissions.manage")}
+              </ButtonV2>
+            </div>
+          </SettingsRowV2>
+        </Show>
 
         <ShellSetting controller={shell} />
 

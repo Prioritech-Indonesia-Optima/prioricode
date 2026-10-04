@@ -1198,5 +1198,13 @@ export const dict: Record<string, string> = {
   "desktop.ssh.error.invalidAlias": "SSH host names cannot start with a dash, contain spaces, or contain control characters.",
   "desktop.ssh.error.busy": "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind": "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "settings.general.row.savedPermissions.title": "Saved permissions",
+  "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
+  "settings.general.row.savedPermissions.manage": "Manage",
+  "dialog.savedPermissions.title": "Saved permissions",
+  "dialog.savedPermissions.empty": "No always-allow rules are saved.",
+  "dialog.savedPermissions.error": "Failed to load saved permissions.",
+  "dialog.savedPermissions.remove": "Remove rule",
+  "dialog.savedPermissions.close": "Close",
 
 }
