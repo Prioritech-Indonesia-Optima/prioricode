@@ -36,6 +36,35 @@ describe("readSse", () => {
     const events = await collect(['event: message\ndata: {"x":1}\n\n'])
     expect(events[0]).toEqual({ event: "message", data: '{"x":1}' })
   })
+
+  it("reports transport activity for comment-only frames (heartbeat liveness)", async () => {
+    let activities = 0
+    let sent = 0
+    const stream = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (sent < 2) {
+          sent += 1
+          setTimeout(() => controller.enqueue(new TextEncoder().encode(": heartbeat\n\n")), 10)
+        }
+      },
+    })
+    await readSse(stream, () => {}, {
+      onActivity: () => (activities += 1),
+      stop: () => activities >= 2,
+    })
+    expect(activities).toBeGreaterThanOrEqual(2)
+  })
+
+  it("stops cooperatively on a never-ending stream", async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"a":1}\n\n'))
+      },
+    })
+    const events: SseEvent[] = []
+    await readSse(stream, (event) => events.push(event), { stop: () => events.length >= 1 })
+    expect(events).toHaveLength(1)
+  })
 })
 
 describe("parseJsonEvent", () => {

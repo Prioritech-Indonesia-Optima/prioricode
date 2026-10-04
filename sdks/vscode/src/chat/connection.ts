@@ -10,6 +10,13 @@ export interface ConnectionOptions {
   sleep?: (ms: number) => Promise<void>
   random?: () => number
   heartbeatTimeoutMs?: number
+  /**
+   * The durable per-session stream carries no heartbeat, so a dead-but-open
+   * connection is indistinguishable from an idle session by reading alone.
+   * Reconnect cooperatively after this much silence; replay from lastSeq makes
+   * it cheap and idempotent. 0 disables.
+   */
+  durableIdleMs?: number
 }
 
 export interface Connection {
@@ -56,25 +63,43 @@ export function createConnection(options: ConnectionOptions): Connection {
     while (!stopped) {
       const controller = new AbortController()
       durableController = controller
+      let lastActivity = Date.now()
+      let watchdogFired = false
+      const idleMs = options.durableIdleMs ?? 30_000
+      const watchdog =
+        idleMs > 0
+          ? setInterval(() => {
+              if (Date.now() - lastActivity > idleMs) {
+                watchdogFired = true
+                controller.abort()
+              }
+            }, Math.max(250, Math.floor(idleMs / 3)))
+          : undefined
       try {
         const response = await options.openStream(
           `/api/session/${encodeURIComponent(sessionID)}/event?after=${lastSeq}`,
           controller.signal,
         )
         attempt = 0
-        await readSse(response.body as ReadableStream<Uint8Array>, (frame) => {
-          const event = decode(frame.data)
-          if (!event) return
-          const seq = event.durable?.seq
-          if (typeof seq === "number") {
-            if (seq <= lastSeq) return
-            lastSeq = seq
-          }
-          options.onEvent(event)
-        })
+        await readSse(
+          response.body as ReadableStream<Uint8Array>,
+          (frame) => {
+            const event = decode(frame.data)
+            if (!event) return
+            const seq = event.durable?.seq
+            if (typeof seq === "number") {
+              if (seq <= lastSeq) return
+              lastSeq = seq
+            }
+            options.onEvent(event)
+          },
+          { onActivity: () => (lastActivity = Date.now()) },
+        )
       } catch (error) {
         if (stopped) return
-        options.onError?.(error, "durable")
+        options.onError?.(watchdogFired ? new Error("durable stream idle timeout") : error, "durable")
+      } finally {
+        if (watchdog !== undefined) clearInterval(watchdog)
       }
       if (stopped) return
       await sleep(backoffDelay(attempt, { random }))
@@ -96,27 +121,30 @@ export function createConnection(options: ConnectionOptions): Connection {
                 watchdogFired = true
                 controller.abort()
               }
-            }, Math.max(1_000, Math.floor(heartbeatTimeoutMs / 3)))
+            }, Math.max(250, Math.floor(heartbeatTimeoutMs / 3)))
           : undefined
       try {
         const response = await options.openStream("/api/event", controller.signal)
         attempt = 0
         await options.onResync?.()
-        await readSse(response.body as ReadableStream<Uint8Array>, (frame) => {
-          lastActivity = Date.now()
-          const event = decode(frame.data)
-          if (!event) return
-          // Durable events are owned by the per-session stream; the live stream
-          // only carries live-only fragments (deltas, permission/question asks).
-          if (event.durable) return
-          if (!belongsToSession(event)) return
-          if (typeof event.id === "string") {
-            if (seenLive.has(event.id)) return
-            seenLive.add(event.id)
-            trimSeen()
-          }
-          options.onEvent(event)
-        })
+        await readSse(
+          response.body as ReadableStream<Uint8Array>,
+          (frame) => {
+            const event = decode(frame.data)
+            if (!event) return
+            // Durable events are owned by the per-session stream; the live
+            // stream only carries live-only fragments (deltas, asks).
+            if (event.durable) return
+            if (!belongsToSession(event)) return
+            if (typeof event.id === "string") {
+              if (seenLive.has(event.id)) return
+              seenLive.add(event.id)
+              trimSeen()
+            }
+            options.onEvent(event)
+          },
+          { onActivity: () => (lastActivity = Date.now()) },
+        )
       } catch (error) {
         if (stopped) return
         options.onError?.(watchdogFired ? new Error("live stream heartbeat timeout") : error, "live")

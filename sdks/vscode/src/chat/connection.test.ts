@@ -22,7 +22,7 @@ interface StreamSpec {
   end: boolean
 }
 
-function harness(specs: Record<string, StreamSpec | ((route: string) => StreamSpec)>) {
+function harness(specs: Record<string, StreamSpec | ((route: string) => StreamSpec)>, overrides?: Partial<Parameters<typeof createConnection>[0]>) {
   const events: RawEvent[] = []
   const routes: string[] = []
   let resyncCount = 0
@@ -54,12 +54,13 @@ function harness(specs: Record<string, StreamSpec | ((route: string) => StreamSp
     sleep: async () => {},
     random: () => 0.5,
     heartbeatTimeoutMs: 0,
+    ...overrides,
   })
   return { connection, events, routes, resync: () => resyncCount }
 }
 
 const waitFor = async (predicate: () => boolean, message: string) => {
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 400; i++) {
     if (predicate()) return
     await new Promise((resolve) => setTimeout(resolve, 1))
   }
@@ -127,6 +128,28 @@ describe("connection", () => {
     await waitFor(() => durableCalls >= 2, "second durable connection")
     h.connection.stop()
     expect(h.connection.lastSeq()).toBe(5)
+  })
+
+  it("reconnects the durable stream after idle silence (dead connection without heartbeat)", async () => {
+    let durableCalls = 0
+    const h = harness(
+      {
+        "/event?after=": (route) => {
+          durableCalls += 1
+          if (durableCalls === 1) {
+            return { frames: [frame(durable(7, "session.next.step.started", { assistantMessageID: "msg_a1" }))], end: false }
+          }
+          expect(route).toContain("after=7")
+          return { frames: [], end: false }
+        },
+        "/api/event": { frames: [], end: false },
+      },
+      { durableIdleMs: 150 },
+    )
+    h.connection.start()
+    await waitFor(() => durableCalls >= 2, "durable idle reconnect")
+    h.connection.stop()
+    expect(h.connection.lastSeq()).toBe(7)
   })
 
   it("stops cleanly", async () => {
