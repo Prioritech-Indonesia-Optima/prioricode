@@ -2,7 +2,7 @@
   "name": "prioricode",
   "displayName": "prioricode",
   "description": "prioricode for VS Code",
-  "version": "0.1.18",
+  "version": "0.2.0",
   "publisher": "Prioritech-Indonesia-Optima",
   "repository": {
     "type": "git",
@@ -148,7 +148,7 @@
   "scripts": {
     "vscode:prepublish": "bun run package",
     "build:ui": "bun --cwd ../ide-ui run build",
-    "build:ui:production": "bun --cwd ../ide-ui run build --production",
+    "build:ui:production": "bun --cwd ../ide-ui run build:production",
     "compile": "bun run check-types && bun run lint && bun run build:ui && node esbuild.js",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",

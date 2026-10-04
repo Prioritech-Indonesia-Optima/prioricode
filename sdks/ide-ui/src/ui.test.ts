@@ -141,7 +141,7 @@ describe("ide-chat mount", () => {
       questions: [{ question: "Env?", header: "Env", options: [{ label: "prod", description: "live" }, { label: "dev", description: "test" }], multiple: false, custom: true }],
     }
     api.render({ ...ready, blocks: [block] })
-    const radios = findAll(root, ".pc-option input")
+    const radios = findAll(root, ".pc-option input") as HTMLInputElement[]
     radios[1].checked = true
     radios[1].dispatchEvent(new Event("change", { bubbles: true }))
     const custom = find(root, ".pc-custom") as HTMLInputElement
