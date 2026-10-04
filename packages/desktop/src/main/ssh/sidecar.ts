@@ -30,9 +30,23 @@ export type SshSidecarOptions = {
 }
 
 export async function spawnSshSidecar(alias: string, opts: SshSidecarOptions = {}): Promise<SshSidecar> {
-  const password = randomUUID()
   const username = "prioricode"
-  const boot = await runBootstrap(alias, password, opts)
+  const boot = await bootstrap(alias, opts)
+  try {
+    return await openTunnel(alias, boot, await allocateLoopbackPort(), username, opts)
+  } catch (error) {
+    // A reused remote server can already be dead, foreign-owned on the port,
+    // or mid-shutdown. Recover exactly once by stopping it and bootstrapping fresh.
+    if (!boot.reused) throw error
+    opts.onLine?.({ stream: "stderr", text: `retrying ${alias} with a fresh remote server` })
+    await runRemoteExec(stopArgs(alias), stopScript(), opts)
+    const fresh = await bootstrap(alias, opts)
+    return openTunnel(alias, fresh, await allocateLoopbackPort(), username, opts)
+  }
+}
+
+async function bootstrap(alias: string, opts: SshSidecarOptions): Promise<SshBootstrapResult> {
+  const boot = await runBootstrap(alias, randomUUID(), opts)
   if ("code" in boot) {
     throw new Error(
       boot.code === "missing_binary"
@@ -40,8 +54,26 @@ export async function spawnSshSidecar(alias: string, opts: SshSidecarOptions = {
         : nativeT("desktop.ssh.error.bootstrapFailed", { host: alias, code: boot.code }),
     )
   }
-  const localPort = await allocateLoopbackPort()
-  return openTunnel(alias, boot, localPort, username, opts)
+  return boot
+}
+
+function runRemoteExec(args: string[], stdinText: string, opts: SshSidecarOptions): Promise<void> {
+  return new Promise((resolve) => {
+    const child = (opts.spawn ?? spawn)("ssh", args, { stdio: ["pipe", "ignore", "ignore"], windowsHide: true })
+    child.stdin.end(stdinText)
+    const timer = setTimeout(() => {
+      child.kill()
+      resolve()
+    }, 15_000)
+    child.once("exit", () => {
+      clearTimeout(timer)
+      resolve()
+    })
+    child.once("error", () => {
+      clearTimeout(timer)
+      resolve()
+    })
+  })
 }
 
 async function openTunnel(
