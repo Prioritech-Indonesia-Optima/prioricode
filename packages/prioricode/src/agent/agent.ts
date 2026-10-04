@@ -104,7 +104,15 @@ const layer = Layer.effect(
           ? yield* Effect.gen(function* () {
               yield* (yield* PluginV2.Service).wait(PluginV2.ID.make("core/config-reference"))
               return (yield* (yield* Reference.Service).list()).map((reference) => reference.path)
-            }).pipe(Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) }))))
+            }).pipe(
+              Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) }))),
+              // Reference materialization must never take down agent loading:
+              // a broken/unsupported reference degrades to no extra whitelisted
+              // directories instead of failing every /agent consumer.
+              Effect.catchCause((cause) =>
+                Effect.logWarning("failed to resolve reference directories", { cause }).pipe(Effect.as([])),
+              ),
+            )
           : []
         const whitelistedDirs = [
           Truncate.GLOB,
