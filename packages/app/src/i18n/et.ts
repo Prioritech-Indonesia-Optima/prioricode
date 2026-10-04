@@ -1181,5 +1181,12 @@ export const dict = {
   "desktop.ssh.error.invalidHost": "Enter a valid SSH host alias",
   "desktop.ssh.error.updateVersion": "PrioriCode install finished but {{host}} still reports {{installed}}; expected {{expected}}",
   "desktop.ssh.error.noVersion": "no version",
+  "command.category.skills": "Skills",
+  "command.skills": "Browse skills",
+  "command.skills.description": "Pick a skill and insert its command into the prompt",
+  "dialog.skill.title": "Skills",
+  "dialog.skill.search": "Search skills",
+  "dialog.skill.empty": "No skills found",
+  "dialog.skill.error": "Failed to load skills",
 
 }

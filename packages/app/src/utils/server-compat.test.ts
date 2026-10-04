@@ -19,6 +19,7 @@ function makeFakes(protocol: "v1" | "v2") {
     file: {},
     pty: {},
     integration: { connect: {}, oauth: {} },
+    skill: { list: async () => ({ location: { directory: "/x", project: { id: "p", directory: "/x" } }, data: [] }) },
   }
   const legacyClient = {
     v2: {
@@ -56,6 +57,45 @@ test("v1 protocol routes switchModel with the model ref shape", async () => {
   expect(calls).toEqual([
     ["legacy.switchModel", { sessionID: "ses_2", model: { id: "qwen3.8-flash", providerID: "alibaba-token-plan", variant: "high" } }],
   ])
+})
+
+test("v1 protocol exposes skill.list through the legacy app.skills endpoint", async () => {
+  const calls: [string, unknown][] = []
+  const legacyClient = {
+    app: {
+      skills: async () => {
+        calls.push(["legacy.app.skills", undefined])
+        return { data: [{ name: "effect", description: "Effect help", location: "/x/SKILL.md", content: "body" }] }
+      },
+    },
+  }
+  const current = {
+    session: { revert: { commit: async () => undefined } },
+    permission: {},
+    project: {},
+    vcs: {},
+    file: {},
+    pty: {},
+    integration: { connect: {}, oauth: {} },
+    skill: {
+      list: async (input: unknown) => {
+        calls.push(["native.skill.list", input])
+        return { location: { directory: "/x", project: { id: "p", directory: "/x" } }, data: [] }
+      },
+    },
+  }
+  const api = createCompatibleApi({
+    protocol: Promise.resolve("v1"),
+    current: current as never,
+    legacy: () => legacyClient as never,
+    directory: "/tmp/project",
+  })
+  const result = await api.skill.list()
+  expect(calls).toEqual([["legacy.app.skills", undefined]])
+  expect(result.data).toEqual([
+    { id: "effect", name: "effect", description: "Effect help", location: "/x/SKILL.md", content: "body" },
+  ])
+  expect(result.location.directory).toBe("/tmp/project")
 })
 
 test("v2 protocol uses the native client without reshaping", async () => {

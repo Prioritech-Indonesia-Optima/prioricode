@@ -1169,5 +1169,12 @@ export const dict = {
   "workspace.reset.archived.none": "No active sessions will be archived.",
   "workspace.reset.archived.one": "1 session will be archived.",
   "workspace.reset.archived.many": "{{count}} sessions will be archived.",
-  "workspace.reset.note": "This will reset the workspace to match the default branch.",
+  "workspace.reset.note": "This will reset the workspace to match the default branch.",  "command.category.skills": "Skills",
+  "command.skills": "Browse skills",
+  "command.skills.description": "Pick a skill and insert its command into the prompt",
+  "dialog.skill.title": "Skills",
+  "dialog.skill.search": "Search skills",
+  "dialog.skill.empty": "No skills found",
+  "dialog.skill.error": "Failed to load skills",
+
 }

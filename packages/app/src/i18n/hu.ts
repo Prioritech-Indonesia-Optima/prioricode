@@ -1203,5 +1203,12 @@ export const dict = {
   "desktop.dialog.files": "Files",
   "desktop.picker.error.notSelected": "File was not selected by the picker",
   "desktop.picker.error.sizeLimit": "Selected attachments exceed the {{limit}} MB limit",
+  "command.category.skills": "Skills",
+  "command.skills": "Browse skills",
+  "command.skills.description": "Pick a skill and insert its command into the prompt",
+  "dialog.skill.title": "Skills",
+  "dialog.skill.search": "Search skills",
+  "dialog.skill.empty": "No skills found",
+  "dialog.skill.error": "Failed to load skills",
 
 }

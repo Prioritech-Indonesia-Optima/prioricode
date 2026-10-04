@@ -500,6 +500,15 @@ function createV1Api(input: CompatibleInput): CompatibleApi {
       //   return located(result.data, value.location)
       // },
     },
+    skill: {
+      async list(value?: Parameters<ServerApi["skill"]["list"]>[0]) {
+        const result = await legacy(value?.location).app.skills()
+        return located(
+          (result.data ?? []).map((skill) => ({ id: skill.name, ...skill })),
+          value?.location,
+        )
+      },
+    },
     permission: {
       ...input.current.permission,
       async reply(value: Parameters<ServerApi["permission"]["reply"]>[0] & { location?: { directory?: string } }) {

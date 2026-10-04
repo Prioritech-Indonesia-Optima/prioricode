@@ -2,6 +2,7 @@ import { useCommand, type CommandOption } from "@/context/command"
 import { useLanguage } from "@/context/language"
 import { useLocal, type ModelSelection } from "@/context/local"
 import { useDialog } from "@prioricode/ui/context/dialog"
+import { usePrompt } from "@/context/prompt"
 import { getCursorPosition, setCursorPosition } from "@/components/prompt-input/editor-dom"
 import { useSessionLayout } from "./session-layout"
 import { createSessionOwnership } from "./session-ownership"
@@ -18,11 +19,25 @@ export const useComposerCommands = (input: { model?: ModelSelection } = {}) => {
   const dialog = useDialog()
   const language = useLanguage()
   const local = useLocal()
+  const prompt = usePrompt()
   const { sessionKey } = useSessionLayout()
   const sessionOwnership = createSessionOwnership(sessionKey)
   const model = input.model ?? local.model
   const modelCommand = withCategory(language.t("command.category.model"))
   const agentCommand = withCategory(language.t("command.category.agent"))
+  const skillCommand = withCategory(language.t("command.category.skills"))
+
+  const chooseSkill = async () => {
+    const { DialogSkill } = await import("@/components/dialog-skill")
+    dialog.push(() => (
+      <DialogSkill
+        onSelect={(name) => {
+          const text = `/${name} `
+          prompt.set([{ type: "text", content: text, start: 0, end: text.length }], text.length)
+        }}
+      />
+    ))
+  }
 
   const chooseModel = async () => {
     const owner = sessionOwnership.capture()
@@ -70,6 +85,15 @@ export const useComposerCommands = (input: { model?: ModelSelection } = {}) => {
       slash: "agent",
       disabled: !local.agent.visible(),
       onSelect: () => local.agent.move(1),
+    }),
+    skillCommand({
+      id: "skills.browse",
+      title: language.t("command.skills"),
+      description: language.t("command.skills.description"),
+      slash: "skills",
+      onSelect: () => {
+        void chooseSkill()
+      },
     }),
     agentCommand({
       id: "agent.cycle.reverse",
