@@ -6,8 +6,10 @@ export function deactivate() {
 
 import * as vscode from "vscode"
 import { spawnSync } from "child_process"
+import { readFile } from "fs/promises"
 import { pickClipboardImageViaPanel } from "./pastePanel"
 import { readClipboardImage, type ClipboardImage } from "./clipboard"
+import { discoverTuiPort, tuiStateDirectory } from "./tui-port"
 import { ChatViewProvider } from "./chat/panel"
 
 const TERMINAL_NAME = "prioricode"
@@ -88,8 +90,25 @@ export function activate(context: vscode.ExtensionContext) {
     return Number.isInteger(port) && port > 0 ? port : undefined
   }
 
-  const setPasteContext = (terminal: vscode.Terminal | undefined) =>
-    void vscode.commands.executeCommand("setContext", "prioricodeTerminalFocused", portOf(terminal) !== undefined)
+  // Restored terminals (after a window reload) lose their creation options, so
+  // the env port is gone. The TUI worker publishes its port in the state dir;
+  // prefer the terminal's own port, then fall back to the published one.
+  async function resolvePort(terminal: vscode.Terminal | undefined): Promise<number | undefined> {
+    const own = portOf(terminal)
+    if (own !== undefined) return own
+    if (terminal && terminal.name !== TERMINAL_NAME) return undefined
+    return discoverTuiPort({ readFile: (file) => readFile(file, "utf8"), stateDirectory: tuiStateDirectory() })
+  }
+
+  const setPasteContext = (terminal: vscode.Terminal | undefined) => {
+    if (portOf(terminal) !== undefined) {
+      void vscode.commands.executeCommand("setContext", "prioricodeTerminalFocused", true)
+      return
+    }
+    void resolvePort(terminal).then((port) => {
+      void vscode.commands.executeCommand("setContext", "prioricodeTerminalFocused", port !== undefined)
+    })
+  }
   setPasteContext(vscode.window.activeTerminal)
 
   const openNewTerminalDisposable = vscode.commands.registerCommand("prioricode.openNewTerminal", async () => {
@@ -119,9 +138,8 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     if (terminal.name === TERMINAL_NAME) {
-      // @ts-ignore
-      const port = terminal.creationOptions.env?.["_EXTENSION_PRIORICODE_PORT"]
-      port ? await appendPrompt(parseInt(port), fileRef) : terminal.sendText(fileRef, false)
+      const port = await resolvePort(terminal)
+      port ? await appendPrompt(port, fileRef) : terminal.sendText(fileRef, false)
       terminal.show()
     }
   })
@@ -154,7 +172,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   const pasteIntoTerminalDisposable = vscode.commands.registerCommand("prioricode.pasteIntoTerminal", async () => {
     const terminal = vscode.window.activeTerminal
-    const port = portOf(terminal)
+    const port = await resolvePort(terminal)
     if (!port) {
       await vscode.commands.executeCommand("workbench.action.terminal.paste")
       return
