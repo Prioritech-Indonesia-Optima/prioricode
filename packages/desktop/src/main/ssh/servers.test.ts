@@ -72,6 +72,7 @@ test("addServer persists config, starts immediately, and rejects duplicates or b
   await expect(controller.addServer("web")).rejects.toThrow()
   await expect(controller.addServer("  ")).rejects.toThrow()
   await expect(controller.addServer("two words")).rejects.toThrow()
+  await expect(controller.addServer("-oProxyCommand=evil")).rejects.toThrow()
 })
 
 test("persisted password is never written to the store", async () => {

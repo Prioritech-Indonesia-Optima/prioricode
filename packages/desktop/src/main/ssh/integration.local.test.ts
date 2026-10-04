@@ -94,3 +94,27 @@ test(
   },
   180_000,
 )
+
+test(
+  "concurrent bootstraps serialize through the remote lock and share one server",
+  async () => {
+    if (!canSshLocalhost) return
+    const home = mkdtempSync(join(tmpdir(), "pc-ssh-e2e-race-"))
+    try {
+      const results = await Promise.all([
+        remoteScript(home, bootstrapScript("race-password-one")),
+        remoteScript(home, bootstrapScript("race-password-two")),
+      ])
+      const boots = results.map((result, index) => expectBoot(result.output, `race-${index}`))
+      expect(new Set(boots.map((boot) => boot.reused))).toEqual(new Set([true, false]))
+      expect(boots[0]!.port).toBe(boots[1]!.port)
+      expect(boots[0]!.password).toBe(boots[1]!.password)
+      expect(await waitFor(() => health(boots[0]!.port, boots[0]!.password).then((status) => status === 200), 60_000)).toBeTrue()
+      await remoteScript(home, stopScript())
+      expect(await waitFor(async () => (await health(boots[0]!.port, boots[0]!.password)) === 0, 20_000)).toBeTrue()
+    } finally {
+      rmSync(home, { recursive: true, force: true })
+    }
+  },
+  300_000,
+)

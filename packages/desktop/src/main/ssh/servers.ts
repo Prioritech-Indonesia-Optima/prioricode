@@ -12,6 +12,7 @@ import { SSH_SERVERS_KEY } from "../store-keys"
 import { getStore } from "../store"
 import { nativeT } from "../native-translations"
 import { readSshConfigProfiles } from "./config"
+import { isValidSshAlias } from "./errors"
 import { checkArgs, checkScript, installArgs, parseCheckMarker } from "./commands"
 
 type RunningSidecar = {
@@ -265,7 +266,7 @@ export function createSshServersController(appVersion: string, spawnSidecar: Spa
 
     async addServer(alias: string): Promise<SshServerConfig> {
       const clean = alias.trim()
-      if (!clean || /\s/.test(clean)) throw new Error(nativeT("desktop.ssh.error.invalidHost"))
+      if (!isValidSshAlias(clean)) throw new Error(nativeT("desktop.ssh.error.invalidAlias"))
       const id = sshServerIdForAlias(clean)
       if (state.servers.some((item) => item.config.id === id)) {
         throw new Error(nativeT("desktop.ssh.error.alreadyAdded", { host: clean }))

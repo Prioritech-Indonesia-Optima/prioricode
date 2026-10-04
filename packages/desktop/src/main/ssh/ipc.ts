@@ -1,13 +1,14 @@
 import { app, ipcMain } from "electron"
 import type { IpcMainInvokeEvent } from "electron"
 import type { SshServersController } from "./servers"
+import { isValidSshAlias } from "./errors"
 import { nativeT } from "../native-translations"
 
 function requireSshIpcString(name: string, value: unknown): string {
   if (typeof value !== "string" || value.trim().length === 0 || value.length > 512) {
     throw new Error(nativeT("desktop.ssh.error.invalidHost"))
   }
-  if (name === "host alias" && /\s/.test(value)) throw new Error(nativeT("desktop.ssh.error.invalidHost"))
+  if (name === "host alias" && !isValidSshAlias(value.trim())) throw new Error(nativeT("desktop.ssh.error.invalidAlias"))
   return value
 }
 

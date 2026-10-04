@@ -208,7 +208,7 @@ function resolveProfiles(blocks: Block[]): SshHostProfile[] {
   const seen = new Set<string>()
   for (const block of blocks) {
     for (const pattern of block.patterns) {
-      if (pattern.startsWith("!")) continue
+      if (pattern.startsWith("!") || pattern.startsWith("-")) continue
       if (/[*?]/.test(pattern)) continue
       if (seen.has(pattern)) continue
       seen.add(pattern)

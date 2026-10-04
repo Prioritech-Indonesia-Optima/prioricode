@@ -3,10 +3,12 @@ import { randomUUID } from "node:crypto"
 import { checkHealth } from "../server"
 import { pollWslHealth } from "../wsl/startup"
 import { nativeT } from "../native-translations"
+import { classifySshFailure } from "./errors"
 import {
   bootstrapArgs,
   bootstrapScript,
   parseBootstrapMarker,
+  probeArgs,
   stopArgs,
   stopScript,
   tunnelArgs,
@@ -26,11 +28,13 @@ export type SshSidecarOptions = {
   onLine?: (line: { stream: "stdout" | "stderr"; text: string }) => void
   healthTimeoutMs?: number
   bootstrapTimeoutMs?: number
+  probeTimeoutMs?: number
   spawn?: typeof spawn
 }
 
 export async function spawnSshSidecar(alias: string, opts: SshSidecarOptions = {}): Promise<SshSidecar> {
   const username = "prioricode"
+  await runPreflight(alias, opts)
   const boot = await bootstrap(alias, opts)
   try {
     return await openTunnel(alias, boot, await allocateLoopbackPort(), username, opts)
@@ -47,14 +51,47 @@ export async function spawnSshSidecar(alias: string, opts: SshSidecarOptions = {
 
 async function bootstrap(alias: string, opts: SshSidecarOptions): Promise<SshBootstrapResult> {
   const boot = await runBootstrap(alias, randomUUID(), opts)
-  if ("code" in boot) {
-    throw new Error(
-      boot.code === "missing_binary"
-        ? nativeT("desktop.ssh.error.prioricodeNotInstalled", { host: alias })
-        : nativeT("desktop.ssh.error.bootstrapFailed", { host: alias, code: boot.code }),
-    )
-  }
+  if ("code" in boot) throw new Error(bootstrapError(alias, boot.code))
   return boot
+}
+
+export function bootstrapError(alias: string, code: string) {
+  if (code === "missing_binary") return nativeT("desktop.ssh.error.prioricodeNotInstalled", { host: alias })
+  if (code === "busy") return nativeT("desktop.ssh.error.busy", { host: alias })
+  if (code.startsWith("insecure_bind"))
+    return nativeT("desktop.ssh.error.insecureBind", { host: alias, address: code.slice("insecure_bind".length).trim() })
+  return nativeT("desktop.ssh.error.bootstrapFailed", { host: alias, code })
+}
+
+function runPreflight(alias: string, opts: SshSidecarOptions) {
+  return new Promise<void>((resolve, reject) => {
+    const child = (opts.spawn ?? spawn)("ssh", probeArgs(alias), {
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    })
+    let output = ""
+    child.stdout.setEncoding("utf8")
+    child.stdout.on("data", (chunk: string) => (output += chunk))
+    child.stderr.setEncoding("utf8")
+    child.stderr.on("data", (chunk: string) => (output += chunk))
+    const timeoutMs = opts.probeTimeoutMs ?? 20_000
+    const timer = setTimeout(() => {
+      child.kill()
+      reject(new Error(nativeT("desktop.ssh.error.unreachable", { host: alias })))
+    }, timeoutMs)
+    child.once("error", (error: NodeJS.ErrnoException) => {
+      clearTimeout(timer)
+      reject(error.code === "ENOENT" ? new Error(nativeT("desktop.ssh.error.sshMissing")) : error)
+    })
+    child.once("exit", (code) => {
+      clearTimeout(timer)
+      if (code === 0) {
+        resolve()
+        return
+      }
+      reject(new Error(classifySshFailure(output, alias, code)))
+    })
+  })
 }
 
 function runRemoteExec(args: string[], stdinText: string, opts: SshSidecarOptions): Promise<void> {

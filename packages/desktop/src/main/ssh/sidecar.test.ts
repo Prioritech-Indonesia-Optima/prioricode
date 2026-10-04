@@ -77,10 +77,10 @@ const marker = (over: Partial<{ port: number; version: string; password: string;
 
 describe("spawnSshSidecar", () => {
   test("happy path: script via stdin, tunnel child, health gate, ready sidecar", async () => {
-    const { children, spawn } = harness({ 0: (child) => child.succeed(marker()) })
+    const { children, spawn } = harness({ 0: (child) => child.succeed(""), 1: (child) => child.succeed(marker()) })
     const sidecar = await spawnSshSidecar("web", { spawn, healthTimeoutMs: 2_000, bootstrapTimeoutMs: 5_000 })
-    expect(children).toHaveLength(2)
-    const [exec, tunnel] = children
+    expect(children).toHaveLength(3)
+    const [, exec, tunnel] = children
     expect(pwAssignment.test(exec.stdinData)).toBeTrue()
     expect(sidecar.username).toBe("prioricode")
     expect(sidecar.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/)
@@ -91,35 +91,79 @@ describe("spawnSshSidecar", () => {
   })
 
   test("missing binary maps to the install hint error", async () => {
-    const { spawn } = harness({ 0: (child) => child.succeed("PRIORICODE_SSH_BOOTSTRAP_ERROR missing_binary\n") })
+    const { children, spawn } = harness({
+      0: (child) => child.succeed(""),
+      1: (child) => child.succeed("PRIORICODE_SSH_BOOTSTRAP_ERROR missing_binary\n"),
+    })
     await expect(spawnSshSidecar("web", { spawn })).rejects.toThrow(/PrioriCode is not installed on web/)
+    expect(children).toHaveLength(2)
   })
 
   test("tunnel exit before healthy rejects", async () => {
     const { children, spawn } = harness({
-      0: (child) => child.succeed(marker()),
-      1: (child) => child.die(255, "Connection refused\n"),
+      0: (child) => child.succeed(""),
+      1: (child) => child.succeed(marker()),
+      2: (child) => child.die(255, "Connection refused\n"),
     })
     await expect(spawnSshSidecar("web", { spawn, healthTimeoutMs: 2_000 })).rejects.toThrow(/SSH tunnel to web/)
-    expect(children).toHaveLength(2)
+    expect(children).toHaveLength(3)
   })
 
   test("stale reused server recovers via stop + fresh bootstrap + new tunnel", async () => {
     const { children, spawn } = harness({
-      0: (child) => child.succeed(marker({ reused: true, password: "old-pw" })),
-      1: (child) => child.die(255, "bind: Cannot assign requested address\n"),
-      2: (child) => child.succeed(""),
-      3: (child) => child.succeed(marker({ password: "fresh-pw", reused: false })),
+      0: (child) => child.succeed(""),
+      1: (child) => child.succeed(marker({ reused: true, password: "old-pw" })),
+      2: (child) => child.die(255, "bind: Cannot assign requested address\n"),
+      3: (child) => child.succeed(""),
+      4: (child) => child.succeed(marker({ password: "fresh-pw", reused: false })),
     })
     const sidecar = await spawnSshSidecar("web", { spawn, healthTimeoutMs: 2_000, bootstrapTimeoutMs: 5_000 })
     expect(sidecar.reused).toBeFalse()
     expect(sidecar.password).toBe("fresh-pw")
-    // children: bootstrap exec, dead tunnel, remote stop exec, fresh bootstrap exec, live tunnel
-    expect(children).toHaveLength(5)
+    // children: probe, bootstrap exec, dead tunnel, remote stop exec, fresh bootstrap exec, live tunnel
+    expect(children).toHaveLength(6)
     const scripts = children.filter((child) => child.stdinData.startsWith("set -eu")).map((child) => child.stdinData)
     expect(scripts).toHaveLength(3)
     expect(scripts[1]).toContain('kill "$(cat "$D/pid")"')
     expect(pwAssignment.test(scripts[2]!)).toBeTrue()
     sidecar.listener.stop()
   })
+})
+
+test("probe auth failure is classified before bootstrap runs", async () => {
+  const { children, spawn } = harness({
+    0: (child) => {
+      queueMicrotask(() => {
+        child.stderr.emitData("git@github: Permission denied (publickey).\n")
+        child.emit("exit", 255, null)
+      })
+    },
+  })
+  await expect(spawnSshSidecar("web", { spawn })).rejects.toThrow(/authentication failed for web/)
+  expect(children).toHaveLength(1)
+})
+
+test("probe network failure is classified as unreachable", async () => {
+  const { spawn } = harness({
+    0: (child) => {
+      queueMicrotask(() => {
+        child.stderr.emitData("ssh: connect to host web port 22: Connection timed out\r\n")
+        child.emit("exit", 255, null)
+      })
+    },
+  })
+  await expect(spawnSshSidecar("web", { spawn })).rejects.toThrow(/Could not reach web/)
+})
+
+test("missing ssh binary produces an install hint", async () => {
+  const spawn = ((..._args: unknown[]) => {
+    const child = new FakeChild()
+    queueMicrotask(() => {
+      const error = new Error("spawn ssh ENOENT") as Error & { code?: string }
+      error.code = "ENOENT"
+      child.emit("error", error)
+    })
+    return child
+  }) as never
+  await expect(spawnSshSidecar("web", { spawn })).rejects.toThrow(/ssh command was not found/)
 })
