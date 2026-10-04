@@ -93,23 +93,50 @@ export function activate(context: vscode.ExtensionContext) {
   // Restored terminals (after a window reload) lose their creation options, so
   // the env port is gone. The TUI worker publishes its port in the state dir;
   // prefer the terminal's own port, then fall back to the published one.
+  // terminal.processId is the shell, so look one level down for the foreground
+  // job (Linux /proc children; other platforms fall back to the terminal name).
+  async function terminalRunsPrioricode(terminal: vscode.Terminal): Promise<boolean> {
+    if (terminal.name === TERMINAL_NAME) return true
+    const pid = await terminal.processId
+    if (pid === undefined) return false
+    const read = async (path: string) => {
+      try {
+        return await readFile(path, "utf8")
+      } catch {
+        return ""
+      }
+    }
+    if ((await read(`/proc/${pid}/cmdline`)).includes("prioricode")) return true
+    const children = await read(`/proc/${pid}/task/${pid}/children`)
+    for (const child of children.trim().split(/\s+/).filter(Boolean)) {
+      if ((await read(`/proc/${child}/cmdline`)).includes("prioricode")) return true
+    }
+    return false
+  }
+
   async function resolvePort(terminal: vscode.Terminal | undefined): Promise<number | undefined> {
     const own = portOf(terminal)
     if (own !== undefined) return own
-    if (terminal && terminal.name !== TERMINAL_NAME) return undefined
+    if (!terminal) return undefined
+    if (!(await terminalRunsPrioricode(terminal))) return undefined
     return discoverTuiPort({ readFile: (file) => readFile(file, "utf8"), stateDirectory: tuiStateDirectory() })
   }
 
+  let pasteContext = false
   const setPasteContext = (terminal: vscode.Terminal | undefined) => {
-    if (portOf(terminal) !== undefined) {
-      void vscode.commands.executeCommand("setContext", "prioricodeTerminalFocused", true)
-      return
-    }
     void resolvePort(terminal).then((port) => {
-      void vscode.commands.executeCommand("setContext", "prioricodeTerminalFocused", port !== undefined)
+      const next = port !== undefined
+      if (next === pasteContext) return
+      pasteContext = next
+      void vscode.commands.executeCommand("setContext", "prioricodeTerminalFocused", next)
     })
   }
   setPasteContext(vscode.window.activeTerminal)
+  // The foreground command changes without any terminal event we can rely on
+  // (prioricode starts after the terminal is already active), so re-evaluate
+  // on a slow heartbeat: two tiny /proc reads, and one health fetch only when
+  // a prioricode session is actually detected.
+  const pasteContextTimer = setInterval(() => setPasteContext(vscode.window.activeTerminal), 4000)
 
   const openNewTerminalDisposable = vscode.commands.registerCommand("prioricode.openNewTerminal", async () => {
     await openTerminal()
@@ -194,6 +221,7 @@ export function activate(context: vscode.ExtensionContext) {
     openTerminalDisposable,
     addFilepathDisposable,
     pasteIntoTerminalDisposable,
+    new vscode.Disposable(() => clearInterval(pasteContextTimer)),
     vscode.window.onDidChangeActiveTerminal((terminal) => setPasteContext(terminal)),
   )
 

@@ -103,3 +103,19 @@ export const rpc = {
 }
 
 Rpc.listen(rpc)
+
+// Editor integration: inside a VS Code terminal the extension pushes clipboard
+// images to this session over loopback HTTP. Sessions started by hand (no
+// --port) previously had no listener at all, so expose one automatically when
+// we can tell we are running under VS Code. Loopback-only; auth middleware
+// still applies when PRIORICODE_SERVER_PASSWORD is set.
+if (process.env.TERM_PROGRAM === "vscode" || process.env.PRIORICODE_CALLER === "vscode") {
+  void Server.listen({ port: 0, hostname: "127.0.0.1" })
+    .then((listener) => {
+      if (!server) {
+        server = listener
+        writePortFile(listener.port)
+      }
+    })
+    .catch(() => {})
+}
