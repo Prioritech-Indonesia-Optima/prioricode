@@ -137,6 +137,15 @@ function createV1Api(input: CompatibleInput): CompatibleApi {
     ...input.current,
     session: {
       ...input.current.session,
+      async switchAgent(value: Parameters<SessionApi["switchAgent"]>[0]) {
+        await legacy().v2.session.switchAgent({ sessionID: value.sessionID, agent: value.agent })
+      },
+      async switchModel(value: Parameters<SessionApi["switchModel"]>[0]) {
+        await legacy().v2.session.switchModel({
+          sessionID: value.sessionID,
+          model: { id: value.model.id, providerID: value.model.providerID, variant: value.model.variant },
+        })
+      },
       async list(
         value?: Parameters<ServerApi["session"]["list"]>[0],
         options?: Parameters<ServerApi["session"]["list"]>[1],
