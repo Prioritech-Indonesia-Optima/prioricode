@@ -317,6 +317,21 @@ export const DESKTOP_NATIVE_ENGLISH = {
   "desktop.wsl.error.commandTimeout": "{{command}} {{args}} timed out after {{timeout}}ms",
   "desktop.wsl.error.failedPort": "Failed to get port",
 
+  "desktop.ssh.error.prioricodeNotInstalled": "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
+  "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
+  "desktop.ssh.error.bootstrapTimeout": "PrioriCode bootstrap on {{host}} timed out after {{timeout}}ms",
+  "desktop.ssh.error.healthTimeout": "SSH server for {{host}} health check timed out after {{timeout}}ms",
+  "desktop.ssh.error.serverExitedBeforeHealthy":
+    "SSH tunnel to {{host}} exited before becoming healthy (code={{code}} signal={{signal}}){{output}}",
+  "desktop.ssh.error.serverExited": "SSH tunnel to {{host}} exited after startup (code={{code}} signal={{signal}})",
+  "desktop.ssh.error.alreadyAdded": "{{host}} is already added",
+  "desktop.ssh.error.installPrioricode": "PrioriCode installation on {{host}} failed",
+  "desktop.ssh.error.hostsReadFailed": "Failed to read the SSH config file",
+  "desktop.ssh.error.invalidHost": "Enter a valid SSH host alias",
+  "desktop.ssh.error.updateVersion":
+    "PrioriCode install finished but {{host}} still reports {{installed}}; expected {{expected}}",
+  "desktop.ssh.error.noVersion": "no version",
+
   "desktop.picker.error.notSelected": "File was not selected by the picker",
   "desktop.picker.error.sizeLimit": "Selected attachments exceed the {{limit}} MB limit",
 } as const

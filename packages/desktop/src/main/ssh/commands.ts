@@ -65,12 +65,7 @@ export function bootstrapScript(password: string) {
     'D="$HOME/.prioricode/ssh"',
     'mkdir -p "$D"',
     "umask 077",
-    'BIN=""',
-    'for c in "$HOME/.prioricode/bin/prioricode" "$HOME/.local/bin/prioricode" "$HOME/bin/prioricode" "/usr/local/bin/prioricode"; do',
-    '  if [ -x "$c" ]; then BIN="$c"; break; fi',
-    "done",
-    'if [ -z "$BIN" ] && command -v prioricode >/dev/null 2>&1; then BIN="$(command -v prioricode)"; fi',
-    `if [ -z "$BIN" ]; then echo '${SSH_BOOTSTRAP_ERROR_MARKER} missing_binary'; exit 3; fi`,
+    ...binaryProbeLines(),
     'V="$("$BIN" --version 2>/dev/null | sed -n \'1p\' || true)"',
     `V="$(printf '%s' "$V" | tr -cd 'A-Za-z0-9._+-')"`,
     'if [ -f "$D/pid" ] && [ -f "$D/port" ] && [ -f "$D/password" ] && kill -0 "$(cat "$D/pid")" 2>/dev/null; then',
@@ -110,6 +105,61 @@ export function stopScript() {
     'rm -f "$D/pid" "$D/port" "$D/password"',
     "",
   ].join("\n")
+}
+
+export const SSH_CHECK_MARKER = "PRIORICODE_SSH_CHECK"
+
+const BINARY_CANDIDATES = [
+  '"$HOME/.prioricode/bin/prioricode"',
+  '"$HOME/.local/bin/prioricode"',
+  '"$HOME/bin/prioricode"',
+  '"/usr/local/bin/prioricode"',
+]
+
+function binaryProbeLines() {
+  return [
+    'BIN=""',
+    `for c in ${BINARY_CANDIDATES.join(" ")}; do`,
+    '  if [ -x "$c" ]; then BIN="$c"; break; fi',
+    "done",
+    'if [ -z "$BIN" ] && command -v prioricode >/dev/null 2>&1; then BIN="$(command -v prioricode)"; fi',
+    `if [ -z "$BIN" ]; then echo '${SSH_BOOTSTRAP_ERROR_MARKER} missing_binary'; exit 3; fi`,
+  ]
+}
+
+export function checkArgs(alias: string) {
+  return [...BASE_ARGS, alias, "sh", "-s"]
+}
+
+export function checkScript() {
+  return [
+    "set -eu",
+    ...binaryProbeLines(),
+    'V="$("$BIN" --version 2>/dev/null | sed -n \'1p\' || true)"',
+    `V="$(printf '%s' "$V" | tr -cd 'A-Za-z0-9._+-')"`,
+    `P="$(printf '%s' "$BIN" | tr -cd 'A-Za-z0-9._/+-')"`,
+    `printf '${SSH_CHECK_MARKER} {"version":"%s","path":"%s"}\\n' "$V" "$P"`,
+    "",
+  ].join("\n")
+}
+
+export type SshCheckResult = { version: string; path: string } | { code: string }
+
+export function parseCheckMarker(output: string): SshCheckResult {
+  for (const line of output.split(/\r?\n/)) {
+    const error = line.indexOf(`${SSH_BOOTSTRAP_ERROR_MARKER} `)
+    if (error !== -1) return { code: line.slice(error + SSH_BOOTSTRAP_ERROR_MARKER.length + 1).trim() || "unknown" }
+    const marker = line.indexOf(`${SSH_CHECK_MARKER} `)
+    if (marker === -1) continue
+    try {
+      const value = JSON.parse(line.slice(marker + SSH_CHECK_MARKER.length + 1)) as Record<string, unknown>
+      if (typeof value.path !== "string" || !value.path) return { code: "bad_marker" }
+      return { version: typeof value.version === "string" ? value.version : "", path: value.path }
+    } catch {
+      return { code: "bad_marker" }
+    }
+  }
+  return { code: "no_marker" }
 }
 
 export function parseBootstrapMarker(output: string): SshBootstrapResult | SshBootstrapError {

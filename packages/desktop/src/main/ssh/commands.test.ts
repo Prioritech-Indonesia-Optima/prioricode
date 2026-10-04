@@ -2,6 +2,10 @@ import { expect, test } from "bun:test"
 import { randomUUID } from "node:crypto"
 import {
   bootstrapArgs,
+  checkArgs,
+  checkScript,
+  parseCheckMarker,
+  SSH_CHECK_MARKER,
   bootstrapScript,
   installArgs,
   parseBootstrapMarker,
@@ -121,4 +125,18 @@ test("listening line parser extracts host and port", () => {
     port: 4096,
   })
   expect(parseListeningLine("no noise here")).toBeNull()
+})
+
+test("check probe prints marker with sanitized version and path", () => {
+  const script = checkScript()
+  expect(script).toContain("set -eu")
+  expect(script).toContain(SSH_CHECK_MARKER)
+  expect(script).toContain('tr -cd')
+  expect(checkArgs("web").join(" ")).not.toContain("Password")
+  expect(parseCheckMarker(`${SSH_CHECK_MARKER} {"version":"0.1.18","path":"/home/u/.prioricode/bin/prioricode"}`)).toEqual({
+    version: "0.1.18",
+    path: "/home/u/.prioricode/bin/prioricode",
+  })
+  expect(parseCheckMarker("noise")).toEqual({ code: "no_marker" })
+  expect(parseCheckMarker("PRIORICODE_SSH_BOOTSTRAP_ERROR missing_binary")).toEqual({ code: "missing_binary" })
 })

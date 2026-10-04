@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
-import { createServer } from "node:net"
 import { app } from "electron"
+import { allocateLoopbackPort } from "../ports"
 import { checkHealth } from "../server"
 import { type WslCommandLine, resolveWslPrioricode, shellEscape, wslArgs } from "./runtime"
 import { pollWslHealth } from "./startup"
@@ -21,7 +21,7 @@ export async function spawnWslSidecar(
   const prioricode = await resolveWslPrioricode(distro)
   if (!prioricode) throw new Error(nativeT("desktop.wsl.error.prioricodeNotInstalled", { distro }))
 
-  const port = await allocatePort()
+  const port = await allocateLoopbackPort()
   const password = randomUUID()
   const username = "prioricode"
   const script = [
@@ -88,22 +88,6 @@ export async function spawnWslSidecar(
     username,
     password,
   }
-}
-
-function allocatePort() {
-  return new Promise<number>((resolve, reject) => {
-    const server = createServer()
-    server.on("error", reject)
-    server.listen(0, "127.0.0.1", () => {
-      const address = server.address()
-      if (typeof address !== "object" || !address) {
-        server.close()
-        reject(new Error(nativeT("desktop.wsl.error.failedPort")))
-        return
-      }
-      server.close(() => resolve(address.port))
-    })
-  })
 }
 
 function forwardLines(
