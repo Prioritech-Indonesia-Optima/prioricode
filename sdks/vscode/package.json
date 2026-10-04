@@ -21,11 +21,38 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onView:prioricode.chat"
   ],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "prioricode",
+          "title": "prioricode",
+          "icon": "images/button-dark.svg"
+        }
+      ]
+    },
+    "views": {
+      "prioricode": [
+        {
+          "type": "webview",
+          "id": "prioricode.chat",
+          "name": "Chat"
+        }
+      ]
+    },
     "commands": [
+      {
+        "command": "prioricode.openChat",
+        "title": "Open prioricode Chat",
+        "icon": {
+          "light": "images/button-dark.svg",
+          "dark": "images/button-light.svg"
+        }
+      },
       {
         "command": "prioricode.openTerminal",
         "title": "Open prioricode",

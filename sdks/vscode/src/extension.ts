@@ -1,10 +1,14 @@
 // This method is called when your extension is deactivated
-export function deactivate() {}
+let chatProvider: ChatViewProvider | undefined
+export function deactivate() {
+  chatProvider?.dispose()
+}
 
 import * as vscode from "vscode"
 import { spawnSync } from "child_process"
 import { pickClipboardImageViaPanel } from "./pastePanel"
 import { readClipboardImage, type ClipboardImage } from "./clipboard"
+import { ChatViewProvider } from "./chat/panel"
 
 const TERMINAL_NAME = "prioricode"
 
@@ -18,6 +22,16 @@ function hasCli() {
 export function activate(context: vscode.ExtensionContext) {
   // The server's base64 image ceiling is 5 MiB; keep raw bytes well under it.
   const MAX_CLIPBOARD_IMAGE_BYTES = 3_500_000
+
+  chatProvider = new ChatViewProvider(context.extensionUri)
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider("prioricode.chat", chatProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    vscode.commands.registerCommand("prioricode.openChat", async () => {
+      await vscode.commands.executeCommand("prioricode.chat.focus")
+    }),
+  )
 
   function portOf(terminal: vscode.Terminal | undefined) {
     if (!terminal) return undefined

@@ -40,11 +40,27 @@ async function main() {
       esbuildProblemMatcherPlugin,
     ],
   })
+  const webviewCtx = await esbuild.context({
+    entryPoints: ["src/chat/webview-ui.ts"],
+    bundle: true,
+    format: "iife",
+    target: "es2020",
+    minify: production,
+    sourcemap: !production,
+    sourcesContent: false,
+    platform: "browser",
+    outfile: "dist/webview.js",
+    logLevel: "silent",
+    plugins: [esbuildProblemMatcherPlugin],
+  })
   if (watch) {
     await ctx.watch()
+    await webviewCtx.watch()
   } else {
     await ctx.rebuild()
+    await webviewCtx.rebuild()
     await ctx.dispose()
+    await webviewCtx.dispose()
   }
 }
 
