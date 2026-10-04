@@ -13,76 +13,40 @@ import { useLanguage } from "@/context/language"
 import { usePlatform } from "@/context/platform"
 import { ServerConnection } from "@/context/server"
 import { showToast } from "@/utils/toast"
-import { DialogAddWslServer } from "./dialog-add-server"
-import { openAddSshServer } from "@/ssh/settings"
-import { useWslServers } from "./context"
-import { wslPrioricodeAction, wslRuntimeRetryable } from "./settings-model"
+import { DialogAddSshServer } from "./dialog-add-server"
+import { useSshServers } from "./context"
+import { sshPrioricodeAction, sshRuntimeRetryable } from "./settings-model"
 
 type Controller = ReturnType<typeof useServerManagementController>
 
-export function isWslServer(server: ServerConnection.Any) {
-  return server.type === "sidecar" && server.variant === "wsl"
+export function isSshServer(server: ServerConnection.Any) {
+  return server.type === "ssh"
 }
 
-export function AddServerMenu(props: { onAddServer: () => void }) {
-  const platform = usePlatform()
-  const dialog = useDialog()
-  const language = useLanguage()
-  const openAddWsl = () => {
-    dialog.push(() => <DialogAddWslServer />)
-  }
-  const openAddSsh = () => {
-    openAddSshServer(dialog)
-  }
-  return (
-    <Show
-      when={platform.wslServers || platform.sshServers}
-      fallback={
-        <ButtonV2 variant="ghost-muted" icon="plus" onClick={props.onAddServer}>
-          {language.t("dialog.server.add.button")}
-        </ButtonV2>
-      }
-    >
-      <MenuV2 gutter={4} modal={false} placement="bottom-end">
-        <MenuV2.Trigger as={ButtonV2} variant="ghost-muted" icon="plus">
-          {language.t("dialog.server.add.button")}
-        </MenuV2.Trigger>
-        <MenuV2.Portal>
-          <MenuV2.Content>
-            <MenuV2.Item onSelect={props.onAddServer}>{language.t("dialog.server.add.button")}</MenuV2.Item>
-            <Show when={platform.wslServers}>
-              <MenuV2.Item onSelect={openAddWsl}>{language.t("wsl.server.add")}</MenuV2.Item>
-            </Show>
-            <Show when={platform.sshServers}>
-              <MenuV2.Item onSelect={openAddSsh}>{language.t("ssh.server.add")}</MenuV2.Item>
-            </Show>
-          </MenuV2.Content>
-        </MenuV2.Portal>
-      </MenuV2>
-    </Show>
-  )
+export function openAddSshServer(dialog: ReturnType<typeof useDialog>) {
+  dialog.push(() => <DialogAddSshServer />)
 }
 
-export function useFilteredWslServers(filter: Accessor<string>) {
-  const wsl = useWslServers()
+export function useFilteredSshServers(filter: Accessor<string>) {
+  const ssh = useSshServers()
   return createMemo(() => {
-    const servers = wsl.data?.servers ?? []
+    const servers = ssh.data?.servers ?? []
     const query = filter().trim()
     if (!query) return servers
     return fuzzysort
-      .go(query, servers, { keys: [(item) => item.config.distro, (item) => item.config.id] })
+      .go(query, servers, { keys: [(item) => item.config.alias, (item) => item.config.id] })
       .map((x) => x.obj)
   })
 }
 
-export function WslServerSettings(props: {
+export function SshServerSettings(props: {
   controller: Controller
-  servers: ReturnType<typeof useFilteredWslServers>
+  servers: ReturnType<typeof useFilteredSshServers>
 }) {
   const platform = usePlatform()
   const language = useLanguage()
-  const wsl = useWslServers()
-  const api = platform.wslServers
+  const ssh = useSshServers()
+  const api = platform.sshServers
 
   const request = useMutation(() => ({
     mutationFn: (action: () => Promise<unknown>) => action(),
@@ -103,18 +67,22 @@ export function WslServerSettings(props: {
       <For each={props.servers()}>
         {(item) => {
           const key = ServerConnection.Key.make(item.config.id)
-          const check = () => wsl.data?.prioricodeChecks[item.config.distro]
-          const prioricodeAction = () => wslPrioricodeAction(check())
-          const busy = () => wsl.data?.job?.kind === "install-prioricode" && wsl.data.job.distro === item.config.distro
+          const check = () => ssh.data?.prioricodeChecks[item.config.alias]
+          const prioricodeAction = () => sshPrioricodeAction(check())
+          const busy = () =>
+            ssh.data?.job?.kind === "install-prioricode" && ssh.data.job.alias === item.config.alias
+          const connected = () => item.runtime.kind === "ready"
           return (
             <div class="settings-v2-servers-row">
               <div class="settings-v2-servers-lead">
                 <ServerHealthIndicator health={props.controller.status()[key]} />
                 <div class="settings-v2-servers-copy">
                   <span class="flex min-w-0 items-center gap-1">
-                    <span class="settings-v2-servers-name">{item.config.distro}</span>
+                    <span class="settings-v2-servers-name" dir="ltr">
+                      <bdi>{item.config.alias}</bdi>
+                    </span>
                     <span class="shrink-0 rounded-[3px] border border-pc-border-base px-1 py-0.5 text-[9px] leading-none text-pc-text-muted">
-                      {language.t("wsl.server.label")}
+                      {language.t("ssh.server.label")}
                     </span>
                   </span>
                   <span class="settings-v2-servers-meta">
@@ -131,9 +99,9 @@ export function WslServerSettings(props: {
                     <ButtonV2
                       size="small"
                       disabled={busy() || request.isPending}
-                      onClick={() => api && request.mutate(() => api.installPrioricode(item.config.distro))}
+                      onClick={() => api && request.mutate(() => api.installPrioricode(item.config.alias))}
                     >
-                      {busy() ? language.t("wsl.server.updating") : language.t(label())}
+                      {busy() ? language.t("ssh.server.updating") : language.t(label())}
                     </ButtonV2>
                   )}
                 </Show>
@@ -148,10 +116,15 @@ export function WslServerSettings(props: {
                   <MenuV2.Portal>
                     <MenuV2.Content>
                       <MenuV2.Group>
-                        <MenuV2.GroupLabel>{language.t("wsl.server.menu.label")}</MenuV2.GroupLabel>
-                        <Show when={wslRuntimeRetryable(item.runtime)}>
+                        <MenuV2.GroupLabel>{language.t("ssh.server.menu.label")}</MenuV2.GroupLabel>
+                        <Show when={sshRuntimeRetryable(item.runtime)}>
                           <MenuV2.Item onSelect={() => api && request.mutate(() => api.startServer(key))}>
-                            {language.t("wsl.server.retryStart")}
+                            {language.t("ssh.server.retryStart")}
+                          </MenuV2.Item>
+                        </Show>
+                        <Show when={connected()}>
+                          <MenuV2.Item onSelect={() => api && request.mutate(() => api.stopServer(key))}>
+                            {language.t("ssh.server.stop")}
                           </MenuV2.Item>
                         </Show>
                         <Show when={props.controller.canDefault() && props.controller.defaultKey() !== key}>
@@ -165,9 +138,7 @@ export function WslServerSettings(props: {
                           </MenuV2.Item>
                         </Show>
                         <MenuV2.Separator />
-                        <MenuV2.Item onSelect={() => remove(key)}>
-                          {language.t("dialog.server.menu.delete")}
-                        </MenuV2.Item>
+                        <MenuV2.Item onSelect={() => remove(key)}>{language.t("dialog.server.menu.delete")}</MenuV2.Item>
                       </MenuV2.Group>
                     </MenuV2.Content>
                   </MenuV2.Portal>
