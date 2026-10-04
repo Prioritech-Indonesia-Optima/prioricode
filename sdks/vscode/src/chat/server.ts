@@ -7,6 +7,12 @@ export interface ServerInfo {
   version?: string
 }
 
+export interface RemoteTarget {
+  url: string
+  username: string
+  password?: string
+}
+
 export type DiscoveryResult =
   | { ok: true; server: ServerInfo }
   | { ok: false; reason: "auth-mismatch" | "offline" | "no-cli"; detail?: string }
@@ -26,6 +32,7 @@ export interface DiscoveryDeps {
   readFile: (path: string) => Promise<string>
   probe: (server: ServerInfo) => Promise<HealthOutcome>
   startDaemon?: () => Promise<boolean>
+  remote?: RemoteTarget
   log?: (message: string) => void
 }
 
@@ -92,7 +99,31 @@ async function tryRegistered(
   return { outcome, server }
 }
 
+export function parseServerTarget(raw: string, fallbackPassword?: string): RemoteTarget | undefined {
+  try {
+    const url = new URL(raw)
+    if (url.protocol !== "http:" && url.protocol !== "https:") return undefined
+    const username = url.username ? decodeURIComponent(url.username) : DEFAULT_USERNAME
+    const password = url.password ? decodeURIComponent(url.password) : fallbackPassword
+    url.username = ""
+    url.password = ""
+    return { url: normalizeServerUrl(url.href), username, ...(password === undefined || password === "" ? {} : { password }) }
+  } catch {
+    return undefined
+  }
+}
+
 export async function discover(deps: DiscoveryDeps): Promise<DiscoveryResult> {
+  if (deps.remote) {
+    const server: ServerInfo = { ...deps.remote }
+    const outcome = await deps.probe(server)
+    deps.log?.(`remote probe ${server.url}: ${outcome}`)
+    if (outcome === "ok") return { ok: true, server }
+    if (outcome === "unauthorized")
+      return { ok: false, reason: "auth-mismatch", detail: `Server ${server.url} rejected the configured credentials.` }
+    return { ok: false, reason: "offline", detail: `Configured server ${server.url} is not responding.` }
+  }
+
   const first = await tryRegistered(deps)
   if (first) {
     if (first.outcome === "ok") return { ok: true, server: first.server }

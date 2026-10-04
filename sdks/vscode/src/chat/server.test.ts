@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test"
-import { discover, normalizeServerUrl, parseRegistration, stateDirectory, type DiscoveryDeps } from "./server"
+import { discover, normalizeServerUrl, parseRegistration, parseServerTarget, stateDirectory, type DiscoveryDeps } from "./server"
 
 const registration = JSON.stringify({ id: "abc", version: "1.2.3", url: "http://127.0.0.1:4096", pid: 42 })
 
@@ -13,6 +13,56 @@ const deps = (overrides: Partial<DiscoveryDeps>): DiscoveryDeps => ({
   },
   probe: async () => "ok",
   ...overrides,
+})
+
+describe("parseServerTarget", () => {
+  it("extracts credentials from URL userinfo", () => {
+    const target = parseServerTarget("http://dev:pass%201@10.0.0.5:4096")
+    expect(target).toEqual({ url: "http://10.0.0.5:4096", username: "dev", password: "pass 1" })
+  })
+
+  it("uses defaults and fallback password", () => {
+    expect(parseServerTarget("http://10.0.0.5:4096", "fallback")).toEqual({
+      url: "http://10.0.0.5:4096",
+      username: "prioricode",
+      password: "fallback",
+    })
+    expect(parseServerTarget("http://10.0.0.5:4096")).toEqual({ url: "http://10.0.0.5:4096", username: "prioricode" })
+  })
+
+  it("rejects non-http schemes and garbage", () => {
+    expect(parseServerTarget("ftp://host/x")).toBeUndefined()
+    expect(parseServerTarget("not a url")).toBeUndefined()
+  })
+})
+
+describe("discover with remote target", () => {
+  const remote = { url: "http://10.0.0.5:4096", username: "prioricode", password: "pw" }
+
+  it("probes the remote directly and never starts a local daemon", async () => {
+    let started = false
+    const result = await discover(
+      deps({
+        remote,
+        probe: async () => "ok",
+        startDaemon: async () => {
+          started = true
+          return true
+        },
+      }),
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.server.url).toBe("http://10.0.0.5:4096")
+    expect(started).toBe(false)
+  })
+
+  it("maps remote 401 to auth-mismatch and unreachable to offline", async () => {
+    const unauthorized = await discover(deps({ remote, probe: async () => "unauthorized" }))
+    expect(!unauthorized.ok && unauthorized.reason).toBe("auth-mismatch")
+    const offline = await discover(deps({ remote, probe: async () => "unreachable" }))
+    expect(!offline.ok && offline.reason).toBe("offline")
+  })
 })
 
 describe("stateDirectory", () => {

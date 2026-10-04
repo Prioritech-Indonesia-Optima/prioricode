@@ -23,13 +23,61 @@ export function activate(context: vscode.ExtensionContext) {
   // The server's base64 image ceiling is 5 MiB; keep raw bytes well under it.
   const MAX_CLIPBOARD_IMAGE_BYTES = 3_500_000
 
-  chatProvider = new ChatViewProvider(context.extensionUri)
+  chatProvider = new ChatViewProvider(context)
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("prioricode.chat", chatProvider, {
       webviewOptions: { retainContextWhenHidden: true },
     }),
     vscode.commands.registerCommand("prioricode.openChat", async () => {
       await vscode.commands.executeCommand("prioricode.chat.focus")
+    }),
+    vscode.commands.registerCommand("prioricode.connectServer", async () => {
+      const url = await vscode.window.showInputBox({
+        title: "Connect to a prioricode server",
+        prompt: "Server URL, for example http://192.168.1.20:4096 (leave empty to go back to the local daemon)",
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+          if (!value.trim()) return undefined
+          try {
+            const parsed = new URL(value.trim())
+            return parsed.protocol === "http:" || parsed.protocol === "https:" ? undefined : "Use an http(s) URL"
+          } catch {
+            return "Invalid URL"
+          }
+        },
+      })
+      if (url === undefined) return
+      const trimmed = url.trim()
+      if (!trimmed) {
+        await context.globalState.update("prioricode.serverUrl", undefined)
+        await context.secrets.delete("prioricode.serverPassword")
+        await vscode.window.showInformationMessage("prioricode: back to the local daemon.")
+      } else {
+        let password: string | undefined
+        try {
+          const parsed = new URL(trimmed)
+          if (!parsed.password) {
+            password = await vscode.window.showInputBox({
+              title: "prioricode server password",
+              prompt: "Leave empty if the server is unauthenticated",
+              password: true,
+              ignoreFocusOut: true,
+            })
+          }
+        } catch {
+          return
+        }
+        await context.globalState.update("prioricode.serverUrl", trimmed)
+        if (password) await context.secrets.store("prioricode.serverPassword", password)
+        else await context.secrets.delete("prioricode.serverPassword")
+      }
+      await chatProvider?.refresh()
+    }),
+    vscode.commands.registerCommand("prioricode.disconnectServer", async () => {
+      await context.globalState.update("prioricode.serverUrl", undefined)
+      await context.secrets.delete("prioricode.serverPassword")
+      await chatProvider?.refresh()
+      await vscode.window.showInformationMessage("prioricode: disconnected from remote server.")
     }),
   )
 

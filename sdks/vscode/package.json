@@ -54,6 +54,14 @@
         }
       },
       {
+        "command": "prioricode.connectServer",
+        "title": "Connect to prioricode Server…"
+      },
+      {
+        "command": "prioricode.disconnectServer",
+        "title": "Disconnect from prioricode Server (use local daemon)"
+      },
+      {
         "command": "prioricode.openTerminal",
         "title": "Open prioricode",
         "icon": {
@@ -85,6 +93,16 @@
           "group": "navigation"
         }
       ]
+    },
+    "configuration": {
+      "title": "prioricode",
+      "properties": {
+        "prioricode.serverUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Connect the Chat panel to a specific prioricode server (for example http://192.168.1.20:4096) instead of the local daemon. Credentials may be embedded in the URL or provided via 'prioricode: Connect to prioricode Server…'."
+        }
+      }
     },
     "keybindings": [
       {
@@ -129,10 +147,12 @@
   },
   "scripts": {
     "vscode:prepublish": "bun run package",
-    "compile": "bun run check-types && bun run lint && node esbuild.js",
+    "build:ui": "bun --cwd ../ide-ui run build",
+    "build:ui:production": "bun --cwd ../ide-ui run build --production",
+    "compile": "bun run check-types && bun run lint && bun run build:ui && node esbuild.js",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "bun run check-types && bun run lint && node esbuild.js --production",
+    "package": "bun run check-types && bun run lint && bun run build:ui:production && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",

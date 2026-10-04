@@ -1,7 +1,21 @@
 const esbuild = require("esbuild")
+const fs = require("fs")
+const path = require("path")
 
 const production = process.argv.includes("--production")
 const watch = process.argv.includes("--watch")
+
+function copyIdeAssets() {
+  const source = path.join(__dirname, "..", "ide-ui", "dist")
+  const target = path.join(__dirname, "dist")
+  for (const file of ["ide-chat.js", "ide-chat.css"]) {
+    const from = path.join(source, file)
+    if (!fs.existsSync(from)) {
+      throw new Error(`Missing ${file}: run 'bun run build:ui' (or build packages in sdks/ide-ui) before packaging`)
+    }
+    fs.copyFileSync(from, path.join(target, file))
+  }
+}
 
 /**
  * @type {import('esbuild').Plugin}
@@ -61,6 +75,7 @@ async function main() {
     await webviewCtx.rebuild()
     await ctx.dispose()
     await webviewCtx.dispose()
+    copyIdeAssets()
   }
 }
 
