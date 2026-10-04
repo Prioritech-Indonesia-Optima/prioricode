@@ -8,10 +8,13 @@ This extension requires the [prioricode CLI](https://prioricode.ai) to be instal
 
 ## Features
 
+- **Chat Panel**: Click the prioricode icon in the Activity Bar (or run `prioricode: Open prioricode Chat`) for a native chat panel — streaming transcript, tool cards, permission approvals, and **Ctrl+V image paste** that works like any other editor paste. The panel connects to the local prioricode service (started automatically when needed) and runs sessions in your workspace folder.
 - **Quick Launch**: Use `Cmd+Esc` (Mac) or `Ctrl+Esc` (Windows/Linux) to open prioricode in a split terminal view, or focus an existing terminal session if one is already running.
 - **New Session**: Use `Cmd+Shift+Esc` (Mac) or `Ctrl+Shift+Esc` (Windows/Linux) to start a new prioricode terminal session, even if one is already open. You can also click the prioricode button in the UI.
 - **Context Awareness**: Automatically share your current selection or tab with prioricode.
 - **File Reference Shortcuts**: Use `Cmd+Option+K` (Mac) or `Alt+Ctrl+K` (Linux/Windows) to insert file references. For example, `@File#L37-42`.
+
+The chat panel requires a prioricode build that ships the `prioricode service` daemon command (or a running `prioricode service start` daemon).
 
 ## Support
 
