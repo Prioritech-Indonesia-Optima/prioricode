@@ -8,11 +8,12 @@ import { useSettings } from "@/context/settings"
 import { useProviders } from "@/hooks/use-providers"
 import { resolveDefaultModel } from "@/hooks/provider-catalog"
 import { Persist, persisted } from "@/utils/persist"
-import { hasCustomAgent, resolveAgent } from "./local-agent"
+import { hasCustomAgent, resolveAgent, selectionFromSessionInfo } from "./local-agent"
 import { cycleModelVariant, getConfiguredAgentVariant, resolveModelVariant } from "./model-variant"
 import { useSDK } from "./sdk"
 import { useSync } from "./sync"
 import { useServerSDK } from "./server-sdk"
+import { useServerSync } from "./server-sync"
 import { ScopedKey, type ServerScope } from "@/utils/server-scope"
 
 export type ModelKey = { providerID: string; modelID: string; variant?: string }
@@ -62,6 +63,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const params = useParams()
     const sdk = useSDK()
     const sync = useSync()
+    const serverSync = useServerSync()
     const serverSDK = useServerSDK()
     const providers = useProviders(() => sdk().directory)
     const models = useModels()
@@ -308,6 +310,18 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           if (pinnedModel.get(session) === next) pinnedModel.delete(session)
         })
     }
+
+    createEffect(() => {
+      const session = id()
+      if (!session) return
+      if (!savedReady()) return
+      if (saved.session[session] !== undefined) return
+      const next = selectionFromSessionInfo(serverSync().session.data.info[session], validModel)
+      if (!next) return
+      setSaved("session", session, next)
+      if (next.agent) pinnedAgent.set(session, next.agent)
+      if (next.model) pinnedModel.set(session, { ...next.model, variant: next.variant })
+    })
 
     const recent = createMemo(() => models.recent.list().map(models.find).filter(Boolean))
 
