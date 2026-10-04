@@ -43,6 +43,9 @@ import {
   restoreMainWindows,
 } from "./windows"
 import { createWslServersController } from "./wsl/servers"
+import { createSshServersController } from "./ssh/servers"
+import { registerSshIpcHandlers } from "./ssh/ipc"
+import { spawnSshSidecar } from "./ssh/sidecar"
 import { registerWslIpcHandlers } from "./wsl/ipc"
 import { spawnWslSidecar } from "./wsl/sidecar"
 import { migrate } from "./migrate"
@@ -164,9 +167,25 @@ const main = Effect.gen(function* () {
       },
     },
   )
+  const sshServers = createSshServersController(
+    app.getVersion(),
+    async (alias) => {
+      logger.log("spawning ssh sidecar", { alias })
+      return spawnSshSidecar(alias, {
+        onLine: (line) => logger.log("ssh sidecar", { alias, stream: line.stream, text: line.text }),
+      })
+    },
+    {
+      logger: {
+        log: (message, meta) => logger.log(message, meta),
+        error: (message, meta) => logger.error(message, meta),
+      },
+    },
+  )
   const stopSidecars = async () => {
     await killSidecar()
     wslServers.stopAll()
+    sshServers.stopAll()
   }
   const relaunch = () => {
     setAppQuitting()
@@ -312,6 +331,7 @@ const main = Effect.gen(function* () {
     },
   })
   registerWslIpcHandlers(wslServers)
+  registerSshIpcHandlers(sshServers)
   void updater.start()
   const updateTimer = setInterval(() => void updater.check(), 10 * 60 * 1000)
   updateTimer.unref()
@@ -342,6 +362,7 @@ const main = Effect.gen(function* () {
       if (process.platform === "win32") {
         void wslServers.initialize().catch((error) => logger.error("wsl server initialization failed", error))
       }
+      void sshServers.initialize().catch((error) => logger.error("ssh server initialization failed", error))
 
       logger.log("loading task finished")
       return
@@ -393,6 +414,7 @@ const main = Effect.gen(function* () {
     if (process.platform === "win32") {
       void wslServers.initialize().catch((error) => logger.error("wsl server initialization failed", error))
     }
+    void sshServers.initialize().catch((error) => logger.error("ssh server initialization failed", error))
 
     yield* Effect.promise(() => health.wait).pipe(
       Effect.timeout("30 seconds"),

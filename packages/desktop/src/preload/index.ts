@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from "electron"
-import type { ElectronAPI, WslServersEvent } from "./types"
+import type { ElectronAPI, SshServersEvent, WslServersEvent } from "./types"
 import type { UpdaterState } from "@prioricode/app/updater"
 
 const updaterCallbacks = new Set<(state: UpdaterState) => void>()
@@ -35,6 +35,24 @@ const api: ElectronAPI = {
     addServer: (distro) => ipcRenderer.invoke("wsl-servers-add", distro),
     removeServer: (id) => ipcRenderer.invoke("wsl-servers-remove", id),
     startServer: (id) => ipcRenderer.invoke("wsl-servers-start", id),
+  },
+  sshServers: {
+    getState: () => ipcRenderer.invoke("ssh-servers-get-state"),
+    subscribe: (cb) => {
+      const handler = (_: unknown, event: SshServersEvent) => cb(event)
+      ipcRenderer.on("ssh-servers-event", handler)
+      void ipcRenderer.invoke("ssh-servers-subscribe")
+      return () => {
+        ipcRenderer.removeListener("ssh-servers-event", handler)
+        void ipcRenderer.invoke("ssh-servers-unsubscribe")
+      }
+    },
+    refreshHosts: () => ipcRenderer.invoke("ssh-servers-refresh-hosts"),
+    addServer: (alias) => ipcRenderer.invoke("ssh-servers-add", alias),
+    removeServer: (id) => ipcRenderer.invoke("ssh-servers-remove", id),
+    startServer: (id) => ipcRenderer.invoke("ssh-servers-start", id),
+    stopServer: (id) => ipcRenderer.invoke("ssh-servers-stop", id),
+    installPrioricode: (alias) => ipcRenderer.invoke("ssh-servers-install-prioricode", alias),
   },
   updater: {
     subscribe: async (cb) => {
