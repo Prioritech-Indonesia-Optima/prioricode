@@ -39,6 +39,8 @@ export type BridgeOutbound =
   | { kind: "openExternal"; url: string }
   | { kind: "selection"; id: string }
   | { kind: "openFile"; path: string }
+  | { kind: "pty-open"; id: string; ptyID: string; cursor?: number }
+  | { kind: "pty-send"; id: string; dataBase64: string }
   | { kind: "req"; id: string; method: string; path: string; headers?: Record<string, string>; body?: string }
   | { kind: "open"; id: string; path: string }
   | { kind: "cancel"; id: string }
@@ -50,6 +52,14 @@ export type BridgeInbound =
   | { kind: "chunk"; id: string; dataBase64: string }
   | { kind: "end"; id: string; error?: string }
   | { kind: "selection-res"; id: string; path?: string; start?: number; end?: number; text?: string }
+  | { kind: "pty-head"; id: string; ok: boolean; error?: string }
+  | { kind: "pty-closed"; id: string; code?: number }
+
+export interface PtyChannel {
+  send: (data: Uint8Array) => void
+  close: () => void
+  closed: Promise<number | undefined>
+}
 
 export interface BridgeSelection {
   path: string
@@ -75,6 +85,7 @@ export interface BridgeHandle {
   onConfig: (listener: (config: BridgeConfig) => void) => () => void
   target: () => Promise<BridgeConfig>
   requestSelection: () => Promise<BridgeSelection | undefined>
+  requestPty: (options: { ptyID: string; cursor?: number; onData: (bytes: Uint8Array) => void }) => Promise<PtyChannel | undefined>
   retry: () => void
   fetch: typeof globalThis.fetch
   dispose: () => void
@@ -110,6 +121,7 @@ export function createBridge(options: {
   const requests = new Map<string, PendingRequest>()
   const streams = new Map<string, PendingStream>()
   const selections = new Map<string, (selection: BridgeSelection | undefined) => void>()
+  const ptys = new Map<string, { head: (ok: boolean, error?: string) => void; data: (bytes: Uint8Array) => void; closed: (code: number | undefined) => void }>()
   const configListeners = new Set<(config: BridgeConfig) => void>()
   let latestConfig: BridgeConfig | undefined
   let resolveReady: (config: BridgeConfig) => void = () => {}
@@ -162,8 +174,11 @@ export function createBridge(options: {
       }
       case "chunk": {
         const stream = streams.get(frame.id)
-        if (stream === undefined) return
-        stream.controller.enqueue(decodeBase64(frame.dataBase64))
+        if (stream !== undefined) {
+          stream.controller.enqueue(decodeBase64(frame.dataBase64))
+          return
+        }
+        ptys.get(frame.id)?.data(decodeBase64(frame.dataBase64))
         return
       }
       case "end": {
@@ -177,6 +192,19 @@ export function createBridge(options: {
         }
         if (frame.error !== undefined) stream.controller.error(new Error(frame.error))
         else stream.controller.close()
+        return
+      }
+      case "pty-head": {
+        const pty = ptys.get(frame.id)
+        if (pty === undefined) return
+        pty.head(frame.ok, frame.error)
+        return
+      }
+      case "pty-closed": {
+        const pty = ptys.get(frame.id)
+        if (pty === undefined) return
+        ptys.delete(frame.id)
+        pty.closed(frame.code)
         return
       }
       case "selection-res": {
@@ -280,6 +308,48 @@ export function createBridge(options: {
     return new Response(body as BodyInit, { status: frame.status, headers: new Headers(frame.headers) })
   }
 
+  const requestPty = async (request: {
+    ptyID: string
+    cursor?: number
+    onData: (bytes: Uint8Array) => void
+  }): Promise<PtyChannel | undefined> => {
+    const id = nextID()
+    let resolveHead: (ok: boolean) => void = () => {}
+    const headPromise = new Promise<boolean>((resolve) => {
+      resolveHead = (ok) => resolve(ok)
+    })
+    let resolveClosed: (code: number | undefined) => void = () => {}
+    const closedPromise = new Promise<number | undefined>((resolve) => {
+      resolveClosed = resolve
+    })
+    ptys.set(id, {
+      head: (ok, error) => {
+        if (!ok) resolveClosed(undefined)
+        void error
+        resolveHead(ok)
+      },
+      data: request.onData,
+      closed: (code) => resolveClosed(code),
+    })
+    options.api.postMessage({ kind: "pty-open", id, ptyID: request.ptyID, cursor: request.cursor } satisfies BridgeOutbound)
+    if (!(await headPromise)) {
+      ptys.delete(id)
+      return undefined
+    }
+    return {
+      send: (data) => {
+        let binary = ""
+        for (const byte of data) binary += String.fromCharCode(byte)
+        options.api.postMessage({ kind: "pty-send", id, dataBase64: btoa(binary) } satisfies BridgeOutbound)
+      },
+      close: () => {
+        ptys.delete(id)
+        options.api.postMessage({ kind: "cancel", id } satisfies BridgeOutbound)
+      },
+      closed: closedPromise,
+    }
+  }
+
   const requestSelection = (): Promise<BridgeSelection | undefined> =>
     new Promise((resolve) => {
       const id = nextID()
@@ -301,6 +371,7 @@ export function createBridge(options: {
     },
     target,
     requestSelection,
+    requestPty,
     retry: () => {
       readySent = false
       sendReady()
@@ -315,6 +386,8 @@ export function createBridge(options: {
       streams.clear()
       for (const [, resolve] of selections) resolve(undefined)
       selections.clear()
+      for (const [, pty] of ptys) pty.closed(undefined)
+      ptys.clear()
       configListeners.clear()
     },
   }

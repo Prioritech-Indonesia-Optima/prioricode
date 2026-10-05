@@ -179,6 +179,74 @@ describe("bridge pair conformance (gui shim <-> extension host relay)", () => {
     await bridge.target()
     expect(await bridge.requestSelection()).toBeUndefined()
   })
+
+  it("relays a PTY socket with ticket minted host-side and bidirectional frames", async () => {
+    let capturedUrl = ""
+    let push: ((data: Uint8Array, isBinary: boolean) => void) | undefined
+    let close: ((code: number) => void) | undefined
+    let sent: Uint8Array | undefined
+    const upstream = async (url: string) =>
+      url.includes("/connect-token")
+        ? new Response(JSON.stringify({ location: {}, data: { ticket: "tk-1", expires_in: 60 } }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          })
+        : new Response("{}", { status: 404, headers: { "content-type": "application/json" } })
+    const webviewListeners: ((message: unknown) => void)[] = []
+    const host = createBridgeHost({
+      post: (message) => {
+        queueMicrotask(() => {
+          for (const listener of webviewListeners) listener(message)
+        })
+      },
+      resolveServer: async () => ({ ok: true, server: { url: "http://daemon.local", username: "prioricode", password: "pw-123" } }),
+      directory: () => "/work/tree",
+      coalesceMs: 1,
+      openWebSocket: async (url) => {
+        capturedUrl = url
+        return {
+          send: () => {},
+          sendBinary: (data) => {
+            sent = data
+          },
+          onMessage: (handler) => {
+            push = handler
+          },
+          onClose: (handler) => {
+            close = handler
+          },
+          close: () => close?.(1000),
+        }
+      },
+      fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => upstream(String(input))) as unknown as typeof fetch,
+    })
+    const bridge = createBridge({
+      api: { postMessage: (message) => void queueMicrotask(() => host.onMessage(message)) },
+      subscribe: (listener) => {
+        webviewListeners.push(listener)
+        return () => {}
+      },
+    })
+    await bridge.target()
+    const output: number[] = []
+    const channel = await bridge.requestPty({ ptyID: "p_1", cursor: 42, onData: (bytes) => output.push(...bytes) })
+    expect(channel).toBeDefined()
+    expect(capturedUrl).toContain("/api/pty/p_1/connect?")
+    expect(capturedUrl).toContain("ticket=tk-1")
+    expect(capturedUrl).toContain("cursor=42")
+    expect(capturedUrl).toContain("location%5Bdirectory%5D=%2Fwork%2Ftree")
+    push?.(new TextEncoder().encode("hello-term"), true)
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(output).toEqual(Array.from(new TextEncoder().encode("hello-term")))
+    channel!.send(new TextEncoder().encode("ls\n"))
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(new TextDecoder().decode(sent)).toBe("ls\n")
+    const closedAt = channel!.closed
+    close?.(1000)
+    expect(await closedAt).toBe(1000)
+    host.dispose()
+    bridge.dispose()
+  })
 })
 
 describe("host relay stream guards", () => {

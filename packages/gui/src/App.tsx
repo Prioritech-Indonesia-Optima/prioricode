@@ -10,7 +10,9 @@ import { AgentPicker, ModelPicker } from "./components/shell/Pickers"
 import { ServerDialog } from "./components/shell/ServerDialog"
 import { SessionSidebar } from "./components/panels/SessionSidebar"
 import { CheckpointBar } from "./components/panels/Checkpoint"
+import { TerminalTab } from "./components/panels/TerminalTab"
 import { clientErrorMessage } from "./core/transport/errors"
+import { cn } from "./lib/cn"
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, refetchOnWindowFocus: false, staleTime: 5_000 } },
@@ -84,6 +86,12 @@ function Shell() {
   const { transport, store } = useGui()
   const [sidebarDrawer, setSidebarDrawer] = useState(false)
   const [serverOpen, setServerOpen] = useState(false)
+  const [view, setView] = useState<"chat" | "terminal">("chat")
+  const [terminalMounted, setTerminalMounted] = useState(false)
+
+  useEffect(() => {
+    if (view === "terminal") setTerminalMounted(true)
+  }, [view])
 
   const subscribe = useCallback((listener: () => void) => store.subscribe(listener), [store])
   const snapshot = useSyncExternalStore(
@@ -210,22 +218,41 @@ function Shell() {
           canRetry={snapshot.status !== "ready"}
           onRetry={() => (transport.kind === "web" ? globalThis.location.reload() : store.retry())}
         />
-        {snapshot.restoring ? (
-          <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">Restoring session…</div>
-        ) : snapshot.transcript.blocks.length === 0 ? (
-          <EmptyTranscript />
-        ) : (
-          <MessageList blocks={snapshot.transcript.blocks} {...actions} />
-        )}
-        <CheckpointBar />
-        <Composer
-          sessionID={snapshot.sessionID}
-          busy={busy}
-          disabled={snapshot.status === "connecting"}
-          notice={(message) => store.notify(message)}
-          onSend={(submit) => void store.send(submit.text, submit.attachments, { delivery: submit.delivery })}
-          onInterrupt={() => void store.interrupt()}
-        />
+        <div className="flex items-center gap-1 border-b border-border px-3 py-1 text-xs">
+          <button
+            type="button"
+            onClick={() => setView("chat")}
+            className={cn("rounded px-2 py-0.5", view === "chat" ? "bg-accent font-medium" : "text-muted-foreground hover:bg-accent/60")}
+          >
+            Chat
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("terminal")}
+            className={cn("rounded px-2 py-0.5", view === "terminal" ? "bg-accent font-medium" : "text-muted-foreground hover:bg-accent/60")}
+          >
+            Terminal
+          </button>
+        </div>
+        <div className={cn("flex min-h-0 flex-1 flex-col", view !== "chat" && "hidden")}>
+          {snapshot.restoring ? (
+            <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">Restoring session…</div>
+          ) : snapshot.transcript.blocks.length === 0 ? (
+            <EmptyTranscript />
+          ) : (
+            <MessageList blocks={snapshot.transcript.blocks} {...actions} />
+          )}
+          <CheckpointBar />
+          <Composer
+            sessionID={snapshot.sessionID}
+            busy={busy}
+            disabled={snapshot.status === "connecting"}
+            notice={(message) => store.notify(message)}
+            onSend={(submit) => void store.send(submit.text, submit.attachments, { delivery: submit.delivery })}
+            onInterrupt={() => void store.interrupt()}
+          />
+        </div>
+        {terminalMounted && <TerminalTab active={view === "terminal"} />}
       </main>
       <ServerDialog open={serverOpen} onOpenChange={setServerOpen} />
     </div>

@@ -1,4 +1,5 @@
 import type { ServerInfo } from "./server"
+import { createWebSocket, type WebSocketFactory } from "./ws-client"
 
 /**
  * Extension-host side of the GUI transport bridge.
@@ -30,6 +31,7 @@ export interface BridgeHostDeps {
   openExternal?: (url: string) => void
   getSelection?: () => Promise<{ path: string; start: number; end: number; text?: string } | undefined>
   openFile?: (path: string) => void
+  openWebSocket?: WebSocketFactory
   fetchImpl?: typeof fetch
   log?: (message: string) => void
   coalesceMs?: number
@@ -44,12 +46,16 @@ export interface BridgeHost {
   dispose: () => void
 }
 
+const base64ToBytes = (value: string): Uint8Array => new Uint8Array(Buffer.from(value, "base64"))
+
 type WebviewFrame =
   | { kind: "ready" }
   | { kind: "retry" }
   | { kind: "openExternal"; url: string }
   | { kind: "selection"; id: string }
   | { kind: "openFile"; path: string }
+  | { kind: "pty-open"; id: string; ptyID: string; cursor?: number }
+  | { kind: "pty-send"; id: string; dataBase64: string }
   | { kind: "req"; id: string; method: string; path: string; headers?: Record<string, string>; body?: string }
   | { kind: "open"; id: string; path: string }
   | { kind: "cancel"; id: string }
@@ -76,8 +82,10 @@ const isAllowedPath = (path: unknown): path is string => {
 
 export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
   const fetchImpl = deps.fetchImpl ?? fetch
+  const openWebSocket = deps.openWebSocket ?? createWebSocket
   const coalesceMs = deps.coalesceMs ?? 50
   const controllers = new Map<string, AbortController>()
+  const ptySockets = new Map<string, { sendBinary: (data: Uint8Array) => void; close: () => void }>()
   let disposed = false
   let lastConfig: string | undefined
 
@@ -241,6 +249,62 @@ export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
     }
   }
 
+  const handlePtyOpen = async (frame: Extract<WebviewFrame, { kind: "pty-open" }>): Promise<void> => {
+    if (typeof frame.ptyID !== "string" || frame.ptyID.length === 0 || frame.ptyID.includes("..")) {
+      deps.post({ kind: "pty-head", id: frame.id, ok: false, error: "invalid pty id" })
+      return
+    }
+    const result = await deps.resolveServer()
+    if (!result.ok) {
+      deps.post({ kind: "pty-head", id: frame.id, ok: false, error: result.detail ?? result.reason })
+      return
+    }
+    try {
+      const serverUrl = new URL(result.server.url)
+      const tokenUrl = new URL(`/api/pty/${encodeURIComponent(frame.ptyID)}/connect-token`, result.server.url)
+      const directory = deps.directory()
+      if (directory !== undefined) tokenUrl.searchParams.set("location[directory]", directory)
+      const tokenResponse = await fetchImpl(tokenUrl.toString(), {
+        method: "POST",
+        headers: { ...authHeaders(result.server), "x-prioricode-ticket": "1" },
+      })
+      if (!tokenResponse.ok) {
+        deps.post({ kind: "pty-head", id: frame.id, ok: false, error: `connect-token http ${tokenResponse.status}` })
+        return
+      }
+      const tokenPayload = (await tokenResponse.json()) as { data?: { ticket?: string } } | { ticket?: string }
+      const ticket = ("data" in tokenPayload && tokenPayload.data?.ticket) || ("ticket" in tokenPayload && tokenPayload.ticket) || undefined
+      if (typeof ticket !== "string") {
+        deps.post({ kind: "pty-head", id: frame.id, ok: false, error: "connect-token malformed" })
+        return
+      }
+      serverUrl.protocol = serverUrl.protocol === "https:" ? "wss:" : "ws:"
+      const connectUrl = new URL(`/api/pty/${encodeURIComponent(frame.ptyID)}/connect`, serverUrl.toString())
+      connectUrl.searchParams.set("ticket", ticket)
+      if (typeof frame.cursor === "number") connectUrl.searchParams.set("cursor", String(frame.cursor))
+      if (directory !== undefined) connectUrl.searchParams.set("location[directory]", directory)
+      const socket = await openWebSocket(connectUrl.toString())
+      if (disposed) {
+        socket.close()
+        return
+      }
+      ptySockets.set(frame.id, socket)
+      socket.onMessage((data) => {
+        if (!ptySockets.has(frame.id)) return
+        let binary = ""
+        for (const byte of data) binary += String.fromCharCode(byte)
+        deps.post({ kind: "chunk", id: frame.id, dataBase64: Buffer.from(binary, "binary").toString("base64") })
+      })
+      socket.onClose((code) => {
+        if (!ptySockets.delete(frame.id)) return
+        deps.post({ kind: "pty-closed", id: frame.id, code })
+      })
+      deps.post({ kind: "pty-head", id: frame.id, ok: true })
+    } catch (error) {
+      deps.post({ kind: "pty-head", id: frame.id, ok: false, error: String(error) })
+    }
+  }
+
   return {
     onMessage: (message) => {
       const frame = message as WebviewFrame | undefined
@@ -279,9 +343,20 @@ export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
           deps.openFile?.(frame.path)
           return
         }
+        case "pty-open":
+          void handlePtyOpen(frame)
+          return
+        case "pty-send": {
+          const socket = ptySockets.get(frame.id)
+          if (socket === undefined || typeof frame.dataBase64 !== "string") return
+          socket.sendBinary(base64ToBytes(frame.dataBase64))
+          return
+        }
         case "cancel": {
           controllers.get(frame.id)?.abort()
           controllers.delete(frame.id)
+          ptySockets.get(frame.id)?.close()
+          ptySockets.delete(frame.id)
           return
         }
         case "req":
@@ -296,6 +371,8 @@ export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
       disposed = true
       for (const controller of controllers.values()) controller.abort()
       controllers.clear()
+      for (const socket of ptySockets.values()) socket.close()
+      ptySockets.clear()
     },
   }
 }
