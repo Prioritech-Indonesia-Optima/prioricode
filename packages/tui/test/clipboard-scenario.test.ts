@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test"
-import { clipboardSignals, detectTerminal, pasteMissHint, resolveScenario, SCENARIOS } from "../src/clipboard-scenario"
+import { REMOTE_PASTE_DISABLED, clipboardSignals, detectTerminal, pasteMissHint, resolveScenario, SCENARIOS } from "../src/clipboard-scenario"
 
 test("resolveScenario covers the Windows/remote matrix", () => {
   expect(resolveScenario({ platform: "win32" })).toBe("win32-native")
@@ -52,4 +52,11 @@ test("terminal-aware remote guidance", () => {
 test("local scenarios keep the terse clipboard message", () => {
   expect(pasteMissHint({ platform: "win32" })).toBe("Clipboard has nothing pasteable")
   expect(SCENARIOS["linux-local"].pasteEmpty).toContain("xclip")
+})
+
+test("remote disabled note is terse and free of old pitches", () => {
+  expect(REMOTE_PASTE_DISABLED).toContain("paste its path")
+  expect(REMOTE_PASTE_DISABLED).toContain("text pastes normally")
+  expect(REMOTE_PASTE_DISABLED).not.toContain("extension")
+  expect(REMOTE_PASTE_DISABLED).not.toContain("paste-serve")
 })

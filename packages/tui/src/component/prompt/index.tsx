@@ -70,7 +70,7 @@ import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
 import { pastedFilepath } from "./pasted-filepath"
 import { pasteDirectory, savePastedImage } from "./paste-store"
-import { pasteMissHint } from "../../clipboard-scenario"
+import { REMOTE_PASTE_DISABLED, pasteMissHint } from "../../clipboard-scenario"
 import { readTerminalClipboard } from "../../clipboard-terminal"
 import { useLocation } from "../../context/location"
 
@@ -463,14 +463,15 @@ export function Prompt(props: PromptProps) {
           lastPasteProbe = now
           const imageOnly = pasteImageOnlyRequest
           pasteImageOnlyRequest = false
-          // In a remote session the host clipboard is empty by definition, so try
-          // the terminal clipboard protocol (kitty OSC 5522 with an OSC 52 text
-          // fallback, which only some emulators answer; tmux may block the reply
-          // round-trip, so stay off it there), then the host read as last resort.
+          // Remote image fetching is opt-in. By default a remote session never
+          // probes the terminal clipboard protocol, so Ctrl+V answers instantly
+          // with the terse disabled note instead of a multi-second stall. The
+          // "Enable OSC clipboard reads" command restores the kitty OSC 5522 /
+          // OSC 52 round-trip (only some emulators answer; tmux may block it).
           const terminalChannel =
             terminalEnvironment.remote &&
             !terminalEnvironment.multiplexer &&
-            kv.get("terminal_clipboard_enabled", true)
+            kv.get("terminal_clipboard_enabled", false)
           let content = terminalChannel
             ? await readTerminalClipboard(renderer, {
                 write: (sequence) => void process.stdout.write(sequence),
@@ -493,7 +494,14 @@ export function Prompt(props: PromptProps) {
             await pasteInputText(content.data)
             return
           }
-          if (!imageOnly) toast.show({ message: pasteMissHint(terminalEnvironment), variant: "info" })
+          if (!imageOnly)
+            toast.show({
+              message:
+                terminalEnvironment.remote && !terminalChannel
+                  ? REMOTE_PASTE_DISABLED
+                  : pasteMissHint(terminalEnvironment),
+              variant: "info",
+            })
         },
       },
       {

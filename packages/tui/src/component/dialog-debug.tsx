@@ -47,7 +47,7 @@ export function DialogDebug() {
       {
         label: "Term clip",
         value: [
-          `enabled=${kv.get("terminal_clipboard_enabled", true) ? "y" : "n"}`,
+          `enabled=${kv.get("terminal_clipboard_enabled", false) ? "y" : "n"}`,
           `terminal=${signals.terminal ?? "unknown"}`,
           (() => {
             const attempt = terminalClipboardLastAttempt()

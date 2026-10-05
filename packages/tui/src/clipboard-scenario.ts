@@ -102,6 +102,11 @@ function remotePasteEmpty(terminal?: TerminalName, multiplexer?: "tmux" | "scree
 const REMOTE_COPY_FAILED =
   "Copy failed on this host; in a remote session your terminal may still receive the text via OSC 52"
 
+// Shown when remote image fetching is disabled (the default): terse on purpose —
+// no stall, no long remedy list.
+export const REMOTE_PASTE_DISABLED =
+  "Remote sessions can't pull clipboard images — text pastes normally. To attach an image: copy the file onto this machine (VS Code drag-and-drop or scp) and paste its path. Advanced: enable OSC clipboard reads in the command palette."
+
 export const SCENARIOS: Record<ScenarioId, Scenario> = {
   "win32-native": {
     id: "win32-native",

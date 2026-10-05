@@ -143,6 +143,7 @@ const appBindingCommands = [
   "app.toggle.file_context",
   "app.toggle.diffwrap",
   "app.toggle.paste_summary",
+  "app.toggle.terminal_clipboard",
   "app.toggle.session_directory_filter",
   "toast.dismiss",
 ] as const
@@ -968,6 +969,17 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         run: () => {
           const current = kv.get("diff_wrap_mode", "word")
           kv.set("diff_wrap_mode", current === "word" ? "none" : "word")
+          dialog.clear()
+        },
+      },
+      {
+        name: "app.toggle.terminal_clipboard",
+        title: kv.get("terminal_clipboard_enabled", false)
+          ? "Disable OSC clipboard image reads (remote)"
+          : "Enable OSC clipboard image reads (remote)",
+        category: "System",
+        run: () => {
+          kv.set("terminal_clipboard_enabled", !kv.get("terminal_clipboard_enabled", false))
           dialog.clear()
         },
       },

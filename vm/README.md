@@ -22,17 +22,17 @@ bun vm/diagnose.ts        # same diagnosis, no Docker (needs bun)
 
 ## What it shows
 
-| terminal         | image result                           |
-|------------------|----------------------------------------|
-| windows-terminal | **miss** ← the bug                     |
-| kitty            | protocol (kitty OSC 5522)              |
-| any              | text → bracketed paste (terminal-native)|
+| terminal / setting         | image result                              |
+|----------------------------|-------------------------------------------|
+| any, default               | **instant miss note** (no probe stall)     |
+| kitty, `+OSC reads`        | protocol (kitty OSC 5522) — opt-in        |
+| any                        | text → bracketed paste (terminal-native)  |
 
-**Root cause:** the clipboard lives on the Windows client. Windows Terminal
-implements neither the kitty clipboard protocol (OSC 5522) nor OSC 52
-*read/query* (only write), so the terminal-protocol channel gets no answer; and
-the host clipboard needs a display server a headless remote lacks. Text still
-works via the terminal's own bracketed paste.
+**Root cause:** remote clipboards live on the client. Only a kitty-protocol
+terminal can carry image bytes over the pty (VS Code's terminal and Windows
+Terminal can't answer clipboard reads), and a headless remote has no host
+clipboard — so remote image fetching is now **off by default** with an instant
+note; "Enable OSC clipboard image reads" opts the protocol back in.
 
 **Fixes (any one):** use a terminal that answers the kitty protocol
 (kitty/ghostty/wezterm) · use the PrioriCode VS Code extension · copy the file

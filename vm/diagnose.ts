@@ -24,11 +24,10 @@ import path from "node:path"
 import {
   readTerminalClipboard,
   encodeOsc52Query,
-  terminalClipboardLastAttempt,
   type OscTerminal,
 } from "../packages/tui/src/clipboard-terminal"
 import { readClipboard, type ClipboardEnvironment, type Content } from "../packages/tui/src/clipboard"
-import { clipboardSignals, resolveScenario, pasteMissHint } from "../packages/tui/src/clipboard-scenario"
+import { REMOTE_PASTE_DISABLED, clipboardSignals, resolveScenario } from "../packages/tui/src/clipboard-scenario"
 import { pasteDirectory, savePastedImage } from "../packages/tui/src/component/prompt/paste-store"
 
 const ESC = "\x1b"
@@ -171,12 +170,13 @@ type Channel = "protocol" | "host" | "miss"
 
 async function runPasteDecision(opts: {
   remote: boolean
+  protocol: boolean
   multiplexer?: "tmux" | "screen"
   term: OscTerminal
   write: (seq: string) => void
   hostRead: () => Promise<Content | undefined>
 }): Promise<{ channel: Channel; content?: Content }> {
-  const terminalChannel = opts.remote && !opts.multiplexer
+  const terminalChannel = opts.remote && opts.protocol && !opts.multiplexer
   if (terminalChannel) {
     const terminal = await readTerminalClipboard(opts.term, { write: opts.write })
     if (terminal) return { channel: "protocol", content: terminal }
@@ -241,32 +241,33 @@ async function main(): Promise<void> {
 
   const hostRead = () => readClipboard(hostEnvironment())
 
-  // --- Remote matrix (the user's scenario): image clipboard over SSH --------
-  console.log("\n  REMOTE — image on the Windows clipboard, Ctrl+V in the TUI")
+  // --- Remote matrix: image on the client clipboard, Ctrl+V in the TUI ------
+  console.log("\n  REMOTE — image on the client clipboard, Ctrl+V (default: OSC reads OFF)")
   console.log(line())
-  console.log("  " + "terminal".padEnd(20) + "result")
+  console.log("  " + "terminal / setting".padEnd(28) + "result")
   console.log(line("·"))
 
-  const remoteCases: TerminalModel[] = ["windows-terminal", "kitty"]
+  const remoteCases: { terminal: TerminalModel; protocol: boolean }[] = [
+    { terminal: "windows-terminal", protocol: false },
+    { terminal: "kitty", protocol: false },
+    { terminal: "kitty", protocol: true },
+  ]
 
-  let missRow: { channel: Channel; content?: Content } | undefined
-  for (const terminal of remoteCases) {
-    const { term, write } = makeTerminal(terminal, { imageB64: TINY_PNG_B64, text: CLIP_TEXT })
-    const result = await runPasteDecision({ remote: true, term, write, hostRead })
+  let fastestMissMs = Number.POSITIVE_INFINITY
+  let protocolRow: { channel: Channel; content?: Content } | undefined
+  for (const c of remoteCases) {
+    const { term, write } = makeTerminal(c.terminal, { imageB64: TINY_PNG_B64, text: CLIP_TEXT })
+    const started = performance.now()
+    const result = await runPasteDecision({ remote: true, protocol: c.protocol, term, write, hostRead })
+    const elapsed = Math.round(performance.now() - started)
+    const tag = c.terminal + (c.protocol ? " +osc-reads" : "")
     const mime = result.content?.mime ?? "—"
-    console.log("  " + terminal.padEnd(20) + `${result.channel} (${mime})`)
-    if (result.channel === "miss") {
-      missRow = result
-      const attempt = terminalClipboardLastAttempt()
-      if (attempt) {
-        console.log(
-          "      ↳ the terminal-protocol probe sat for ~" +
-            Math.round(attempt.ms / 1000) +
-            "s before giving up — the 'stuck' feeling on Ctrl+V.",
-        )
-      }
-    }
+    console.log("  " + tag.padEnd(28) + `${result.channel} (${mime}) in ${elapsed}ms`)
+    if (result.channel === "miss") fastestMissMs = Math.min(fastestMissMs, elapsed)
+    if (result.channel === "protocol") protocolRow = result
   }
+  console.log("      Default is an instant, terse note — no probe stall. Enabling")
+  console.log("      'OSC clipboard image reads' restores kitty-protocol paste when answered.")
 
   // --- Text path: bracketed paste (terminal-native) -------------------------
   console.log(line())
@@ -315,32 +316,31 @@ async function main(): Promise<void> {
   console.log("\n" + line("═"))
   console.log("  WHY Windows → Linux Ctrl+V (image) fails")
   console.log(line("═"))
-  const hint = pasteMissHint({ ...signals, terminal: "windows-terminal" })
   console.log("  1. On a remote session the clipboard lives on the CLIENT, not this Linux host.")
-  console.log("  2. Channel 1 (terminal protocol) needs the terminal to ANSWER a clipboard")
-  console.log("     read. Windows Terminal implements neither the kitty protocol (OSC 5522)")
-  console.log("     nor OSC 52 read/query (only OSC 52 *write*) -> no answer -> timeout.")
-  console.log("  3. Channel 2 (host clipboard) needs xclip/wl-paste + a display server; a")
-  console.log("     headless remote host has neither -> empty.")
-  console.log("  => No channel can pull the image, so Ctrl+V misses. TEXT still works via")
-  console.log("     the terminal's own bracketed paste, which is why it feels 'half-broken'.")
+  console.log("  2. A terminal can only carry image bytes via the kitty OSC 5522 protocol,")
+  console.log("     which VS Code's terminal, Windows Terminal, PuTTY etc. never answer —")
+  console.log("     probing it cost seconds for a guaranteed miss.")
+  console.log("  3. So remote image fetching is now OFF by default: Ctrl+V answers instantly")
+  console.log("     with a terse note; TEXT paste keeps working via bracketed paste.")
+  console.log("  4. Power users on kitty/ghostty can run 'Enable OSC clipboard image reads'")
+  console.log("     to opt the protocol back in (the third matrix row shows it delivering).")
   console.log(line())
-  console.log("  User-facing hint PrioriCode shows in this exact case:")
-  for (const sentence of hint.match(/[^.]+\.?/g) ?? [hint]) {
+  console.log("  User-facing note PrioriCode shows on remote Ctrl+V now:")
+  for (const sentence of REMOTE_PASTE_DISABLED.match(/[^.]+\.?/g) ?? [REMOTE_PASTE_DISABLED]) {
     console.log("    • " + sentence.trim())
   }
   console.log(line())
-  console.log("  Fixes (any one): (a) use a terminal that answers the kitty protocol")
-  console.log("  (kitty/ghostty/wezterm), (b) use the PrioriCode VS Code extension, or")
-  console.log("  (c) copy the file to the host (scp, WinSCP) and paste its path.")
-  console.log("  Whatever carries the bytes, they now land as a private file on the box and")
-  console.log("  the prompt attaches that path — one uniform result for local and remote.")
+  console.log("  Carriers for remote images: (a) drag the file into VS Code (uploads to the")
+  console.log("  box) then paste its path, (b) the VS Code extension, (c) enable OSC reads")
+  console.log("  on a kitty-protocol terminal. Whatever carries the bytes, they land as a")
+  console.log("  private file on the box and the prompt attaches that path.")
   console.log(line("═"))
 
   // Sanity assertions so the VM is self-verifying.
   const problems: string[] = []
   if (!signals.remote) problems.push("remote not detected")
-  if (!missRow) problems.push("expected a miss row (windows-terminal)")
+  if (fastestMissMs >= 100) problems.push(`default remote miss should be instant, took ${fastestMissMs}ms`)
+  if (protocolRow?.content?.mime !== "image/png") problems.push("kitty protocol with OSC reads enabled did not deliver the image")
   if (winText !== CLIP_TEXT) problems.push(`bracketed paste recovered wrong text: ${winText}`)
   if (localWithXclip?.mime !== "text/plain") problems.push("host channel with xclip did not return text")
   if (headless !== undefined) problems.push("headless host read unexpectedly returned content")
