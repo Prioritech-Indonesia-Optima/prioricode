@@ -63,7 +63,7 @@ test("local scenarios keep the terse clipboard message", () => {
 
 test("remote disabled note is terse and free of old pitches", () => {
   expect(REMOTE_PASTE_DISABLED).toContain("paste its path")
-  expect(REMOTE_PASTE_DISABLED).toContain("text pastes normally")
+  expect(REMOTE_PASTE_DISABLED).toContain("Ctrl+Shift+V")
   expect(REMOTE_PASTE_DISABLED).not.toContain("extension")
   expect(REMOTE_PASTE_DISABLED).not.toContain("paste-serve")
 })

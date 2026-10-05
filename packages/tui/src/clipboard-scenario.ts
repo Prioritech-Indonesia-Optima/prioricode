@@ -105,7 +105,7 @@ const REMOTE_COPY_FAILED =
 // Shown when remote image fetching is disabled (the default): terse on purpose —
 // no stall, no long remedy list.
 export const REMOTE_PASTE_DISABLED =
-  "Remote sessions can't pull clipboard images — text pastes normally. To attach an image: copy the file onto this machine (VS Code drag-and-drop or scp) and paste its path. Advanced: enable OSC clipboard reads in the command palette."
+  "Remote session: your terminal holds the clipboard — paste text with Ctrl+Shift+V or right-click (or map Ctrl+V to your terminal's paste). Images: copy the file to this machine (drag/scp) and paste its path."
 
 export const SCENARIOS: Record<ScenarioId, Scenario> = {
   "win32-native": {
