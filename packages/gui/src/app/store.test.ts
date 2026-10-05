@@ -93,9 +93,26 @@ describe("chat store", () => {
   it("creates a session on first send, adopts optimistic user, and folds streamed events", async () => {
     const h = harness({
       events: [
-        evt("session.next.step.started", { assistantMessageID: "msg_a1", agent: "build", model: { id: "m", providerID: "p" } }, 1),
-        evt("session.next.text.ended", { assistantMessageID: "msg_a1", textID: "t1", text: "hello from prioricode" }, 2),
-        evt("session.next.step.ended", { assistantMessageID: "msg_a1", finish: "stop", cost: 0, tokens: { input: 1, output: 2, reasoning: 0, cache: { read: 0, write: 0 } } }, 3),
+        evt(
+          "session.next.step.started",
+          { assistantMessageID: "msg_a1", agent: "build", model: { id: "m", providerID: "p" } },
+          1,
+        ),
+        evt(
+          "session.next.text.ended",
+          { assistantMessageID: "msg_a1", textID: "t1", text: "hello from prioricode" },
+          2,
+        ),
+        evt(
+          "session.next.step.ended",
+          {
+            assistantMessageID: "msg_a1",
+            finish: "stop",
+            cost: 0,
+            tokens: { input: 1, output: 2, reasoning: 0, cache: { read: 0, write: 0 } },
+          },
+          3,
+        ),
       ],
     })
     await h.store.send("hi there")
@@ -112,7 +129,11 @@ describe("chat store", () => {
     const user = state.transcript.blocks.find((block) => block.kind === "user")
     const assistant = state.transcript.blocks.find((block) => block.kind === "assistant")
     expect(user?.kind === "user" ? user.text : "").toBe("hi there")
-    expect(assistant?.kind === "assistant" ? assistant.parts.some((part) => part.type === "text" && part.text === "hello from prioricode") : false).toBe(true)
+    expect(
+      assistant?.kind === "assistant"
+        ? assistant.parts.some((part) => part.type === "text" && part.text === "hello from prioricode")
+        : false,
+    ).toBe(true)
     expect(state.transcript.busy).toBe(false)
     expect(state.transcript.lastSeq).toBe(0)
     h.store.dispose()
@@ -126,7 +147,15 @@ describe("chat store", () => {
   })
 
   it("keeps busy during a running step", async () => {
-    const h = harness({ events: [evt("session.next.step.started", { assistantMessageID: "msg_a1", agent: "build", model: { id: "m", providerID: "p" } }, 1)] })
+    const h = harness({
+      events: [
+        evt(
+          "session.next.step.started",
+          { assistantMessageID: "msg_a1", agent: "build", model: { id: "m", providerID: "p" } },
+          1,
+        ),
+      ],
+    })
     await h.store.send("work")
     await waitFor(() => h.store.getSnapshot().transcript.busy, "busy true")
     h.store.dispose()
@@ -153,13 +182,25 @@ describe("chat store", () => {
         id: "e1",
         type: "session.next.prompt.admitted",
         durable: { aggregateID: "ses_old", seq: 3, version: 1 },
-        data: { sessionID: "ses_old", timestamp: 0, messageID: "msg_u1", delivery: "steer", prompt: { text: "earlier question" } },
+        data: {
+          sessionID: "ses_old",
+          timestamp: 0,
+          messageID: "msg_u1",
+          delivery: "steer",
+          prompt: { text: "earlier question" },
+        },
       },
       {
         id: "e2",
         type: "session.next.text.ended",
         durable: { aggregateID: "ses_old", seq: 5, version: 1 },
-        data: { sessionID: "ses_old", timestamp: 0, assistantMessageID: "msg_a1", textID: "t1", text: "earlier answer" },
+        data: {
+          sessionID: "ses_old",
+          timestamp: 0,
+          assistantMessageID: "msg_a1",
+          textID: "t1",
+          text: "earlier answer",
+        },
       },
     ]
     const h = harness({ history: () => ({ data: history, hasMore: false }) })
@@ -202,7 +243,9 @@ describe("chat store", () => {
   })
 
   it("newSession clears transcript and restarts on next send", async () => {
-    const h = harness({ events: [evt("session.next.text.ended", { assistantMessageID: "msg_a1", textID: "t1", text: "x" }, 1)] })
+    const h = harness({
+      events: [evt("session.next.text.ended", { assistantMessageID: "msg_a1", textID: "t1", text: "x" }, 1)],
+    })
     await h.store.send("hi")
     await waitFor(() => h.store.getSnapshot().transcript.blocks.length > 0, "blocks")
     h.store.newSession()

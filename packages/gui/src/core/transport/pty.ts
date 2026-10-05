@@ -93,7 +93,9 @@ export async function openPty(options: {
       if (socket.readyState === WebSocket.OPEN) socket.send(text)
     },
     resize: (rows, cols) => {
-      void transport.client?.ptys.update({ ptyID, size: { rows, cols }, ...(location === undefined ? {} : { location }) }).catch(() => {})
+      void transport.client?.ptys
+        .update({ ptyID, size: { rows, cols }, ...(location === undefined ? {} : { location }) })
+        .catch(() => {})
     },
     close: () => socket.close(1000),
     closed,
@@ -108,7 +110,9 @@ export async function ensureTerminalPty(transport: AppTransport): Promise<string
     const listed = unwrapList(await client.ptys.list(location === undefined ? undefined : { location }))
     const running = listed.find((pty) => pty.status === "running")
     if (running !== undefined) return running.id
-    const created = unwrapCreate(await client.ptys.create({ ...(location === undefined ? {} : { location }), title: "PrioriCode GUI" }))
+    const created = unwrapCreate(
+      await client.ptys.create({ ...(location === undefined ? {} : { location }), title: "PrioriCode GUI" }),
+    )
     return created.id
   } catch {
     return undefined

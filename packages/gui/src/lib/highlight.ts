@@ -65,7 +65,9 @@ export function getHighlighter(): Promise<Highlighter | undefined> {
   const current: Promise<Highlighter | undefined> =
     instance ??
     (instance = import("shiki")
-      .then(({ createHighlighter }) => createHighlighter({ themes: ["github-light", "github-dark"], langs: [...LANGS] as BundledLanguage[] }))
+      .then(({ createHighlighter }) =>
+        createHighlighter({ themes: ["github-light", "github-dark"], langs: [...LANGS] as BundledLanguage[] }),
+      )
       .catch(() => undefined))
   return current
 }

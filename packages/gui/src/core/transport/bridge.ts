@@ -46,7 +46,14 @@ export type BridgeOutbound =
   | { kind: "cancel"; id: string }
 
 export type BridgeInbound =
-  | { kind: "config"; status: BridgeConfigStatus; baseUrl: string; directory?: string; serverLabel?: string; detail?: string }
+  | {
+      kind: "config"
+      status: BridgeConfigStatus
+      baseUrl: string
+      directory?: string
+      serverLabel?: string
+      detail?: string
+    }
   | { kind: "res"; id: string; status: number; headers: Record<string, string>; text?: string; bodyBase64?: string }
   | { kind: "open-head"; id: string; status: number; headers: Record<string, string> }
   | { kind: "chunk"; id: string; dataBase64: string }
@@ -85,7 +92,11 @@ export interface BridgeHandle {
   onConfig: (listener: (config: BridgeConfig) => void) => () => void
   target: () => Promise<BridgeConfig>
   requestSelection: () => Promise<BridgeSelection | undefined>
-  requestPty: (options: { ptyID: string; cursor?: number; onData: (bytes: Uint8Array) => void }) => Promise<PtyChannel | undefined>
+  requestPty: (options: {
+    ptyID: string
+    cursor?: number
+    onData: (bytes: Uint8Array) => void
+  }) => Promise<PtyChannel | undefined>
   retry: () => void
   fetch: typeof globalThis.fetch
   dispose: () => void
@@ -121,7 +132,14 @@ export function createBridge(options: {
   const requests = new Map<string, PendingRequest>()
   const streams = new Map<string, PendingStream>()
   const selections = new Map<string, (selection: BridgeSelection | undefined) => void>()
-  const ptys = new Map<string, { head: (ok: boolean, error?: string) => void; data: (bytes: Uint8Array) => void; closed: (code: number | undefined) => void }>()
+  const ptys = new Map<
+    string,
+    {
+      head: (ok: boolean, error?: string) => void
+      data: (bytes: Uint8Array) => void
+      closed: (code: number | undefined) => void
+    }
+  >()
   const configListeners = new Set<(config: BridgeConfig) => void>()
   let latestConfig: BridgeConfig | undefined
   let resolveReady: (config: BridgeConfig) => void = () => {}
@@ -215,7 +233,12 @@ export function createBridge(options: {
           pending(undefined)
           return
         }
-        pending({ path: frame.path, start: frame.start, end: frame.end, text: typeof frame.text === "string" ? frame.text : undefined })
+        pending({
+          path: frame.path,
+          start: frame.start,
+          end: frame.end,
+          text: typeof frame.text === "string" ? frame.text : undefined,
+        })
         return
       }
     }
@@ -304,7 +327,8 @@ export function createBridge(options: {
       postCancel()
     })
     const frame = await responsePromise
-    const body = frame.bodyBase64 !== undefined ? decodeBase64(frame.bodyBase64) : frame.text !== undefined ? frame.text : null
+    const body =
+      frame.bodyBase64 !== undefined ? decodeBase64(frame.bodyBase64) : frame.text !== undefined ? frame.text : null
     return new Response(body as BodyInit, { status: frame.status, headers: new Headers(frame.headers) })
   }
 
@@ -331,7 +355,12 @@ export function createBridge(options: {
       data: request.onData,
       closed: (code) => resolveClosed(code),
     })
-    options.api.postMessage({ kind: "pty-open", id, ptyID: request.ptyID, cursor: request.cursor } satisfies BridgeOutbound)
+    options.api.postMessage({
+      kind: "pty-open",
+      id,
+      ptyID: request.ptyID,
+      cursor: request.cursor,
+    } satisfies BridgeOutbound)
     if (!(await headPromise)) {
       ptys.delete(id)
       return undefined

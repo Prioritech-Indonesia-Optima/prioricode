@@ -24,7 +24,11 @@ function StateDot({ state }: { state: "running" | "success" | "error" | "done" }
       aria-hidden
       className={cn(
         "size-1.5 shrink-0 rounded-full",
-        state === "running" ? "animate-pulse bg-amber-400" : state === "success" || state === "done" ? "bg-emerald-500" : "bg-red-500",
+        state === "running"
+          ? "animate-pulse bg-amber-400"
+          : state === "success" || state === "done"
+            ? "bg-emerald-500"
+            : "bg-red-500",
       )}
     />
   )
@@ -57,7 +61,9 @@ function PartRow({ part }: { part: AssistantPart }) {
     return (
       <details className="text-xs text-muted-foreground">
         <summary className="cursor-pointer select-none">Thinking{part.streaming ? "…" : ""}</summary>
-        <p dir="auto" className="whitespace-pre-wrap ps-2 pt-1">{part.text}</p>
+        <p dir="auto" className="whitespace-pre-wrap ps-2 pt-1">
+          {part.text}
+        </p>
       </details>
     )
   }
@@ -66,10 +72,14 @@ function PartRow({ part }: { part: AssistantPart }) {
       <details className="text-xs" open={part.state === "running"}>
         <summary className="flex cursor-pointer select-none items-center gap-2 rounded border border-border bg-muted px-2 py-1 font-mono">
           <StateDot state={part.state} />
-          <bdi dir="ltr" className="truncate">{part.command}</bdi>
+          <bdi dir="ltr" className="truncate">
+            {part.command}
+          </bdi>
         </summary>
         {part.output !== undefined && (
-          <pre dir="ltr" className="overflow-x-auto whitespace-pre-wrap ps-2 pt-1 font-mono">{part.output}</pre>
+          <pre dir="ltr" className="overflow-x-auto whitespace-pre-wrap ps-2 pt-1 font-mono">
+            {part.output}
+          </pre>
         )}
       </details>
     )
@@ -85,10 +95,15 @@ function derivePatch(part: Extract<AssistantPart, { type: "tool" }>): string | u
       const parsed: unknown = JSON.parse(part.input)
       if (typeof parsed === "object" && parsed !== null) {
         const record = parsed as Record<string, unknown>
-        if (typeof record.path === "string" && typeof record.oldString === "string" && typeof record.newString === "string") {
+        if (
+          typeof record.path === "string" &&
+          typeof record.oldString === "string" &&
+          typeof record.newString === "string"
+        ) {
           return computePatch(record.path, record.oldString, record.newString)
         }
-        if (typeof record.path === "string" && typeof record.content === "string") return computePatch(record.path, "", record.content)
+        if (typeof record.path === "string" && typeof record.content === "string")
+          return computePatch(record.path, "", record.content)
         if (typeof record.patch === "string") return record.patch
       }
     }
@@ -146,10 +161,20 @@ function ToolPartRow({ part }: { part: Extract<AssistantPart, { type: "tool" }> 
       <div className="grid gap-1 ps-2 pt-1">
         {patch !== undefined && <DiffView patch={patch} maxLines={24} className="mt-1" />}
         {part.input !== undefined && patch === undefined && (
-          <pre dir="ltr" className="max-h-40 overflow-auto whitespace-pre-wrap font-mono text-muted-foreground">{part.input}</pre>
+          <pre dir="ltr" className="max-h-40 overflow-auto whitespace-pre-wrap font-mono text-muted-foreground">
+            {part.input}
+          </pre>
         )}
-        {part.summary !== undefined && <p dir="auto" className="whitespace-pre-wrap">{part.summary}</p>}
-        {part.error !== undefined && <p dir="auto" className="whitespace-pre-wrap text-destructive">{part.error}</p>}
+        {part.summary !== undefined && (
+          <p dir="auto" className="whitespace-pre-wrap">
+            {part.summary}
+          </p>
+        )}
+        {part.error !== undefined && (
+          <p dir="auto" className="whitespace-pre-wrap text-destructive">
+            {part.error}
+          </p>
+        )}
       </div>
     </details>
   )
@@ -205,22 +230,39 @@ function AssistantRow({ block }: { block: AssistantBlock }) {
       {(block.agent !== undefined || block.model !== undefined) && (
         <div className="mb-1 flex items-center gap-2 text-[11px] text-muted-foreground">
           <span className="font-medium">{block.agent ?? "agent"}</span>
-          {block.model !== undefined && <bdi dir="ltr" className="truncate">{block.model}</bdi>}
+          {block.model !== undefined && (
+            <bdi dir="ltr" className="truncate">
+              {block.model}
+            </bdi>
+          )}
         </div>
       )}
       <div className="grid gap-1.5">
         {block.parts.map((part) => (
-          <PartRow key={part.type === "text" ? part.textID : part.type === "reasoning" ? part.reasoningID : part.callID} part={part} />
+          <PartRow
+            key={part.type === "text" ? part.textID : part.type === "reasoning" ? part.reasoningID : part.callID}
+            part={part}
+          />
         ))}
       </div>
       {block.retryNote !== undefined && <p className="mt-1 text-xs text-amber-500">{block.retryNote}</p>}
-      {block.error !== undefined && <p dir="auto" className="mt-1 text-xs text-destructive">{block.error}</p>}
+      {block.error !== undefined && (
+        <p dir="auto" className="mt-1 text-xs text-destructive">
+          {block.error}
+        </p>
+      )}
       {tokenLine !== undefined && <p className="mt-1 text-[10px] text-muted-foreground">{tokenLine}</p>}
     </div>
   )
 }
 
-function PermissionRow({ block, onReply }: { block: PermissionBlock; onReply: (requestID: string, reply: PermissionReply) => void }) {
+function PermissionRow({
+  block,
+  onReply,
+}: {
+  block: PermissionBlock
+  onReply: (requestID: string, reply: PermissionReply) => void
+}) {
   return (
     <div className="rounded-lg border border-amber-500/50 bg-amber-500/5 px-3 py-2 text-sm">
       <div dir="auto" className="text-xs text-muted-foreground">
@@ -228,12 +270,16 @@ function PermissionRow({ block, onReply }: { block: PermissionBlock; onReply: (r
         {block.filepath !== undefined && (
           <>
             <span> · </span>
-            <bdi dir="ltr" className="font-mono">{block.filepath}</bdi>
+            <bdi dir="ltr" className="font-mono">
+              {block.filepath}
+            </bdi>
           </>
         )}
       </div>
       {block.resources.length > 0 && (
-        <pre dir="auto" className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-xs">{block.resources.join("\n")}</pre>
+        <pre dir="auto" className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-xs">
+          {block.resources.join("\n")}
+        </pre>
       )}
       {block.diffPreview !== undefined && block.resolved === undefined && (
         <div className="mt-2">
@@ -244,13 +290,25 @@ function PermissionRow({ block, onReply }: { block: PermissionBlock; onReply: (r
         <div className="mt-1 text-xs text-muted-foreground">Resolved: {block.resolved}</div>
       ) : (
         <div className="mt-2 flex gap-2">
-          <button type="button" className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground" onClick={() => onReply(block.id, "once")}>
+          <button
+            type="button"
+            className="rounded bg-primary px-2 py-1 text-xs text-primary-foreground"
+            onClick={() => onReply(block.id, "once")}
+          >
             Allow once
           </button>
-          <button type="button" className="rounded border border-border px-2 py-1 text-xs hover:bg-accent" onClick={() => onReply(block.id, "always")}>
+          <button
+            type="button"
+            className="rounded border border-border px-2 py-1 text-xs hover:bg-accent"
+            onClick={() => onReply(block.id, "always")}
+          >
             Always allow
           </button>
-          <button type="button" className="rounded border border-destructive/60 px-2 py-1 text-xs text-destructive hover:bg-destructive/10" onClick={() => onReply(block.id, "reject")}>
+          <button
+            type="button"
+            className="rounded border border-destructive/60 px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
+            onClick={() => onReply(block.id, "reject")}
+          >
             Reject
           </button>
         </div>
@@ -291,7 +349,9 @@ function QuestionField(props: { requestID: string; index: number; question: Ques
       <legend className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
         {props.question.header.length > 0 ? props.question.header : `Question ${props.index + 1}`}
       </legend>
-      <p dir="auto" className="mb-1">{props.question.question}</p>
+      <p dir="auto" className="mb-1">
+        {props.question.question}
+      </p>
       <div className="flex flex-wrap gap-1.5">
         {props.question.options.map((option, optionIndex) => {
           const active = props.question.multiple ? draft.multi.includes(option.label) : draft.single === option.label
@@ -345,7 +405,13 @@ function QuestionRow({
   return (
     <div className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
       {block.questions.map((question, index) => (
-        <QuestionField key={index} requestID={block.id} index={index} question={question} disabled={block.resolved !== undefined} />
+        <QuestionField
+          key={index}
+          requestID={block.id}
+          index={index}
+          question={question}
+          disabled={block.resolved !== undefined}
+        />
       ))}
       <div className="mt-2 flex items-center gap-2">
         {block.resolved !== undefined ? (
@@ -359,7 +425,8 @@ function QuestionRow({
                 const drafts = draftBook(block.id)
                 const answers = block.questions.map((question, index) => {
                   const draft = drafts[index] ?? emptyDraft()
-                  const labels = question.multiple === true ? [...draft.multi] : draft.single !== undefined ? [draft.single] : []
+                  const labels =
+                    question.multiple === true ? [...draft.multi] : draft.single !== undefined ? [draft.single] : []
                   if (draft.custom.trim().length > 0) labels.push(draft.custom.trim())
                   return labels
                 })
@@ -393,17 +460,29 @@ function CompactionRow({ block }: { block: CompactionBlock }) {
         {block.state === "running" ? "Compacting context…" : "Context compacted"}
         {block.reason !== undefined ? ` (${block.reason})` : ""}
       </summary>
-      {block.text !== undefined && <p dir="auto" className="whitespace-pre-wrap pt-1">{block.text}</p>}
-      {block.recent !== undefined && <p dir="auto" className="whitespace-pre-wrap pt-1 opacity-75">{block.recent}</p>}
+      {block.text !== undefined && (
+        <p dir="auto" className="whitespace-pre-wrap pt-1">
+          {block.text}
+        </p>
+      )}
+      {block.recent !== undefined && (
+        <p dir="auto" className="whitespace-pre-wrap pt-1 opacity-75">
+          {block.recent}
+        </p>
+      )}
     </details>
   )
 }
 
 function RevertRow({ block }: { block: RevertBlock }) {
   return (
-    <details className="rounded border border-border bg-muted px-3 py-1 text-xs text-muted-foreground" open={block.state === "staged"}>
+    <details
+      className="rounded border border-border bg-muted px-3 py-1 text-xs text-muted-foreground"
+      open={block.state === "staged"}
+    >
       <summary className="cursor-pointer select-none">
-        {block.state === "staged" ? "Checkpoint staged" : "Checkpoint committed"} · <bdi dir="ltr">{block.messageID}</bdi>
+        {block.state === "staged" ? "Checkpoint staged" : "Checkpoint committed"} ·{" "}
+        <bdi dir="ltr">{block.messageID}</bdi>
         {block.files !== undefined && block.files.length > 0 ? ` (${block.files.length} files)` : ""}
       </summary>
       {block.files !== undefined && block.files.length > 0 && (
@@ -411,7 +490,9 @@ function RevertRow({ block }: { block: RevertBlock }) {
           {block.files.map((file) => (
             <li key={file.path} className="flex items-center gap-2">
               <span className="font-mono">{file.status === "added" ? "A" : file.status === "deleted" ? "D" : "M"}</span>
-              <bdi dir="ltr" className="truncate font-mono">{file.path}</bdi>
+              <bdi dir="ltr" className="truncate font-mono">
+                {file.path}
+              </bdi>
               <DiffStats patch={file.patch} additions={file.additions} deletions={file.deletions} />
             </li>
           ))}
@@ -423,7 +504,10 @@ function RevertRow({ block }: { block: RevertBlock }) {
 
 function SystemRow({ block }: { block: SystemBlock }) {
   return (
-    <div dir="auto" className={cn("px-1 text-center text-xs", block.tone === "error" ? "text-destructive" : "text-muted-foreground")}>
+    <div
+      dir="auto"
+      className={cn("px-1 text-center text-xs", block.tone === "error" ? "text-destructive" : "text-muted-foreground")}
+    >
       {block.text}
     </div>
   )

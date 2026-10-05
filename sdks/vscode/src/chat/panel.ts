@@ -55,7 +55,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
         const editor = vscode.window.activeTextEditor
         if (editor === undefined || editor.selection.isEmpty) return undefined
         const root = vscode.workspace.workspaceFolders?.[0]?.uri
-        const relative = root !== undefined ? vscode.workspace.asRelativePath(editor.document.uri, false) : editor.document.uri.fsPath
+        const relative =
+          root !== undefined ? vscode.workspace.asRelativePath(editor.document.uri, false) : editor.document.uri.fsPath
         return {
           path: relative,
           start: editor.selection.start.line + 1,

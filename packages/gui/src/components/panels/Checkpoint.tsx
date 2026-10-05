@@ -15,11 +15,15 @@ const normalizeSessionDiff = (payload: unknown[] | undefined): FileDiffInfo[] =>
       if (typeof value === "string") return { path: value }
       if (typeof value !== "object" || value === null) return undefined
       const record = value as Record<string, unknown>
-      const path = typeof record.path === "string" ? record.path : typeof record.file === "string" ? record.file : undefined
+      const path =
+        typeof record.path === "string" ? record.path : typeof record.file === "string" ? record.file : undefined
       if (path === undefined) return undefined
       return {
         path,
-        status: record.status === "added" || record.status === "modified" || record.status === "deleted" ? record.status : undefined,
+        status:
+          record.status === "added" || record.status === "modified" || record.status === "deleted"
+            ? record.status
+            : undefined,
         additions: typeof record.additions === "number" ? record.additions : undefined,
         deletions: typeof record.deletions === "number" ? record.deletions : undefined,
         patch: typeof record.patch === "string" ? record.patch : undefined,
@@ -48,15 +52,34 @@ export function CheckpointBar() {
       <div className="border-t border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
         <div className="flex items-center gap-2">
           <span className="font-medium text-amber-600 dark:text-amber-400">Checkpoint staged</span>
-          <span className="text-muted-foreground">workspace reverted to before <bdi dir="ltr" className="font-mono">{revert.messageID}</bdi></span>
+          <span className="text-muted-foreground">
+            workspace reverted to before{" "}
+            <bdi dir="ltr" className="font-mono">
+              {revert.messageID}
+            </bdi>
+          </span>
           <div className="ms-auto flex items-center gap-1.5">
-            <button type="button" onClick={() => setReviewOpen(true)} className="rounded border border-border bg-background px-2 py-0.5 hover:bg-accent">
+            <button
+              type="button"
+              onClick={() => setReviewOpen(true)}
+              className="rounded border border-border bg-background px-2 py-0.5 hover:bg-accent"
+            >
               Review ({files.length})
             </button>
-            <button type="button" disabled={busy} onClick={() => void act(() => store.clearRevert())} className="rounded border border-border bg-background px-2 py-0.5 hover:bg-accent disabled:opacity-50">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void act(() => store.clearRevert())}
+              className="rounded border border-border bg-background px-2 py-0.5 hover:bg-accent disabled:opacity-50"
+            >
               Undo checkpoint
             </button>
-            <button type="button" disabled={busy} onClick={() => void act(() => store.commitRevert())} className="rounded bg-primary px-2 py-0.5 text-primary-foreground disabled:opacity-50">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void act(() => store.commitRevert())}
+              className="rounded bg-primary px-2 py-0.5 text-primary-foreground disabled:opacity-50"
+            >
               Keep
             </button>
           </div>
@@ -67,7 +90,11 @@ export function CheckpointBar() {
   )
 }
 
-export function ReviewPanel(props: { open: boolean; onOpenChange: (open: boolean) => void; checkpointFiles: FileDiffInfo[] }) {
+export function ReviewPanel(props: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  checkpointFiles: FileDiffInfo[]
+}) {
   const { transport, store } = useGui()
   const sessionID = store.getSnapshot().sessionID
   const [extra, setExtra] = useState<FileDiffInfo[] | undefined>()
@@ -102,24 +129,46 @@ export function ReviewPanel(props: { open: boolean; onOpenChange: (open: boolean
         <Dialog.Content className="fixed left-1/2 top-1/2 z-50 flex max-h-[85vh] w-[min(44rem,95vw)] -translate-x-1/2 -translate-y-1/2 flex-col rounded-lg border border-border bg-popover text-popover-foreground shadow-lg">
           <div className="flex items-center gap-2 border-b border-border p-3">
             <Dialog.Title className="text-sm font-semibold">Changed files</Dialog.Title>
-            <span className="text-xs text-muted-foreground">{files.length === 0 ? (loading ? "loading…" : "no changes recorded") : ""}</span>
+            <span className="text-xs text-muted-foreground">
+              {files.length === 0 ? (loading ? "loading…" : "no changes recorded") : ""}
+            </span>
             {transport.kind === "web" && (
-              <button type="button" onClick={() => void loadSession()} className="ms-auto rounded border border-border px-2 py-0.5 text-xs hover:bg-accent">
+              <button
+                type="button"
+                onClick={() => void loadSession()}
+                className="ms-auto rounded border border-border px-2 py-0.5 text-xs hover:bg-accent"
+              >
                 Load all session changes
               </button>
             )}
-            <Dialog.Close className="rounded border border-border px-2 py-0.5 text-xs hover:bg-accent">Close</Dialog.Close>
+            <Dialog.Close className="rounded border border-border px-2 py-0.5 text-xs hover:bg-accent">
+              Close
+            </Dialog.Close>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto p-3">
             <div className="grid gap-3">
               {files.map((file) => (
                 <div key={file.path} className="rounded border border-border p-2">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="rounded bg-muted px-1 font-mono">{file.status === "added" ? "A" : file.status === "deleted" ? "D" : file.source === "checkpoint" ? "C" : "M"}</span>
-                    <bdi dir="ltr" className="truncate font-mono">{file.path}</bdi>
+                    <span className="rounded bg-muted px-1 font-mono">
+                      {file.status === "added"
+                        ? "A"
+                        : file.status === "deleted"
+                          ? "D"
+                          : file.source === "checkpoint"
+                            ? "C"
+                            : "M"}
+                    </span>
+                    <bdi dir="ltr" className="truncate font-mono">
+                      {file.path}
+                    </bdi>
                     <DiffStats patch={file.patch} additions={file.additions} deletions={file.deletions} />
                     {transport.openFile !== undefined && (
-                      <button type="button" onClick={() => transport.openFile?.(file.path)} className="ms-auto rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-accent">
+                      <button
+                        type="button"
+                        onClick={() => transport.openFile?.(file.path)}
+                        className="ms-auto rounded border border-border px-1.5 py-0.5 text-[10px] hover:bg-accent"
+                      >
                         Open
                       </button>
                     )}

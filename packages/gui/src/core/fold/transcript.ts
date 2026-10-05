@@ -214,7 +214,9 @@ const attachmentMeta = (file: unknown): AttachmentMeta => {
 const formatModel = (model: unknown): string | undefined => {
   const record = asRecord(model)
   if (typeof record.id === "string" && typeof record.providerID === "string") {
-    return record.variant ? `${record.providerID}/${record.id} (${record.variant})` : `${record.providerID}/${record.id}`
+    return record.variant
+      ? `${record.providerID}/${record.id} (${record.variant})`
+      : `${record.providerID}/${record.id}`
   }
   if (typeof model === "string") return model
   return undefined
@@ -276,11 +278,22 @@ const upsertPart = <P extends AssistantPart>(
   return { next, part }
 }
 
-const isTextPartWith = (textID: string) => (part: AssistantPart): part is TextPart => part.type === "text" && part.textID === textID
+const isTextPartWith =
+  (textID: string) =>
+  (part: AssistantPart): part is TextPart =>
+    part.type === "text" && part.textID === textID
 const isReasoningPartWith =
-  (reasoningID: string) => (part: AssistantPart): part is ReasoningPart => part.type === "reasoning" && part.reasoningID === reasoningID
-const isToolPartWith = (callID: string) => (part: AssistantPart): part is ToolPart => part.type === "tool" && part.callID === callID
-const isShellPartWith = (callID: string) => (part: AssistantPart): part is ShellPart => part.type === "shell" && part.callID === callID
+  (reasoningID: string) =>
+  (part: AssistantPart): part is ReasoningPart =>
+    part.type === "reasoning" && part.reasoningID === reasoningID
+const isToolPartWith =
+  (callID: string) =>
+  (part: AssistantPart): part is ToolPart =>
+    part.type === "tool" && part.callID === callID
+const isShellPartWith =
+  (callID: string) =>
+  (part: AssistantPart): part is ShellPart =>
+    part.type === "shell" && part.callID === callID
 
 const applyText = (
   state: TranscriptState,
@@ -288,7 +301,12 @@ const applyText = (
   textID: string,
   mutate: (part: { text: string; streaming: boolean }) => void,
 ): TranscriptState => {
-  const { next, part } = upsertPart(state, assistantID, isTextPartWith(textID), () => ({ type: "text", textID, text: "", streaming: true }))
+  const { next, part } = upsertPart(state, assistantID, isTextPartWith(textID), () => ({
+    type: "text",
+    textID,
+    text: "",
+    streaming: true,
+  }))
   mutate(part)
   return next
 }
@@ -313,7 +331,14 @@ const applyTool = (
   state: TranscriptState,
   assistantID: string,
   callID: string,
-  mutate: (part: { state: "running" | "success" | "error"; name?: string; input?: string; summary?: string; progress?: string; error?: string }) => void,
+  mutate: (part: {
+    state: "running" | "success" | "error"
+    name?: string
+    input?: string
+    summary?: string
+    progress?: string
+    error?: string
+  }) => void,
   name?: string,
 ): TranscriptState => {
   const { next, part } = upsertPart(state, assistantID, isToolPartWith(callID), () => ({
@@ -353,7 +378,12 @@ const finishShell = (state: TranscriptState, callID: string, output: string): Tr
   return state
 }
 
-const systemNote = (state: TranscriptState, id: string, text: string, tone: "info" | "error" = "info"): TranscriptState => {
+const systemNote = (
+  state: TranscriptState,
+  id: string,
+  text: string,
+  tone: "info" | "error" = "info",
+): TranscriptState => {
   const next = clone(state)
   const index = indexOfBlock(next.blocks, id)
   if (index >= 0) return state
@@ -389,7 +419,9 @@ const applyPermissionAsked = (state: TranscriptState, data: Record<string, any>)
     kind: "permission",
     id,
     action: typeof data.action === "string" ? data.action : "action",
-    resources: Array.isArray(data.resources) ? data.resources.filter((r: unknown): r is string => typeof r === "string") : [],
+    resources: Array.isArray(data.resources)
+      ? data.resources.filter((r: unknown): r is string => typeof r === "string")
+      : [],
     filepath: typeof metadata.filepath === "string" ? metadata.filepath : undefined,
     diffPreview: typeof metadata.diff === "string" ? metadata.diff : undefined,
   })
@@ -431,7 +463,11 @@ const applyQuestionAsked = (state: TranscriptState, data: Record<string, any>): 
   return next
 }
 
-const resolveQuestion = (state: TranscriptState, requestID: string, resolved: "answered" | "rejected"): TranscriptState => {
+const resolveQuestion = (
+  state: TranscriptState,
+  requestID: string,
+  resolved: "answered" | "rejected",
+): TranscriptState => {
   const index = indexOfBlock(state.blocks, requestID)
   if (index < 0) return state
   const block = state.blocks[index]
@@ -441,7 +477,11 @@ const resolveQuestion = (state: TranscriptState, requestID: string, resolved: "a
   return next
 }
 
-const applyCompactionStarted = (state: TranscriptState, data: Record<string, any>, event: RawEvent): TranscriptState => {
+const applyCompactionStarted = (
+  state: TranscriptState,
+  data: Record<string, any>,
+  event: RawEvent,
+): TranscriptState => {
   const id = `compaction:${data.messageID ?? event.id ?? ""}`
   if (indexOfBlock(state.blocks, id) >= 0) return state
   const next = clone(state)
@@ -475,7 +515,8 @@ const applyCompactionEnded = (state: TranscriptState, data: Record<string, any>,
       ? {
           ...(next.blocks[index] as CompactionBlock),
           state: "done",
-          text: typeof data.text === "string" ? truncate(data.text, 4000) : (next.blocks[index] as CompactionBlock).text,
+          text:
+            typeof data.text === "string" ? truncate(data.text, 4000) : (next.blocks[index] as CompactionBlock).text,
           recent: typeof data.recent === "string" ? truncate(data.recent, 4000) : undefined,
         }
       : {
@@ -496,7 +537,10 @@ const fileDiffInfo = (value: unknown): FileDiffInfo | undefined => {
   if (typeof record.path !== "string") return undefined
   return {
     path: record.path,
-    status: record.status === "added" || record.status === "modified" || record.status === "deleted" ? record.status : undefined,
+    status:
+      record.status === "added" || record.status === "modified" || record.status === "deleted"
+        ? record.status
+        : undefined,
     additions: typeof record.additions === "number" ? record.additions : undefined,
     deletions: typeof record.deletions === "number" ? record.deletions : undefined,
     patch: typeof record.patch === "string" ? record.patch : undefined,
@@ -507,7 +551,9 @@ const applyRevertStaged = (state: TranscriptState, data: Record<string, any>): T
   const revert = asRecord(data.revert)
   if (typeof revert.messageID !== "string") return state
   const files = Array.isArray(revert.files)
-    ? revert.files.map(fileDiffInfo).filter((file: FileDiffInfo | undefined): file is FileDiffInfo => file !== undefined)
+    ? revert.files
+        .map(fileDiffInfo)
+        .filter((file: FileDiffInfo | undefined): file is FileDiffInfo => file !== undefined)
     : undefined
   const block: RevertBlock = {
     kind: "revert",
@@ -540,7 +586,11 @@ const applyRevertCommitted = (state: TranscriptState, data: Record<string, any>)
   return next
 }
 
-const setAssistantSettled = (state: TranscriptState, id: string, mutate: (block: AssistantBlock) => void): TranscriptState => {
+const setAssistantSettled = (
+  state: TranscriptState,
+  id: string,
+  mutate: (block: AssistantBlock) => void,
+): TranscriptState => {
   const existing = settledAssistant(state, id)
   if (!existing) {
     const { next, block } = ensureAssistant(state, id)
@@ -566,7 +616,8 @@ const noteRetry = (state: TranscriptState, attempt: number, message: string): Tr
   return state
 }
 
-const optionalNumber = (value: unknown): number | undefined => (typeof value === "number" && Number.isFinite(value) ? value : undefined)
+const optionalNumber = (value: unknown): number | undefined =>
+  typeof value === "number" && Number.isFinite(value) ? value : undefined
 
 const foldEventState = (state: TranscriptState, event: RawEvent): TranscriptState => {
   const data = asRecord(event.data)
@@ -638,7 +689,13 @@ const foldEventState = (state: TranscriptState, event: RawEvent): TranscriptStat
 
     case "session.next.tool.input.started": {
       if (typeof data.assistantMessageID !== "string" || typeof data.callID !== "string") return state
-      return applyTool(state, data.assistantMessageID, data.callID, () => {}, typeof data.name === "string" ? data.name : undefined)
+      return applyTool(
+        state,
+        data.assistantMessageID,
+        data.callID,
+        () => {},
+        typeof data.name === "string" ? data.name : undefined,
+      )
     }
 
     case "session.next.tool.input.delta": {
@@ -669,10 +726,16 @@ const foldEventState = (state: TranscriptState, event: RawEvent): TranscriptStat
       } catch {
         input = undefined
       }
-      return applyTool(state, data.assistantMessageID, data.callID, (part) => {
-        if (input !== undefined) part.input = input
-        part.state = "running"
-      }, name)
+      return applyTool(
+        state,
+        data.assistantMessageID,
+        data.callID,
+        (part) => {
+          if (input !== undefined) part.input = input
+          part.state = "running"
+        },
+        name,
+      )
     }
 
     case "session.next.tool.progress": {
@@ -730,7 +793,8 @@ const foldEventState = (state: TranscriptState, event: RawEvent): TranscriptStat
         const cost = optionalNumber(data.cost)
         if (cost !== undefined) block.cost = cost
         if (hasTokens) block.tokens = tokenSummary
-        if (Array.isArray(data.files)) block.files = data.files.filter((f: unknown): f is string => typeof f === "string")
+        if (Array.isArray(data.files))
+          block.files = data.files.filter((f: unknown): f is string => typeof f === "string")
       })
       return { ...next, busy: false }
     }
@@ -752,7 +816,11 @@ const foldEventState = (state: TranscriptState, event: RawEvent): TranscriptStat
     }
 
     case "session.next.agent.switched":
-      return systemNote(state, `agent:${data.messageID ?? event.id ?? ""}`, `Agent switched to ${String(data.agent ?? "?")}`)
+      return systemNote(
+        state,
+        `agent:${data.messageID ?? event.id ?? ""}`,
+        `Agent switched to ${String(data.agent ?? "?")}`,
+      )
 
     case "session.next.model.switched": {
       const model = formatModel(data.model) ?? "?"
@@ -760,7 +828,11 @@ const foldEventState = (state: TranscriptState, event: RawEvent): TranscriptStat
     }
 
     case "session.next.goal.set":
-      return systemNote(state, `goal:${data.messageID ?? event.id ?? ""}`, `Goal set: ${truncate(String(data.goal ?? ""), 200)}`)
+      return systemNote(
+        state,
+        `goal:${data.messageID ?? event.id ?? ""}`,
+        `Goal set: ${truncate(String(data.goal ?? ""), 200)}`,
+      )
 
     case "session.next.synthetic":
       if (typeof data.messageID !== "string") return state
@@ -793,7 +865,11 @@ const foldEventState = (state: TranscriptState, event: RawEvent): TranscriptStat
 
     case "permission.v2.replied":
       if (typeof data.requestID !== "string") return state
-      return resolvePermission(state, data.requestID, data.reply === "once" || data.reply === "always" ? data.reply : "reject")
+      return resolvePermission(
+        state,
+        data.requestID,
+        data.reply === "once" || data.reply === "always" ? data.reply : "reject",
+      )
 
     case "question.v2.asked":
       return applyQuestionAsked(state, data)

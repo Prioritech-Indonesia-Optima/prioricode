@@ -9,13 +9,18 @@ import { createGuiClient } from "./client"
  * If these drift, the extension ships broken; this test is the fence.
  */
 function wired(options?: {
-  serverResult?: { ok: true; server: { url: string; username: string; password?: string } } | { ok: false; reason: "offline"; detail?: string }
+  serverResult?:
+    | { ok: true; server: { url: string; username: string; password?: string } }
+    | { ok: false; reason: "offline"; detail?: string }
   upstream?: (url: string, init: RequestInit) => Promise<Response>
   getSelection?: () => Promise<{ path: string; start: number; end: number; text?: string } | undefined>
 }) {
   const webviewListeners: ((message: unknown) => void)[] = []
   const hostCalls: { method: string; url: string; headers: Record<string, string>; body?: string }[] = []
-  const resolver = options?.serverResult ?? { ok: true as const, server: { url: "http://daemon.local", username: "prioricode", password: "pw-123" } }
+  const resolver = options?.serverResult ?? {
+    ok: true as const,
+    server: { url: "http://daemon.local", username: "prioricode", password: "pw-123" },
+  }
 
   const host = createBridgeHost({
     post: (message) => {
@@ -36,7 +41,10 @@ function wired(options?: {
         body: typeof init?.body === "string" ? init.body : undefined,
       })
       if (options?.upstream) return options.upstream(url, init ?? {})
-      return new Response(JSON.stringify({ id: "ses_pair" }), { status: 200, headers: { "content-type": "application/json" } })
+      return new Response(JSON.stringify({ id: "ses_pair" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      })
     }) as unknown as typeof fetch,
   })
 
@@ -93,7 +101,10 @@ describe("bridge pair conformance (gui shim <-> extension host relay)", () => {
   it("relays a typed client request with host-owned auth and stripped webview headers", async () => {
     const upstream = async (url: string) =>
       url.includes("/api/health")
-        ? new Response(JSON.stringify({ healthy: true }), { status: 200, headers: { "content-type": "application/json" } })
+        ? new Response(JSON.stringify({ healthy: true }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          })
         : new Response("{}", { status: 404, headers: { "content-type": "application/json" } })
     const { bridge, hostCalls } = wired({ upstream })
     const config = await bridge.target()
@@ -199,7 +210,10 @@ describe("bridge pair conformance (gui shim <-> extension host relay)", () => {
           for (const listener of webviewListeners) listener(message)
         })
       },
-      resolveServer: async () => ({ ok: true, server: { url: "http://daemon.local", username: "prioricode", password: "pw-123" } }),
+      resolveServer: async () => ({
+        ok: true,
+        server: { url: "http://daemon.local", username: "prioricode", password: "pw-123" },
+      }),
       directory: () => "/work/tree",
       coalesceMs: 1,
       openWebSocket: async (url) => {
@@ -218,7 +232,8 @@ describe("bridge pair conformance (gui shim <-> extension host relay)", () => {
           close: () => close?.(1000),
         }
       },
-      fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => upstream(String(input))) as unknown as typeof fetch,
+      fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) =>
+        upstream(String(input))) as unknown as typeof fetch,
     })
     const bridge = createBridge({
       api: { postMessage: (message) => void queueMicrotask(() => host.onMessage(message)) },

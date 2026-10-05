@@ -73,8 +73,7 @@ export function useModelCatalog() {
     queryKey: ["models"],
     enabled: transport.client !== undefined,
     staleTime: 60_000,
-    queryFn: async ({ signal }) =>
-      (await transport.client!.models.list(locArg(transport), { signal })).data,
+    queryFn: async ({ signal }) => (await transport.client!.models.list(locArg(transport), { signal })).data,
   })
 }
 
@@ -84,8 +83,7 @@ export function useAgentCatalog() {
     queryKey: ["agents"],
     enabled: transport.client !== undefined,
     staleTime: 60_000,
-    queryFn: async ({ signal }) =>
-      (await transport.client!.agents.list(locArg(transport), { signal })).data,
+    queryFn: async ({ signal }) => (await transport.client!.agents.list(locArg(transport), { signal })).data,
   })
 }
 
@@ -94,8 +92,7 @@ export function useIntegrations() {
   return useQuery({
     queryKey: ["integrations"],
     enabled: transport.client !== undefined,
-    queryFn: async ({ signal }) =>
-      (await transport.client!.integrations.list(locArg(transport), { signal })).data,
+    queryFn: async ({ signal }) => (await transport.client!.integrations.list(locArg(transport), { signal })).data,
   })
 }
 
@@ -128,7 +125,12 @@ export function useFileFind(query: string, enabled: boolean) {
     placeholderData: keepPreviousData,
     queryFn: async ({ signal }) => {
       const result = await transport.client!.files.find(
-        { query, type: "file", limit: 30, ...(transport.directory === undefined ? {} : { location: { directory: transport.directory } }) },
+        {
+          query,
+          type: "file",
+          limit: 30,
+          ...(transport.directory === undefined ? {} : { location: { directory: transport.directory } }),
+        },
         { signal },
       )
       const rows: FileHit[] = (result as unknown as { data?: FileHit[] }).data ?? (result as unknown as FileHit[])

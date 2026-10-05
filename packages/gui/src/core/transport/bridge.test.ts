@@ -26,7 +26,12 @@ function fakeHost(options: FakeHostOptions & { directory?: string }) {
 
   const dispatch = async (frame: BridgeOutbound) => {
     if (frame.kind === "ready") {
-      toWebview({ kind: "config", status: "ready", baseUrl: "http://prioricode.local", directory: options.directory ?? "/repo" })
+      toWebview({
+        kind: "config",
+        status: "ready",
+        baseUrl: "http://prioricode.local",
+        directory: options.directory ?? "/repo",
+      })
       return
     }
     if (frame.kind === "cancel") {
@@ -115,7 +120,9 @@ describe("bridge transport", () => {
   })
 
   it("propagates abort signal to a host cancel", async () => {
-    const endless = { sseChunks: ["data: {\"id\":\"a\",\"type\":\"t\",\"data\":{}}\n\n"].concat(Array.from({ length: 200 }, () => ": pings\n\n")) }
+    const endless = {
+      sseChunks: ['data: {"id":"a","type":"t","data":{}}\n\n'].concat(Array.from({ length: 200 }, () => ": pings\n\n")),
+    }
     const host = fakeHost(endless)
     const bridge = createBridge({ api: host.api, subscribe: host.subscribe })
     const client = createGuiClient({ baseUrl: "http://prioricode.local", fetch: bridge.fetch })

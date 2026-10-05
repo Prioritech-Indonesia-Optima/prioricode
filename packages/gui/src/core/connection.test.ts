@@ -33,7 +33,7 @@ function harness(
     routes.push(route)
     const key = Object.keys(specs).find((candidate) => route.includes(candidate))
     const spec = key === undefined ? undefined : specs[key]
-    const resolved = typeof spec === "function" ? spec(route) : spec ?? { frames: [], end: false }
+    const resolved = typeof spec === "function" ? spec(route) : (spec ?? { frames: [], end: false })
     const body = new ReadableStream<Uint8Array>({
       start(controller) {
         for (const chunk of resolved.frames) controller.enqueue(new TextEncoder().encode(chunk))
@@ -160,7 +160,10 @@ describe("connection", () => {
         "/event?after=": (route) => {
           durableCalls += 1
           if (durableCalls === 1) {
-            return { frames: [frame(durable(7, "session.next.step.started", { assistantMessageID: "msg_a1" }))], end: false }
+            return {
+              frames: [frame(durable(7, "session.next.step.started", { assistantMessageID: "msg_a1" }))],
+              end: false,
+            }
           }
           expect(route).toContain("after=7")
           return { frames: [], end: false }

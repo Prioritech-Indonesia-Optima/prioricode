@@ -45,7 +45,9 @@ instance.use({
       const label = this.parser.parseInline(token.tokens ?? [])
       if (!onlyHttpLinks(token.href)) return `<span>${label}</span>`
       const safeTitle =
-        token.title !== undefined && token.title !== null && token.title.length > 0 ? ` title="${escapeHtml(token.title)}"` : ""
+        token.title !== undefined && token.title !== null && token.title.length > 0
+          ? ` title="${escapeHtml(token.title)}"`
+          : ""
       return `<a href="${escapeHtml(token.href)}" target="_blank" rel="noopener noreferrer"${safeTitle}>${label}</a>`
     },
   },

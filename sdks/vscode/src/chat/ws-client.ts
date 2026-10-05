@@ -113,7 +113,18 @@ const encodeFrame = (opcode: number, payload: Buffer): Buffer => {
   else if (length < 65536) {
     header = [0x80 | opcode, 0x80 | 126, (length >> 8) & 0xff, length & 0xff]
   } else {
-    header = [0x80 | opcode, 0x80 | 127, 0, 0, 0, 0, (length >>> 24) & 0xff, (length >> 16) & 0xff, (length >> 8) & 0xff, length & 0xff]
+    header = [
+      0x80 | opcode,
+      0x80 | 127,
+      0,
+      0,
+      0,
+      0,
+      (length >>> 24) & 0xff,
+      (length >> 16) & 0xff,
+      (length >> 8) & 0xff,
+      length & 0xff,
+    ]
   }
   return Buffer.concat([Buffer.from(header), mask, maskPayload(payload, Buffer.from(mask))])
 }

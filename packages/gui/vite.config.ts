@@ -19,7 +19,8 @@ export default defineConfig({
           output: {
             inlineDynamicImports: true,
             entryFileNames: "webview.js",
-            assetFileNames: (info) => ((info.name ?? "").endsWith(".css") ? "webview.css" : "assets/[name]-[hash][extname]"),
+            assetFileNames: (info) =>
+              (info.name ?? "").endsWith(".css") ? "webview.css" : "assets/[name]-[hash][extname]",
           },
         }
       : undefined,

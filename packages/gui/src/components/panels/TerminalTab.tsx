@@ -49,7 +49,12 @@ export function TerminalTab(props: { active: boolean }) {
         term.onData((text) => connRef.current?.write(text))
       }
       fitRef.current?.fit()
-      const conn = await openPty({ transport, ptyID: id, cursor: cursorRef.current, onData: (bytes) => term.write(bytes) })
+      const conn = await openPty({
+        transport,
+        ptyID: id,
+        cursor: cursorRef.current,
+        onData: (bytes) => term.write(bytes),
+      })
       if (conn === undefined) {
         setError("Terminal connection refused by the host relay.")
         setStatus("idle")
@@ -132,7 +137,13 @@ export function TerminalTab(props: { active: boolean }) {
         <span
           className={cn(
             "size-1.5 rounded-full",
-            status === "connected" ? "bg-emerald-500" : status === "connecting" ? "animate-pulse bg-amber-400" : status === "exited" ? "bg-red-500" : "bg-muted-foreground",
+            status === "connected"
+              ? "bg-emerald-500"
+              : status === "connecting"
+                ? "animate-pulse bg-amber-400"
+                : status === "exited"
+                  ? "bg-red-500"
+                  : "bg-muted-foreground",
           )}
         />
         <span>
@@ -147,12 +158,20 @@ export function TerminalTab(props: { active: boolean }) {
         {error !== undefined && <span className="truncate text-destructive">{error}</span>}
         <div className="ms-auto flex gap-1">
           {(status === "exited" || status === "idle") && (
-            <button type="button" onClick={() => void connect()} className="rounded border border-border px-2 py-0.5 hover:bg-accent">
+            <button
+              type="button"
+              onClick={() => void connect()}
+              className="rounded border border-border px-2 py-0.5 hover:bg-accent"
+            >
               {status === "exited" ? "Reconnect" : "Start"}
             </button>
           )}
           {status === "connected" && (
-            <button type="button" onClick={() => void kill()} className="rounded border border-border px-2 py-0.5 hover:bg-accent">
+            <button
+              type="button"
+              onClick={() => void kill()}
+              className="rounded border border-border px-2 py-0.5 hover:bg-accent"
+            >
               Kill
             </button>
           )}

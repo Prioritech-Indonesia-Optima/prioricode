@@ -26,7 +26,9 @@ export function ServerDialog(props: { open: boolean; onOpenChange: (open: boolea
             <ProvidersSection />
             <ServerSection />
           </div>
-          <Dialog.Close className="mt-4 rounded border border-border px-3 py-1 text-xs hover:bg-accent">Close</Dialog.Close>
+          <Dialog.Close className="mt-4 rounded border border-border px-3 py-1 text-xs hover:bg-accent">
+            Close
+          </Dialog.Close>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -58,13 +60,19 @@ function ProvidersSection() {
     <div className="grid gap-2">
       <div className="text-xs font-medium uppercase text-muted-foreground">Providers</div>
       {integrations.isPending && <div className="text-xs text-muted-foreground">Loading providers…</div>}
-      {items.length === 0 && !integrations.isPending && <div className="text-xs text-muted-foreground">No integrations published.</div>}
+      {items.length === 0 && !integrations.isPending && (
+        <div className="text-xs text-muted-foreground">No integrations published.</div>
+      )}
       {items.map((integration) => (
         <div key={integration.id} className="rounded border border-border p-2">
           <div className="text-xs font-medium">{integration.name}</div>
           <div className="mt-1 grid gap-2">
             {integration.methods.map((method) => (
-              <MethodRow key={`${method.type}:${"id" in method ? method.id : ""}`} integrationID={integration.id} method={method} />
+              <MethodRow
+                key={`${method.type}:${"id" in method ? method.id : ""}`}
+                integrationID={integration.id}
+                method={method}
+              />
             ))}
           </div>
         </div>
@@ -206,7 +214,11 @@ function MethodRow(props: { integrationID: string; method: IntegrationMethod }) 
       ) : (
         <div className="grid gap-1 text-[11px]">
           <div className="text-muted-foreground">{attempt.instructions}</div>
-          <button type="button" className="justify-self-start rounded border border-border px-2 py-0.5 hover:bg-accent" onClick={() => transport.openExternal(attempt.url)}>
+          <button
+            type="button"
+            className="justify-self-start rounded border border-border px-2 py-0.5 hover:bg-accent"
+            onClick={() => transport.openExternal(attempt.url)}
+          >
             Open sign-in URL again
           </button>
           {attempt.mode === "code" && <CodeAttemptForm attempt={attempt} onDone={(note) => setMessage(note)} />}

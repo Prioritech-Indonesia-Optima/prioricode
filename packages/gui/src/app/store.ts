@@ -114,7 +114,11 @@ export function createChatStore(transport: AppTransport): ChatStore {
             applyEvent({ id: `resync:${String(request.id)}`, type: "permission.v2.asked", data: request })
           }
           for (const request of questions) {
-            applyEvent({ id: `resync:${String(request.id ?? newMessageID())}`, type: "question.v2.asked", data: request })
+            applyEvent({
+              id: `resync:${String(request.id ?? newMessageID())}`,
+              type: "question.v2.asked",
+              data: request,
+            })
           }
         } catch {
           // Resync is best-effort; live events still flow.
@@ -138,7 +142,11 @@ export function createChatStore(transport: AppTransport): ChatStore {
     let maxSeq = 0
     try {
       for (let page = 0; page < HISTORY_MAX_PAGES; page++) {
-        const result = await client.sessions.history({ sessionID: target, limit: HISTORY_PAGE, ...(after === undefined ? {} : { after }) })
+        const result = await client.sessions.history({
+          sessionID: target,
+          limit: HISTORY_PAGE,
+          ...(after === undefined ? {} : { after }),
+        })
         const events = result.data ?? []
         for (const event of events) {
           const normalized = normalizeEvent(event)
@@ -200,9 +208,15 @@ export function createChatStore(transport: AppTransport): ChatStore {
           const models = await client.models.list({
             ...(transport.directory === undefined ? {} : { location: { directory } }),
           })
-          const rows = (models as unknown as { data?: { id: string; providerID: string }[] }).data ?? (models as unknown as { id: string; providerID: string }[])
+          const rows =
+            (models as unknown as { data?: { id: string; providerID: string }[] }).data ??
+            (models as unknown as { id: string; providerID: string }[])
           const first = Array.isArray(rows) ? rows[0] : undefined
-          if (first !== undefined) await client.sessions.switchModel({ sessionID: created.id, model: { id: first.id, providerID: first.providerID } })
+          if (first !== undefined)
+            await client.sessions.switchModel({
+              sessionID: created.id,
+              model: { id: first.id, providerID: first.providerID },
+            })
         } catch {
           // best-effort; the picker can still set a model explicitly
         }
@@ -219,7 +233,11 @@ export function createChatStore(transport: AppTransport): ChatStore {
     }
   }
 
-  const send = async (text: string, attachments: OutgoingAttachment[] = [], opts?: { delivery?: "steer" | "queue" }) => {
+  const send = async (
+    text: string,
+    attachments: OutgoingAttachment[] = [],
+    opts?: { delivery?: "steer" | "queue" },
+  ) => {
     const trimmed = text.trim()
     if (trimmed.length === 0) return
     if (!(await ensureSession())) return

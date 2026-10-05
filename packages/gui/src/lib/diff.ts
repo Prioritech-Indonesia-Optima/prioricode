@@ -17,7 +17,13 @@ export function computePatch(path: string, oldText: string, newText: string): st
 export function splitPatch(patch: string): DiffLine[] {
   const lines: DiffLine[] = []
   for (const raw of patch.split("\n")) {
-    if (raw.startsWith("+++") || raw.startsWith("---") || raw.startsWith("@@") || raw.startsWith("diff ") || raw.startsWith("index ")) {
+    if (
+      raw.startsWith("+++") ||
+      raw.startsWith("---") ||
+      raw.startsWith("@@") ||
+      raw.startsWith("diff ") ||
+      raw.startsWith("index ")
+    ) {
       lines.push({ kind: "meta", text: raw })
     } else if (raw.startsWith("+")) lines.push({ kind: "add", text: raw.slice(1) })
     else if (raw.startsWith("-")) lines.push({ kind: "remove", text: raw.slice(1) })

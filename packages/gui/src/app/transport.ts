@@ -21,7 +21,8 @@ export interface AppTransport {
   bridge?: BridgeHandle
 }
 
-const webBase = (target: DirectTarget): string => target.baseUrl || globalThis.location?.origin || "http://127.0.0.1:4096"
+const webBase = (target: DirectTarget): string =>
+  target.baseUrl || globalThis.location?.origin || "http://127.0.0.1:4096"
 
 const assertStream = async (open: Promise<Response>): Promise<Response> => {
   const response = await open

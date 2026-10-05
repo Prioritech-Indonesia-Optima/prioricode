@@ -56,5 +56,12 @@ export function Markdown(props: { text: string; settled: boolean; className?: st
     }
   }, [html, props.settled])
 
-  return <div dir="auto" className={cn("gui-markdown text-sm", props.className)} dangerouslySetInnerHTML={{ __html: html }} ref={ref} />
+  return (
+    <div
+      dir="auto"
+      className={cn("gui-markdown text-sm", props.className)}
+      dangerouslySetInnerHTML={{ __html: html }}
+      ref={ref}
+    />
+  )
 }

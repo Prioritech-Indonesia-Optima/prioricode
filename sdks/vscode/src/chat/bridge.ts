@@ -136,12 +136,20 @@ export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
       })
     }
     if (!isAllowedPath(frame.path) || typeof frame.method !== "string") {
-      respond(400, { "content-type": "application/json" }, JSON.stringify({ _tag: "InvalidRequest", message: "path not allowed" }))
+      respond(
+        400,
+        { "content-type": "application/json" },
+        JSON.stringify({ _tag: "InvalidRequest", message: "path not allowed" }),
+      )
       return
     }
     const result = await deps.resolveServer()
     if (!result.ok) {
-      respond(503, { "content-type": "application/json" }, JSON.stringify({ _tag: "Unavailable", message: result.detail ?? result.reason }))
+      respond(
+        503,
+        { "content-type": "application/json" },
+        JSON.stringify({ _tag: "Unavailable", message: result.detail ?? result.reason }),
+      )
       return
     }
     const controller = new AbortController()
@@ -155,7 +163,11 @@ export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
       })
       const buffer = new Uint8Array(await response.arrayBuffer())
       if (buffer.byteLength > MAX_BODY_BYTES) {
-        respond(502, { "content-type": "application/json" }, JSON.stringify({ _tag: "TooLarge", message: "response exceeded bridge limit" }))
+        respond(
+          502,
+          { "content-type": "application/json" },
+          JSON.stringify({ _tag: "TooLarge", message: "response exceeded bridge limit" }),
+        )
         return
       }
       const contentType = response.headers.get("content-type") ?? ""
@@ -169,7 +181,11 @@ export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
     } catch (error) {
       if (!controller.signal.aborted) {
         deps.log?.(`bridge req ${frame.path} failed: ${String(error)}`)
-        respond(502, { "content-type": "application/json" }, JSON.stringify({ _tag: "BridgeTransport", message: String(error) }))
+        respond(
+          502,
+          { "content-type": "application/json" },
+          JSON.stringify({ _tag: "BridgeTransport", message: String(error) }),
+        )
       }
     } finally {
       controllers.delete(frame.id)
@@ -273,7 +289,10 @@ export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
         return
       }
       const tokenPayload = (await tokenResponse.json()) as { data?: { ticket?: string } } | { ticket?: string }
-      const ticket = ("data" in tokenPayload && tokenPayload.data?.ticket) || ("ticket" in tokenPayload && tokenPayload.ticket) || undefined
+      const ticket =
+        ("data" in tokenPayload && tokenPayload.data?.ticket) ||
+        ("ticket" in tokenPayload && tokenPayload.ticket) ||
+        undefined
       if (typeof ticket !== "string") {
         deps.post({ kind: "pty-head", id: frame.id, ok: false, error: "connect-token malformed" })
         return

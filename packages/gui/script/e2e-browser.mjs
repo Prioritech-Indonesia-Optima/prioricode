@@ -50,7 +50,11 @@ await step("boot + settings + connect", async () => {
 })
 
 await step("sessions sidebar lists real daemon sessions", async () => {
-  await page.locator("aside button").filter({ hasText: /New session - \d{4}/ }).first().waitFor({ timeout: 15_000 })
+  await page
+    .locator("aside button")
+    .filter({ hasText: /New session - \d{4}/ })
+    .first()
+    .waitFor({ timeout: 15_000 })
 })
 
 const marker = `GUI-E2E-${Math.random().toString(36).slice(2, 7)}`
@@ -65,8 +69,16 @@ await step("send prompt -> optimistic bubble + streamed turn result", async () =
   // Either the assistant answers (provider healthy) or the turn fails loudly (provider key expired) —
   // both are rendered from real streamed events; the wire itself must complete either way.
   const settled = await Promise.race([
-    page.getByText(marker, { exact: false }).nth(1).waitFor({ timeout: 90_000 }).then(() => "answered"),
-    page.locator("text=/Provider request failed|401/").first().waitFor({ timeout: 90_000 }).then(() => "provider-error"),
+    page
+      .getByText(marker, { exact: false })
+      .nth(1)
+      .waitFor({ timeout: 90_000 })
+      .then(() => "answered"),
+    page
+      .locator("text=/Provider request failed|401/")
+      .first()
+      .waitFor({ timeout: 90_000 })
+      .then(() => "provider-error"),
   ]).catch(() => "timeout")
   if (settled !== "answered" && settled !== "provider-error") throw new Error("turn never settled")
   console.log(`  [stream settled via ${settled}]`)
@@ -76,10 +88,16 @@ await step("session restore from durable history (reload + sidebar reselect)", a
   await page.getByRole("button", { name: "New", exact: true }).click()
   await page.reload({ waitUntil: "domcontentloaded" })
   await page.getByRole("button", { name: "Server" }).waitFor({ timeout: 20_000 })
-  const row = page.locator("aside button").filter({ hasText: /New session - \d{4}/ }).first()
+  const row = page
+    .locator("aside button")
+    .filter({ hasText: /New session - \d{4}/ })
+    .first()
   await row.waitFor({ timeout: 20_000 })
   await row.click()
-  await page.getByText(`Reply with exactly this single line and nothing else: ${marker}`).first().waitFor({ timeout: 20_000 })
+  await page
+    .getByText(`Reply with exactly this single line and nothing else: ${marker}`)
+    .first()
+    .waitFor({ timeout: 20_000 })
 })
 
 await step("model picker shows catalog", async () => {
@@ -90,7 +108,10 @@ await step("model picker shows catalog", async () => {
     await page.waitForTimeout(400)
     await trigger.click()
   }
-  await items.filter({ hasText: /prioritech-llm|qwen|claude|gpt/i }).first().waitFor({ timeout: 8_000 })
+  await items
+    .filter({ hasText: /prioritech-llm|qwen|claude|gpt/i })
+    .first()
+    .waitFor({ timeout: 8_000 })
   await page.keyboard.press("Escape")
 })
 

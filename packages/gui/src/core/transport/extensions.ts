@@ -24,7 +24,11 @@ export interface LocationRef {
 export const PTY_CONNECT_TICKET_QUERY = "ticket"
 export const PTY_CONNECT_TOKEN_HEADER = "x-prioricode-ticket"
 
-const buildUrl = (transport: RawTransport, path: string, query?: Iterable<readonly [string, string | number | undefined]>) => {
+const buildUrl = (
+  transport: RawTransport,
+  path: string,
+  query?: Iterable<readonly [string, string | number | undefined]>,
+) => {
   const url = new URL(path, transport.baseUrl)
   if (query !== undefined) {
     for (const [key, value] of query) {
@@ -97,8 +101,12 @@ export function ptyConnectURL(
   const url = buildUrl({ baseUrl, fetch: globalThis.fetch }, `/api/pty/${encodeURIComponent(ptyID)}/connect`, [
     [PTY_CONNECT_TICKET_QUERY, options.ticket],
     ["cursor", options.cursor],
-    ...(options.location?.directory !== undefined ? ([["location[directory]", options.location.directory]] as const) : []),
-    ...(options.location?.workspace !== undefined ? ([["location[workspace]", options.location.workspace]] as const) : []),
+    ...(options.location?.directory !== undefined
+      ? ([["location[directory]", options.location.directory]] as const)
+      : []),
+    ...(options.location?.workspace !== undefined
+      ? ([["location[workspace]", options.location.workspace]] as const)
+      : []),
   ])
   url.protocol = url.protocol === "https:" ? "wss:" : "ws:"
   return url.toString()

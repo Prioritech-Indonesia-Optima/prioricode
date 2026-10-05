@@ -48,7 +48,10 @@ export function StatusBanner(props: {
         )}
       </div>
       {props.note !== undefined && (
-        <div role="alert" className="mt-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive">
+        <div
+          role="alert"
+          className="mt-1 rounded border border-destructive/40 bg-destructive/10 px-2 py-1 text-xs text-destructive"
+        >
           {props.note}
         </div>
       )}

@@ -23,7 +23,8 @@ export function normalizeEvent(value: unknown): RawEvent | undefined {
   const record = value as Record<string, unknown>
   if (typeof record.type !== "string") return undefined
   const data = record.data !== undefined ? record.data : record.properties
-  const durable = typeof record.durable === "object" && record.durable !== null ? (record.durable as RawEventDurable) : undefined
+  const durable =
+    typeof record.durable === "object" && record.durable !== null ? (record.durable as RawEventDurable) : undefined
   return {
     ...(typeof record.id === "string" ? { id: record.id } : {}),
     type: record.type,

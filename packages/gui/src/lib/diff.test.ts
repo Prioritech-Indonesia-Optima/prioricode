@@ -20,7 +20,7 @@ describe("diff helpers", () => {
   })
 
   it("extracts fenced diffs from tool summaries", () => {
-    const text = 'Edited file successfully: a.ts\n\n```diff\n-old\n+new\n```\nnotes'
+    const text = "Edited file successfully: a.ts\n\n```diff\n-old\n+new\n```\nnotes"
     expect(extractFencedDiff(text)).toBe("-old\n+new\n")
     expect(extractFencedDiff("no fence here")).toBeUndefined()
     expect(extractFencedDiff(undefined)).toBeUndefined()

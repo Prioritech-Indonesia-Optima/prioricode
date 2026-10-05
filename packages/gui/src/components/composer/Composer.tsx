@@ -14,7 +14,15 @@ const SNIFFED: Array<{ mime: string; test: (bytes: Uint8Array) => boolean }> = [
   { mime: "image/gif", test: (b) => b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 },
   {
     mime: "image/webp",
-    test: (b) => b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 && b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50,
+    test: (b) =>
+      b[0] === 0x52 &&
+      b[1] === 0x49 &&
+      b[2] === 0x46 &&
+      b[3] === 0x46 &&
+      b[8] === 0x57 &&
+      b[9] === 0x45 &&
+      b[10] === 0x42 &&
+      b[11] === 0x50,
   },
 ]
 
@@ -61,9 +69,15 @@ export function Composer(props: {
   const hits = useMemo(() => {
     const rows = find.data ?? []
     if (mention === undefined || mention.query.length === 0) return rows
-    const scored = fuzzysort.go(mention.query, rows.map((row) => row.path), { limit: 30 })
+    const scored = fuzzysort.go(
+      mention.query,
+      rows.map((row) => row.path),
+      { limit: 30 },
+    )
     const byPath = new Map(rows.map((row) => [row.path, row]))
-    const ordered = scored.map((result) => byPath.get(result.target)).filter((row): row is (typeof rows)[number] => row !== undefined)
+    const ordered = scored
+      .map((result) => byPath.get(result.target))
+      .filter((row): row is (typeof rows)[number] => row !== undefined)
     return ordered.length > 0 ? ordered : rows
   }, [find.data, mention])
 
@@ -98,7 +112,10 @@ export function Composer(props: {
       props.notice?.(`Skipped oversized image (${declaredName ?? "clipboard"}); max ~3.5 MB.`)
       return
     }
-    setAttachments((current) => [...current, { name: declaredName ?? `image.${mime.split("/")[1]}`, mime, dataBase64: toBase64(bytes) }])
+    setAttachments((current) => [
+      ...current,
+      { name: declaredName ?? `image.${mime.split("/")[1]}`, mime, dataBase64: toBase64(bytes) },
+    ])
   }
 
   const submit = () => {
@@ -118,7 +135,10 @@ export function Composer(props: {
       props.notice?.("Select a range in the active editor first.")
       return
     }
-    setDraft(draftKey, `${text}${text.endsWith(" ") || text.length === 0 ? "" : " "}${formatMention(selection.path, { start: selection.start, end: selection.end })} `)
+    setDraft(
+      draftKey,
+      `${text}${text.endsWith(" ") || text.length === 0 ? "" : " "}${formatMention(selection.path, { start: selection.start, end: selection.end })} `,
+    )
     textareaRef.current?.focus()
   }
 
@@ -137,7 +157,10 @@ export function Composer(props: {
               type="button"
               role="option"
               aria-selected={index === highlighted}
-              className={cn("block w-full truncate rounded px-2 py-1 text-start font-mono", index === highlighted ? "bg-accent" : "hover:bg-accent/60")}
+              className={cn(
+                "block w-full truncate rounded px-2 py-1 text-start font-mono",
+                index === highlighted ? "bg-accent" : "hover:bg-accent/60",
+              )}
               onMouseEnter={() => setHighlighted(index)}
               onMouseDown={(event) => {
                 event.preventDefault()
@@ -153,9 +176,19 @@ export function Composer(props: {
       {chips.length > 0 && (
         <div className="mb-1 flex flex-wrap gap-1">
           {chips.map((chip) => (
-            <span key={`${chip.index}-${chip.token}`} className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[11px]">
-              <bdi dir="ltr" className="max-w-[16rem] truncate font-mono">{chip.path}</bdi>
-              {chip.range !== undefined && <span className="text-muted-foreground">L{chip.range.start}{chip.range.end !== chip.range.start ? `-${chip.range.end}` : ""}</span>}
+            <span
+              key={`${chip.index}-${chip.token}`}
+              className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[11px]"
+            >
+              <bdi dir="ltr" className="max-w-[16rem] truncate font-mono">
+                {chip.path}
+              </bdi>
+              {chip.range !== undefined && (
+                <span className="text-muted-foreground">
+                  L{chip.range.start}
+                  {chip.range.end !== chip.range.start ? `-${chip.range.end}` : ""}
+                </span>
+              )}
               <button
                 type="button"
                 aria-label={`Remove ${chip.token}`}
@@ -171,8 +204,15 @@ export function Composer(props: {
       {attachments.length > 0 && (
         <div className="mb-1 flex flex-wrap gap-1">
           {attachments.map((attachment, index) => (
-            <span key={index} className="relative inline-flex items-center gap-1 rounded bg-muted px-1.5 py-1 pe-6 text-xs">
-              <img src={`data:${attachment.mime};base64,${attachment.dataBase64}`} alt={attachment.name ?? "attachment"} className="h-8 w-8 rounded object-cover" />
+            <span
+              key={index}
+              className="relative inline-flex items-center gap-1 rounded bg-muted px-1.5 py-1 pe-6 text-xs"
+            >
+              <img
+                src={`data:${attachment.mime};base64,${attachment.dataBase64}`}
+                alt={attachment.name ?? "attachment"}
+                className="h-8 w-8 rounded object-cover"
+              />
               <button
                 type="button"
                 aria-label="Remove attachment"

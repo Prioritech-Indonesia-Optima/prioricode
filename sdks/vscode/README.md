@@ -9,6 +9,7 @@ This extension talks to a running **prioricode server**. Install the [prioricode
 ## Features
 
 ### Chat panel
+
 Open the prioricode icon in the Activity Bar (or `prioricode: Open prioricode Chat`).
 
 - **Streaming transcript** with tool-call cards (running/success/error, expandable input and results), shell output, reasoning summaries, retry notes, and per-turn cost/token stats.
@@ -23,6 +24,7 @@ Open the prioricode icon in the Activity Bar (or `prioricode: Open prioricode Ch
 - **Steer or queue** mid-turn delivery, Stop button, RTL-ready layout, editor-theme matching.
 
 ### Terminal bridge
+
 - **Quick Launch**: `Cmd+Esc` (Mac) / `Ctrl+Esc` (Windows/Linux) opens prioricode in a split terminal; `Cmd/Ctrl+Shift+Esc` starts a fresh session.
 - **File references**: `Cmd+Option+K` (Mac) / `Alt+Ctrl+K` inserts `@File#L37-42` into the terminal prompt; clipboard images paste into the TUI with `Ctrl+V`.
 

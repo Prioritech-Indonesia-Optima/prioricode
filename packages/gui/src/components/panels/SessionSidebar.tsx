@@ -24,16 +24,30 @@ export function SessionSidebar(props: {
           placeholder="Search sessions…"
           className="min-w-0 flex-1 rounded border border-input bg-background px-2 py-1 text-xs"
         />
-        <button type="button" onClick={props.onNew} title="New session" className="rounded border border-border px-2 py-1 text-xs hover:bg-accent">
+        <button
+          type="button"
+          onClick={props.onNew}
+          title="New session"
+          className="rounded border border-border px-2 py-1 text-xs hover:bg-accent"
+        >
           +
         </button>
-        <button type="button" onClick={props.onClose} title="Hide sessions" className="rounded border border-border px-2 py-1 text-xs hover:bg-accent md:hidden">
+        <button
+          type="button"
+          onClick={props.onClose}
+          title="Hide sessions"
+          className="rounded border border-border px-2 py-1 text-xs hover:bg-accent md:hidden"
+        >
           ×
         </button>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {sessions.isPending && rows.length === 0 && <div className="p-3 text-xs text-muted-foreground">Loading sessions…</div>}
-        {sessions.isError && rows.length === 0 && <div className="p-3 text-xs text-destructive">Cannot list sessions.</div>}
+        {sessions.isPending && rows.length === 0 && (
+          <div className="p-3 text-xs text-muted-foreground">Loading sessions…</div>
+        )}
+        {sessions.isError && rows.length === 0 && (
+          <div className="p-3 text-xs text-destructive">Cannot list sessions.</div>
+        )}
         {rows.length === 0 && !sessions.isPending && (
           <div className="p-3 text-xs text-muted-foreground">No sessions yet.</div>
         )}
@@ -50,7 +64,9 @@ export function SessionSidebar(props: {
               )}
             >
               <div className="flex items-center gap-1.5">
-                {isActive && <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" aria-hidden />}
+                {isActive && (
+                  <span className="size-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500" aria-hidden />
+                )}
                 <span className="truncate font-medium">{session.title.length > 0 ? session.title : session.id}</span>
               </div>
               <div className="mt-0.5 flex items-center gap-2 truncate text-[10px] text-muted-foreground">

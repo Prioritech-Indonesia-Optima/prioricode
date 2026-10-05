@@ -19,7 +19,9 @@ export function AgentPicker(props: { current: Current }) {
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content className="z-50 min-w-[12rem] rounded-md border border-border bg-popover p-1 text-xs text-popover-foreground shadow-md">
-          <DropdownMenu.Label className="px-2 py-1 text-[10px] uppercase text-muted-foreground">Agent</DropdownMenu.Label>
+          <DropdownMenu.Label className="px-2 py-1 text-[10px] uppercase text-muted-foreground">
+            Agent
+          </DropdownMenu.Label>
           {visible.map((agent) => (
             <DropdownMenu.Item
               key={agent.id}
@@ -59,7 +61,9 @@ export function ModelPicker(props: { current: Current }) {
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content className="z-50 max-h-[24rem] min-w-[14rem] overflow-y-auto rounded-md border border-border bg-popover p-1 text-xs text-popover-foreground shadow-md">
-          <DropdownMenu.Label className="px-2 py-1 text-[10px] uppercase text-muted-foreground">Model</DropdownMenu.Label>
+          <DropdownMenu.Label className="px-2 py-1 text-[10px] uppercase text-muted-foreground">
+            Model
+          </DropdownMenu.Label>
           {list.map((model) => (
             <DropdownMenu.Item
               key={`${model.providerID}/${model.id}`}

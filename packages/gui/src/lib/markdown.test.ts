@@ -35,7 +35,7 @@ describe("renderMarkdown", () => {
   })
 
   it("tolerates partial markdown during token streaming", () => {
-    const html = renderMarkdown("```python\ndef hello():\n    print(\"hi\")\n``")
+    const html = renderMarkdown('```python\ndef hello():\n    print("hi")\n``')
     expect(html).toContain("gui-code")
   })
 })

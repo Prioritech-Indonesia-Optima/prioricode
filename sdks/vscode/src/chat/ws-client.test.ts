@@ -30,13 +30,20 @@ const parseClientFrame = (raw: Buffer): { opcode: number; payload: Buffer } => {
   return { opcode, payload }
 }
 
-function upgradeServer(onSocket: (socket: import("net").Socket, head: Buffer) => void): Promise<{ url: string; close: () => void }> {
+function upgradeServer(
+  onSocket: (socket: import("net").Socket, head: Buffer) => void,
+): Promise<{ url: string; close: () => void }> {
   return new Promise((resolve) => {
     const server = http.createServer()
     server.on("upgrade", (req, socket, head) => {
       const key = req.headers["sec-websocket-key"] ?? ""
-      const accept = crypto.createHash("sha1").update(key + GUID).digest("base64")
-      socket.write(`HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`)
+      const accept = crypto
+        .createHash("sha1")
+        .update(key + GUID)
+        .digest("base64")
+      socket.write(
+        `HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: ${accept}\r\n\r\n`,
+      )
       onSocket(socket as import("net").Socket, head)
     })
     server.listen(0, "127.0.0.1", () => {
@@ -60,7 +67,9 @@ describe("extension-host websocket client", () => {
     try {
       const ws = await createWebSocket(server.url)
       const received: string[] = []
-      ws.onMessage((data, isBinary) => received.push(`${isBinary ? "bin" : "txt"}:${Buffer.from(data).toString("utf8")}`))
+      ws.onMessage((data, isBinary) =>
+        received.push(`${isBinary ? "bin" : "txt"}:${Buffer.from(data).toString("utf8")}`),
+      )
       ws.send("hi")
       await new Promise((resolve) => setTimeout(resolve, 60))
       expect(received).toEqual(["bin:echo:hi"])

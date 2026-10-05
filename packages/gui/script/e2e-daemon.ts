@@ -39,7 +39,10 @@ const transport: AppTransport = {
   directory,
   defaultModel,
   openStream: async (route, signal) => {
-    const response = await fetch(`${registration.url}${route}`, { headers: { ...headers, accept: "text/event-stream" }, signal })
+    const response = await fetch(`${registration.url}${route}`, {
+      headers: { ...headers, accept: "text/event-stream" },
+      signal,
+    })
     if (!response.ok || response.body === null) throw new Error(`stream http ${response.status}`)
     return response
   },
@@ -59,7 +62,10 @@ while (Date.now() < deadline) {
   const assistant = snapshot.transcript.blocks.find((block) => block.kind === "assistant")
   if (assistant && assistant.kind === "assistant") {
     if (assistant.status === "done" && !snapshot.transcript.busy) {
-      const text = assistant.parts.filter((part) => part.type === "text").map((part) => (part.type === "text" ? part.text : "")).join("")
+      const text = assistant.parts
+        .filter((part) => part.type === "text")
+        .map((part) => (part.type === "text" ? part.text : ""))
+        .join("")
       if (!text.includes(marker)) throw new Error(`marker missing; reply was: ${text.slice(0, 200)}`)
       console.log("assistant text ok:", text.slice(0, 80).replace(/\n/g, " "))
       console.log("session:", snapshot.sessionID, "lastSeq:", store.getSnapshot().transcript.lastSeq)

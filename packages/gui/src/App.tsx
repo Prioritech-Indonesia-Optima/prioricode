@@ -65,7 +65,11 @@ export function App() {
       <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
         <p>{bootError ?? "Connecting to prioricode…"}</p>
         {bootError !== undefined && (
-          <button type="button" className="rounded border border-border px-2 py-1" onClick={() => setBootKey((key) => key + 1)}>
+          <button
+            type="button"
+            className="rounded border border-border px-2 py-1"
+            onClick={() => setBootKey((key) => key + 1)}
+          >
             Retry
           </button>
         )}
@@ -115,10 +119,14 @@ function Shell() {
 
   const actions = useMemo(
     () => ({
-      onPermissionReply: (requestID: string, reply: "once" | "always" | "reject") => void store.replyPermission(requestID, reply),
+      onPermissionReply: (requestID: string, reply: "once" | "always" | "reject") =>
+        void store.replyPermission(requestID, reply),
       onQuestionReply: (requestID: string, answers: string[][]) => void store.replyQuestion(requestID, answers),
       onQuestionReject: (requestID: string) => void store.rejectQuestion(requestID),
-      onRevertTo: snapshot?.sessionID === undefined || snapshot.status !== "ready" || snapshot.transcript.busy ? undefined : (messageID: string) => void store.stageRevert(messageID),
+      onRevertTo:
+        snapshot?.sessionID === undefined || snapshot.status !== "ready" || snapshot.transcript.busy
+          ? undefined
+          : (messageID: string) => void store.stageRevert(messageID),
     }),
     [store, snapshot?.sessionID, snapshot?.status, snapshot?.transcript.busy],
   )
@@ -202,10 +210,18 @@ function Shell() {
             >
               Compact
             </button>
-            <button type="button" onClick={() => setServerOpen(true)} className="rounded border border-border px-2 py-0.5 text-xs hover:bg-accent">
+            <button
+              type="button"
+              onClick={() => setServerOpen(true)}
+              className="rounded border border-border px-2 py-0.5 text-xs hover:bg-accent"
+            >
               Server
             </button>
-            <button type="button" onClick={store.newSession} className="rounded border border-border px-2 py-0.5 text-xs hover:bg-accent">
+            <button
+              type="button"
+              onClick={store.newSession}
+              className="rounded border border-border px-2 py-0.5 text-xs hover:bg-accent"
+            >
               New
             </button>
           </div>
@@ -222,21 +238,29 @@ function Shell() {
           <button
             type="button"
             onClick={() => setView("chat")}
-            className={cn("rounded px-2 py-0.5", view === "chat" ? "bg-accent font-medium" : "text-muted-foreground hover:bg-accent/60")}
+            className={cn(
+              "rounded px-2 py-0.5",
+              view === "chat" ? "bg-accent font-medium" : "text-muted-foreground hover:bg-accent/60",
+            )}
           >
             Chat
           </button>
           <button
             type="button"
             onClick={() => setView("terminal")}
-            className={cn("rounded px-2 py-0.5", view === "terminal" ? "bg-accent font-medium" : "text-muted-foreground hover:bg-accent/60")}
+            className={cn(
+              "rounded px-2 py-0.5",
+              view === "terminal" ? "bg-accent font-medium" : "text-muted-foreground hover:bg-accent/60",
+            )}
           >
             Terminal
           </button>
         </div>
         <div className={cn("flex min-h-0 flex-1 flex-col", view !== "chat" && "hidden")}>
           {snapshot.restoring ? (
-            <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">Restoring session…</div>
+            <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
+              Restoring session…
+            </div>
           ) : snapshot.transcript.blocks.length === 0 ? (
             <EmptyTranscript />
           ) : (
