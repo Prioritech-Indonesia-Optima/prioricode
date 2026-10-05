@@ -150,8 +150,8 @@
   },
   "scripts": {
     "vscode:prepublish": "bun run package",
-    "build:ui": "bun --cwd ../ide-ui run build",
-    "build:ui:production": "bun --cwd ../ide-ui run build:production",
+    "build:ui": "bun run --cwd ../../packages/gui build",
+    "build:ui:production": "bun run --cwd ../../packages/gui build",
     "compile": "bun run check-types && bun run lint && bun run build:ui && node esbuild.js",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",

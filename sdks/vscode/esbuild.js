@@ -5,13 +5,13 @@ const path = require("path")
 const production = process.argv.includes("--production")
 const watch = process.argv.includes("--watch")
 
-function copyIdeAssets() {
-  const source = path.join(__dirname, "..", "ide-ui", "dist")
+function copyGuiAssets() {
+  const source = path.join(__dirname, "..", "..", "packages", "gui", "dist")
   const target = path.join(__dirname, "dist")
-  for (const file of ["ide-chat.js", "ide-chat.css"]) {
+  for (const file of ["webview.js", "webview.css"]) {
     const from = path.join(source, file)
     if (!fs.existsSync(from)) {
-      throw new Error(`Missing ${file}: run 'bun run build:ui' (or build packages in sdks/ide-ui) before packaging`)
+      throw new Error(`Missing ${file}: run 'bun run build:ui' (builds packages/gui) before packaging`)
     }
     fs.copyFileSync(from, path.join(target, file))
   }
@@ -54,28 +54,12 @@ async function main() {
       esbuildProblemMatcherPlugin,
     ],
   })
-  const webviewCtx = await esbuild.context({
-    entryPoints: ["src/chat/webview-ui.ts"],
-    bundle: true,
-    format: "iife",
-    target: "es2020",
-    minify: production,
-    sourcemap: !production,
-    sourcesContent: false,
-    platform: "browser",
-    outfile: "dist/webview.js",
-    logLevel: "silent",
-    plugins: [esbuildProblemMatcherPlugin],
-  })
   if (watch) {
     await ctx.watch()
-    await webviewCtx.watch()
   } else {
     await ctx.rebuild()
-    await webviewCtx.rebuild()
     await ctx.dispose()
-    await webviewCtx.dispose()
-    copyIdeAssets()
+    copyGuiAssets()
   }
 }
 

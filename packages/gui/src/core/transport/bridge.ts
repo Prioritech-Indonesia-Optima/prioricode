@@ -7,34 +7,41 @@
  * `fetch` because `PrioriCode.make({ fetch })` is the client's only I/O seam.
  *
  * Wire protocol (postMessage JSON only):
- *   webview -> host: ready | req | open | cancel
+ *   webview -> host: ready | retry | req | open | cancel
  *   host -> webview: config | res | open-head | chunk | end
  *
  * Stream chunks carry base64 of raw bytes so multibyte characters may split
  * across chunk boundaries safely; the SSE framing is parsed downstream by the
  * client exactly as in direct mode.
+ *
+ * Host counterpart: sdks/vscode/src/chat/bridge.ts
  */
 
 export const SSE_ROUTE_PATTERN = /^\/api\/(event|session\/[^/]+\/event)(\?.*)?$/
+
+export type BridgeConfigStatus = "connecting" | "ready" | "offline" | "auth-mismatch" | "no-cli"
 
 export interface BridgeWebviewApi {
   postMessage: (message: unknown) => void
 }
 
-export interface BridgeTargetConfig {
+export interface BridgeConfig {
+  status: BridgeConfigStatus
   baseUrl: string
   directory?: string
   serverLabel?: string
+  detail?: string
 }
 
 export type BridgeOutbound =
   | { kind: "ready" }
+  | { kind: "retry" }
   | { kind: "req"; id: string; method: string; path: string; headers?: Record<string, string>; body?: string }
   | { kind: "open"; id: string; path: string }
   | { kind: "cancel"; id: string }
 
 export type BridgeInbound =
-  | { kind: "config"; baseUrl: string; directory?: string; serverLabel?: string }
+  | { kind: "config"; status: BridgeConfigStatus; baseUrl: string; directory?: string; serverLabel?: string; detail?: string }
   | { kind: "res"; id: string; status: number; headers: Record<string, string>; text?: string; bodyBase64?: string }
   | { kind: "open-head"; id: string; status: number; headers: Record<string, string> }
   | { kind: "chunk"; id: string; dataBase64: string }
@@ -49,11 +56,14 @@ interface PendingStream {
   head: (response: BridgeInbound & { kind: "open-head" }) => void
   controller: ReadableStreamDefaultController<Uint8Array>
   fail: (message: string) => void
+  headed: boolean
 }
 
 export interface BridgeHandle {
   onMessage: (message: unknown) => void
-  target: () => Promise<BridgeTargetConfig>
+  onConfig: (listener: (config: BridgeConfig) => void) => () => void
+  target: () => Promise<BridgeConfig>
+  retry: () => void
   fetch: typeof globalThis.fetch
   dispose: () => void
 }
@@ -87,11 +97,13 @@ export function createBridge(options: {
   const nextID = options.nextID ?? (() => `gui_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`)
   const requests = new Map<string, PendingRequest>()
   const streams = new Map<string, PendingStream>()
-  let configValue: BridgeTargetConfig | undefined
-  let resolveConfig: (config: BridgeTargetConfig) => void = () => {}
-  const configPromise = new Promise<BridgeTargetConfig>((resolve) => {
-    resolveConfig = resolve
+  const configListeners = new Set<(config: BridgeConfig) => void>()
+  let latestConfig: BridgeConfig | undefined
+  let resolveReady: (config: BridgeConfig) => void = () => {}
+  const readyPromise = new Promise<BridgeConfig>((resolve) => {
+    resolveReady = resolve
   })
+  let readyResolved = false
   let readySent = false
 
   const sendReady = () => {
@@ -106,9 +118,18 @@ export function createBridge(options: {
     if (typeof frame !== "object" || frame === null || typeof (frame as { kind?: unknown }).kind !== "string") return
     switch (frame.kind) {
       case "config": {
-        if (configValue === undefined) {
-          configValue = { baseUrl: frame.baseUrl, directory: frame.directory, serverLabel: frame.serverLabel }
-          resolveConfig(configValue)
+        const config: BridgeConfig = {
+          status: frame.status,
+          baseUrl: frame.baseUrl,
+          directory: frame.directory,
+          serverLabel: frame.serverLabel,
+          detail: frame.detail,
+        }
+        latestConfig = config
+        for (const listener of configListeners) listener(config)
+        if (!readyResolved && config.status === "ready") {
+          readyResolved = true
+          resolveReady(config)
         }
         return
       }
@@ -120,17 +141,27 @@ export function createBridge(options: {
         return
       }
       case "open-head": {
-        streams.get(frame.id)?.head(frame)
+        const stream = streams.get(frame.id)
+        if (stream === undefined) return
+        stream.headed = true
+        stream.head(frame)
         return
       }
       case "chunk": {
-        streams.get(frame.id)?.controller.enqueue(decodeBase64(frame.dataBase64))
+        const stream = streams.get(frame.id)
+        if (stream === undefined) return
+        stream.controller.enqueue(decodeBase64(frame.dataBase64))
         return
       }
       case "end": {
         const stream = streams.get(frame.id)
         if (stream === undefined) return
         streams.delete(frame.id)
+        if (!stream.headed) {
+          stream.headed = true
+          stream.fail(frame.error ?? "stream ended before response head")
+          return
+        }
         if (frame.error !== undefined) stream.controller.error(new Error(frame.error))
         else stream.controller.close()
         return
@@ -140,10 +171,10 @@ export function createBridge(options: {
 
   const unsubscribe = options.subscribe(onMessage)
 
-  const target = async (): Promise<BridgeTargetConfig> => {
-    if (configValue !== undefined) return configValue
+  const target = async (): Promise<BridgeConfig> => {
+    if (latestConfig?.status === "ready") return latestConfig
     sendReady()
-    return configPromise
+    return readyPromise
   }
 
   const fetchImpl = async (input: URL | RequestInfo, init?: RequestInit): Promise<Response> => {
@@ -169,12 +200,14 @@ export function createBridge(options: {
         settleHead = resolve
         rejectHead = reject
       })
+      headPromise.catch(() => {})
       const body = new ReadableStream<Uint8Array>({
         start(controller) {
           streams.set(id, {
             head: settleHead,
             controller,
             fail: (message) => controller.error(new Error(message)),
+            headed: false,
           })
         },
         cancel() {
@@ -219,14 +252,25 @@ export function createBridge(options: {
       postCancel()
     })
     const frame = await responsePromise
-    const body =
-      frame.bodyBase64 !== undefined ? decodeBase64(frame.bodyBase64) : frame.text !== undefined ? frame.text : null
+    const body = frame.bodyBase64 !== undefined ? decodeBase64(frame.bodyBase64) : frame.text !== undefined ? frame.text : null
     return new Response(body as BodyInit, { status: frame.status, headers: new Headers(frame.headers) })
   }
 
   return {
     onMessage,
+    onConfig: (listener) => {
+      configListeners.add(listener)
+      if (latestConfig !== undefined) listener(latestConfig)
+      return () => {
+        configListeners.delete(listener)
+      }
+    },
     target,
+    retry: () => {
+      readySent = false
+      sendReady()
+      options.api.postMessage({ kind: "retry" } satisfies BridgeOutbound)
+    },
     fetch: fetchImpl as unknown as typeof globalThis.fetch,
     dispose() {
       unsubscribe()
@@ -234,6 +278,7 @@ export function createBridge(options: {
       requests.clear()
       for (const [, stream] of streams) stream.fail("bridge disposed")
       streams.clear()
+      configListeners.clear()
     },
   }
 }

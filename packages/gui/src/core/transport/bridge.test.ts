@@ -26,7 +26,7 @@ function fakeHost(options: FakeHostOptions & { directory?: string }) {
 
   const dispatch = async (frame: BridgeOutbound) => {
     if (frame.kind === "ready") {
-      toWebview({ kind: "config", baseUrl: "http://prioricode.local", directory: options.directory ?? "/repo" })
+      toWebview({ kind: "config", status: "ready", baseUrl: "http://prioricode.local", directory: options.directory ?? "/repo" })
       return
     }
     if (frame.kind === "cancel") {
@@ -88,7 +88,7 @@ describe("bridge transport", () => {
     const bridge = createBridge({ api: host.api, subscribe: host.subscribe })
     const client = createGuiClient({ baseUrl: "http://prioricode.local", fetch: bridge.fetch })
     const config = await bridge.target()
-    expect(config).toMatchObject({ baseUrl: "http://prioricode.local", directory: "/repo" })
+    expect(config).toMatchObject({ status: "ready", baseUrl: "http://prioricode.local", directory: "/repo" })
     const health = await client.health.get()
     expect(health).toEqual({ healthy: true })
     expect(host.requests).toContain("GET /api/health")
