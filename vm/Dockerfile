@@ -12,7 +12,6 @@ FROM oven/bun:1
 WORKDIR /app
 
 COPY packages/tui/src/clipboard-terminal.ts /app/packages/tui/src/
-COPY packages/tui/src/paste-bridge.ts       /app/packages/tui/src/
 COPY packages/tui/src/clipboard.ts          /app/packages/tui/src/
 COPY packages/tui/src/clipboard-scenario.ts /app/packages/tui/src/
 COPY packages/tui/src/clipboard-win32.ts    /app/packages/tui/src/
