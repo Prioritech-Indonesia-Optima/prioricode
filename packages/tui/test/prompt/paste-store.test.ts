@@ -53,7 +53,11 @@ test("each paste lands as its own file", async () => {
 
 test("empty payload rejects so callers keep their inline fallback", async () => {
   const state = await tempDir()
-  await expect(savePastedImage({ directory: pasteDirectory(state), mime: "image/png", base64: "" })).rejects.toThrow()
+  const thrown = await savePastedImage({ directory: pasteDirectory(state), mime: "image/png", base64: "" }).then(
+    () => undefined,
+    (error: unknown) => error,
+  )
+  expect(thrown).toBeInstanceOf(Error)
 })
 
 test("save prunes entries past the TTL without touching fresh ones", async () => {

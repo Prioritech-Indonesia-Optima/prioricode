@@ -36,4 +36,6 @@ works via the terminal's own bracketed paste.
 
 **Fixes (any one):** use a terminal that answers the kitty protocol
 (kitty/ghostty/wezterm) · use the PrioriCode VS Code extension · copy the file
-to the host and paste its path.
+to the host and paste its path. Whatever channel carries the bytes, they now
+land as a **private file** (`<state>/paste`, `0700`/`0600`, TTL-pruned) and the
+prompt attaches that path — the same uniform result locally and remotely.

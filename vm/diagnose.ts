@@ -18,7 +18,9 @@
 // host clipboard.
 
 import { spawnSync } from "node:child_process"
-import { readFile, rm } from "node:fs/promises"
+import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
 import {
   readTerminalClipboard,
   encodeOsc52Query,
@@ -27,6 +29,7 @@ import {
 } from "../packages/tui/src/clipboard-terminal"
 import { readClipboard, type ClipboardEnvironment, type Content } from "../packages/tui/src/clipboard"
 import { clipboardSignals, resolveScenario, pasteMissHint } from "../packages/tui/src/clipboard-scenario"
+import { pasteDirectory, savePastedImage } from "../packages/tui/src/component/prompt/paste-store"
 
 const ESC = "\x1b"
 const BEL = "\x07"
@@ -61,7 +64,7 @@ function frame52(payloadB64: string): string {
 function parseReadRequest(seq: string): { id: string; mimes: string[] } | undefined {
   const match = seq.match(/\x1b\]5522;(.+)\x07/s)
   if (!match) return undefined
-  const body = match[1]!
+  const body = match[1]
   const sep = body.indexOf(";")
   const meta = sep === -1 ? body : body.slice(0, sep)
   const mimesB64 = sep === -1 ? "" : body.slice(sep + 1)
@@ -152,7 +155,7 @@ function hostEnvironment(overrides?: Partial<ClipboardEnvironment>): ClipboardEn
     platform: "linux",
     wsl: false,
     tmp: "/tmp",
-    has: overrides?.has ?? ((name) => Boolean(tools[name])),
+    has: overrides?.has ?? ((name) => tools[name]),
     run,
     read: (file) => readFile(file),
     remove: (file) => rm(file, { force: true }),
@@ -188,8 +191,8 @@ async function runPasteDecision(opts: {
 // independent of the channels above (packages/tui/src/component/prompt/index.tsx).
 // ---------------------------------------------------------------------------
 
-function decodePasteBytes(bytes: Buffer | string): string {
-  return typeof bytes === "string" ? bytes : bytes.toString("utf8")
+function decodePasteBytes(bytes: string): string {
+  return bytes
 }
 function bracketedPaste(raw: string): string {
   const start = raw.indexOf(`${ESC}[200~`)
@@ -287,6 +290,27 @@ async function main(): Promise<void> {
       `local+xclip: ${localWithXclip?.mime ?? "miss"}   |   headless remote: ${headless?.mime ?? "miss"}`,
   )
 
+  // --- Landing seam: every delivered image becomes a private file on the box --
+  console.log(line())
+  const stateDir = await mkdtemp(path.join(tmpdir(), "prioricode-paste-state-"))
+  const directory = pasteDirectory(stateDir)
+  const landed = await savePastedImage({ directory, mime: "image/png", base64: TINY_PNG_B64 })
+  const landedBytes = await readFile(landed)
+  const landedMode = (await stat(landed)).mode & 0o777
+  const dirMode = (await stat(directory)).mode & 0o777
+  console.log("  " + "image landing".padEnd(20) + directory + "/" + path.basename(landed))
+  console.log(
+    "      file mode " +
+      landedMode.toString(8) +
+      ", dir mode " +
+      dirMode.toString(8) +
+      `, ${landedBytes.length} bytes — attach references this path.`,
+  )
+  console.log("      All sources (host read / OSC 5522 / VS Code upload POST) converge here, so a")
+  console.log("      pasted image is always a real file on the box. Production uses the private")
+  console.log("      state dir — never world-readable /tmp.")
+  await rm(stateDir, { recursive: true, force: true })
+
   // --- Root cause -----------------------------------------------------------
   console.log("\n" + line("═"))
   console.log("  WHY Windows → Linux Ctrl+V (image) fails")
@@ -309,6 +333,8 @@ async function main(): Promise<void> {
   console.log("  Fixes (any one): (a) use a terminal that answers the kitty protocol")
   console.log("  (kitty/ghostty/wezterm), (b) use the PrioriCode VS Code extension, or")
   console.log("  (c) copy the file to the host (scp, WinSCP) and paste its path.")
+  console.log("  Whatever carries the bytes, they now land as a private file on the box and")
+  console.log("  the prompt attaches that path — one uniform result for local and remote.")
   console.log(line("═"))
 
   // Sanity assertions so the VM is self-verifying.
@@ -318,6 +344,9 @@ async function main(): Promise<void> {
   if (winText !== CLIP_TEXT) problems.push(`bracketed paste recovered wrong text: ${winText}`)
   if (localWithXclip?.mime !== "text/plain") problems.push("host channel with xclip did not return text")
   if (headless !== undefined) problems.push("headless host read unexpectedly returned content")
+  if (landedMode !== 0o600) problems.push("landed image file not mode 0600")
+  if (dirMode !== 0o700) problems.push("landing dir not mode 0700")
+  if (!landedBytes.equals(Buffer.from(TINY_PNG_B64, "base64"))) problems.push("landed bytes differ from delivered image")
   if (problems.length) {
     console.error(`\n  SELF-CHECK FAILED: ${problems.join("; ")}`)
     process.exitCode = 1

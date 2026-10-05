@@ -15,6 +15,7 @@ COPY packages/tui/src/clipboard-terminal.ts /app/packages/tui/src/
 COPY packages/tui/src/clipboard.ts          /app/packages/tui/src/
 COPY packages/tui/src/clipboard-scenario.ts /app/packages/tui/src/
 COPY packages/tui/src/clipboard-win32.ts    /app/packages/tui/src/
+COPY packages/tui/src/component/prompt/paste-store.ts /app/packages/tui/src/component/prompt/
 COPY vm/diagnose.ts                         /app/vm/
 
 # Model a remote SSH session on a headless host (diagnose.ts also sets these,
