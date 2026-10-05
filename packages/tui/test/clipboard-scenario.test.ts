@@ -39,6 +39,7 @@ test("terminal-aware remote guidance", () => {
   expect(pasteMissHint({ platform: "linux", remote: true, terminal: "vscode" })).toContain(
     "PrioriCode VS Code extension",
   )
+  expect(pasteMissHint({ platform: "linux", remote: true, terminal: "vscode" })).toContain("drag")
   const kitty = pasteMissHint({ platform: "linux", remote: true, terminal: "kitty" })
   expect(kitty).toContain("permission popup")
   expect(kitty).toContain("Ctrl+V can fetch the clipboard")
