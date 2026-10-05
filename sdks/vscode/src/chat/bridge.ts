@@ -27,6 +27,7 @@ export interface BridgeHostDeps {
   resolveServer: () => Promise<BridgeServerResult>
   directory: () => string | undefined
   serverLabel?: (url: string) => string | undefined
+  openExternal?: (url: string) => void
   fetchImpl?: typeof fetch
   log?: (message: string) => void
   coalesceMs?: number
@@ -44,6 +45,7 @@ export interface BridgeHost {
 type WebviewFrame =
   | { kind: "ready" }
   | { kind: "retry" }
+  | { kind: "openExternal"; url: string }
   | { kind: "req"; id: string; method: string; path: string; headers?: Record<string, string>; body?: string }
   | { kind: "open"; id: string; path: string }
   | { kind: "cancel"; id: string }
@@ -247,6 +249,16 @@ export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
           lastConfig = undefined
           void pushConfig()
           return
+        case "openExternal": {
+          if (typeof frame.url !== "string") return
+          try {
+            const protocol = new URL(frame.url).protocol
+            if (protocol === "https:" || protocol === "http:" || protocol === "mailto:") deps.openExternal?.(frame.url)
+          } catch {
+            // reject malformed URLs quietly
+          }
+          return
+        }
         case "cancel": {
           controllers.get(frame.id)?.abort()
           controllers.delete(frame.id)

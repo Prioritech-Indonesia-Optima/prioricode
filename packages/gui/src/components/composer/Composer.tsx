@@ -27,6 +27,7 @@ const toBase64 = (bytes: Uint8Array): string => {
 export interface ComposerSubmit {
   text: string
   attachments: OutgoingAttachment[]
+  delivery: "steer" | "queue"
 }
 
 export function Composer(props: {
@@ -71,7 +72,7 @@ export function Composer(props: {
     setHistoryIndex(-1)
     const sent = attachments
     setAttachments([])
-    props.onSend({ text: value, attachments: sent })
+    props.onSend({ text: value, attachments: sent, delivery })
   }
 
   return (

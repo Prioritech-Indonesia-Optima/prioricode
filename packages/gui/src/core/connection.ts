@@ -10,6 +10,8 @@ export interface ConnectionOptions {
   sleep?: (ms: number) => Promise<void>
   random?: () => number
   heartbeatTimeoutMs?: number
+  /** Resume the durable spine after a transcript restored from history. */
+  initialLastSeq?: number
   /**
    * The durable per-session stream carries no heartbeat, so a dead-but-open
    * connection is indistinguishable from an idle session by reading alone.
@@ -34,7 +36,7 @@ export function createConnection(options: ConnectionOptions): Connection {
   const sessionID = options.sessionID
   const seenLive = new Set<string>()
   let stopped = true
-  let lastSeq = 0
+  let lastSeq = options.initialLastSeq ?? 0
   let durableController: AbortController | undefined
   let liveController: AbortController | undefined
 

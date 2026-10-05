@@ -39,6 +39,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       resolveServer: () => this.resolveServer(),
       directory: () => this.workspaceDirectory(),
       serverLabel: (url) => this.hostLabel(url),
+      openExternal: (url) => void vscode.env.openExternal(vscode.Uri.parse(url)),
       log: (message) => console.log("[prioricode chat]", message),
     })
     this.disposables.push(

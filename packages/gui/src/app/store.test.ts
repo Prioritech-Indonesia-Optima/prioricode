@@ -15,6 +15,7 @@ interface HarnessOptions {
   directory?: string
   client?: string
   events?: Record<string, unknown>[]
+  history?: (input: { sessionID: string; after?: number; limit?: number }) => { data: unknown[]; hasMore: boolean }
 }
 
 function harness(options: HarnessOptions = {}) {
@@ -47,6 +48,8 @@ function harness(options: HarnessOptions = {}) {
         createCalls.push(input)
         return { id: "ses_fake" }
       },
+      history: async (input: { sessionID: string; after?: number; limit?: number }) =>
+        options.history === undefined ? { data: [], hasMore: false } : options.history(input),
       prompt: async (input: Record<string, unknown>) => {
         promptCalls.push(input)
       },
@@ -65,6 +68,7 @@ function harness(options: HarnessOptions = {}) {
     status: "ready",
     directory: "directory" in options ? options.directory : "/tmp/project",
     openStream,
+    openExternal: () => {},
     retry: () => {},
   }
   const store = createChatStore(transport)
@@ -126,6 +130,44 @@ describe("chat store", () => {
     const h = harness()
     await h.store.send("queued", [], { delivery: "queue" })
     expect(h.promptCalls[0]).toMatchObject({ delivery: "queue" })
+    h.store.dispose()
+  })
+
+  it("restores a session by replaying durable history, then tails after the last seq", async () => {
+    const history = [
+      {
+        id: "e1",
+        type: "session.next.prompt.admitted",
+        durable: { aggregateID: "ses_old", seq: 3, version: 1 },
+        data: { sessionID: "ses_old", timestamp: 0, messageID: "msg_u1", delivery: "steer", prompt: { text: "earlier question" } },
+      },
+      {
+        id: "e2",
+        type: "session.next.text.ended",
+        durable: { aggregateID: "ses_old", seq: 5, version: 1 },
+        data: { sessionID: "ses_old", timestamp: 0, assistantMessageID: "msg_a1", textID: "t1", text: "earlier answer" },
+      },
+    ]
+    const h = harness({ history: () => ({ data: history, hasMore: false }) })
+    h.store.selectSession("ses_old")
+    await waitFor(() => {
+      const s = h.store.getSnapshot()
+      return !s.restoring && s.transcript.blocks.length > 0
+    }, "restored blocks")
+    const state = h.store.getSnapshot()
+    expect(state.sessionID).toBe("ses_old")
+    expect(state.transcript.blocks.map((block) => block.kind)).toEqual(["user", "assistant"])
+    expect(h.postedStreams.some((route) => route.includes("after=5"))).toBe(true)
+    h.store.dispose()
+  })
+
+  it("selectSession(undefined) returns to a fresh composer state", async () => {
+    const h = harness({ history: () => ({ data: [], hasMore: false }) })
+    h.store.selectSession("ses_old")
+    await waitFor(() => !h.store.getSnapshot().restoring, "restore settle")
+    h.store.selectSession(undefined)
+    expect(h.store.getSnapshot().sessionID).toBeUndefined()
+    expect(h.store.getSnapshot().transcript.blocks.length).toBe(0)
     h.store.dispose()
   })
 

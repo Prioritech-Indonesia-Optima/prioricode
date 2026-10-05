@@ -266,10 +266,11 @@ const upsertPart = <P extends AssistantPart>(
   return { next, part }
 }
 
-const isTextPart = (part: AssistantPart): part is TextPart => part.type === "text"
-const isReasoningPart = (part: AssistantPart): part is ReasoningPart => part.type === "reasoning"
-const isToolPart = (part: AssistantPart): part is ToolPart => part.type === "tool"
-const isShellPart = (part: AssistantPart): part is ShellPart => part.type === "shell"
+const isTextPartWith = (textID: string) => (part: AssistantPart): part is TextPart => part.type === "text" && part.textID === textID
+const isReasoningPartWith =
+  (reasoningID: string) => (part: AssistantPart): part is ReasoningPart => part.type === "reasoning" && part.reasoningID === reasoningID
+const isToolPartWith = (callID: string) => (part: AssistantPart): part is ToolPart => part.type === "tool" && part.callID === callID
+const isShellPartWith = (callID: string) => (part: AssistantPart): part is ShellPart => part.type === "shell" && part.callID === callID
 
 const applyText = (
   state: TranscriptState,
@@ -277,7 +278,7 @@ const applyText = (
   textID: string,
   mutate: (part: { text: string; streaming: boolean }) => void,
 ): TranscriptState => {
-  const { next, part } = upsertPart(state, assistantID, isTextPart, () => ({ type: "text", textID, text: "", streaming: true }))
+  const { next, part } = upsertPart(state, assistantID, isTextPartWith(textID), () => ({ type: "text", textID, text: "", streaming: true }))
   mutate(part)
   return next
 }
@@ -288,7 +289,7 @@ const applyReasoning = (
   reasoningID: string,
   mutate: (part: { text: string; streaming: boolean }) => void,
 ): TranscriptState => {
-  const { next, part } = upsertPart(state, assistantID, isReasoningPart, () => ({
+  const { next, part } = upsertPart(state, assistantID, isReasoningPartWith(reasoningID), () => ({
     type: "reasoning",
     reasoningID,
     text: "",
@@ -305,7 +306,7 @@ const applyTool = (
   mutate: (part: { state: "running" | "success" | "error"; name?: string; input?: string; summary?: string; progress?: string; error?: string }) => void,
   name?: string,
 ): TranscriptState => {
-  const { next, part } = upsertPart(state, assistantID, isToolPart, () => ({
+  const { next, part } = upsertPart(state, assistantID, isToolPartWith(callID), () => ({
     type: "tool",
     callID,
     name: name ?? "tool",
@@ -317,7 +318,7 @@ const applyTool = (
 }
 
 const applyShell = (state: TranscriptState, messageID: string, callID: string, command: string): TranscriptState => {
-  const { next, part } = upsertPart(state, messageID, isShellPart, () => ({
+  const { next, part } = upsertPart(state, messageID, isShellPartWith(callID), () => ({
     type: "shell",
     callID,
     command,

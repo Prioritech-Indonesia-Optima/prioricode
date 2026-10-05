@@ -13,6 +13,7 @@ export interface AppTransport {
   serverLabel?: string
   defaultModel?: { id: string; providerID: string }
   openStream: (route: string, signal: AbortSignal) => Promise<Response>
+  openExternal: (url: string) => void
   retry: () => void
   bridge?: BridgeHandle
 }
@@ -50,6 +51,9 @@ function webTransport(target: DirectTarget): AppTransport {
     directory: target.directory,
     openStream: (route, signal) =>
       assertStream(fetch(`${baseUrl}${route}`, { headers: { ...headers, accept: "text/event-stream" }, signal })),
+    openExternal: (url) => {
+      globalThis.open(url, "_blank", "noopener")
+    },
     retry: () => {},
   }
 }
@@ -102,6 +106,7 @@ async function vscodeTransport(): Promise<AppTransport> {
     statusDetail: config?.detail,
     directory: config?.directory,
     openStream: (route, signal) => assertStream(bridge.fetch(`http://prioricode.invalid${route}`, { signal })),
+    openExternal: (url) => api.postMessage({ kind: "openExternal", url }),
     retry: () => bridge.retry(),
     bridge,
   }
@@ -117,6 +122,7 @@ async function vscodeTransport(): Promise<AppTransport> {
     serverLabel: config.serverLabel,
     openStream: (route, signal) =>
       assertStream(bridge.fetch(`${config.baseUrl}${route}`, { headers: { accept: "text/event-stream" }, signal })),
+    openExternal: (url) => api.postMessage({ kind: "openExternal", url }),
     retry: () => bridge.retry(),
     bridge,
   }

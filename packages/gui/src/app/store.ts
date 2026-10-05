@@ -1,5 +1,5 @@
 import { createConnection, type Connection } from "../core/connection"
-import type { RawEvent } from "../core/events/normalize"
+import { normalizeEvent, type RawEvent } from "../core/events/normalize"
 import {
   emptyTranscript,
   foldTranscript,
@@ -19,6 +19,7 @@ export interface StoreState {
   serverLabel?: string
   directory?: string
   sessionID?: string
+  restoring: boolean
   transcript: TranscriptState
   note?: string
 }
@@ -31,7 +32,10 @@ export interface ChatStore {
   replyPermission: (requestID: string, reply: PermissionReply) => Promise<void>
   replyQuestion: (requestID: string, answers: string[][]) => Promise<void>
   rejectQuestion: (requestID: string) => Promise<void>
+  selectSession: (sessionID: string | undefined) => void
   newSession: () => void
+  setAgent: (agent: string) => Promise<void>
+  setModel: (model: { id: string; providerID: string; variant?: string }) => Promise<void>
   retry: () => void
   notify: (message: string) => void
   setConfig: (status: StoreStatus, detail?: string) => void
@@ -41,6 +45,8 @@ export interface ChatStore {
 const newMessageID = () => `msg_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
 const MAX_ATTACHMENT_BASE64 = Math.ceil(3_500_000 / 3) * 4
 const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"])
+const HISTORY_PAGE = 100
+const HISTORY_MAX_PAGES = 200
 
 const attachmentFile = (attachment: OutgoingAttachment) => ({
   uri: `data:${attachment.mime};base64,${attachment.dataBase64}`,
@@ -53,6 +59,7 @@ export function createChatStore(transport: AppTransport): ChatStore {
     statusDetail: transport.statusDetail,
     serverLabel: transport.serverLabel,
     directory: transport.directory,
+    restoring: false,
     transcript: emptyTranscript(),
   }
   const listeners = new Set<() => void>()
@@ -79,20 +86,17 @@ export function createChatStore(transport: AppTransport): ChatStore {
   const applyEvent = (event: RawEvent) => {
     const folded = foldTranscript(state.transcript, event)
     if (folded.state === state.transcript) return
-    state = {
-      ...state,
-      transcript: folded.state,
-      sessionID: sessionID,
-    }
+    state = { ...state, transcript: folded.state, sessionID }
     notify()
   }
 
-  const startConnection = () => {
+  const startConnection = (initialLastSeq = 0) => {
     const currentSession = sessionID
     if (currentSession === undefined) return
     connection?.stop()
     connection = createConnection({
       sessionID: currentSession,
+      initialLastSeq,
       openStream: transport.openStream,
       onEvent: applyEvent,
       onResync: async () => {
@@ -118,12 +122,53 @@ export function createChatStore(transport: AppTransport): ChatStore {
     connection.start()
   }
 
-  const resetSession = () => {
+  const restoreSession = async (target: string) => {
+    const client = transport.client
+    state = { ...state, sessionID: target, restoring: true, transcript: emptyTranscript() }
+    notify()
+    if (client === undefined) {
+      set({ restoring: false })
+      return
+    }
+    let transcript = emptyTranscript()
+    let after: number | undefined
+    let maxSeq = 0
+    try {
+      for (let page = 0; page < HISTORY_MAX_PAGES; page++) {
+        const result = await client.sessions.history({ sessionID: target, limit: HISTORY_PAGE, ...(after === undefined ? {} : { after }) })
+        const events = result.data ?? []
+        for (const event of events) {
+          const normalized = normalizeEvent(event)
+          if (normalized === undefined) continue
+          transcript = foldTranscript(transcript, normalized).state
+          const seq = normalized.durable?.seq
+          if (typeof seq === "number" && seq > maxSeq) maxSeq = seq
+        }
+        if (result.hasMore !== true) break
+        const lastSeq = events[events.length - 1]?.durable?.seq
+        if (typeof lastSeq !== "number") break
+        after = lastSeq
+      }
+    } catch (error) {
+      set({ note: clientErrorMessage(error) })
+    }
+    if (disposed || sessionID !== target) return
+    state = { ...state, restoring: false, transcript }
+    notify()
+    startConnection(maxSeq)
+  }
+
+  const selectSession = (target: string | undefined) => {
+    if (target === sessionID) return
     connection?.stop()
     connection = undefined
-    sessionID = undefined
-    state = { ...state, sessionID: undefined, transcript: emptyTranscript() }
-    notify()
+    sessionID = target
+    if (target === undefined) {
+      state = { ...state, sessionID: undefined, restoring: false, transcript: emptyTranscript() }
+      notify()
+      return
+    }
+    void restoreSession(target)
   }
 
   const ensureSession = async (): Promise<boolean> => {
@@ -190,7 +235,7 @@ export function createChatStore(transport: AppTransport): ChatStore {
       })
     } catch (error) {
       if (isSessionNotFoundError(error)) {
-        resetSession()
+        selectSession(undefined)
         set({ note: "Session no longer exists; a new one will be created on the next message." })
         return
       }
@@ -237,6 +282,24 @@ export function createChatStore(transport: AppTransport): ChatStore {
     }
   }
 
+  const setAgent = async (agent: string) => {
+    if (sessionID === undefined || transport.client === undefined) return
+    try {
+      await transport.client.sessions.switchAgent({ sessionID, agent })
+    } catch (error) {
+      set({ note: clientErrorMessage(error) })
+    }
+  }
+
+  const setModel = async (model: { id: string; providerID: string; variant?: string }) => {
+    if (sessionID === undefined || transport.client === undefined) return
+    try {
+      await transport.client.sessions.switchModel({ sessionID, model })
+    } catch (error) {
+      set({ note: clientErrorMessage(error) })
+    }
+  }
+
   return {
     getSnapshot: () => state,
     subscribe: (listener) => {
@@ -250,7 +313,10 @@ export function createChatStore(transport: AppTransport): ChatStore {
     replyPermission,
     replyQuestion,
     rejectQuestion,
-    newSession: resetSession,
+    selectSession,
+    newSession: () => selectSession(undefined),
+    setAgent,
+    setModel,
     retry: () => transport.retry(),
     notify: (message) => set({ note: message }),
     setConfig: (status, detail) => set({ status, statusDetail: detail }),

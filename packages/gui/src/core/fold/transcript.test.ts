@@ -175,6 +175,27 @@ describe("fold assistant lifecycle", () => {
     expect(part.progress).toBe("3 files done")
   })
 
+  it("keeps concurrent tool calls and text blocks as separate keyed parts", () => {
+    let state = applyEvent(start, evt("session.next.text.started", { ...base, assistantMessageID: "msg_a1", textID: "t1" }))
+    state = applyEvent(state, evt("session.next.text.delta", { ...base, assistantMessageID: "msg_a1", textID: "t1", delta: "one" }))
+    state = applyEvent(state, evt("session.next.tool.called", { ...base, assistantMessageID: "msg_a1", callID: "c1", tool: "read", input: { path: "a.ts" }, provider: { executed: false } }))
+    state = applyEvent(state, evt("session.next.tool.called", { ...base, assistantMessageID: "msg_a1", callID: "c2", tool: "read", input: { path: "b.ts" }, provider: { executed: false } }))
+    state = applyEvent(state, evt("session.next.text.started", { ...base, assistantMessageID: "msg_a1", textID: "t2" }))
+    state = applyEvent(state, evt("session.next.text.delta", { ...base, assistantMessageID: "msg_a1", textID: "t2", delta: "two" }))
+    state = applyEvent(state, evt("session.next.tool.success", { ...base, assistantMessageID: "msg_a1", callID: "c2", structured: {}, content: [{ type: "text", text: "b done" }], provider: { executed: false } }))
+    const block = assistant(state)
+    if (block?.kind !== "assistant") throw new Error("missing assistant")
+    expect(block.parts.map((part) => part.type)).toEqual(["text", "tool", "tool", "text"])
+    const texts = block.parts.filter((part) => part.type === "text")
+    expect((texts[0] as { text: string }).text).toBe("one")
+    expect((texts[1] as { text: string }).text).toBe("two")
+    const tools = block.parts.filter((part) => part.type === "tool")
+    expect((tools[0] as { callID: string; state: string }).callID).toBe("c1")
+    expect((tools[0] as { state: string }).state).toBe("running")
+    expect((tools[1] as { callID: string; state: string; summary?: string }).callID).toBe("c2")
+    expect((tools[1] as { state: string }).state).toBe("success")
+  })
+
   it("marks tool failure with error text", () => {
     let state = applyEvent(start, evt("session.next.tool.called", { ...base, assistantMessageID: "msg_a1", callID: "c2", tool: "edit", input: {}, provider: { executed: false } }))
     state = applyEvent(state, evt("session.next.tool.failed", { ...base, assistantMessageID: "msg_a1", callID: "c2", error: { type: "unknown", message: "boom" }, provider: { executed: false } }))

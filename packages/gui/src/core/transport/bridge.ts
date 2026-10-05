@@ -36,6 +36,7 @@ export interface BridgeConfig {
 export type BridgeOutbound =
   | { kind: "ready" }
   | { kind: "retry" }
+  | { kind: "openExternal"; url: string }
   | { kind: "req"; id: string; method: string; path: string; headers?: Record<string, string>; body?: string }
   | { kind: "open"; id: string; path: string }
   | { kind: "cancel"; id: string }
