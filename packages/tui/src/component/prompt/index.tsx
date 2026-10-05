@@ -71,7 +71,6 @@ import { readLocalAttachment } from "./local-attachment"
 import { pastedFilepath } from "./pasted-filepath"
 import { pasteMissHint } from "../../clipboard-scenario"
 import { readTerminalClipboard } from "../../clipboard-terminal"
-import { fetchBridgeClipboard } from "../../paste-bridge"
 import { useLocation } from "../../context/location"
 
 registerPrioricodeSpinner()
@@ -461,23 +460,19 @@ export function Prompt(props: PromptProps) {
           lastPasteProbe = now
           const imageOnly = pasteImageOnlyRequest
           pasteImageOnlyRequest = false
-          // In a remote session the host clipboard is empty by definition, so
-          // try the SSH bridge first (`prioricode paste-serve` + a one-time
-          // RemoteForward — works in every terminal, images included), then the
-          // terminal clipboard protocol (kitty OSC 5522 with an OSC 52 text
+          // In a remote session the host clipboard is empty by definition, so try
+          // the terminal clipboard protocol (kitty OSC 5522 with an OSC 52 text
           // fallback, which only some emulators answer; tmux may block the reply
           // round-trip, so stay off it there), then the host read as last resort.
-          const bridge = terminalEnvironment.remote ? await fetchBridgeClipboard() : undefined
           const terminalChannel =
             terminalEnvironment.remote &&
-            bridge === undefined &&
             !terminalEnvironment.multiplexer &&
             kv.get("terminal_clipboard_enabled", true)
-          let content = bridge
-          if (!content && terminalChannel)
-            content = await readTerminalClipboard(renderer, {
-              write: (sequence) => void process.stdout.write(sequence),
-            })
+          let content = terminalChannel
+            ? await readTerminalClipboard(renderer, {
+                write: (sequence) => void process.stdout.write(sequence),
+              })
+            : undefined
           if (!content) content = await clipboard.read?.()
           if (content?.mime.startsWith("image/")) {
             await pasteAttachment({

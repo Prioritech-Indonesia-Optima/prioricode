@@ -25,7 +25,6 @@
     "./context/editor": "./src/context/editor.ts",
     "./context/clipboard": "./src/context/clipboard.tsx",
     "./clipboard": "./src/clipboard.ts",
-    "./paste-bridge": "./src/paste-bridge.ts",
     "./attention": "./src/attention.ts",
     "./editor": "./src/editor.ts",
     "./editor-zed": "./src/editor-zed.ts",
