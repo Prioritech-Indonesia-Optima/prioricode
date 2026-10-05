@@ -23,6 +23,7 @@ function harness(options: HarnessOptions = {}) {
   const promptCalls: Record<string, unknown>[] = []
   const interruptCalls: string[] = []
   const createCalls: Record<string, unknown>[] = []
+  const switchModelCalls: Record<string, unknown>[] = []
 
   const streamFrames = (options.events ?? []).map((event) => `data: ${JSON.stringify(event)}\n\n`)
   const openStream = async (route: string, signal: AbortSignal): Promise<Response> => {
@@ -56,6 +57,12 @@ function harness(options: HarnessOptions = {}) {
       interrupt: async (input: { sessionID: string }) => {
         interruptCalls.push(input.sessionID)
       },
+      switchModel: async (input: Record<string, unknown>) => {
+        switchModelCalls.push(input)
+      },
+    },
+    models: {
+      list: async () => ({ data: [{ id: "m1", providerID: "p1" }] }),
     },
     permissions: { list: async () => [], reply: async () => {} },
     questions: { list: async () => [], reply: async () => {}, reject: async () => {} },
@@ -72,7 +79,7 @@ function harness(options: HarnessOptions = {}) {
     retry: () => {},
   }
   const store = createChatStore(transport)
-  return { store, postedStreams, promptCalls, interruptCalls, createCalls }
+  return { store, postedStreams, promptCalls, interruptCalls, createCalls, switchModelCalls }
 }
 
 const evt = (type: string, data: Record<string, unknown>, seq?: number) => ({
@@ -108,6 +115,13 @@ describe("chat store", () => {
     expect(assistant?.kind === "assistant" ? assistant.parts.some((part) => part.type === "text" && part.text === "hello from prioricode") : false).toBe(true)
     expect(state.transcript.busy).toBe(false)
     expect(state.transcript.lastSeq).toBe(0)
+    h.store.dispose()
+  })
+
+  it("falls back to the catalog model when the server created a session without one", async () => {
+    const h = harness()
+    await h.store.send("hi")
+    expect(h.switchModelCalls[0]).toMatchObject({ sessionID: "ses_fake", model: { id: "m1", providerID: "p1" } })
     h.store.dispose()
   })
 

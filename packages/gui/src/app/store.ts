@@ -193,6 +193,20 @@ export function createChatStore(transport: AppTransport): ChatStore {
       })
       sessionID = created.id
       set({ sessionID, note: undefined })
+      if (created.model === undefined) {
+        // A session without a model can never run a turn; fall back to the
+        // location catalog so prompts are not silently stuck pending.
+        try {
+          const models = await client.models.list({
+            ...(transport.directory === undefined ? {} : { location: { directory } }),
+          })
+          const rows = (models as unknown as { data?: { id: string; providerID: string }[] }).data ?? (models as unknown as { id: string; providerID: string }[])
+          const first = Array.isArray(rows) ? rows[0] : undefined
+          if (first !== undefined) await client.sessions.switchModel({ sessionID: created.id, model: { id: first.id, providerID: first.providerID } })
+        } catch {
+          // best-effort; the picker can still set a model explicitly
+        }
+      }
       startConnection()
       return true
     } catch (error) {

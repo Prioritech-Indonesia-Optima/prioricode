@@ -56,7 +56,7 @@ export async function fsRead(transport: RawTransport, path: string, location?: L
     `/api/fs/read/${encoded}`,
     location?.directory !== undefined ? [["location[directory]", location.directory]] : undefined,
   )
-  const response = await transport.fetch(url.toString(), requestInit(transport))
+  const response = await (0, transport.fetch)(url.toString(), requestInit(transport))
   if (!response.ok) throw new Error(`fs.read failed: HTTP ${response.status}`)
   return new Uint8Array(await response.arrayBuffer())
 }
@@ -76,7 +76,7 @@ export async function ptyConnectToken(
     ...(location?.directory !== undefined ? ([["location[directory]", location.directory]] as const) : []),
     ...(location?.workspace !== undefined ? ([["location[workspace]", location.workspace]] as const) : []),
   ])
-  const response = await transport.fetch(
+  const response = await (0, transport.fetch)(
     url.toString(),
     requestInit(transport, { method: "POST", headers: { [PTY_CONNECT_TOKEN_HEADER]: "1" } }),
   )
@@ -121,7 +121,7 @@ export async function sessionTodo(
       ["directory", location?.directory],
       ["workspace", location?.workspace],
     ])
-    const response = await transport.fetch(url.toString(), requestInit(transport))
+    const response = await (0, transport.fetch)(url.toString(), requestInit(transport))
     if (!response.ok) return undefined
     const payload = unwrap(await response.json())
     if (!Array.isArray(payload)) return undefined
@@ -149,7 +149,7 @@ export async function sessionDiff(
       ["directory", options?.location?.directory],
       ["workspace", options?.location?.workspace],
     ])
-    const response = await transport.fetch(url.toString(), requestInit(transport))
+    const response = await (0, transport.fetch)(url.toString(), requestInit(transport))
     if (!response.ok) return undefined
     const payload = unwrap(await response.json())
     return Array.isArray(payload) ? payload : undefined

@@ -73,7 +73,8 @@ export function useModelCatalog() {
     queryKey: ["models"],
     enabled: transport.client !== undefined,
     staleTime: 60_000,
-    queryFn: async ({ signal }) => (await transport.client!.models.list(undefined, { signal })).data,
+    queryFn: async ({ signal }) =>
+      (await transport.client!.models.list(locArg(transport), { signal })).data,
   })
 }
 
@@ -83,7 +84,8 @@ export function useAgentCatalog() {
     queryKey: ["agents"],
     enabled: transport.client !== undefined,
     staleTime: 60_000,
-    queryFn: async ({ signal }) => (await transport.client!.agents.list(undefined, { signal })).data,
+    queryFn: async ({ signal }) =>
+      (await transport.client!.agents.list(locArg(transport), { signal })).data,
   })
 }
 
@@ -92,7 +94,8 @@ export function useIntegrations() {
   return useQuery({
     queryKey: ["integrations"],
     enabled: transport.client !== undefined,
-    queryFn: async ({ signal }) => (await transport.client!.integrations.list(undefined, { signal })).data,
+    queryFn: async ({ signal }) =>
+      (await transport.client!.integrations.list(locArg(transport), { signal })).data,
   })
 }
 
@@ -105,6 +108,10 @@ export function useIntegrationAttempt(attemptID: string | undefined) {
     queryFn: async ({ signal }) =>
       (await transport.client!.integrations.attemptStatus({ attemptID: attemptID as string }, { signal })).data,
   })
+}
+
+function locArg(transport: { directory?: string }): { location: { directory: string } } | undefined {
+  return transport.directory === undefined ? undefined : { location: { directory: transport.directory } }
 }
 
 export interface FileHit {
