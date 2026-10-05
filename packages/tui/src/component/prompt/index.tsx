@@ -69,6 +69,7 @@ import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
 import { pastedFilepath } from "./pasted-filepath"
+import { pasteDirectory, savePastedImage } from "./paste-store"
 import { pasteMissHint } from "../../clipboard-scenario"
 import { readTerminalClipboard } from "../../clipboard-terminal"
 import { useLocation } from "../../context/location"
@@ -327,7 +328,9 @@ export function Prompt(props: PromptProps) {
       toast.show({ message: "Clipboard image is too large (5 MB limit)", variant: "error" })
       return
     }
-    void pasteAttachment({ filename: file.filename ?? "clipboard", mime: file.mime, content: file.data })
+    void saveClipboardImage(file.data, file.mime).then((filepath) => {
+      void pasteAttachment({ filename: file.filename ?? "clipboard", filepath, mime: file.mime, content: file.data })
+    })
   })
 
   createEffect(() => {
@@ -477,6 +480,7 @@ export function Prompt(props: PromptProps) {
           if (content?.mime.startsWith("image/")) {
             await pasteAttachment({
               filename: "clipboard",
+              filepath: await saveClipboardImage(content.data, content.mime),
               mime: content.mime,
               content: content.data,
             })
@@ -1321,6 +1325,18 @@ export function Prompt(props: PromptProps) {
       input.getLayoutNode().markDirty()
       renderer.requestRender()
     }, 0)
+  }
+
+  // Every clipboard image also lands as a private file under the state dir so
+  // the attachment references a real on-host path — local host reads, the OSC
+  // 5522 terminal protocol, and extension uploads all converge here. A failed
+  // write must not lose the paste: inline content still travels to the model.
+  async function saveClipboardImage(base64: string, mime: string): Promise<string | undefined> {
+    try {
+      return await savePastedImage({ directory: pasteDirectory(paths.state), mime, base64 })
+    } catch {
+      return undefined
+    }
   }
 
   async function pasteAttachment(file: { filename?: string; filepath?: string; content: string; mime: string }) {
