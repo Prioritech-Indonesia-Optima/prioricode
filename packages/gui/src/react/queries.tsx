@@ -107,6 +107,29 @@ export function useIntegrationAttempt(attemptID: string | undefined) {
   })
 }
 
+export interface FileHit {
+  path: string
+  type: "file" | "directory"
+}
+
+export function useFileFind(query: string, enabled: boolean) {
+  const { transport } = useGui()
+  return useQuery({
+    queryKey: ["fs-find", query, transport.directory ?? ""],
+    enabled: enabled && transport.client !== undefined && query.length > 0,
+    staleTime: 15_000,
+    placeholderData: keepPreviousData,
+    queryFn: async ({ signal }) => {
+      const result = await transport.client!.files.find(
+        { query, type: "file", limit: 30, ...(transport.directory === undefined ? {} : { location: { directory: transport.directory } }) },
+        { signal },
+      )
+      const rows: FileHit[] = (result as unknown as { data?: FileHit[] }).data ?? (result as unknown as FileHit[])
+      return rows
+    },
+  })
+}
+
 export function timeAgo(millis: number, now = Date.now()): string {
   const diff = Math.max(0, now - millis)
   const minutes = Math.floor(diff / 60_000)

@@ -8,6 +8,7 @@ export interface MessageListProps {
   onPermissionReply: (requestID: string, reply: PermissionReply) => void
   onQuestionReply: (requestID: string, answers: string[][]) => void
   onQuestionReject: (requestID: string) => void
+  onRevertTo?: (messageID: string) => void
 }
 
 /**
@@ -77,6 +78,7 @@ export function MessageList(props: MessageListProps) {
                 onPermissionReply={props.onPermissionReply}
                 onQuestionReply={props.onQuestionReply}
                 onQuestionReject={props.onQuestionReject}
+                onRevertTo={props.onRevertTo}
               />
             </div>
           )

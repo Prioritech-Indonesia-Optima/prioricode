@@ -86,12 +86,20 @@ export interface CompactionBlock {
   recent?: string
 }
 
+export interface FileDiffInfo {
+  path: string
+  status?: "added" | "modified" | "deleted"
+  additions?: number
+  deletions?: number
+  patch?: string
+}
+
 export interface RevertBlock {
   kind: "revert"
   id: string
   state: "staged" | "committed"
   messageID: string
-  files?: string[]
+  files?: FileDiffInfo[]
 }
 
 export interface PermissionBlock {
@@ -99,6 +107,8 @@ export interface PermissionBlock {
   id: string
   action: string
   resources: string[]
+  filepath?: string
+  diffPreview?: string
   resolved?: "once" | "always" | "reject"
 }
 
@@ -374,11 +384,14 @@ const applyPermissionAsked = (state: TranscriptState, data: Record<string, any>)
   const id = typeof data.id === "string" ? data.id : undefined
   if (id === undefined || indexOfBlock(state.blocks, id) >= 0) return state
   const next = clone(state)
+  const metadata = asRecord(data.metadata)
   next.blocks.push({
     kind: "permission",
     id,
     action: typeof data.action === "string" ? data.action : "action",
     resources: Array.isArray(data.resources) ? data.resources.filter((r: unknown): r is string => typeof r === "string") : [],
+    filepath: typeof metadata.filepath === "string" ? metadata.filepath : undefined,
+    diffPreview: typeof metadata.diff === "string" ? metadata.diff : undefined,
   })
   return next
 }
@@ -478,15 +491,30 @@ const applyCompactionEnded = (state: TranscriptState, data: Record<string, any>,
 
 const REVERT_BLOCK_ID = "revert"
 
+const fileDiffInfo = (value: unknown): FileDiffInfo | undefined => {
+  const record = asRecord(value)
+  if (typeof record.path !== "string") return undefined
+  return {
+    path: record.path,
+    status: record.status === "added" || record.status === "modified" || record.status === "deleted" ? record.status : undefined,
+    additions: typeof record.additions === "number" ? record.additions : undefined,
+    deletions: typeof record.deletions === "number" ? record.deletions : undefined,
+    patch: typeof record.patch === "string" ? record.patch : undefined,
+  }
+}
+
 const applyRevertStaged = (state: TranscriptState, data: Record<string, any>): TranscriptState => {
   const revert = asRecord(data.revert)
   if (typeof revert.messageID !== "string") return state
+  const files = Array.isArray(revert.files)
+    ? revert.files.map(fileDiffInfo).filter((file: FileDiffInfo | undefined): file is FileDiffInfo => file !== undefined)
+    : undefined
   const block: RevertBlock = {
     kind: "revert",
     id: REVERT_BLOCK_ID,
     state: "staged",
     messageID: revert.messageID,
-    files: Array.isArray(revert.files) ? revert.files.filter((f: unknown): f is string => typeof f === "string") : undefined,
+    files: files === undefined || files.length === 0 ? undefined : files,
   }
   const next = clone(state)
   setBlock(next.blocks, indexOfBlock(next.blocks, REVERT_BLOCK_ID), block)

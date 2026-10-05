@@ -37,6 +37,8 @@ export type BridgeOutbound =
   | { kind: "ready" }
   | { kind: "retry" }
   | { kind: "openExternal"; url: string }
+  | { kind: "selection"; id: string }
+  | { kind: "openFile"; path: string }
   | { kind: "req"; id: string; method: string; path: string; headers?: Record<string, string>; body?: string }
   | { kind: "open"; id: string; path: string }
   | { kind: "cancel"; id: string }
@@ -47,6 +49,14 @@ export type BridgeInbound =
   | { kind: "open-head"; id: string; status: number; headers: Record<string, string> }
   | { kind: "chunk"; id: string; dataBase64: string }
   | { kind: "end"; id: string; error?: string }
+  | { kind: "selection-res"; id: string; path?: string; start?: number; end?: number; text?: string }
+
+export interface BridgeSelection {
+  path: string
+  start: number
+  end: number
+  text?: string
+}
 
 interface PendingRequest {
   resolve: (response: BridgeInbound & { kind: "res" }) => void
@@ -64,6 +74,7 @@ export interface BridgeHandle {
   onMessage: (message: unknown) => void
   onConfig: (listener: (config: BridgeConfig) => void) => () => void
   target: () => Promise<BridgeConfig>
+  requestSelection: () => Promise<BridgeSelection | undefined>
   retry: () => void
   fetch: typeof globalThis.fetch
   dispose: () => void
@@ -98,6 +109,7 @@ export function createBridge(options: {
   const nextID = options.nextID ?? (() => `gui_${Math.random().toString(36).slice(2)}_${Date.now().toString(36)}`)
   const requests = new Map<string, PendingRequest>()
   const streams = new Map<string, PendingStream>()
+  const selections = new Map<string, (selection: BridgeSelection | undefined) => void>()
   const configListeners = new Set<(config: BridgeConfig) => void>()
   let latestConfig: BridgeConfig | undefined
   let resolveReady: (config: BridgeConfig) => void = () => {}
@@ -165,6 +177,17 @@ export function createBridge(options: {
         }
         if (frame.error !== undefined) stream.controller.error(new Error(frame.error))
         else stream.controller.close()
+        return
+      }
+      case "selection-res": {
+        const pending = selections.get(frame.id)
+        if (pending === undefined) return
+        selections.delete(frame.id)
+        if (typeof frame.path !== "string" || typeof frame.start !== "number" || typeof frame.end !== "number") {
+          pending(undefined)
+          return
+        }
+        pending({ path: frame.path, start: frame.start, end: frame.end, text: typeof frame.text === "string" ? frame.text : undefined })
         return
       }
     }
@@ -257,6 +280,16 @@ export function createBridge(options: {
     return new Response(body as BodyInit, { status: frame.status, headers: new Headers(frame.headers) })
   }
 
+  const requestSelection = (): Promise<BridgeSelection | undefined> =>
+    new Promise((resolve) => {
+      const id = nextID()
+      selections.set(id, resolve)
+      options.api.postMessage({ kind: "selection", id } satisfies BridgeOutbound)
+      setTimeout(() => {
+        if (selections.delete(id)) resolve(undefined)
+      }, 2_000)
+    })
+
   return {
     onMessage,
     onConfig: (listener) => {
@@ -267,6 +300,7 @@ export function createBridge(options: {
       }
     },
     target,
+    requestSelection,
     retry: () => {
       readySent = false
       sendReady()
@@ -279,6 +313,8 @@ export function createBridge(options: {
       requests.clear()
       for (const [, stream] of streams) stream.fail("bridge disposed")
       streams.clear()
+      for (const [, resolve] of selections) resolve(undefined)
+      selections.clear()
       configListeners.clear()
     },
   }

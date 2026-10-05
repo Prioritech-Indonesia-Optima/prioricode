@@ -28,6 +28,8 @@ export interface BridgeHostDeps {
   directory: () => string | undefined
   serverLabel?: (url: string) => string | undefined
   openExternal?: (url: string) => void
+  getSelection?: () => Promise<{ path: string; start: number; end: number; text?: string } | undefined>
+  openFile?: (path: string) => void
   fetchImpl?: typeof fetch
   log?: (message: string) => void
   coalesceMs?: number
@@ -46,6 +48,8 @@ type WebviewFrame =
   | { kind: "ready" }
   | { kind: "retry" }
   | { kind: "openExternal"; url: string }
+  | { kind: "selection"; id: string }
+  | { kind: "openFile"; path: string }
   | { kind: "req"; id: string; method: string; path: string; headers?: Record<string, string>; body?: string }
   | { kind: "open"; id: string; path: string }
   | { kind: "cancel"; id: string }
@@ -257,6 +261,22 @@ export function createBridgeHost(deps: BridgeHostDeps): BridgeHost {
           } catch {
             // reject malformed URLs quietly
           }
+          return
+        }
+        case "selection": {
+          void (async () => {
+            try {
+              const selection = await deps.getSelection?.()
+              deps.post({ kind: "selection-res", id: frame.id, ...(selection ?? {}) })
+            } catch {
+              deps.post({ kind: "selection-res", id: frame.id })
+            }
+          })()
+          return
+        }
+        case "openFile": {
+          if (typeof frame.path !== "string" || frame.path.includes("\0")) return
+          deps.openFile?.(frame.path)
           return
         }
         case "cancel": {

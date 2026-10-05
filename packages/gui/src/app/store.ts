@@ -36,6 +36,9 @@ export interface ChatStore {
   newSession: () => void
   setAgent: (agent: string) => Promise<void>
   setModel: (model: { id: string; providerID: string; variant?: string }) => Promise<void>
+  stageRevert: (messageID: string) => Promise<void>
+  clearRevert: () => Promise<void>
+  commitRevert: () => Promise<void>
   retry: () => void
   notify: (message: string) => void
   setConfig: (status: StoreStatus, detail?: string) => void
@@ -180,7 +183,7 @@ export function createChatStore(transport: AppTransport): ChatStore {
     }
     const directory = transport.directory ?? state.directory
     if (directory === undefined) {
-      set({ note: "Open a folder before chatting so prioricode knows the project directory." })
+      set({ note: "No project directory set — open a folder in VS Code, or set one in Settings (browser)." })
       return false
     }
     try {
@@ -300,6 +303,33 @@ export function createChatStore(transport: AppTransport): ChatStore {
     }
   }
 
+  const stageRevert = async (messageID: string) => {
+    if (sessionID === undefined || transport.client === undefined) return
+    try {
+      await transport.client.sessions.stage({ sessionID, messageID })
+    } catch (error) {
+      set({ note: clientErrorMessage(error) })
+    }
+  }
+
+  const clearRevert = async () => {
+    if (sessionID === undefined || transport.client === undefined) return
+    try {
+      await transport.client.sessions.clear({ sessionID })
+    } catch (error) {
+      set({ note: clientErrorMessage(error) })
+    }
+  }
+
+  const commitRevert = async () => {
+    if (sessionID === undefined || transport.client === undefined) return
+    try {
+      await transport.client.sessions.commit({ sessionID })
+    } catch (error) {
+      set({ note: clientErrorMessage(error) })
+    }
+  }
+
   return {
     getSnapshot: () => state,
     subscribe: (listener) => {
@@ -317,6 +347,9 @@ export function createChatStore(transport: AppTransport): ChatStore {
     newSession: () => selectSession(undefined),
     setAgent,
     setModel,
+    stageRevert,
+    clearRevert,
+    commitRevert,
     retry: () => transport.retry(),
     notify: (message) => set({ note: message }),
     setConfig: (status, detail) => set({ status, statusDetail: detail }),

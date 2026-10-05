@@ -9,6 +9,7 @@ import { StatusBanner } from "./components/shell/StatusBanner"
 import { AgentPicker, ModelPicker } from "./components/shell/Pickers"
 import { ServerDialog } from "./components/shell/ServerDialog"
 import { SessionSidebar } from "./components/panels/SessionSidebar"
+import { CheckpointBar } from "./components/panels/Checkpoint"
 import { clientErrorMessage } from "./core/transport/errors"
 
 const queryClient = new QueryClient({
@@ -109,8 +110,9 @@ function Shell() {
       onPermissionReply: (requestID: string, reply: "once" | "always" | "reject") => void store.replyPermission(requestID, reply),
       onQuestionReply: (requestID: string, answers: string[][]) => void store.replyQuestion(requestID, answers),
       onQuestionReject: (requestID: string) => void store.rejectQuestion(requestID),
+      onRevertTo: snapshot?.sessionID === undefined || snapshot.status !== "ready" || snapshot.transcript.busy ? undefined : (messageID: string) => void store.stageRevert(messageID),
     }),
-    [store],
+    [store, snapshot?.sessionID, snapshot?.status, snapshot?.transcript.busy],
   )
 
   const onClickCapture = (event: MouseEvent<HTMLDivElement>) => {
@@ -215,6 +217,7 @@ function Shell() {
         ) : (
           <MessageList blocks={snapshot.transcript.blocks} {...actions} />
         )}
+        <CheckpointBar />
         <Composer
           sessionID={snapshot.sessionID}
           busy={busy}

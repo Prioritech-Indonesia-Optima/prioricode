@@ -1,4 +1,4 @@
-import { createBridge, type BridgeHandle } from "../core/transport/bridge"
+import { createBridge, type BridgeHandle, type BridgeSelection } from "../core/transport/bridge"
 import { createGuiClient, type GuiClient } from "../core/transport/client"
 import { basicAuthorization, readStoredTarget, writeStoredTarget, type DirectTarget } from "../core/transport/direct"
 import { detectHost, type GuiHost } from "../lib/host"
@@ -14,6 +14,9 @@ export interface AppTransport {
   defaultModel?: { id: string; providerID: string }
   openStream: (route: string, signal: AbortSignal) => Promise<Response>
   openExternal: (url: string) => void
+  requestSelection?: () => Promise<BridgeSelection | undefined>
+  openFile?: (path: string) => void
+  authHeaders?: () => Record<string, string>
   retry: () => void
   bridge?: BridgeHandle
 }
@@ -54,6 +57,7 @@ function webTransport(target: DirectTarget): AppTransport {
     openExternal: (url) => {
       globalThis.open(url, "_blank", "noopener")
     },
+    authHeaders: () => headers,
     retry: () => {},
   }
 }
@@ -107,6 +111,8 @@ async function vscodeTransport(): Promise<AppTransport> {
     directory: config?.directory,
     openStream: (route, signal) => assertStream(bridge.fetch(`http://prioricode.invalid${route}`, { signal })),
     openExternal: (url) => api.postMessage({ kind: "openExternal", url }),
+    requestSelection: () => bridge.requestSelection(),
+    openFile: (path) => api.postMessage({ kind: "openFile", path }),
     retry: () => bridge.retry(),
     bridge,
   }
@@ -123,6 +129,8 @@ async function vscodeTransport(): Promise<AppTransport> {
     openStream: (route, signal) =>
       assertStream(bridge.fetch(`${config.baseUrl}${route}`, { headers: { accept: "text/event-stream" }, signal })),
     openExternal: (url) => api.postMessage({ kind: "openExternal", url }),
+    requestSelection: () => bridge.requestSelection(),
+    openFile: (path) => api.postMessage({ kind: "openFile", path }),
     retry: () => bridge.retry(),
     bridge,
   }

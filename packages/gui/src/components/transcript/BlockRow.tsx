@@ -1,4 +1,4 @@
-import { memo, useState } from "react"
+import { memo, useMemo, useState } from "react"
 import type {
   AssistantBlock,
   AssistantPart,
@@ -12,7 +12,10 @@ import type {
   UserBlock,
   PermissionReply,
 } from "../../core/fold/transcript"
+import { computePatch, extractFencedDiff } from "../../lib/diff"
+import { useGui } from "../../react/queries"
 import { cn } from "../../lib/cn"
+import { DiffStats, DiffView } from "./DiffView"
 import { Markdown } from "./Markdown"
 
 function StateDot({ state }: { state: "running" | "success" | "error" | "done" }) {
@@ -71,19 +74,78 @@ function PartRow({ part }: { part: AssistantPart }) {
       </details>
     )
   }
+  return <ToolPartRow part={part} />
+}
+
+const EDIT_TOOL_NAMES = new Set(["edit", "write", "apply_patch", "patch", "multiedit", "multi_edit"])
+
+function derivePatch(part: Extract<AssistantPart, { type: "tool" }>): string | undefined {
+  try {
+    if (part.input !== undefined) {
+      const parsed: unknown = JSON.parse(part.input)
+      if (typeof parsed === "object" && parsed !== null) {
+        const record = parsed as Record<string, unknown>
+        if (typeof record.path === "string" && typeof record.oldString === "string" && typeof record.newString === "string") {
+          return computePatch(record.path, record.oldString, record.newString)
+        }
+        if (typeof record.path === "string" && typeof record.content === "string") return computePatch(record.path, "", record.content)
+        if (typeof record.patch === "string") return record.patch
+      }
+    }
+  } catch {
+    // input still streaming; fall through to summary extraction
+  }
+  return extractFencedDiff(part.summary ?? part.progress)
+}
+
+function toolFilePath(part: Extract<AssistantPart, { type: "tool" }>): string | undefined {
+  try {
+    const parsed: unknown = part.input === undefined ? undefined : JSON.parse(part.input)
+    if (typeof parsed === "object" && parsed !== null) {
+      const record = parsed as Record<string, unknown>
+      if (typeof record.path === "string") return record.path
+      if (typeof record.filepath === "string") return record.filepath
+    }
+  } catch {
+    return undefined
+  }
+  return undefined
+}
+
+function ToolPartRow({ part }: { part: Extract<AssistantPart, { type: "tool" }> }) {
+  const { transport } = useGui()
   const summary = summarizeToolInput(part)
+  const isEdit = EDIT_TOOL_NAMES.has(part.name)
+  const patch = useMemo(() => (isEdit ? derivePatch(part) : undefined), [isEdit, part])
+  const filePath = useMemo(() => (isEdit ? toolFilePath(part) : undefined), [isEdit, part])
   return (
     <details className="text-xs" open={part.state === "running"}>
       <summary className="flex cursor-pointer select-none items-center gap-2 rounded border border-border bg-muted px-2 py-1">
         <StateDot state={part.state} />
         <span className="font-mono">{part.name}</span>
         {summary !== undefined && <span className="truncate text-muted-foreground">{summary}</span>}
+        {patch !== undefined && <DiffStats patch={patch} />}
         {part.progress !== undefined && part.state === "running" && (
           <span className="truncate text-muted-foreground">— {part.progress}</span>
         )}
+        {filePath !== undefined && transport.openFile !== undefined && (
+          <button
+            type="button"
+            className="ms-auto shrink-0 rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-accent"
+            onMouseDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              transport.openFile?.(filePath)
+            }}
+          >
+            Open
+          </button>
+        )}
       </summary>
       <div className="grid gap-1 ps-2 pt-1">
-        {part.input !== undefined && (
+        {patch !== undefined && <DiffView patch={patch} maxLines={24} className="mt-1" />}
+        {part.input !== undefined && patch === undefined && (
           <pre dir="ltr" className="max-h-40 overflow-auto whitespace-pre-wrap font-mono text-muted-foreground">{part.input}</pre>
         )}
         {part.summary !== undefined && <p dir="auto" className="whitespace-pre-wrap">{part.summary}</p>}
@@ -93,9 +155,19 @@ function PartRow({ part }: { part: AssistantPart }) {
   )
 }
 
-function UserRow({ block }: { block: UserBlock }) {
+function UserRow({ block, onRevertTo }: { block: UserBlock; onRevertTo?: (messageID: string) => void }) {
   return (
-    <div className="flex justify-end">
+    <div className="group flex items-start justify-end gap-1">
+      {onRevertTo !== undefined && (
+        <button
+          type="button"
+          title="Revert workspace to just before this message"
+          onClick={() => onRevertTo(block.id)}
+          className="mt-2 hidden rounded border border-border bg-background px-1.5 py-0.5 text-[10px] text-muted-foreground hover:bg-accent group-hover:block"
+        >
+          ⟲ revert to here
+        </button>
+      )}
       <div dir="auto" className="max-w-[85%] rounded-lg bg-secondary px-3 py-2">
         <p className="whitespace-pre-wrap text-sm">{block.text}</p>
         {block.files.length > 0 && (
@@ -153,9 +225,20 @@ function PermissionRow({ block, onReply }: { block: PermissionBlock; onReply: (r
     <div className="rounded-lg border border-amber-500/50 bg-amber-500/5 px-3 py-2 text-sm">
       <div dir="auto" className="text-xs text-muted-foreground">
         Permission requested: <span className="font-mono">{block.action}</span>
+        {block.filepath !== undefined && (
+          <>
+            <span> · </span>
+            <bdi dir="ltr" className="font-mono">{block.filepath}</bdi>
+          </>
+        )}
       </div>
       {block.resources.length > 0 && (
         <pre dir="auto" className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap text-xs">{block.resources.join("\n")}</pre>
+      )}
+      {block.diffPreview !== undefined && block.resolved === undefined && (
+        <div className="mt-2">
+          <DiffView patch={block.diffPreview} maxLines={18} />
+        </div>
       )}
       {block.resolved !== undefined ? (
         <div className="mt-1 text-xs text-muted-foreground">Resolved: {block.resolved}</div>
@@ -318,10 +401,23 @@ function CompactionRow({ block }: { block: CompactionBlock }) {
 
 function RevertRow({ block }: { block: RevertBlock }) {
   return (
-    <div className="rounded border border-border bg-muted px-3 py-1 text-xs text-muted-foreground">
-      {block.state === "staged" ? "Checkpoint staged" : "Checkpoint committed"} · <bdi dir="ltr">{block.messageID}</bdi>
-      {block.files !== undefined && block.files.length > 0 ? ` (${block.files.length} files)` : ""}
-    </div>
+    <details className="rounded border border-border bg-muted px-3 py-1 text-xs text-muted-foreground" open={block.state === "staged"}>
+      <summary className="cursor-pointer select-none">
+        {block.state === "staged" ? "Checkpoint staged" : "Checkpoint committed"} · <bdi dir="ltr">{block.messageID}</bdi>
+        {block.files !== undefined && block.files.length > 0 ? ` (${block.files.length} files)` : ""}
+      </summary>
+      {block.files !== undefined && block.files.length > 0 && (
+        <ul className="mt-1 grid gap-1">
+          {block.files.map((file) => (
+            <li key={file.path} className="flex items-center gap-2">
+              <span className="font-mono">{file.status === "added" ? "A" : file.status === "deleted" ? "D" : "M"}</span>
+              <bdi dir="ltr" className="truncate font-mono">{file.path}</bdi>
+              <DiffStats patch={file.patch} additions={file.additions} deletions={file.deletions} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </details>
   )
 }
 
@@ -338,11 +434,12 @@ export const BlockRow = memo(function BlockRow(props: {
   onPermissionReply: (requestID: string, reply: PermissionReply) => void
   onQuestionReply: (requestID: string, answers: string[][]) => void
   onQuestionReject: (requestID: string) => void
+  onRevertTo?: (messageID: string) => void
 }) {
   const { block } = props
   switch (block.kind) {
     case "user":
-      return <UserRow block={block} />
+      return <UserRow block={block} onRevertTo={props.onRevertTo} />
     case "assistant":
       return <AssistantRow block={block} />
     case "permission":

@@ -40,6 +40,28 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
       directory: () => this.workspaceDirectory(),
       serverLabel: (url) => this.hostLabel(url),
       openExternal: (url) => void vscode.env.openExternal(vscode.Uri.parse(url)),
+      openFile: async (pathValue) => {
+        const root = vscode.workspace.workspaceFolders?.[0]?.uri
+        const base = root ?? vscode.Uri.file("/")
+        const target = pathValue.startsWith("/") ? vscode.Uri.file(pathValue) : vscode.Uri.joinPath(base, pathValue)
+        try {
+          const document = await vscode.workspace.openTextDocument(target)
+          await vscode.window.showTextDocument(document, { preview: true })
+        } catch {
+          void vscode.window.showWarningMessage(`prioricode: cannot open ${pathValue}`)
+        }
+      },
+      getSelection: async () => {
+        const editor = vscode.window.activeTextEditor
+        if (editor === undefined || editor.selection.isEmpty) return undefined
+        const root = vscode.workspace.workspaceFolders?.[0]?.uri
+        const relative = root !== undefined ? vscode.workspace.asRelativePath(editor.document.uri, false) : editor.document.uri.fsPath
+        return {
+          path: relative,
+          start: editor.selection.start.line + 1,
+          end: editor.selection.end.line + 1,
+        }
+      },
       log: (message) => console.log("[prioricode chat]", message),
     })
     this.disposables.push(

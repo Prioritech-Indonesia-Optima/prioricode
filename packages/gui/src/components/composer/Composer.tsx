@@ -1,6 +1,9 @@
-import { useRef, useState } from "react"
+import { useMemo, useRef, useState } from "react"
+import fuzzysort from "fuzzysort"
 import type { OutgoingAttachment } from "../../core/fold/transcript"
+import { useGui, useFileFind } from "../../react/queries"
 import { cn } from "../../lib/cn"
+import { formatMention, parseMentions, removeMention, activeMention } from "../../lib/mentions"
 import { composerDraftKey, useUiStore } from "../../lib/ui-state"
 
 const MAX_IMAGE_BYTES = 3_500_000
@@ -38,16 +41,50 @@ export function Composer(props: {
   onSend: (submit: ComposerSubmit) => void
   onInterrupt: () => void
 }) {
+  const { transport } = useGui()
   const draftKey = composerDraftKey(props.sessionID)
   const text = useUiStore((state) => state.drafts[draftKey] ?? "")
   const setDraft = useUiStore((state) => state.setDraft)
   const delivery = useUiStore((state) => state.delivery)
   const setDelivery = useUiStore((state) => state.setDelivery)
   const [attachments, setAttachments] = useState<OutgoingAttachment[]>([])
+  const [caret, setCaret] = useState(0)
   const [history, setHistory] = useState<string[]>([])
   const [historyIndex, setHistoryIndex] = useState(-1)
+  const [dismissedQuery, setDismissedQuery] = useState<string | undefined>(undefined)
+  const [highlighted, setHighlighted] = useState(0)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
+
+  const mention = useMemo(() => activeMention(text, Math.min(caret, text.length)), [text, caret])
+  const find = useFileFind(mention?.query ?? "", mention !== undefined)
+  const hits = useMemo(() => {
+    const rows = find.data ?? []
+    if (mention === undefined || mention.query.length === 0) return rows
+    const scored = fuzzysort.go(mention.query, rows.map((row) => row.path), { limit: 30 })
+    const byPath = new Map(rows.map((row) => [row.path, row]))
+    const ordered = scored.map((result) => byPath.get(result.target)).filter((row): row is (typeof rows)[number] => row !== undefined)
+    return ordered.length > 0 ? ordered : rows
+  }, [find.data, mention])
+
+  const popoverOpen =
+    mention !== undefined &&
+    hits.length > 0 &&
+    dismissedQuery !== mention.query &&
+    !text.slice(mention.end).startsWith("@")
+
+  const applyMention = (path: string) => {
+    if (mention === undefined) return
+    const token = formatMention(path)
+    const next = `${text.slice(0, mention.start)}${token} `
+    setDraft(draftKey, next + text.slice(mention.end))
+    const position = mention.start + token.length + 1
+    queueMicrotask(() => {
+      textareaRef.current?.setSelectionRange(position, position)
+      textareaRef.current?.focus()
+      setCaret(position)
+    })
+  }
 
   const addImage = async (blob: Blob, declaredName?: string) => {
     const bytes = new Uint8Array(await blob.arrayBuffer())
@@ -75,8 +112,62 @@ export function Composer(props: {
     props.onSend({ text: value, attachments: sent, delivery })
   }
 
+  const attachSelection = async () => {
+    const selection = await transport.requestSelection?.()
+    if (selection === undefined) {
+      props.notice?.("Select a range in the active editor first.")
+      return
+    }
+    setDraft(draftKey, `${text}${text.endsWith(" ") || text.length === 0 ? "" : " "}${formatMention(selection.path, { start: selection.start, end: selection.end })} `)
+    textareaRef.current?.focus()
+  }
+
+  const chips = useMemo(() => parseMentions(text), [text])
+
   return (
-    <div className="border-t border-border bg-background p-2">
+    <div className="relative border-t border-border bg-background p-2">
+      {popoverOpen && mention !== undefined && (
+        <div
+          role="listbox"
+          className="absolute bottom-full start-2 z-30 mb-1 max-h-56 w-72 overflow-y-auto rounded-md border border-border bg-popover p-1 text-xs text-popover-foreground shadow-md"
+        >
+          {hits.map((hit, index) => (
+            <button
+              key={hit.path}
+              type="button"
+              role="option"
+              aria-selected={index === highlighted}
+              className={cn("block w-full truncate rounded px-2 py-1 text-start font-mono", index === highlighted ? "bg-accent" : "hover:bg-accent/60")}
+              onMouseEnter={() => setHighlighted(index)}
+              onMouseDown={(event) => {
+                event.preventDefault()
+                applyMention(hit.path)
+              }}
+            >
+              {hit.type === "directory" ? "🗀 " : "🗎 "}
+              <bdi dir="ltr">{hit.path}</bdi>
+            </button>
+          ))}
+        </div>
+      )}
+      {chips.length > 0 && (
+        <div className="mb-1 flex flex-wrap gap-1">
+          {chips.map((chip) => (
+            <span key={`${chip.index}-${chip.token}`} className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-[11px]">
+              <bdi dir="ltr" className="max-w-[16rem] truncate font-mono">{chip.path}</bdi>
+              {chip.range !== undefined && <span className="text-muted-foreground">L{chip.range.start}{chip.range.end !== chip.range.start ? `-${chip.range.end}` : ""}</span>}
+              <button
+                type="button"
+                aria-label={`Remove ${chip.token}`}
+                className="text-muted-foreground hover:text-foreground"
+                onClick={() => setDraft(draftKey, removeMention(text, chip))}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       {attachments.length > 0 && (
         <div className="mb-1 flex flex-wrap gap-1">
           {attachments.map((attachment, index) => (
@@ -103,6 +194,16 @@ export function Composer(props: {
         >
           +
         </button>
+        {transport.requestSelection !== undefined && (
+          <button
+            type="button"
+            title="Attach current editor selection"
+            onClick={() => void attachSelection()}
+            className="h-9 shrink-0 rounded-md border border-border px-2 text-xs text-muted-foreground hover:bg-accent"
+          >
+            Sel
+          </button>
+        )}
         <input
           ref={fileRef}
           type="file"
@@ -120,13 +221,15 @@ export function Composer(props: {
           rows={1}
           value={text}
           disabled={props.disabled}
-          placeholder="Ask prioricode… (Enter to send, Shift+Enter for newline)"
+          placeholder="Ask prioricode… (@ for files, Enter to send)"
           onChange={(event) => {
             setDraft(draftKey, event.target.value)
+            setCaret(event.target.selectionStart)
             const el = event.currentTarget
             el.style.height = "auto"
             el.style.height = `${Math.min(el.scrollHeight, 160)}px`
           }}
+          onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
           onPaste={(event) => {
             const item = Array.from(event.clipboardData.items).find((candidate) => candidate.type.startsWith("image/"))
             if (item !== undefined) {
@@ -138,7 +241,31 @@ export function Composer(props: {
             }
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+            if (event.nativeEvent.isComposing) return
+            if (popoverOpen) {
+              if (event.key === "ArrowDown") {
+                event.preventDefault()
+                setHighlighted((at) => Math.min(at + 1, hits.length - 1))
+                return
+              }
+              if (event.key === "ArrowUp") {
+                event.preventDefault()
+                setHighlighted((at) => Math.max(at - 1, 0))
+                return
+              }
+              if (event.key === "Enter" || event.key === "Tab") {
+                event.preventDefault()
+                const hit = hits[highlighted]
+                if (hit !== undefined) applyMention(hit.path)
+                return
+              }
+              if (event.key === "Escape") {
+                event.preventDefault()
+                setDismissedQuery(mention?.query)
+                return
+              }
+            }
+            if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault()
               submit()
               return

@@ -323,12 +323,19 @@ describe("fold compaction and revert events", () => {
   })
 
   it("folds revert staged -> committed and cleared removes the marker", () => {
-    let state = applyEvent(emptyTranscript(), evt("session.next.revert.staged", { ...base, revert: { messageID: "msg_u1", files: ["a.ts"] } }, 1))
+    let state = applyEvent(
+      emptyTranscript(),
+      evt(
+        "session.next.revert.staged",
+        { ...base, revert: { messageID: "msg_u1", files: [{ path: "a.ts", status: "modified", additions: 2, deletions: 1, patch: "@@x" }] } },
+        1,
+      ),
+    )
     const staged = state.blocks[0]
     expect(staged.kind).toBe("revert")
     if (staged.kind !== "revert") return
     expect(staged.messageID).toBe("msg_u1")
-    expect(staged.files).toEqual(["a.ts"])
+    expect(staged.files?.[0]).toEqual({ path: "a.ts", status: "modified", additions: 2, deletions: 1, patch: "@@x" })
 
     state = applyEvent(state, evt("session.next.revert.committed", { ...base, messageID: "msg_u1" }, 2))
     if (state.blocks[0].kind !== "revert") throw new Error("bad block")
@@ -336,6 +343,23 @@ describe("fold compaction and revert events", () => {
 
     state = applyEvent(state, evt("session.next.revert.cleared", { ...base }, 3))
     expect(state.blocks.length).toBe(0)
+  })
+
+  it("captures edit permission metadata diff preview", () => {
+    const state = applyEvent(
+      emptyTranscript(),
+      evt("permission.v2.asked", {
+        id: "per_3",
+        sessionID: "ses_test",
+        action: "edit",
+        resources: ["src/a.ts"],
+        metadata: { filepath: "src/a.ts", diff: "---a\n+++b\n-old\n+new" },
+      }),
+    )
+    const card = state.blocks[0]
+    if (card.kind !== "permission") throw new Error("bad block")
+    expect(card.filepath).toBe("src/a.ts")
+    expect(card.diffPreview).toContain("+new")
   })
 })
 

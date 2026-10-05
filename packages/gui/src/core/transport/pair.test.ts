@@ -11,6 +11,7 @@ import { createGuiClient } from "./client"
 function wired(options?: {
   serverResult?: { ok: true; server: { url: string; username: string; password?: string } } | { ok: false; reason: "offline"; detail?: string }
   upstream?: (url: string, init: RequestInit) => Promise<Response>
+  getSelection?: () => Promise<{ path: string; start: number; end: number; text?: string } | undefined>
 }) {
   const webviewListeners: ((message: unknown) => void)[] = []
   const hostCalls: { method: string; url: string; headers: Record<string, string>; body?: string }[] = []
@@ -24,6 +25,7 @@ function wired(options?: {
     },
     resolveServer: async () => resolver,
     directory: () => "/work/tree",
+    getSelection: options?.getSelection,
     coalesceMs: 1,
     fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
@@ -163,6 +165,19 @@ describe("bridge pair conformance (gui shim <-> extension host relay)", () => {
     const response = await bridge.fetch("http://daemon.local/etc/passwd")
     expect(response.status).toBe(400)
     expect(hostCalls.length).toBe(0)
+  })
+
+  it("round-trips an editor selection through the host", async () => {
+    const { bridge } = wired({ getSelection: async () => ({ path: "src/a.ts", start: 3, end: 7 }) })
+    await bridge.target()
+    const selection = await bridge.requestSelection()
+    expect(selection).toEqual({ path: "src/a.ts", start: 3, end: 7, text: undefined })
+  })
+
+  it("resolves undefined selection when the host has no editor", async () => {
+    const { bridge } = wired({ getSelection: async () => undefined })
+    await bridge.target()
+    expect(await bridge.requestSelection()).toBeUndefined()
   })
 })
 
