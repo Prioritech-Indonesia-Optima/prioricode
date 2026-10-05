@@ -1,6 +1,6 @@
 {
   "name": "@prioricode/ide-chat",
-  "version": "0.1.0",
+  "version": "0.1.20",
   "description": "PrioriCode chat frontend for editor webviews (VS Code, and any host that can embed HTML). Framework-agnostic DOM renderer with markdown, syntax highlighting, permission cards, and clipboard image paste. Host-agnostic: plug in a ChatTransport.",
   "type": "module",
   "license": "MIT",
