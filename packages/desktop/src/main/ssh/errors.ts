@@ -11,10 +11,22 @@ export function isValidSshAlias(value: string) {
 }
 
 const PATTERNS: Array<{ test: RegExp; key: Parameters<typeof nativeT>[0] }> = [
-  { test: /Permission denied \(publickey|Too many authentication failures|no supported authentication methods|Received disconnect.*No supported authentication/i, key: "desktop.ssh.error.authDenied" },
-  { test: /Could not resolve hostname|Name or service not known|nodename nor servname provided|Temporary failure in name resolution/i, key: "desktop.ssh.error.hostUnresolved" },
-  { test: /Host key verification failed|REMOTE HOST IDENTIFICATION HAS CHANGED|offering a different key/i, key: "desktop.ssh.error.hostKeyChanged" },
-  { test: /Connection timed out|Connection refused|Network is unreachable|No route to host|Connection closed by/i, key: "desktop.ssh.error.unreachable" },
+  {
+    test: /Permission denied \(publickey|Too many authentication failures|no supported authentication methods|Received disconnect.*No supported authentication/i,
+    key: "desktop.ssh.error.authDenied",
+  },
+  {
+    test: /Could not resolve hostname|Name or service not known|nodename nor servname provided|Temporary failure in name resolution/i,
+    key: "desktop.ssh.error.hostUnresolved",
+  },
+  {
+    test: /Host key verification failed|REMOTE HOST IDENTIFICATION HAS CHANGED|offering a different key/i,
+    key: "desktop.ssh.error.hostKeyChanged",
+  },
+  {
+    test: /Connection timed out|Connection refused|Network is unreachable|No route to host|Connection closed by/i,
+    key: "desktop.ssh.error.unreachable",
+  },
 ]
 
 export function classifySshFailure(output: string, alias: string, code: number | null) {

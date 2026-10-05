@@ -87,7 +87,9 @@ describe("ide-chat mount", () => {
     api.render(ready)
     const textarea = find(root, ".pc-textarea") as HTMLTextAreaElement
     const transfer = new DataTransfer()
-    transfer.items.add(new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], "shot.png", { type: "image/png" }))
+    transfer.items.add(
+      new File([new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])], "shot.png", { type: "image/png" }),
+    )
     textarea.dispatchEvent(new ClipboardEvent("paste", { clipboardData: transfer, bubbles: true, cancelable: true }))
     await new Promise((resolve) => setTimeout(resolve, 20))
     expect(find(root, ".pc-chip img")).not.toBeNull()
@@ -138,7 +140,18 @@ describe("ide-chat mount", () => {
     const block: ChatState["blocks"][number] = {
       kind: "question",
       id: "que_1",
-      questions: [{ question: "Env?", header: "Env", options: [{ label: "prod", description: "live" }, { label: "dev", description: "test" }], multiple: false, custom: true }],
+      questions: [
+        {
+          question: "Env?",
+          header: "Env",
+          options: [
+            { label: "prod", description: "live" },
+            { label: "dev", description: "test" },
+          ],
+          multiple: false,
+          custom: true,
+        },
+      ],
     }
     api.render({ ...ready, blocks: [block] })
     const radios = findAll(root, ".pc-option input") as HTMLInputElement[]

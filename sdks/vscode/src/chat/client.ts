@@ -66,15 +66,11 @@ export function createClient(options: ClientOptions) {
       files?: PromptFile[]
       delivery?: "steer" | "queue"
     }): Promise<void> {
-      await request(
-        "POST",
-        `${sessionPath(input.sessionID)}/prompt`,
-        {
-          ...(input.messageID === undefined ? {} : { id: input.messageID }),
-          prompt: { text: input.text, ...(input.files && input.files.length > 0 ? { files: input.files } : {}) },
-          ...(input.delivery === undefined ? {} : { delivery: input.delivery }),
-        },
-      )
+      await request("POST", `${sessionPath(input.sessionID)}/prompt`, {
+        ...(input.messageID === undefined ? {} : { id: input.messageID }),
+        prompt: { text: input.text, ...(input.files && input.files.length > 0 ? { files: input.files } : {}) },
+        ...(input.delivery === undefined ? {} : { delivery: input.delivery }),
+      })
     },
     async interrupt(sessionID: string): Promise<void> {
       await request("POST", `${sessionPath(sessionID)}/interrupt`)

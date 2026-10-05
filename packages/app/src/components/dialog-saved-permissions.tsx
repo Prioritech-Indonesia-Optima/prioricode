@@ -42,9 +42,22 @@ export function DialogSavedPermissions() {
         <DialogTitle>{language.t("dialog.savedPermissions.title")}</DialogTitle>
       </DialogHeader>
       <DialogBody class="dialog-saved-permissions-body">
-        <Show when={!query.isPending} fallback={<div class="dialog-saved-permissions-loading"><LoaderV2 /></div>}>
-          <Show when={!query.isError} fallback={<div class="dialog-saved-permissions-empty">{language.t("dialog.savedPermissions.error")}</div>}>
-            <Show when={(query.data ?? []).length > 0} fallback={<div class="dialog-saved-permissions-empty">{language.t("dialog.savedPermissions.empty")}</div>}>
+        <Show
+          when={!query.isPending}
+          fallback={
+            <div class="dialog-saved-permissions-loading">
+              <LoaderV2 />
+            </div>
+          }
+        >
+          <Show
+            when={!query.isError}
+            fallback={<div class="dialog-saved-permissions-empty">{language.t("dialog.savedPermissions.error")}</div>}
+          >
+            <Show
+              when={(query.data ?? []).length > 0}
+              fallback={<div class="dialog-saved-permissions-empty">{language.t("dialog.savedPermissions.empty")}</div>}
+            >
               <div class="dialog-saved-permissions-list">
                 <For each={query.data ?? []}>
                   {(rule) => (

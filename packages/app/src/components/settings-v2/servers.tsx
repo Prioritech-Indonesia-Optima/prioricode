@@ -28,9 +28,9 @@ export const SettingsServersV2: Component = () => {
   const showSearch = createMemo(
     () =>
       controller.sortedItems().filter((item) => !isWslServer(item) && !isSshServer(item)).length +
-      wslServers().length +
-      sshServers().length >
-        1,
+        wslServers().length +
+        sshServers().length >
+      1,
   )
 
   const filtered = createMemo(() => {

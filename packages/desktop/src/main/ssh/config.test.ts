@@ -38,7 +38,14 @@ Host db
   IdentityFile ~/.ssh/id_ed25519
 `)
   expect(profiles).toEqual([
-    { alias: "web", hostname: "web.example.com", user: "deploy", port: 2222, hasProxy: false, sourceFile: expect.any(String) },
+    {
+      alias: "web",
+      hostname: "web.example.com",
+      user: "deploy",
+      port: 2222,
+      hasProxy: false,
+      sourceFile: expect.any(String),
+    },
     { alias: "db", hostname: "10.0.0.5", user: null, port: null, hasProxy: false, sourceFile: expect.any(String) },
   ])
 })
@@ -59,7 +66,14 @@ Host *
   Port 2200
 `)
   expect(profiles).toEqual([
-    { alias: "special", hostname: "special", user: "owner", port: 2200, hasProxy: false, sourceFile: expect.any(String) },
+    {
+      alias: "special",
+      hostname: "special",
+      user: "owner",
+      port: 2200,
+      hasProxy: false,
+      sourceFile: expect.any(String),
+    },
   ])
 })
 

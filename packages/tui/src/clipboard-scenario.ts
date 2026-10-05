@@ -91,7 +91,7 @@ function remotePasteEmpty(terminal?: TerminalName, multiplexer?: "tmux" | "scree
   } else if (terminal === "vscode") {
     parts.push(
       "Images: drag the file into VS Code — Remote-SSH uploads it to this machine — then paste its path to attach it; the PrioriCode VS Code extension is an optional one-key upgrade (Ctrl+V sends the clipboard image directly).",
-    );
+    )
   } else {
     parts.push("This terminal does not hand clipboard images to applications over SSH.")
   }

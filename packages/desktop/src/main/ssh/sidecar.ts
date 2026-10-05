@@ -59,7 +59,10 @@ export function bootstrapError(alias: string, code: string) {
   if (code === "missing_binary") return nativeT("desktop.ssh.error.prioricodeNotInstalled", { host: alias })
   if (code === "busy") return nativeT("desktop.ssh.error.busy", { host: alias })
   if (code.startsWith("insecure_bind"))
-    return nativeT("desktop.ssh.error.insecureBind", { host: alias, address: code.slice("insecure_bind".length).trim() })
+    return nativeT("desktop.ssh.error.insecureBind", {
+      host: alias,
+      address: code.slice("insecure_bind".length).trim(),
+    })
   return nativeT("desktop.ssh.error.bootstrapFailed", { host: alias, code })
 }
 
@@ -223,7 +226,10 @@ function runBootstrap(
 }
 
 export async function stopSshServer(alias: string, opts: { spawn?: typeof spawn; timeoutMs?: number } = {}) {
-  const child = (opts.spawn ?? spawn)("ssh", stopArgs(alias), { stdio: ["pipe", "ignore", "ignore"], windowsHide: true })
+  const child = (opts.spawn ?? spawn)("ssh", stopArgs(alias), {
+    stdio: ["pipe", "ignore", "ignore"],
+    windowsHide: true,
+  })
   child.stdin.end(stopScript())
   await new Promise<void>((resolve) => {
     const timer = setTimeout(() => {

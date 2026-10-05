@@ -72,7 +72,12 @@ test("save prunes entries past the TTL without touching fresh ones", async () =>
   const fresh = await savePastedImage({ directory, mime: "image/png", base64: PNG_B64 })
   await settled()
 
-  expect(await stat(old).then(() => false, () => true)).toBe(true)
+  expect(
+    await stat(old).then(
+      () => false,
+      () => true,
+    ),
+  ).toBe(true)
   expect(await readFile(fresh)).toEqual(PNG)
 })
 

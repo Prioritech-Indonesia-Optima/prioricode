@@ -1,6 +1,7 @@
 import type { SshHostProfile, SshPrioricodeCheck, SshServerRuntime } from "./types"
 
-export const sshRuntimeRetryable = (runtime: SshServerRuntime) => runtime.kind === "failed" || runtime.kind === "stopped"
+export const sshRuntimeRetryable = (runtime: SshServerRuntime) =>
+  runtime.kind === "failed" || runtime.kind === "stopped"
 
 export function sshPrioricodeAction(check: SshPrioricodeCheck | undefined) {
   if (!check) return

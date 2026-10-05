@@ -135,11 +135,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     ])
       .then(([remote, result]) => {
         if (!result.ok) {
-          this.setStatus(result.reason, result.detail ?? (remote ? `Configured server ${remote.url} is not reachable.` : undefined))
+          this.setStatus(
+            result.reason,
+            result.detail ?? (remote ? `Configured server ${remote.url} is not reachable.` : undefined),
+          )
           return
         }
         this.server = result.server
-        this.client = createClient({ url: result.server.url, username: result.server.username, password: result.server.password })
+        this.client = createClient({
+          url: result.server.url,
+          username: result.server.username,
+          password: result.server.password,
+        })
         const label = this.hostLabel(result.server.url)
         this.state = { ...this.state, status: "ready", statusDetail: undefined, serverUrl: label }
         this.post()
@@ -203,7 +210,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const detail = error instanceof ApiError ? ` (${error.status})` : ""
     this.state = {
       ...this.state,
-      blocks: [...this.state.blocks, { kind: "system", id: newMessageID(), text: `${String(error)}${detail}`, tone: "error" }],
+      blocks: [
+        ...this.state.blocks,
+        { kind: "system", id: newMessageID(), text: `${String(error)}${detail}`, tone: "error" },
+      ],
     }
     this.post()
   }
@@ -231,7 +241,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     if (!this.client) await this.connect()
     const client = this.client
     if (!client) {
-      this.noteError(new Error(`No prioricode server available (${this.state.status}). Use Retry after starting the service.`))
+      this.noteError(
+        new Error(`No prioricode server available (${this.state.status}). Use Retry after starting the service.`),
+      )
       return
     }
     const files: ReturnType<typeof attachmentFile>[] = []
@@ -297,7 +309,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
             client.listQuestions(sessionID).catch(() => []),
           ])
           for (const request of permissions) {
-            this.state = applyEvent(this.state, { id: `resync:${request.id}`, type: "permission.v2.asked", data: request })
+            this.state = applyEvent(this.state, {
+              id: `resync:${request.id}`,
+              type: "permission.v2.asked",
+              data: request,
+            })
           }
           for (const request of questions) {
             this.state = applyEvent(this.state, {

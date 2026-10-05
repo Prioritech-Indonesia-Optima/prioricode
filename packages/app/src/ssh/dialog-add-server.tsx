@@ -90,10 +90,18 @@ export function DialogAddSshServer() {
           </ButtonV2>
         </div>
 
-        <Show when={!ssh.isPending} fallback={<div class="settings-v2-ssh-loading"><LoaderV2 /></div>}>
-          <Show when={hosts().length > 0} fallback={
-            <div class="settings-v2-ssh-empty">{language.t("ssh.server.empty")}</div>
-          }>
+        <Show
+          when={!ssh.isPending}
+          fallback={
+            <div class="settings-v2-ssh-loading">
+              <LoaderV2 />
+            </div>
+          }
+        >
+          <Show
+            when={hosts().length > 0}
+            fallback={<div class="settings-v2-ssh-empty">{language.t("ssh.server.empty")}</div>}
+          >
             <div class="settings-v2-ssh-list">
               <For each={hosts()}>
                 {(host) => {
@@ -115,7 +123,10 @@ export function DialogAddSshServer() {
                         <span class="settings-v2-ssh-row-meta" dir="ltr">
                           <bdi>{sshHostMeta(host)}</bdi>
                           <Show when={host.hasProxy}>
-                            <span class="settings-v2-ssh-row-badge" dir="auto"> · {language.t("ssh.server.viaJump")}</span>
+                            <span class="settings-v2-ssh-row-badge" dir="auto">
+                              {" "}
+                              · {language.t("ssh.server.viaJump")}
+                            </span>
                           </Show>
                         </span>
                         <Show when={check()?.error && !check()?.resolvedPath}>

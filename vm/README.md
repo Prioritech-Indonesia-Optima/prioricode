@@ -22,11 +22,11 @@ bun vm/diagnose.ts        # same diagnosis, no Docker (needs bun)
 
 ## What it shows
 
-| terminal / setting         | image result                              |
-|----------------------------|-------------------------------------------|
-| any, default               | **instant miss note** (no probe stall)     |
-| kitty, `+OSC reads`        | protocol (kitty OSC 5522) — opt-in        |
-| any                        | text → bracketed paste (terminal-native)  |
+| terminal / setting  | image result                             |
+| ------------------- | ---------------------------------------- |
+| any, default        | **instant miss note** (no probe stall)   |
+| kitty, `+OSC reads` | protocol (kitty OSC 5522) — opt-in       |
+| any                 | text → bracketed paste (terminal-native) |
 
 **Root cause:** remote clipboards live on the client. Only a kitty-protocol
 terminal can carry image bytes over the pty (VS Code's terminal and Windows

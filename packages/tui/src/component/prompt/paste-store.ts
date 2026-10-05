@@ -27,13 +27,15 @@ export function pasteDirectory(state: string): string {
   return path.join(state, "paste")
 }
 
-export async function savePastedImage(input: Readonly<{
-  directory: string
-  mime: string
-  base64: string
-  now?: () => number
-  uuid?: () => string
-}>): Promise<string> {
+export async function savePastedImage(
+  input: Readonly<{
+    directory: string
+    mime: string
+    base64: string
+    now?: () => number
+    uuid?: () => string
+  }>,
+): Promise<string> {
   const bytes = Buffer.from(input.base64, "base64")
   if (!bytes.length) throw new Error("paste store: empty image payload")
   await mkdir(input.directory, { recursive: true, mode: 0o700 })
@@ -72,4 +74,3 @@ async function prune(directory: string, now: number): Promise<void> {
     await rm(path.join(directory, entry.name), { force: true }).catch(() => {})
   }
 }
-

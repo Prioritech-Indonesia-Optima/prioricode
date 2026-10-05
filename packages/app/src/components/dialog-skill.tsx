@@ -57,12 +57,22 @@ export function DialogSkill(props: { onSelect: (skillName: string) => void }) {
           aria-label={language.t("dialog.skill.search")}
           class="dialog-skill-search"
         />
-        <Show when={!query.isPending} fallback={<div class="dialog-skill-loading"><LoaderV2 /></div>}>
+        <Show
+          when={!query.isPending}
+          fallback={
+            <div class="dialog-skill-loading">
+              <LoaderV2 />
+            </div>
+          }
+        >
           <Show
             when={!query.isError}
             fallback={<div class="dialog-skill-empty">{language.t("dialog.skill.error")}</div>}
           >
-            <Show when={items().length > 0} fallback={<div class="dialog-skill-empty">{language.t("dialog.skill.empty")}</div>}>
+            <Show
+              when={items().length > 0}
+              fallback={<div class="dialog-skill-empty">{language.t("dialog.skill.empty")}</div>}
+            >
               <div class="dialog-skill-list">
                 <For each={items()}>
                   {(skill) => (

@@ -79,9 +79,7 @@ const readOptional = async (readFile: (path: string) => Promise<string>, file: s
   }
 }
 
-async function tryRegistered(
-  deps: DiscoveryDeps,
-): Promise<{ outcome: HealthOutcome; server: ServerInfo } | undefined> {
+async function tryRegistered(deps: DiscoveryDeps): Promise<{ outcome: HealthOutcome; server: ServerInfo } | undefined> {
   const directory = stateDirectory(deps)
   const registrationText = await readOptional(deps.readFile, path.join(directory, "server.json"))
   if (registrationText === undefined) return undefined
@@ -107,7 +105,11 @@ export function parseServerTarget(raw: string, fallbackPassword?: string): Remot
     const password = url.password ? decodeURIComponent(url.password) : fallbackPassword
     url.username = ""
     url.password = ""
-    return { url: normalizeServerUrl(url.href), username, ...(password === undefined || password === "" ? {} : { password }) }
+    return {
+      url: normalizeServerUrl(url.href),
+      username,
+      ...(password === undefined || password === "" ? {} : { password }),
+    }
   } catch {
     return undefined
   }
@@ -128,7 +130,11 @@ export async function discover(deps: DiscoveryDeps): Promise<DiscoveryResult> {
   if (first) {
     if (first.outcome === "ok") return { ok: true, server: first.server }
     if (first.outcome === "unauthorized")
-      return { ok: false, reason: "auth-mismatch", detail: `Server at ${first.server.url} rejected the stored password.` }
+      return {
+        ok: false,
+        reason: "auth-mismatch",
+        detail: `Server at ${first.server.url} rejected the stored password.`,
+      }
   }
 
   if (deps.startDaemon) {
@@ -138,14 +144,26 @@ export async function discover(deps: DiscoveryDeps): Promise<DiscoveryResult> {
       const second = await tryRegistered(deps)
       if (second?.outcome === "ok") return { ok: true, server: second.server }
       if (second?.outcome === "unauthorized")
-        return { ok: false, reason: "auth-mismatch", detail: `Server at ${second.server.url} rejected the stored password.` }
+        return {
+          ok: false,
+          reason: "auth-mismatch",
+          detail: `Server at ${second.server.url} rejected the stored password.`,
+        }
     }
   }
 
-  return { ok: false, reason: "offline", detail: first ? `Server at ${first.server.url} is not responding.` : undefined }
+  return {
+    ok: false,
+    reason: "offline",
+    detail: first ? `Server at ${first.server.url} is not responding.` : undefined,
+  }
 }
 
-export async function defaultProbe(fetchImpl: typeof fetch, server: ServerInfo, timeoutMs = 2000): Promise<HealthOutcome> {
+export async function defaultProbe(
+  fetchImpl: typeof fetch,
+  server: ServerInfo,
+  timeoutMs = 2000,
+): Promise<HealthOutcome> {
   const headers: Record<string, string> = {}
   if (server.password !== undefined) {
     headers.authorization = `Basic ${Buffer.from(`${server.username}:${server.password}`).toString("base64")}`

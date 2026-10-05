@@ -147,7 +147,9 @@ test("stopAll invalidates attempts and kills every tunnel", async () => {
 })
 
 test("refreshHosts pulls parsed profiles from injected reader", async () => {
-  const hosts: SshHostProfile[] = [{ alias: "web", hostname: "web.example.com", user: null, port: null, hasProxy: false, sourceFile: "/x" }]
+  const hosts: SshHostProfile[] = [
+    { alias: "web", hostname: "web.example.com", user: null, port: null, hasProxy: false, sourceFile: "/x" },
+  ]
   const { controller } = setup({ hosts })
   await controller.refreshHosts()
   expect(controller.getState().hosts).toEqual(hosts)
@@ -165,7 +167,10 @@ test("installPrioricode runs pinned version, refreshes check, and restarts known
     },
     remoteExec: async (args, stdin) => {
       execCalls.push({ args, stdin })
-      return { code: 0, output: `PRIORICODE_SSH_CHECK {"version":"0.1.18","path":"/home/u/.prioricode/bin/prioricode"}` }
+      return {
+        code: 0,
+        output: `PRIORICODE_SSH_CHECK {"version":"0.1.18","path":"/home/u/.prioricode/bin/prioricode"}`,
+      }
     },
   })
   await controller.addServer("web")
@@ -182,15 +187,19 @@ test("installPrioricode runs pinned version, refreshes check, and restarts known
 test("initialize starts every persisted server and refreshes hosts", async () => {
   const started: string[] = []
   let persisted: SshServerConfig[] = [{ id: "ssh:web", alias: "web" }]
-  const controller = createSshServersController("0.1.18", async (alias) => {
-    started.push(alias)
-    return fakeSidecar() as never
-  }, {
-    readServers: () => persisted.map((x) => ({ ...x })),
-    writeServers: (servers) => (persisted = servers),
-    readHosts: () => ({ profiles: [], files: [] }),
-    remoteExec: async () => ({ code: 0, output: "" }),
-  })
+  const controller = createSshServersController(
+    "0.1.18",
+    async (alias) => {
+      started.push(alias)
+      return fakeSidecar() as never
+    },
+    {
+      readServers: () => persisted.map((x) => ({ ...x })),
+      writeServers: (servers) => (persisted = servers),
+      readHosts: () => ({ profiles: [], files: [] }),
+      remoteExec: async () => ({ code: 0, output: "" }),
+    },
+  )
   await controller.initialize()
   await flush()
   expect(started).toEqual(["web"])

@@ -21,11 +21,7 @@ import { spawnSync } from "node:child_process"
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import {
-  readTerminalClipboard,
-  encodeOsc52Query,
-  type OscTerminal,
-} from "../packages/tui/src/clipboard-terminal"
+import { readTerminalClipboard, encodeOsc52Query, type OscTerminal } from "../packages/tui/src/clipboard-terminal"
 import { readClipboard, type ClipboardEnvironment, type Content } from "../packages/tui/src/clipboard"
 import { REMOTE_PASTE_DISABLED, clipboardSignals, resolveScenario } from "../packages/tui/src/clipboard-scenario"
 import { pasteDirectory, savePastedImage } from "../packages/tui/src/component/prompt/paste-store"
@@ -112,8 +108,12 @@ function makeTerminal(model: TerminalModel, clip: Clip): { term: OscTerminal; wr
         return
       }
       const mime = request.mimes[0] ?? "text/plain"
-      const payload = mime === "text/plain" ? b64(clip.text ?? "") : clip.imageB64 ?? ""
-      emit([frame5522(request.id, "OK"), frame5522(request.id, "DATA", { mime, payload }), frame5522(request.id, "DONE")])
+      const payload = mime === "text/plain" ? b64(clip.text ?? "") : (clip.imageB64 ?? "")
+      emit([
+        frame5522(request.id, "OK"),
+        frame5522(request.id, "DATA", { mime, payload }),
+        frame5522(request.id, "DONE"),
+      ])
       return
     }
     if (seq.includes(encodeOsc52Query())) {
@@ -232,7 +232,10 @@ async function main(): Promise<void> {
   console.log("  PrioriCode — Windows → Linux Ctrl+V paste diagnosis")
   console.log(line("═"))
   console.log(label("VM (remote host):"), `headless linux, ${scenario}`)
-  console.log(label("clipboard tools:"), ["xclip", "wl-paste", "xsel"].filter(probeTool).join(", ") || "none (headless)")
+  console.log(
+    label("clipboard tools:"),
+    ["xclip", "wl-paste", "xsel"].filter(probeTool).join(", ") || "none (headless)",
+  )
   console.log(label("remote detected:"), String(signals.remote))
   if (!signals.remote) {
     console.log("  WARNING: remote not detected — the matrix below would be wrong.")
@@ -340,13 +343,15 @@ async function main(): Promise<void> {
   const problems: string[] = []
   if (!signals.remote) problems.push("remote not detected")
   if (fastestMissMs >= 100) problems.push(`default remote miss should be instant, took ${fastestMissMs}ms`)
-  if (protocolRow?.content?.mime !== "image/png") problems.push("kitty protocol with OSC reads enabled did not deliver the image")
+  if (protocolRow?.content?.mime !== "image/png")
+    problems.push("kitty protocol with OSC reads enabled did not deliver the image")
   if (winText !== CLIP_TEXT) problems.push(`bracketed paste recovered wrong text: ${winText}`)
   if (localWithXclip?.mime !== "text/plain") problems.push("host channel with xclip did not return text")
   if (headless !== undefined) problems.push("headless host read unexpectedly returned content")
   if (landedMode !== 0o600) problems.push("landed image file not mode 0600")
   if (dirMode !== 0o700) problems.push("landing dir not mode 0700")
-  if (!landedBytes.equals(Buffer.from(TINY_PNG_B64, "base64"))) problems.push("landed bytes differ from delivered image")
+  if (!landedBytes.equals(Buffer.from(TINY_PNG_B64, "base64")))
+    problems.push("landed bytes differ from delivered image")
   if (problems.length) {
     console.error(`\n  SELF-CHECK FAILED: ${problems.join("; ")}`)
     process.exitCode = 1

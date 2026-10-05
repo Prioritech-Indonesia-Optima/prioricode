@@ -68,12 +68,15 @@ export function createConnection(options: ConnectionOptions): Connection {
       const idleMs = options.durableIdleMs ?? 30_000
       const watchdog =
         idleMs > 0
-          ? setInterval(() => {
-              if (Date.now() - lastActivity > idleMs) {
-                watchdogFired = true
-                controller.abort()
-              }
-            }, Math.max(250, Math.floor(idleMs / 3)))
+          ? setInterval(
+              () => {
+                if (Date.now() - lastActivity > idleMs) {
+                  watchdogFired = true
+                  controller.abort()
+                }
+              },
+              Math.max(250, Math.floor(idleMs / 3)),
+            )
           : undefined
       try {
         const response = await options.openStream(
@@ -116,12 +119,15 @@ export function createConnection(options: ConnectionOptions): Connection {
       let lastActivity = Date.now()
       const watchdog =
         heartbeatTimeoutMs > 0
-          ? setInterval(() => {
-              if (Date.now() - lastActivity > heartbeatTimeoutMs) {
-                watchdogFired = true
-                controller.abort()
-              }
-            }, Math.max(250, Math.floor(heartbeatTimeoutMs / 3)))
+          ? setInterval(
+              () => {
+                if (Date.now() - lastActivity > heartbeatTimeoutMs) {
+                  watchdogFired = true
+                  controller.abort()
+                }
+              },
+              Math.max(250, Math.floor(heartbeatTimeoutMs / 3)),
+            )
           : undefined
       try {
         const response = await options.openStream("/api/event", controller.signal)

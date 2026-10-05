@@ -48,7 +48,11 @@ export function sshServerIdForAlias(alias: string) {
 const INSTALL_TIMEOUT_MS = 15 * 60_000
 const CHECK_TIMEOUT_MS = 30_000
 
-export function createSshServersController(appVersion: string, spawnSidecar: SpawnSidecar, options?: SshServersControllerOptions) {
+export function createSshServersController(
+  appVersion: string,
+  spawnSidecar: SpawnSidecar,
+  options?: SshServersControllerOptions,
+) {
   let state: SshServersState = initialState()
   const listeners = new Set<(event: SshServersEvent) => void>()
   const sidecars = new Map<string, RunningSidecar>()
@@ -196,7 +200,11 @@ export function createSshServersController(appVersion: string, spawnSidecar: Spa
         sidecars.delete(id)
         setRuntime(id, {
           kind: "failed",
-          message: nativeT("desktop.ssh.error.serverExited", { host: item.config.alias, code: code ?? "null", signal: signal ?? "null" }),
+          message: nativeT("desktop.ssh.error.serverExited", {
+            host: item.config.alias,
+            code: code ?? "null",
+            signal: signal ?? "null",
+          }),
         })
         logger?.error("ssh sidecar exited", { id, alias: item.config.alias, code, signal })
       })
@@ -364,7 +372,11 @@ function normalizePersistedServer(value: unknown): SshServerConfig[] {
   return [{ id, alias }]
 }
 
-async function defaultRemoteExec(args: string[], stdin: string, timeoutMs: number): Promise<{ code: number; output: string }> {
+async function defaultRemoteExec(
+  args: string[],
+  stdin: string,
+  timeoutMs: number,
+): Promise<{ code: number; output: string }> {
   const { spawn } = await import("node:child_process")
   return new Promise((resolve, reject) => {
     const child = spawn("ssh", args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true })

@@ -58,7 +58,9 @@ const attachmentMeta = (file: unknown): AttachmentMeta => {
 const formatModel = (model: unknown): string | undefined => {
   const record = asRecord(model)
   if (typeof record.id === "string" && typeof record.providerID === "string") {
-    return record.variant ? `${record.providerID}/${record.id} (${record.variant})` : `${record.providerID}/${record.id}`
+    return record.variant
+      ? `${record.providerID}/${record.id} (${record.variant})`
+      : `${record.providerID}/${record.id}`
   }
   if (typeof model === "string") return model
   return undefined
@@ -130,7 +132,12 @@ const applyText = (
   textID: string,
   mutate: (part: { text: string; streaming: boolean }) => void,
 ): ChatState => {
-  const { next, part } = upsertPart(state, assistantID, isTextPart, () => ({ type: "text", textID, text: "", streaming: true }))
+  const { next, part } = upsertPart(state, assistantID, isTextPart, () => ({
+    type: "text",
+    textID,
+    text: "",
+    streaming: true,
+  }))
   mutate(part)
   return next
 }
@@ -139,7 +146,13 @@ const applyTool = (
   state: ChatState,
   assistantID: string,
   callID: string,
-  mutate: (part: { state: "running" | "success" | "error"; name?: string; input?: string; summary?: string; error?: string }) => void,
+  mutate: (part: {
+    state: "running" | "success" | "error"
+    name?: string
+    input?: string
+    summary?: string
+    error?: string
+  }) => void,
   name?: string,
 ): ChatState => {
   const { next, part } = upsertPart(state, assistantID, isToolPart, () => ({
@@ -172,7 +185,11 @@ const finishShell = (state: ChatState, callID: string, output: string): ChatStat
     if (index < 0) continue
     const next = clone(state)
     const parts = [...block.parts]
-    parts[index] = { ...(parts[index] as Extract<AssistantPart, { type: "shell" }>), state: "done", output: truncate(output, 4000) }
+    parts[index] = {
+      ...(parts[index] as Extract<AssistantPart, { type: "shell" }>),
+      state: "done",
+      output: truncate(output, 4000),
+    }
     setBlock(next.blocks, i, { ...block, parts })
     return next
   }
@@ -214,7 +231,9 @@ const applyPermissionAsked = (state: ChatState, data: Record<string, any>): Chat
     kind: "permission",
     id,
     action: typeof data.action === "string" ? data.action : "action",
-    resources: Array.isArray(data.resources) ? data.resources.filter((r: unknown): r is string => typeof r === "string") : [],
+    resources: Array.isArray(data.resources)
+      ? data.resources.filter((r: unknown): r is string => typeof r === "string")
+      : [],
   })
   return next
 }
@@ -336,7 +355,13 @@ export function applyEvent(state: ChatState, event: RawEvent): ChatState {
 
     case "session.next.tool.input.started": {
       if (typeof data.assistantMessageID !== "string" || typeof data.callID !== "string") return state
-      return applyTool(state, data.assistantMessageID, data.callID, () => {}, typeof data.name === "string" ? data.name : undefined)
+      return applyTool(
+        state,
+        data.assistantMessageID,
+        data.callID,
+        () => {},
+        typeof data.name === "string" ? data.name : undefined,
+      )
     }
 
     case "session.next.tool.input.ended": {
@@ -356,10 +381,16 @@ export function applyEvent(state: ChatState, event: RawEvent): ChatState {
       } catch {
         input = undefined
       }
-      return applyTool(state, data.assistantMessageID, data.callID, (part) => {
-        if (input !== undefined) part.input = input
-        part.state = "running"
-      }, name)
+      return applyTool(
+        state,
+        data.assistantMessageID,
+        data.callID,
+        (part) => {
+          if (input !== undefined) part.input = input
+          part.state = "running"
+        },
+        name,
+      )
     }
 
     case "session.next.tool.success": {
@@ -416,7 +447,11 @@ export function applyEvent(state: ChatState, event: RawEvent): ChatState {
     }
 
     case "session.next.agent.switched":
-      return systemNote(state, `agent:${data.messageID ?? event.id ?? ""}`, `Agent switched to ${String(data.agent ?? "?")}`)
+      return systemNote(
+        state,
+        `agent:${data.messageID ?? event.id ?? ""}`,
+        `Agent switched to ${String(data.agent ?? "?")}`,
+      )
 
     case "session.next.model.switched": {
       const model = formatModel(data.model) ?? "?"
@@ -424,7 +459,11 @@ export function applyEvent(state: ChatState, event: RawEvent): ChatState {
     }
 
     case "session.next.goal.set":
-      return systemNote(state, `goal:${data.messageID ?? event.id ?? ""}`, `Goal set: ${truncate(String(data.goal ?? ""), 200)}`)
+      return systemNote(
+        state,
+        `goal:${data.messageID ?? event.id ?? ""}`,
+        `Goal set: ${truncate(String(data.goal ?? ""), 200)}`,
+      )
 
     case "session.next.synthetic":
       if (typeof data.messageID !== "string") return state
@@ -445,7 +484,11 @@ export function applyEvent(state: ChatState, event: RawEvent): ChatState {
 
     case "permission.v2.replied":
       if (typeof data.requestID !== "string") return state
-      return resolvePermission(state, data.requestID, data.reply === "once" || data.reply === "always" ? data.reply : "reject")
+      return resolvePermission(
+        state,
+        data.requestID,
+        data.reply === "once" || data.reply === "always" ? data.reply : "reject",
+      )
 
     case "question.v2.asked":
       return applyQuestionAsked(state, data)

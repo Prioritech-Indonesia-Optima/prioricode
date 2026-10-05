@@ -25,7 +25,9 @@ describe("renderMarkdown safety", () => {
   })
 
   it("renders lists, headings, quotes, inline marks", () => {
-    const html = renderMarkdown("# Title\n\n- one\n- two\n\n1. first\n\n> quoted **bold**\n\n`code` and *em* and ~~del~~")
+    const html = renderMarkdown(
+      "# Title\n\n- one\n- two\n\n1. first\n\n> quoted **bold**\n\n`code` and *em* and ~~del~~",
+    )
     expect(html).toContain("<h3")
     expect(html).toContain("<ul")
     expect(html).toContain("<ol")

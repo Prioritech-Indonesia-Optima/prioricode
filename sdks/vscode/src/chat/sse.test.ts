@@ -23,7 +23,7 @@ describe("readSse", () => {
   })
 
   it("handles frames split across chunks and CRLF", async () => {
-    const events = await collect(['data: {"ty', 'pe":"sp', 'lit"}\r\n\r', '\n: heartbeat\n\n', "data: tail\r\n"])
+    const events = await collect(['data: {"ty', 'pe":"sp', 'lit"}\r\n\r', "\n: heartbeat\n\n", "data: tail\r\n"])
     expect(events.map((event) => event.data)).toEqual(['{"type":"split"}', "tail"])
   })
 

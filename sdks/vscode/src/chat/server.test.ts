@@ -1,5 +1,12 @@
 import { describe, expect, it } from "bun:test"
-import { discover, normalizeServerUrl, parseRegistration, parseServerTarget, stateDirectory, type DiscoveryDeps } from "./server"
+import {
+  discover,
+  normalizeServerUrl,
+  parseRegistration,
+  parseServerTarget,
+  stateDirectory,
+  type DiscoveryDeps,
+} from "./server"
 
 const registration = JSON.stringify({ id: "abc", version: "1.2.3", url: "http://127.0.0.1:4096", pid: 42 })
 
@@ -93,13 +100,24 @@ describe("discover", () => {
     const result = await discover(deps({}))
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.server).toEqual({ url: "http://127.0.0.1:4096", username: "prioricode", password: "secret", version: "1.2.3" })
+    expect(result.server).toEqual({
+      url: "http://127.0.0.1:4096",
+      username: "prioricode",
+      password: "secret",
+      version: "1.2.3",
+    })
   })
 
   it("surfaces auth mismatch without retrying", async () => {
     const started: string[] = []
     const result = await discover(
-      deps({ probe: async () => "unauthorized", startDaemon: async () => { started.push("called"); return true } }),
+      deps({
+        probe: async () => "unauthorized",
+        startDaemon: async () => {
+          started.push("called")
+          return true
+        },
+      }),
     )
     expect(result.ok).toBe(false)
     if (result.ok) return

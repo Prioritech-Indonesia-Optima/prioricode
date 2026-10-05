@@ -94,21 +94,36 @@ describe("reducer assistant lifecycle", () => {
   })
 
   it("folds text started/delta/ended with authoritative ended value", () => {
-    let state = applyEvent(start, evt("session.next.text.started", { ...base, assistantMessageID: "msg_a1", textID: "t1" }))
-    state = applyEvent(state, evt("session.next.text.delta", { ...base, assistantMessageID: "msg_a1", textID: "t1", delta: "he" }))
-    state = applyEvent(state, evt("session.next.text.delta", { ...base, assistantMessageID: "msg_a1", textID: "t1", delta: "llo " }))
+    let state = applyEvent(
+      start,
+      evt("session.next.text.started", { ...base, assistantMessageID: "msg_a1", textID: "t1" }),
+    )
+    state = applyEvent(
+      state,
+      evt("session.next.text.delta", { ...base, assistantMessageID: "msg_a1", textID: "t1", delta: "he" }),
+    )
+    state = applyEvent(
+      state,
+      evt("session.next.text.delta", { ...base, assistantMessageID: "msg_a1", textID: "t1", delta: "llo " }),
+    )
     let block = assistant(state)
     if (block?.kind !== "assistant") throw new Error("missing assistant")
     expect(block.parts[0]).toEqual({ type: "text", textID: "t1", text: "hello ", streaming: true })
 
-    state = applyEvent(state, evt("session.next.text.ended", { ...base, assistantMessageID: "msg_a1", textID: "t1", text: "hello world" }))
+    state = applyEvent(
+      state,
+      evt("session.next.text.ended", { ...base, assistantMessageID: "msg_a1", textID: "t1", text: "hello world" }),
+    )
     block = assistant(state)
     if (block?.kind !== "assistant") throw new Error("missing assistant")
     expect(block.parts[0]).toEqual({ type: "text", textID: "t1", text: "hello world", streaming: false })
   })
 
   it("buffers a delta that arrives before started", () => {
-    let state = applyEvent(start, evt("session.next.text.delta", { ...base, assistantMessageID: "msg_a1", textID: "t9", delta: "early" }))
+    let state = applyEvent(
+      start,
+      evt("session.next.text.delta", { ...base, assistantMessageID: "msg_a1", textID: "t9", delta: "early" }),
+    )
     state = applyEvent(state, evt("session.next.text.started", { ...base, assistantMessageID: "msg_a1", textID: "t9" }))
     const block = assistant(state)
     if (block?.kind !== "assistant") throw new Error("missing assistant")
@@ -119,9 +134,30 @@ describe("reducer assistant lifecycle", () => {
   })
 
   it("folds tool lifecycle input.started -> called -> success", () => {
-    let state = applyEvent(start, evt("session.next.tool.input.started", { ...base, assistantMessageID: "msg_a1", callID: "c1", name: "bash" }))
-    state = applyEvent(state, evt("session.next.tool.input.ended", { ...base, assistantMessageID: "msg_a1", callID: "c1", text: '{"command":"ls"}' }))
-    state = applyEvent(state, evt("session.next.tool.called", { ...base, assistantMessageID: "msg_a1", callID: "c1", tool: "bash", input: { command: "ls" }, provider: { executed: false } }))
+    let state = applyEvent(
+      start,
+      evt("session.next.tool.input.started", { ...base, assistantMessageID: "msg_a1", callID: "c1", name: "bash" }),
+    )
+    state = applyEvent(
+      state,
+      evt("session.next.tool.input.ended", {
+        ...base,
+        assistantMessageID: "msg_a1",
+        callID: "c1",
+        text: '{"command":"ls"}',
+      }),
+    )
+    state = applyEvent(
+      state,
+      evt("session.next.tool.called", {
+        ...base,
+        assistantMessageID: "msg_a1",
+        callID: "c1",
+        tool: "bash",
+        input: { command: "ls" },
+        provider: { executed: false },
+      }),
+    )
     state = applyEvent(
       state,
       evt("session.next.tool.success", {
@@ -144,8 +180,27 @@ describe("reducer assistant lifecycle", () => {
   })
 
   it("marks tool failure with error text", () => {
-    let state = applyEvent(start, evt("session.next.tool.called", { ...base, assistantMessageID: "msg_a1", callID: "c2", tool: "edit", input: {}, provider: { executed: false } }))
-    state = applyEvent(state, evt("session.next.tool.failed", { ...base, assistantMessageID: "msg_a1", callID: "c2", error: { type: "unknown", message: "boom" }, provider: { executed: false } }))
+    let state = applyEvent(
+      start,
+      evt("session.next.tool.called", {
+        ...base,
+        assistantMessageID: "msg_a1",
+        callID: "c2",
+        tool: "edit",
+        input: {},
+        provider: { executed: false },
+      }),
+    )
+    state = applyEvent(
+      state,
+      evt("session.next.tool.failed", {
+        ...base,
+        assistantMessageID: "msg_a1",
+        callID: "c2",
+        error: { type: "unknown", message: "boom" },
+        provider: { executed: false },
+      }),
+    )
     const block = assistant(state)
     if (block?.kind !== "assistant") throw new Error("missing assistant")
     const part = block.parts[0]
@@ -156,7 +211,10 @@ describe("reducer assistant lifecycle", () => {
   })
 
   it("folds shell started/ended", () => {
-    let state = applyEvent(start, evt("session.next.shell.started", { ...base, messageID: "msg_a1", callID: "s1", command: "ls -la" }))
+    let state = applyEvent(
+      start,
+      evt("session.next.shell.started", { ...base, messageID: "msg_a1", callID: "s1", command: "ls -la" }),
+    )
     state = applyEvent(state, evt("session.next.shell.ended", { ...base, callID: "s1", output: "total 8" }))
     const block = assistant(state)
     if (block?.kind !== "assistant") throw new Error("missing assistant")
@@ -168,11 +226,27 @@ describe("reducer assistant lifecycle", () => {
   })
 
   it("settles step.ended and step.failed", () => {
-    let state = applyEvent(start, evt("session.next.step.ended", { ...base, assistantMessageID: "msg_a1", finish: "stop", cost: 0, tokens: { input: 1, output: 2, reasoning: 0, cache: { read: 0, write: 0 } } }))
+    let state = applyEvent(
+      start,
+      evt("session.next.step.ended", {
+        ...base,
+        assistantMessageID: "msg_a1",
+        finish: "stop",
+        cost: 0,
+        tokens: { input: 1, output: 2, reasoning: 0, cache: { read: 0, write: 0 } },
+      }),
+    )
     expect(state.busy).toBe(false)
     expect(assistant(state)?.status).toBe("done")
 
-    let failed = applyEvent(start, evt("session.next.step.failed", { ...base, assistantMessageID: "msg_a1", error: { type: "unknown", message: "provider exploded" } }))
+    let failed = applyEvent(
+      start,
+      evt("session.next.step.failed", {
+        ...base,
+        assistantMessageID: "msg_a1",
+        error: { type: "unknown", message: "provider exploded" },
+      }),
+    )
     expect(failed.busy).toBe(false)
     const block = assistant(failed)
     expect(block?.status).toBe("error")
@@ -180,7 +254,10 @@ describe("reducer assistant lifecycle", () => {
   })
 
   it("attaches retry note to the running assistant", () => {
-    const state = applyEvent(start, evt("session.next.retried", { ...base, attempt: 2, error: { message: "rate limited", isRetryable: true } }))
+    const state = applyEvent(
+      start,
+      evt("session.next.retried", { ...base, attempt: 2, error: { message: "rate limited", isRetryable: true } }),
+    )
     const block = assistant(state)
     expect(block?.retryNote).toBe("Retrying (attempt 2): rate limited")
   })
@@ -204,18 +281,33 @@ describe("reducer permission and question events", () => {
     expect(card.action).toBe("bash")
     expect(card.resources).toEqual(["rm -rf build"])
 
-    state = applyEvent(state, evt("permission.v2.replied", { sessionID: "ses_test", requestID: "per_1", reply: "once" }))
+    state = applyEvent(
+      state,
+      evt("permission.v2.replied", { sessionID: "ses_test", requestID: "per_1", reply: "once" }),
+    )
     const resolved = state.blocks[0]
     expect(resolved.kind === "permission" ? resolved.resolved : undefined).toBe("once")
   })
 
   it("ignores replied for unknown or already-resolved requests", () => {
-    let state = applyEvent(emptyState(), evt("permission.v2.replied", { sessionID: "ses_test", requestID: "per_missing", reply: "once" }))
+    let state = applyEvent(
+      emptyState(),
+      evt("permission.v2.replied", { sessionID: "ses_test", requestID: "per_missing", reply: "once" }),
+    )
     expect(state.blocks.length).toBe(0)
 
-    state = applyEvent(state, evt("permission.v2.asked", { id: "per_2", sessionID: "ses_test", action: "edit", resources: [] }))
-    state = applyEvent(state, evt("permission.v2.replied", { sessionID: "ses_test", requestID: "per_2", reply: "reject" }))
-    const again = applyEvent(state, evt("permission.v2.replied", { sessionID: "ses_test", requestID: "per_2", reply: "once" }))
+    state = applyEvent(
+      state,
+      evt("permission.v2.asked", { id: "per_2", sessionID: "ses_test", action: "edit", resources: [] }),
+    )
+    state = applyEvent(
+      state,
+      evt("permission.v2.replied", { sessionID: "ses_test", requestID: "per_2", reply: "reject" }),
+    )
+    const again = applyEvent(
+      state,
+      evt("permission.v2.replied", { sessionID: "ses_test", requestID: "per_2", reply: "once" }),
+    )
     expect(again.blocks[0].kind === "permission" ? (again.blocks[0] as any).resolved : undefined).toBe("reject")
   })
 
@@ -225,7 +317,15 @@ describe("reducer permission and question events", () => {
       evt("question.v2.asked", {
         id: "que_1",
         sessionID: "ses_test",
-        questions: [{ question: "Which env?", header: "Env", options: [{ label: "prod", description: "live" }], multiple: false, custom: true }],
+        questions: [
+          {
+            question: "Which env?",
+            header: "Env",
+            options: [{ label: "prod", description: "live" }],
+            multiple: false,
+            custom: true,
+          },
+        ],
       }),
     )
     const card = state.blocks[0]
@@ -233,14 +333,20 @@ describe("reducer permission and question events", () => {
     if (card.kind !== "question") return
     expect(card.questions[0].options[0].label).toBe("prod")
 
-    state = applyEvent(state, evt("question.v2.replied", { sessionID: "ses_test", requestID: "que_1", answers: [["prod"]] }))
+    state = applyEvent(
+      state,
+      evt("question.v2.replied", { sessionID: "ses_test", requestID: "que_1", answers: [["prod"]] }),
+    )
     expect(state.blocks[0].kind === "question" ? (state.blocks[0] as any).resolved : undefined).toBe("answered")
   })
 })
 
 describe("reducer misc events", () => {
   it("renders control notes once", () => {
-    let state = applyEvent(emptyState(), evt("session.next.agent.switched", { ...base, messageID: "msg_x", agent: "plan" }))
+    let state = applyEvent(
+      emptyState(),
+      evt("session.next.agent.switched", { ...base, messageID: "msg_x", agent: "plan" }),
+    )
     state = applyEvent(state, evt("session.next.agent.switched", { ...base, messageID: "msg_x", agent: "plan" }))
     expect(state.blocks.length).toBe(1)
     expect(state.blocks[0].kind === "system" ? state.blocks[0].text : "").toContain("plan")

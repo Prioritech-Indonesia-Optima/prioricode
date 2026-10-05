@@ -1,5 +1,12 @@
 import { expect, test } from "bun:test"
-import { REMOTE_PASTE_DISABLED, clipboardSignals, detectTerminal, pasteMissHint, resolveScenario, SCENARIOS } from "../src/clipboard-scenario"
+import {
+  REMOTE_PASTE_DISABLED,
+  clipboardSignals,
+  detectTerminal,
+  pasteMissHint,
+  resolveScenario,
+  SCENARIOS,
+} from "../src/clipboard-scenario"
 
 test("resolveScenario covers the Windows/remote matrix", () => {
   expect(resolveScenario({ platform: "win32" })).toBe("win32-native")

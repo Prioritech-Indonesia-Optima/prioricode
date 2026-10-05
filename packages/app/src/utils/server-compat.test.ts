@@ -55,7 +55,10 @@ test("v1 protocol routes switchModel with the model ref shape", async () => {
     model: { id: "qwen3.8-flash", providerID: "alibaba-token-plan", variant: "high" },
   })
   expect(calls).toEqual([
-    ["legacy.switchModel", { sessionID: "ses_2", model: { id: "qwen3.8-flash", providerID: "alibaba-token-plan", variant: "high" } }],
+    [
+      "legacy.switchModel",
+      { sessionID: "ses_2", model: { id: "qwen3.8-flash", providerID: "alibaba-token-plan", variant: "high" } },
+    ],
   ])
 })
 

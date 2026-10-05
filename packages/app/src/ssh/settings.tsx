@@ -69,8 +69,7 @@ export function SshServerSettings(props: {
           const key = ServerConnection.Key.make(item.config.id)
           const check = () => ssh.data?.prioricodeChecks[item.config.alias]
           const prioricodeAction = () => sshPrioricodeAction(check())
-          const busy = () =>
-            ssh.data?.job?.kind === "install-prioricode" && ssh.data.job.alias === item.config.alias
+          const busy = () => ssh.data?.job?.kind === "install-prioricode" && ssh.data.job.alias === item.config.alias
           const connected = () => item.runtime.kind === "ready"
           return (
             <div class="settings-v2-servers-row">
@@ -138,7 +137,9 @@ export function SshServerSettings(props: {
                           </MenuV2.Item>
                         </Show>
                         <MenuV2.Separator />
-                        <MenuV2.Item onSelect={() => remove(key)}>{language.t("dialog.server.menu.delete")}</MenuV2.Item>
+                        <MenuV2.Item onSelect={() => remove(key)}>
+                          {language.t("dialog.server.menu.delete")}
+                        </MenuV2.Item>
                       </MenuV2.Group>
                     </MenuV2.Content>
                   </MenuV2.Portal>

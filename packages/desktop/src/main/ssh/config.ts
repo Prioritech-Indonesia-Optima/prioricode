@@ -47,7 +47,13 @@ export function readSshConfigProfiles(home = defaultHome()): SshConfigReadResult
   return { profiles: resolveProfiles(blocks), files }
 }
 
-function collectBlocks(path: string, blocks: Block[], files: SshConfigReadResult["files"], visited: Set<string>, depth: number) {
+function collectBlocks(
+  path: string,
+  blocks: Block[],
+  files: SshConfigReadResult["files"],
+  visited: Set<string>,
+  depth: number,
+) {
   const real = safeRealpath(path)
   if (visited.has(real) || depth > MAX_INCLUDE_DEPTH) return
   visited.add(real)
@@ -66,7 +72,14 @@ function collectBlocks(path: string, blocks: Block[], files: SshConfigReadResult
   parseBlocks(text, path, blocks, files, visited, depth)
 }
 
-function parseBlocks(text: string, file: string, blocks: Block[], files: SshConfigReadResult["files"], visited: Set<string>, depth: number) {
+function parseBlocks(
+  text: string,
+  file: string,
+  blocks: Block[],
+  files: SshConfigReadResult["files"],
+  visited: Set<string>,
+  depth: number,
+) {
   let current: Block | undefined
   let inMatch = false
   for (const rawLine of text.replace(/^\uFEFF/, "").split(/\r?\n/)) {

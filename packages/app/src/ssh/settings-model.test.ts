@@ -15,15 +15,15 @@ test("retryable runtimes are failed and stopped", () => {
   expect(sshRuntimeRetryable({ kind: "failed", message: "x" })).toBeTrue()
   expect(sshRuntimeRetryable({ kind: "stopped" })).toBeTrue()
   expect(sshRuntimeRetryable({ kind: "starting" })).toBeFalse()
-  expect(
-    sshRuntimeRetryable({ kind: "ready", url: "http://127.0.0.1:1", username: null, password: null }),
-  ).toBeFalse()
+  expect(sshRuntimeRetryable({ kind: "ready", url: "http://127.0.0.1:1", username: null, password: null })).toBeFalse()
 })
 
 test("prioricode action suggests install or update only", () => {
   expect(sshPrioricodeAction(undefined)).toBeUndefined()
   expect(sshPrioricodeAction(check({}))).toBe("ssh.server.install")
-  expect(sshPrioricodeAction(check({ resolvedPath: "/x/prioricode", version: "0.1.18", matchesDesktop: true }))).toBeUndefined()
+  expect(
+    sshPrioricodeAction(check({ resolvedPath: "/x/prioricode", version: "0.1.18", matchesDesktop: true })),
+  ).toBeUndefined()
   expect(sshPrioricodeAction(check({ resolvedPath: "/x/prioricode", version: "1.0.0", matchesDesktop: false }))).toBe(
     "ssh.server.update",
   )

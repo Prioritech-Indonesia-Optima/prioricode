@@ -24,7 +24,11 @@ const initialState = (): ChatState => ({ status: "connecting", blocks: [], busy:
 
 const makeMessageId = () => `msg_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
 
-const el = <T extends HTMLElement = HTMLElement>(tag: string, className: string | undefined, parent?: HTMLElement): T => {
+const el = <T extends HTMLElement = HTMLElement>(
+  tag: string,
+  className: string | undefined,
+  parent?: HTMLElement,
+): T => {
   const node = document.createElement(tag) as T
   if (className) node.className = className
   parent?.appendChild(node)
@@ -181,7 +185,9 @@ export function mount(root: HTMLElement, options?: MountOptions): IdeChatApi {
   const handlePaste = (event: ClipboardEvent) => {
     const clipboard = event.clipboardData
     if (!clipboard) return
-    const images = Array.from(clipboard.items).filter((item) => item.kind === "file" && (item.type.startsWith("image/") || item.type === ""))
+    const images = Array.from(clipboard.items).filter(
+      (item) => item.kind === "file" && (item.type.startsWith("image/") || item.type === ""),
+    )
     if (images.length === 0) return
     event.preventDefault()
     const plain = clipboard.getData("text/plain")
@@ -220,10 +226,13 @@ export function mount(root: HTMLElement, options?: MountOptions): IdeChatApi {
     bannerRetry.hidden = active || state.status === "connecting"
     if (transientTimer !== undefined) clearTimeout(transientTimer)
     if (active && transient) {
-      transientTimer = setTimeout(() => {
-        transient = undefined
-        if (!destroyed) renderBanner()
-      }, transient.expires - Date.now() + 50)
+      transientTimer = setTimeout(
+        () => {
+          transient = undefined
+          if (!destroyed) renderBanner()
+        },
+        transient.expires - Date.now() + 50,
+      )
     }
   }
 
@@ -234,7 +243,12 @@ export function mount(root: HTMLElement, options?: MountOptions): IdeChatApi {
     node.textContent = value
   }
 
-  const collapsible = (parent: HTMLElement, key: string, summary: HTMLElement, className: string): HTMLDetailsElement => {
+  const collapsible = (
+    parent: HTMLElement,
+    key: string,
+    summary: HTMLElement,
+    className: string,
+  ): HTMLDetailsElement => {
     const details = el<HTMLDetailsElement>("details", className, parent)
     details.appendChild(summary)
     details.open = openCards.has(key)
@@ -369,7 +383,11 @@ export function mount(root: HTMLElement, options?: MountOptions): IdeChatApi {
     questionDrafts.set(block.id, draft)
     block.questions.forEach((question, questionIndex) => {
       const group = el("div", "pc-question", card)
-      const title = text(group, "pc-question-title", question.header ? `${question.header}: ${question.question}` : question.question)
+      const title = text(
+        group,
+        "pc-question-title",
+        question.header ? `${question.header}: ${question.question}` : question.question,
+      )
       title.setAttribute("dir", "auto")
       const options = el("div", "pc-options", group)
       for (const option of question.options) {
