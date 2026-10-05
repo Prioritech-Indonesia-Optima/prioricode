@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react"
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react"
 import { bootTransport, type AppTransport } from "./app/transport"
 import { createChatStore, type ChatStore, type StoreState } from "./app/store"
-import { BlockList } from "./components/transcript/BlockList"
+import { EmptyTranscript, MessageList } from "./components/transcript/MessageList"
 import { Composer } from "./components/composer/Composer"
 import { SettingsForm } from "./components/shell/SettingsForm"
 import { StatusBanner } from "./components/shell/StatusBanner"
+import { useUiStore } from "./lib/ui-state"
 
 const EMPTY_SUBSCRIBE = () => () => {}
 
@@ -13,6 +14,7 @@ export function App() {
   const [bootError, setBootError] = useState<string | undefined>(undefined)
   const [bootKey, setBootKey] = useState(0)
   const [showSettings, setShowSettings] = useState(false)
+  const delivery = useUiStore((state) => state.delivery)
 
   useEffect(() => {
     let active = true
@@ -59,18 +61,16 @@ export function App() {
     })
   }, [transport, store])
 
-  const scrollRef = useRef<HTMLDivElement | null>(null)
-  const pinned = useRef(true)
-  useEffect(() => {
-    const el = scrollRef.current
-    if (el !== null && pinned.current) el.scrollTop = el.scrollHeight
-  })
-  const onScroll = () => {
-    const el = scrollRef.current
-    if (el !== null) pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 40
-  }
+  const actions = useMemo(() => {
+    if (store === undefined) return undefined
+    return {
+      onPermissionReply: (requestID: string, reply: "once" | "always" | "reject") => void store.replyPermission(requestID, reply),
+      onQuestionReply: (requestID: string, answers: string[][]) => void store.replyQuestion(requestID, answers),
+      onQuestionReject: (requestID: string) => void store.rejectQuestion(requestID),
+    }
+  }, [store])
 
-  if (store === undefined || snapshot === undefined) {
+  if (store === undefined || snapshot === undefined || actions === undefined) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-muted-foreground">
         <p>{bootError ?? "Connecting to prioricode…"}</p>
@@ -118,35 +118,21 @@ export function App() {
           />
         </div>
       )}
-      <div ref={scrollRef} onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto">
-        <MessageStream snapshot={snapshot} store={store} />
-      </div>
+      {snapshot.transcript.blocks.length === 0 ? (
+        <EmptyTranscript />
+      ) : (
+        <MessageList blocks={snapshot.transcript.blocks} {...actions} />
+      )}
       <Composer
+        sessionID={snapshot.sessionID}
         busy={snapshot.transcript.busy}
         disabled={snapshot.status === "connecting"}
-        onSend={(text) => void store.send(text)}
+        notice={(message) => store.notify(message)}
+        onSend={(submit) => void store.send(submit.text, submit.attachments, { delivery })}
         onInterrupt={() => void store.interrupt()}
       />
     </div>
   )
 }
 
-function MessageStream(props: { snapshot: StoreState; store: ChatStore }) {
-  const { snapshot, store } = props
-  if (snapshot.transcript.blocks.length === 0) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-1 p-6 text-center text-sm text-muted-foreground">
-        <p className="text-base font-medium text-foreground">PrioriCode</p>
-        <p>Ask anything about this workspace.</p>
-      </div>
-    )
-  }
-  return (
-    <BlockList
-      blocks={snapshot.transcript.blocks}
-      onPermissionReply={(requestID, reply) => void store.replyPermission(requestID, reply)}
-      onQuestionReply={(requestID, answers) => void store.replyQuestion(requestID, answers)}
-      onQuestionReject={(requestID) => void store.rejectQuestion(requestID)}
-    />
-  )
-}
+export type { StoreState }

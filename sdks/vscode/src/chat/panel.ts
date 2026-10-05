@@ -76,7 +76,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider {
     const locale = vscode.env.language
     const dir = RTL_LANGUAGES.has(locale.slice(0, 2).toLowerCase()) ? "rtl" : "ltr"
     return `<!DOCTYPE html>
-<html lang="${locale}" dir="${dir}">
+<html lang="${locale}" dir="${dir}" class="vscode-webview">
 <head>
 <meta charset="UTF-8" />
 <meta http-equiv="Content-Security-Policy" content="${csp}" />

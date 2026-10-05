@@ -26,18 +26,21 @@ export interface StoreState {
 export interface ChatStore {
   getSnapshot: () => StoreState
   subscribe: (listener: () => void) => () => void
-  send: (text: string, attachments?: OutgoingAttachment[]) => Promise<void>
+  send: (text: string, attachments?: OutgoingAttachment[], opts?: { delivery?: "steer" | "queue" }) => Promise<void>
   interrupt: () => Promise<void>
   replyPermission: (requestID: string, reply: PermissionReply) => Promise<void>
   replyQuestion: (requestID: string, answers: string[][]) => Promise<void>
   rejectQuestion: (requestID: string) => Promise<void>
   newSession: () => void
   retry: () => void
+  notify: (message: string) => void
   setConfig: (status: StoreStatus, detail?: string) => void
   dispose: () => void
 }
 
 const newMessageID = () => `msg_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+const MAX_ATTACHMENT_BASE64 = Math.ceil(3_500_000 / 3) * 4
+const IMAGE_MIMES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"])
 
 const attachmentFile = (attachment: OutgoingAttachment) => ({
   uri: `data:${attachment.mime};base64,${attachment.dataBase64}`,
@@ -154,12 +157,26 @@ export function createChatStore(transport: AppTransport): ChatStore {
     }
   }
 
-  const send = async (text: string, attachments: OutgoingAttachment[] = []) => {
+  const send = async (text: string, attachments: OutgoingAttachment[] = [], opts?: { delivery?: "steer" | "queue" }) => {
     const trimmed = text.trim()
     if (trimmed.length === 0) return
     if (!(await ensureSession())) return
+    const files: { uri: string; name?: string }[] = []
+    const accepted: OutgoingAttachment[] = []
+    for (const attachment of attachments) {
+      if (!IMAGE_MIMES.has(attachment.mime)) {
+        set({ note: `Skipped unsupported attachment type ${attachment.mime}` })
+        continue
+      }
+      if (attachment.dataBase64.length > MAX_ATTACHMENT_BASE64) {
+        set({ note: `Skipped oversized image (${attachment.name ?? "clipboard"}); max ~3.5 MB` })
+        continue
+      }
+      files.push(attachmentFile(attachment))
+      accepted.push(attachment)
+    }
     const messageID = newMessageID()
-    state = { ...state, transcript: optimisticUser(state.transcript, messageID, trimmed, attachments) }
+    state = { ...state, transcript: optimisticUser(state.transcript, messageID, trimmed, accepted) }
     notify()
     try {
       await transport.client!.sessions.prompt({
@@ -167,8 +184,9 @@ export function createChatStore(transport: AppTransport): ChatStore {
         id: messageID,
         prompt: {
           text: trimmed,
-          ...(attachments.length === 0 ? {} : { files: attachments.map(attachmentFile) }),
+          ...(files.length === 0 ? {} : { files }),
         },
+        ...(opts?.delivery === undefined ? {} : { delivery: opts.delivery }),
       })
     } catch (error) {
       if (isSessionNotFoundError(error)) {
@@ -234,6 +252,7 @@ export function createChatStore(transport: AppTransport): ChatStore {
     rejectQuestion,
     newSession: resetSession,
     retry: () => transport.retry(),
+    notify: (message) => set({ note: message }),
     setConfig: (status, detail) => set({ status, statusDetail: detail }),
     dispose: () => {
       disposed = true

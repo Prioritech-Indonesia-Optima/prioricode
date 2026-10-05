@@ -122,6 +122,13 @@ describe("chat store", () => {
     h.store.dispose()
   })
 
+  it("passes delivery mode through to the prompt payload", async () => {
+    const h = harness()
+    await h.store.send("queued", [], { delivery: "queue" })
+    expect(h.promptCalls[0]).toMatchObject({ delivery: "queue" })
+    h.store.dispose()
+  })
+
   it("reports a note instead of sending when no directory is known", async () => {
     const h = harness({ directory: undefined })
     await h.store.send("hi")

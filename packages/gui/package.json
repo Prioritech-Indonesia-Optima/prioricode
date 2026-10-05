@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:webview": "GUI_TARGET=webview vite build",
     "preview": "vite preview",
     "typecheck": "tsgo --noEmit",
     "test": "bun test --preload ./happydom.ts ./src"
