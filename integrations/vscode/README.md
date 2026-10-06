@@ -17,9 +17,9 @@ This extension drives the **prioricode CLI** in a terminal. Install the [prioric
 
 ## Development
 
-1. `code sdks/vscode` — open the extension directory (not the repo root). `bun install` inside `sdks/vscode`.
+1. `code integrations/vscode` — open the extension directory (not the repo root). `bun install` inside `integrations/vscode`.
 2. Press `F5` to launch the Extension Development Host.
-3. Tests: `bun run --cwd sdks/vscode test`.
+3. Tests: `bun run --cwd integrations/vscode test`.
 
 Releases are tagged `vscode-vX.Y.Z` and published by the `publish-vscode` workflow (Marketplace + Open VSX when secrets are configured).
 

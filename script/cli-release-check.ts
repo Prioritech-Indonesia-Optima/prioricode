@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 // Guards the integrity of the CLI release assets and publishes SHA256SUMS.txt.
 //
-//   bun script/cli-release-check.ts --local packages/prioricode/dist
+//   bun script/cli-release-check.ts --local cli/dist
 //   bun script/cli-release-check.ts --release v0.1.4
 //
 // --local runs pre-upload against freshly built archives (fail fast, before

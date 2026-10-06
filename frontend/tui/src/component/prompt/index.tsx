@@ -102,7 +102,7 @@ export type PromptRef = {
 }
 
 const DRAFT_RETENTION_MIN_CHARS = 20
-// Matches the server image pipeline ceiling (packages/prioricode/src/image/image.ts).
+// Matches the server image pipeline ceiling (cli/src/image/image.ts).
 const MAX_CLIPBOARD_BASE64_BYTES = 5 * 1024 * 1024
 
 function randomIndex(count: number) {

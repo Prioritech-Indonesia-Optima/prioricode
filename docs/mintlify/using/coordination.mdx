@@ -25,7 +25,7 @@ From inside a session, the agent uses the `sessions` tool:
 | `notify` | completion | "Tell me when this peer goes idle" — a one-shot subscription (default expiry 12 h), optionally with a reminder note. This is how you wait for someone to *finish* work without blocking. |
 | `claim` / `release` | advisory locks | Declare the paths (or logical resources, like `release:main`) you're actively editing. Peers see claims in the roster and are expected to re-read before touching them. |
 
-The tool contract itself — the guidance the agents follow — lives in the product at `packages/prioricode/src/tool/sessions.txt`. It reads like good office etiquette: don't wake anyone to say hi, don't ask in a loop after a timeout, never send social acknowledgements ("noted", "thanks") — silence means noted.
+The tool contract itself — the guidance the agents follow — lives in the product at `cli/src/tool/sessions.txt`. It reads like good office etiquette: don't wake anyone to say hi, don't ask in a loop after a timeout, never send social acknowledgements ("noted", "thanks") — silence means noted.
 
 ## Properties the channel keeps
 

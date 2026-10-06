@@ -7,7 +7,7 @@ import path from "path"
 // silently loses whatever the patch fixed. This pins the two together for the
 // packages that ship in the CLI.
 const root = path.resolve(import.meta.dir, "../../..")
-const workspaces = ["packages/prioricode", "backend/core"]
+const workspaces = ["cli", "backend/core"]
 const patched = (await Bun.file(path.join(root, "package.json")).json()).patchedDependencies as Record<string, string>
 
 describe("patched dependencies", () => {

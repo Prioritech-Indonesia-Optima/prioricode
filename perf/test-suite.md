@@ -2,11 +2,11 @@
 
 ## Goal
 
-Speed up the `packages/prioricode` test suite without reducing coverage or hiding failures.
+Speed up the `cli` test suite without reducing coverage or hiding failures.
 
 ## Benchmark Command
 
-Run from `packages/prioricode`:
+Run from `cli`:
 
 ```sh
 bun run bench:test
@@ -43,7 +43,7 @@ For profiling: `slowest_test_file_seconds` and the slowest file list.
 
 ## Files In Scope
 
-`packages/prioricode/test/**`, test fixtures, package test scripts, and implementation setup paths only when a benchmarked bottleneck points there.
+`cli/test/**`, test fixtures, package test scripts, and implementation setup paths only when a benchmarked bottleneck points there.
 
 ## Signals To Watch
 

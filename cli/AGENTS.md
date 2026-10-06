@@ -2,13 +2,13 @@
 
 ## Database
 
-- **Schema**: Drizzle schema lives in `packages/core/src/**/*.sql.ts`.
-- **Migrations**: database migrations live in `packages/core` and are applied by core.
-- **DB file routing**: `bun dev` (channel = `local`) MUST use the main `prioricode.db` so sessions, projects, and coordination state are shared with installed builds. The `dev` script sets `PRIORICODE_DISABLE_CHANNEL_DB=1` as a belt-and-suspenders guarantee alongside the `InstallationLocal` check in `packages/core/src/database/database.ts`. Do not introduce a channel-specific DB for local/dev runs without migrating existing data.
+- **Schema**: Drizzle schema lives in `backend/core/src/**/*.sql.ts`.
+- **Migrations**: database migrations live in `backend/core` and are applied by core.
+- **DB file routing**: `bun dev` (channel = `local`) MUST use the main `prioricode.db` so sessions, projects, and coordination state are shared with installed builds. The `dev` script sets `PRIORICODE_DISABLE_CHANNEL_DB=1` as a belt-and-suspenders guarantee alongside the `InstallationLocal` check in `backend/core/src/database/database.ts`. Do not introduce a channel-specific DB for local/dev runs without migrating existing data.
 
 ## Development server
 
-- Running `bun dev` from `packages/prioricode` starts the live interactive TUI. Do not run it as a blocking foreground command when you need to inspect the result.
+- Running `bun dev` from `cli` starts the live interactive TUI. Do not run it as a blocking foreground command when you need to inspect the result.
 - Start it in `tmux` instead: `tmux new-session -d -s prioricode-dev 'bun dev'`.
 - Capture the current TUI output with: `tmux capture-pane -pt prioricode-dev`.
 - Stop the session explicitly when done: `tmux kill-session -t prioricode-dev`.
@@ -141,6 +141,6 @@ Concurrent sessions on one project coordinate through a durable, cross-process c
 - **Presence is the cross-process truth for busy/idle.** `SessionStatus` (in-memory, per-process) mirrors every transition into `session_presence`; a crashed owner reads as idle once its heartbeat goes stale.
 - **`notify` is the completion primitive.** Waiting for a peer to finish work uses a one-shot `notify` subscription (then keep working), not a long blocking `ask`.
 
-Schema changes go through `bun run script/migration.ts` from `packages/core` and must be idempotent (cross-process migration race). After changing any HttpApi route, regenerate the SDK: `bun run build` from `packages/sdk/js`.
+Schema changes go through `bun run script/migration.ts` from `backend/core` and must be idempotent (cross-process migration race). After changing any HttpApi route, regenerate the SDK: `bun run build` from `backend/sdk/js`.
 
 Tests: `bun test test/session/coordination.test.ts test/session/presence.test.ts test/session/prompt.test.ts`. The full lifecycle (ask→responder, notify→idle→wake, mid-injection takeover, escalation) runs in-process against the real 2s watcher via `coordinationIt` in `test/session/prompt.test.ts`.

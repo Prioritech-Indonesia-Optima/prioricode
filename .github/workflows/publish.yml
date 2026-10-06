@@ -139,7 +139,7 @@ jobs:
           curl -fsSL -o /tmp/bun-avx2.zip "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_V}/bun-linux-x64.zip"
           unzip -q /tmp/bun-avx2.zip -d /tmp/bun-avx2
           export PATH="/tmp/bun-avx2/bun-linux-x64:$PATH"
-           ./packages/prioricode/script/build.ts
+           ./cli/script/build.ts
          env:
           PRIORICODE_VERSION: ${{ needs.version.outputs.version }}
           PRIORICODE_RELEASE: ${{ needs.version.outputs.release }}
@@ -147,7 +147,7 @@ jobs:
           GH_TOKEN: ${{ steps.committer.outputs.token }}
 
       - name: Repack Windows CLI archives
-        working-directory: packages/prioricode/dist
+        working-directory: cli/dist
         run: |
           for d in prioricode-windows-arm64 prioricode-windows-x64 prioricode-windows-x64-baseline; do
             (cd "$d/bin" && zip -qr "../$d.zip" .)
@@ -158,20 +158,20 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.committer.outputs.token }}
         run: |
-          cd packages/prioricode/dist
+          cd cli/dist
           gh release upload "v${{ needs.version.outputs.version }}" prioricode-windows-*.zip --clobber --repo "${{ needs.version.outputs.repo }}"
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: prioricode-cli
           path: |
-            packages/prioricode/dist/prioricode-darwin*
-            packages/prioricode/dist/prioricode-linux*
+            cli/dist/prioricode-darwin*
+            cli/dist/prioricode-linux*
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: prioricode-cli-windows
-          path: packages/prioricode/dist/prioricode-windows*
+          path: cli/dist/prioricode-windows*
 
     outputs:
       version: ${{ needs.version.outputs.version }}
@@ -196,7 +196,7 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: prioricode-cli-windows
-          path: packages/prioricode/dist
+          path: cli/dist
 
       - name: Setup git committer
         id: committer
@@ -250,7 +250,7 @@ jobs:
           }
 
       - name: Repack Windows CLI archives
-        working-directory: packages/prioricode/dist
+        working-directory: cli/dist
         shell: pwsh
         run: |
           Compress-Archive -Path "prioricode-windows-arm64\bin\*" -DestinationPath "prioricode-windows-arm64.zip" -Force
@@ -274,9 +274,9 @@ jobs:
         with:
           name: prioricode-cli-signed-windows
           path: |
-            packages/prioricode/dist/prioricode-windows-arm64
-            packages/prioricode/dist/prioricode-windows-x64
-            packages/prioricode/dist/prioricode-windows-x64-baseline
+            cli/dist/prioricode-windows-arm64
+            cli/dist/prioricode-windows-x64
+            cli/dist/prioricode-windows-x64-baseline
 
   build-electron:
     needs:
@@ -498,18 +498,18 @@ jobs:
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: prioricode-cli
-          path: packages/prioricode/dist
+          path: cli/dist
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: prioricode-cli-windows
-          path: packages/prioricode/dist
+          path: cli/dist
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         if: needs.sign-cli-windows.result == 'success'
         with:
           name: prioricode-cli-signed-windows
-          path: packages/prioricode/dist
+          path: cli/dist
 
       - name: Setup git committer
         id: committer

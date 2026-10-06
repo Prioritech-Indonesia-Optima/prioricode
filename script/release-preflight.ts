@@ -5,7 +5,7 @@
 //   bun run script/release-preflight.ts
 //
 // Mirrors publish.yml build-cli:
-//   1. PRIORICODE_RELEASE=1 ./packages/prioricode/script/build.ts --no-upload
+//   1. PRIORICODE_RELEASE=1 ./cli/script/build.ts --no-upload
 //      (cross-builds all 12 CLI targets, zips/tars them, and runs
 //      cli-release-check --local: baseline/AVX2 byte-distinctness + SHA256SUMS)
 //
@@ -21,7 +21,7 @@ import { $ } from "bun"
 import path from "path"
 
 const root = path.resolve(import.meta.dir, "..")
-const dirt = ["packages/prioricode/dist", "frontend/gui/dist"]
+const dirt = ["cli/dist", "frontend/gui/dist"]
 
 function clean() {
   for (const dir of dirt) {
@@ -40,7 +40,7 @@ const preflightVersion = version ? `${version}-preflight` : "0.0.0-preflight"
 console.log(`release preflight as version ${preflightVersion}`)
 
 const cli =
-  await $`PRIORICODE_VERSION=${preflightVersion} PRIORICODE_RELEASE=1 ./packages/prioricode/script/build.ts --no-upload`
+  await $`PRIORICODE_VERSION=${preflightVersion} PRIORICODE_RELEASE=1 ./cli/script/build.ts --no-upload`
     .cwd(root)
     .env(process.env)
     .nothrow()

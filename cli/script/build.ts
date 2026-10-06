@@ -278,7 +278,7 @@ if (Script.release) {
   // Fail fast (before anything touches the draft release) if the baseline and
   // AVX2 builds came out byte-identical — a known bun artifact-download flake.
   // Paths are anchored to this file, not the caller's cwd (CI runs the script
-  // from the repo root; `bun run build` runs it from packages/prioricode).
+  // from the repo root; `bun run build` runs it from cli).
   await $`bun ${path.join(root, "script/cli-release-check.ts")} --local ${path.join(import.meta.dirname, "../dist")}`
   if (noUploadFlag) {
     console.log(`--no-upload: skipping gh release upload (local preflight)`)

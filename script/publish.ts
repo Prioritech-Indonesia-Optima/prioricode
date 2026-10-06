@@ -36,7 +36,7 @@ if (Script.release && !Script.preview) {
 await prepareReleaseFiles()
 
 console.log("\n=== cli ===\n")
-await $`bun ./packages/prioricode/script/publish.ts`
+await $`bun ./cli/script/publish.ts`
 
 // npm publishing (sdk/plugin/ui) only happens when a token is configured; the
 // CLI publish above still runs for docker/AUR/homebrew regardless.

@@ -7,9 +7,9 @@
 // *Important*: make sure you add the debug workspace plugin first.
 // In `.prioricode/prioricode.jsonc` in the root of this project add:
 //
-// "plugin": ["../packages/prioricode/src/control-plane/dev/debug-workspace-plugin.ts"]
+// "plugin": ["../cli/src/control-plane/dev/debug-workspace-plugin.ts"]
 //
-// Afterwards, run `./packages/prioricode/script/run-workspace-server`
+// Afterwards, run `./cli/script/run-workspace-server`
 
 import { stat } from "node:fs/promises"
 import { setTimeout as sleep } from "node:timers/promises"

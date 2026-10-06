@@ -1,6 +1,6 @@
 import { type ChildProcess, spawnSync } from "node:child_process"
 
-// Duplicated from `packages/prioricode/src/util/process.ts` because the SDK cannot
+// Duplicated from `cli/src/util/process.ts` because the SDK cannot
 // import `prioricode` without creating a cycle (`prioricode` depends on `@prioricode/sdk`).
 export function stop(proc: ChildProcess) {
   if (proc.exitCode !== null || proc.signalCode !== null) return

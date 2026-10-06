@@ -71,7 +71,7 @@ Permissions and questions that surface on the server reply through `POST /permis
 
 ## Slack, for the social kind of automation
 
-`packages/slack` ships a small bot ([@prioricode/slack](https://github.com/Prioritech-Indonesia-Optima/prioricode/tree/main/packages/slack)): mention it in a channel, and it boots an in-process PrioriCode server, keeps one session per thread, and posts tool activity back into the conversation. Setup is classic Slack-app: create an app with Socket Mode, scopes `chat:write`, `app_mentions:read`, `channels:history`, `groups:history`; then run it with `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_APP_TOKEN` set. It's a package in the repo rather than a hosted integration — bring your own runner.
+`integrations/slack` ships a small bot ([@prioricode/slack](https://github.com/Prioritech-Indonesia-Optima/prioricode/tree/main/integrations/slack)): mention it in a channel, and it boots an in-process PrioriCode server, keeps one session per thread, and posts tool activity back into the conversation. Setup is classic Slack-app: create an app with Socket Mode, scopes `chat:write`, `app_mentions:read`, `channels:history`, `groups:history`; then run it with `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_APP_TOKEN` set. It's a package in the repo rather than a hosted integration — bring your own runner.
 
 <Note>
   The Slack bot is a thin example of what the API enables, not a supported product surface. Treat it as reference code you deploy — review it before pointing it at production channels.

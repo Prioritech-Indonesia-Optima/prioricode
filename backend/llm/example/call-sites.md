@@ -7,7 +7,7 @@ values directly.
 ## Conversation Summary
 
 Kit and Aidan want provider-specific LLM behavior to move out of prioricode's AI
-SDK transform path and into `packages/llm` where possible. The goal is not a big
+SDK transform path and into `backend/llm` where possible. The goal is not a big
 generic transform layer; the goal is small composable route definitions backed by
 recorded golden tests.
 
@@ -561,7 +561,7 @@ App boundary = explicit durable-config -> typed-provider call
 - [ ] Decide whether a tiny `Provider.define(...)` helper is warranted after two
       or three provider conversions; start with plain objects if duplication is not
       yet painful.
-- [x] Update `packages/prioricode/src/session/llm/native-request.ts` to construct
+- [x] Update `cli/src/session/llm/native-request.ts` to construct
       executable models at the session boundary with explicit provider facade
       calls, mapping catalog metadata such as `endpoint.websocket` to the correct
       named route selector.

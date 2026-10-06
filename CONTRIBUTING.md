@@ -41,7 +41,7 @@ https://github.com/anomalyco/models.dev
 
 ### Running against a different directory
 
-By default, `bun dev` runs PrioriCode in the `packages/prioricode` directory. To run it against a different directory or repository:
+By default, `bun dev` runs PrioriCode in the `cli` directory. To run it against a different directory or repository:
 
 ```bash
 bun dev <directory>
@@ -58,23 +58,23 @@ bun dev .
 To compile a standalone executable:
 
 ```bash
-./packages/prioricode/script/build.ts --single
+./cli/script/build.ts --single
 ```
 
 Then run it with:
 
 ```bash
-./packages/prioricode/dist/prioricode-<platform>/bin/prioricode
+./cli/dist/prioricode-<platform>/bin/prioricode
 ```
 
 Replace `<platform>` with your platform (e.g., `darwin-arm64`, `linux-x64`).
 
 - Core pieces:
-  - `packages/prioricode`: PrioriCode core business logic & server.
-  - `packages/prioricode/src/cli/cmd/tui/`: The TUI code, written in SolidJS with [opentui](https://github.com/sst/opentui)
-  - `packages/app`: The shared web UI components, written in SolidJS
-  - `packages/desktop`: The native desktop app, built with Electron (wraps `packages/app`)
-  - `packages/plugin`: Source for `@prioricode/plugin`
+  - `cli`: PrioriCode core business logic & server.
+  - `cli/src/cli/cmd/tui/`: The TUI code, written in SolidJS with [opentui](https://github.com/sst/opentui)
+  - `frontend/gui`: The shared web UI components, written in SolidJS
+  - `frontend/desktop`: The native desktop app, built with Electron (wraps `frontend/gui`)
+  - `backend/plugin`: Source for `@prioricode/plugin`
 
 ### Understanding bun dev vs prioricode
 
@@ -116,7 +116,7 @@ To test UI changes during development:
 2. **Then run the web app:**
 
 ```bash
-bun run --cwd packages/app dev
+bun run --cwd frontend/gui dev
 ```
 
 This starts a local dev server at http://localhost:5173 (or similar port shown in output). Most UI changes can be tested here, but the server must be running for full functionality.
@@ -128,18 +128,18 @@ The desktop app is an Electron application that wraps the web UI.
 To run the desktop app in development:
 
 ```bash
-bun run --cwd packages/desktop dev
+bun run --cwd frontend/desktop dev
 ```
 
 To create a production build and package the app:
 
 ```bash
-bun run --cwd packages/desktop build
-bun run --cwd packages/desktop package
+bun run --cwd frontend/desktop build
+bun run --cwd frontend/desktop package
 ```
 
 > [!NOTE]
-> If you make changes to the API or SDK (e.g. `packages/prioricode/src/server/server.ts`), run `./script/generate.ts` to regenerate the SDK and related files.
+> If you make changes to the API or SDK (e.g. `cli/src/server/server.ts`), run `./script/generate.ts` to regenerate the SDK and related files.
 
 Please try to follow the [style guide](./AGENTS.md)
 
@@ -155,9 +155,9 @@ Caveats:
 - If you want to run the PrioriCode TUI and have breakpoints triggered in the server code, you might need to run `bun dev spawn` instead of
   the usual `bun dev`. This is because `bun dev` runs the server in a worker thread and breakpoints might not work there.
 - If `spawn` does not work for you, you can debug the server separately:
-  - Debug server: `bun run --inspect=ws://localhost:6499/ --cwd packages/prioricode ./src/index.ts serve --port 4096`,
+  - Debug server: `bun run --inspect=ws://localhost:6499/ --cwd cli ./src/index.ts serve --port 4096`,
     then attach TUI with `prioricode attach http://localhost:4096`
-  - Debug TUI: `bun run --inspect=ws://localhost:6499/ --cwd packages/prioricode ./src/index.ts`
+  - Debug TUI: `bun run --inspect=ws://localhost:6499/ --cwd cli ./src/index.ts`
 
 Other tips and tricks:
 

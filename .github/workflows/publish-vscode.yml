@@ -26,12 +26,12 @@ jobs:
 
       - name: Install extension dependencies
         run: bun install
-        working-directory: ./sdks/vscode
+        working-directory: ./integrations/vscode
 
       - name: Publish
         run: |
           ./script/publish
-        working-directory: ./sdks/vscode
+        working-directory: ./integrations/vscode
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
           OPENVSX_TOKEN: ${{ secrets.OPENVSX_TOKEN }}
@@ -45,9 +45,9 @@ jobs:
           tag=$(git describe --tags --match 'vscode-v*' --abbrev=0)
           version=${tag#vscode-v}
           if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" sdks/vscode/dist/prioricode.vsix --clobber
+            gh release upload "$tag" integrations/vscode/dist/prioricode.vsix --clobber
           else
-            gh release create "$tag" sdks/vscode/dist/prioricode.vsix \
+            gh release create "$tag" integrations/vscode/dist/prioricode.vsix \
               --title "PrioriCode VS Code extension $version" \
               --notes "Direct .vsix download for the PrioriCode VS Code extension. Prefer installing from the VS Code Marketplace or Open VSX." \
               --prerelease

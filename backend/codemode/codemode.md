@@ -28,7 +28,7 @@ CodeMode is an orchestration language, not a general JavaScript runtime or an ap
 
 ### Runtime
 
-The generic runtime lives in `packages/codemode` and is host-neutral:
+The generic runtime lives in `backend/codemode` and is host-neutral:
 
 1. The host builds a tree of `Tool.make(...)` definitions and calls `CodeMode.make(...)` or `CodeMode.execute(...)`.
 2. CodeMode generates model instructions, a budgeted inline catalog, and the internal `$codemode.search` tool.
@@ -86,11 +86,11 @@ attach them to the outer result, but the program receives only the structured to
 ### V2 PrioriCode adapter
 
 This section describes the `v2` branch integration. On `dev`, CodeMode is integrated through
-`packages/prioricode/src/tool/code-mode.ts`, where nested MCP calls run the `tool.execute.before` and
+`cli/src/tool/code-mode.ts`, where nested MCP calls run the `tool.execute.before` and
 `tool.execute.after` plugin hooks.
 
-CodeMode is integrated into V2 through `packages/core/src/tool/registry.ts` and
-`packages/core/src/tool/execute.ts`:
+CodeMode is integrated into V2 through `backend/core/src/tool/registry.ts` and
+`backend/core/src/tool/execute.ts`:
 
 - Core has one canonical `Tool` representation. Location-scoped producers register direct or deferred tools through
   `Tools.Service`.

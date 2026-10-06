@@ -23,12 +23,12 @@ This package is an Effect Schema-first LLM core. The Schema classes in `src/sche
 
 Primary in-repo integration point:
 
-- `packages/prioricode/src/session/llm.ts` is the session-owned orchestration layer that decides whether a request uses AI SDK or this package's native route runtime.
-- `packages/prioricode/src/session/llm/native-request.ts` is the lowering adapter from prioricode's session/AI SDK-shaped data into this package's `LLMRequest` model.
-- `packages/prioricode/src/session/llm/native-runtime.ts` is the execution adapter that calls raw `LLMClient.stream(request)` and bridges one provider turn of prioricode tool calls through this package's typed dispatcher.
-- `packages/prioricode/src/session/llm/ai-sdk.ts` keeps the default AI SDK path compatible by converting AI SDK stream parts into this package's shared `LLMEvent`s.
+- `cli/src/session/llm.ts` is the session-owned orchestration layer that decides whether a request uses AI SDK or this package's native route runtime.
+- `cli/src/session/llm/native-request.ts` is the lowering adapter from prioricode's session/AI SDK-shaped data into this package's `LLMRequest` model.
+- `cli/src/session/llm/native-runtime.ts` is the execution adapter that calls raw `LLMClient.stream(request)` and bridges one provider turn of prioricode tool calls through this package's typed dispatcher.
+- `cli/src/session/llm/ai-sdk.ts` keeps the default AI SDK path compatible by converting AI SDK stream parts into this package's shared `LLMEvent`s.
 
-Keep this package independent of session concerns. Session auth, permissions, plugins, telemetry headers, and runtime selection belong in `packages/prioricode/src/session/llm.ts` and its local adapters.
+Keep this package independent of session concerns. Session auth, permissions, plugins, telemetry headers, and runtime selection belong in `cli/src/session/llm.ts` and its local adapters.
 
 ### Request Flow
 
@@ -116,7 +116,7 @@ Keep provider facades small and explicit:
 ### Folder layout
 
 ```
-packages/llm/src/
+backend/llm/src/
   schema/                   canonical Schema model, split by concern
     ids.ts                  branded IDs, literal types, ProviderMetadata
     options.ts              Generation/Provider/Http options, Limits, Model, cache policy
