@@ -5,6 +5,7 @@ import { Flock } from "@prioricode/core/util/flock"
 import { Global } from "@prioricode/core/global"
 import { readJson, writeJsonAtomic } from "../util/persistence"
 import { useTuiPaths } from "./runtime"
+import { mkdir } from "fs/promises"
 import path from "path"
 
 export const { use: useKV, provider: KVProvider } = createSimpleContext({
@@ -18,6 +19,10 @@ export const { use: useKV, provider: KVProvider } = createSimpleContext({
     const [store, setStore] = createStore<Record<string, any>>()
     // Queue same-process writes so rapid updates persist in order.
     let write = Promise.resolve()
+
+    // Ensure the state directory exists before the first read/write so a clean
+    // environment (no prior kv.json) does not surface a spurious ENOENT.
+    void mkdir(paths.state, { recursive: true }).catch(() => undefined)
 
     Flock.withLock(lock, () => readJson<Record<string, unknown>>(file))
       .then((x) => {
