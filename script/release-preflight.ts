@@ -8,7 +8,6 @@
 //   1. PRIORICODE_RELEASE=1 ./packages/prioricode/script/build.ts --no-upload
 //      (cross-builds all 12 CLI targets, zips/tars them, and runs
 //      cli-release-check --local: baseline/AVX2 byte-distinctness + SHA256SUMS)
-//   2. ./packages/cli/script/build.ts
 //
 // On success everything built is deleted again (dist trees are hundreds of MB
 // and gitignored — leaving them around just bloats disk). On failure the dirt
@@ -22,7 +21,7 @@ import { $ } from "bun"
 import path from "path"
 
 const root = path.resolve(import.meta.dir, "..")
-const dirt = ["packages/prioricode/dist", "packages/app/dist", "packages/cli/dist"]
+const dirt = ["packages/prioricode/dist", "packages/app/dist"]
 
 function clean() {
   for (const dir of dirt) {
@@ -48,15 +47,6 @@ const cli =
 if (cli.exitCode !== 0) {
   console.error("CLI build failed — dist trees kept for debugging")
   process.exit(cli.exitCode)
-}
-
-const lildax = await $`PRIORICODE_VERSION=${preflightVersion} ./packages/cli/script/build.ts`
-  .cwd(root)
-  .env(process.env)
-  .nothrow()
-if (lildax.exitCode !== 0) {
-  console.error("cli (lildax) build failed — dist trees kept for debugging")
-  process.exit(lildax.exitCode)
 }
 
 // Warn (never block) if the manually-synced installer copies on

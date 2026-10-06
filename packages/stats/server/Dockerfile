@@ -26,7 +26,7 @@ FROM base AS runner
 COPY --from=installer /app ./
 COPY --from=pruner /app/out/full/ ./
 
-WORKDIR /app/cloud/stats/server
+WORKDIR /app/packages/stats/server
 
 EXPOSE 3000
 

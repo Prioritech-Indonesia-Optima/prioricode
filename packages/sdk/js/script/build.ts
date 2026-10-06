@@ -27,7 +27,22 @@ async function findRepoRoot(start: string): Promise<string> {
 }
 const root = await findRepoRoot(dir)
 
-const prioricode = path.join(root, "cli")
+// Resolve the CLI package's directory by name so this stays correct wherever it lives.
+async function findPackageDir(root: string, name: string): Promise<string> {
+  const pkg = await Bun.file(path.join(root, "package.json")).json()
+  const globs = pkg?.workspaces?.packages ?? []
+  for (const glob of globs) {
+    for (const file of new Bun.Glob(`${glob}/package.json`).scanSync(root)) {
+      try {
+        const candidate = await Bun.file(path.join(root, file)).json()
+        if (candidate?.name === name) return path.join(root, path.dirname(file))
+      } catch {}
+    }
+  }
+  throw new Error(`Workspace package not found: ${name}`)
+}
+
+const prioricode = await findPackageDir(root, "prioricode")
 
 await $`bun dev generate > ${dir}/openapi.json`.cwd(prioricode)
 

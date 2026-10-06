@@ -7,6 +7,10 @@ import { fileURLToPath } from "url"
 const rootDir = fileURLToPath(new URL("../../..", import.meta.url))
 process.chdir(rootDir)
 
+// The containers dir, relative to the repo root, so the Dockerfile paths stay
+// correct no matter where this package lives in the tree.
+const containersRel = path.relative(rootDir, fileURLToPath(new URL("..", import.meta.url)))
+
 const reg = process.env.REGISTRY ?? "ghcr.io/anomalyco"
 const tag = process.env.TAG ?? "24.04"
 const push = process.argv.includes("--push") || process.env.PUSH === "1"
@@ -35,7 +39,7 @@ const platform = "linux/amd64,linux/arm64"
 
 for (const name of images) {
   const image = `${reg}/build/${name}:${tag}`
-  const file = `tooling/containers/${name}/Dockerfile`
+  const file = `${containersRel}/${name}/Dockerfile`
   if (name === "base") {
     if (push) {
       console.log(`docker buildx build --platform ${platform} -f ${file} -t ${image} --push .`)

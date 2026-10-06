@@ -29,6 +29,22 @@ async function findRepoRoot(start: string): Promise<string> {
 }
 const root = await findRepoRoot(__dirname)
 
+// Resolve a workspace package's directory by its package.json name, so this
+// script stays correct no matter where the package lives in the tree.
+async function findPackageDir(root: string, name: string): Promise<string> {
+  const pkg = await Bun.file(path.join(root, "package.json")).json()
+  const globs = pkg?.workspaces?.packages ?? []
+  for (const glob of globs) {
+    for (const file of new Bun.Glob(`${glob}/package.json`).scanSync(root)) {
+      try {
+        const candidate = await Bun.file(path.join(root, file)).json()
+        if (candidate?.name === name) return path.join(root, path.dirname(file))
+      } catch {}
+    }
+  }
+  throw new Error(`Workspace package not found: ${name}`)
+}
+
 const generated = await import("./generate.ts")
 
 import { Script } from "@prioricode/script"
@@ -44,7 +60,7 @@ const noUploadFlag = process.argv.includes("--no-upload")
 
 const createEmbeddedWebUIBundle = async () => {
   console.log(`Building Web UI to embed in the binary`)
-  const appDir = path.join(root, "frontend/gui")
+  const appDir = await findPackageDir(root, "@prioricode/app")
   const dist = path.join(appDir, "dist")
   await $`PRIORICODE_CHANNEL=${Script.channel} bun run --cwd ${appDir} build`
   const files = (await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: dist })))

@@ -24,46 +24,11 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished",
-    "onView:prioricode.chat"
+    "onStartupFinished"
   ],
   "main": "./dist/extension.js",
   "contributes": {
-    "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "prioricode",
-          "title": "prioricode",
-          "icon": "images/button-dark.svg"
-        }
-      ]
-    },
-    "views": {
-      "prioricode": [
-        {
-          "type": "webview",
-          "id": "prioricode.chat",
-          "name": "Chat"
-        }
-      ]
-    },
     "commands": [
-      {
-        "command": "prioricode.openChat",
-        "title": "Open prioricode Chat",
-        "icon": {
-          "light": "images/button-dark.svg",
-          "dark": "images/button-light.svg"
-        }
-      },
-      {
-        "command": "prioricode.connectServer",
-        "title": "Connect to prioricode Server…"
-      },
-      {
-        "command": "prioricode.disconnectServer",
-        "title": "Disconnect from prioricode Server (use local daemon)"
-      },
       {
         "command": "prioricode.openTerminal",
         "title": "Open prioricode",
@@ -96,16 +61,6 @@
           "group": "navigation"
         }
       ]
-    },
-    "configuration": {
-      "title": "prioricode",
-      "properties": {
-        "prioricode.serverUrl": {
-          "type": "string",
-          "default": "",
-          "description": "Connect the Chat panel to a specific prioricode server (for example http://192.168.1.20:4096) instead of the local daemon. Credentials may be embedded in the URL or provided via 'prioricode: Connect to prioricode Server…'."
-        }
-      }
     },
     "keybindings": [
       {
@@ -150,19 +105,16 @@
   },
   "scripts": {
     "vscode:prepublish": "bun run package",
-    "build:ui": "bun run --cwd ../../packages/gui build:webview",
-    "build:ui:production": "bun run --cwd ../../packages/gui build:webview",
-    "compile": "bun run check-types && bun run lint && bun run build:ui && node esbuild.js",
+    "compile": "bun run check-types && bun run lint && node esbuild.js",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",
-    "package": "bun run check-types && bun run lint && bun run build:ui:production && node esbuild.js --production",
+    "package": "bun run check-types && bun run lint && node esbuild.js --production",
     "compile-tests": "tsc -p . --outDir out",
     "watch-tests": "tsc -p . -w --outDir out",
     "pretest": "bun run compile-tests && bun run compile && bun run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vscode-test",
-    "test:unit": "bun test src/chat"
+    "test": "vscode-test"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",

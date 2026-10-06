@@ -1,21 +1,7 @@
 const esbuild = require("esbuild")
-const fs = require("fs")
-const path = require("path")
 
 const production = process.argv.includes("--production")
 const watch = process.argv.includes("--watch")
-
-function copyGuiAssets() {
-  const source = path.join(__dirname, "..", "..", "packages", "gui", "dist")
-  const target = path.join(__dirname, "dist")
-  for (const file of ["webview.js", "webview.css"]) {
-    const from = path.join(source, file)
-    if (!fs.existsSync(from)) {
-      throw new Error(`Missing ${file}: run 'bun run build:ui' (builds packages/gui) before packaging`)
-    }
-    fs.copyFileSync(from, path.join(target, file))
-  }
-}
 
 /**
  * @type {import('esbuild').Plugin}
@@ -59,7 +45,6 @@ async function main() {
   } else {
     await ctx.rebuild()
     await ctx.dispose()
-    copyGuiAssets()
   }
 }
 

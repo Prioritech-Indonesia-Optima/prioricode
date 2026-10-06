@@ -20,9 +20,25 @@ async function findRepoRoot(start: string): Promise<string> {
 }
 const root = await findRepoRoot(import.meta.dirname)
 
+// Resolve the CLI package's directory by name so this stays correct wherever it lives.
+async function findPackageDir(root: string, name: string): Promise<string> {
+  const pkg = await Bun.file(path.join(root, "package.json")).json()
+  const globs = pkg?.workspaces?.packages ?? []
+  for (const glob of globs) {
+    for (const file of new Bun.Glob(`${glob}/package.json`).scanSync(root)) {
+      try {
+        const candidate = await Bun.file(path.join(root, file)).json()
+        if (candidate?.name === name) return path.join(root, path.dirname(file))
+      } catch {}
+    }
+  }
+  throw new Error(`Workspace package not found: ${name}`)
+}
+const cliDir = await findPackageDir(root, "prioricode")
+
 await $`bun run install-electron`
 
 await $`bun ./scripts/copy-icons.ts ${process.env.PRIORICODE_CHANNEL ?? "dev"}`
 
-await $`cd ${path.join(root, "cli")} && bun script/build-node.ts`
+await $`cd ${cliDir} && bun script/build-node.ts`
 await downloadCliToResources()
