@@ -1,8 +1,25 @@
 import { $ } from "bun"
 import semver from "semver"
 import path from "path"
+import { existsSync } from "node:fs"
 
-const rootPkgPath = path.resolve(import.meta.dir, "../../../package.json")
+async function findRepoRoot(start: string): Promise<string> {
+  let current = path.resolve(start)
+  for (;;) {
+    const pkgPath = path.join(current, "package.json")
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = await Bun.file(pkgPath).json()
+        if (pkg?.workspaces) return current
+      } catch {}
+    }
+    const parent = path.dirname(current)
+    if (parent === current) throw new Error(`Could not find repo root from ${start}`)
+    current = parent
+  }
+}
+const root = await findRepoRoot(import.meta.dir)
+const rootPkgPath = path.join(root, "package.json")
 const rootPkg = await Bun.file(rootPkgPath).json()
 const expectedBunVersion = rootPkg.packageManager?.split("@")[1]
 
@@ -61,7 +78,7 @@ const VERSION = await (async () => {
 })()
 
 const bot = ["actions-user", "prioricode", "prioricode-agent[bot]"]
-const teamPath = path.resolve(import.meta.dir, "../../../.github/TEAM_MEMBERS")
+const teamPath = path.join(root, ".github/TEAM_MEMBERS")
 const team = [
   ...(await Bun.file(teamPath)
     .text()

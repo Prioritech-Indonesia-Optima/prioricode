@@ -1,7 +1,8 @@
 import { $ } from "bun"
+import { existsSync } from "node:fs"
 import { chmod, copyFile, mkdtemp, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
-import { join } from "node:path"
+import { dirname, join } from "node:path"
 
 const CLI_VERSION = "0.0.0-next-16350"
 
@@ -69,6 +70,22 @@ export function getCurrentCli(target = RUST_TARGET ?? nativeTarget()) {
   return binaryConfig
 }
 
+async function findRepoRoot(start: string): Promise<string> {
+  let current = start
+  for (;;) {
+    const pkgPath = join(current, "package.json")
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = await Bun.file(pkgPath).json()
+        if (pkg?.workspaces) return current
+      } catch {}
+    }
+    const parent = dirname(current)
+    if (parent === current) throw new Error(`Could not find repo root from ${start}`)
+    current = parent
+  }
+}
+
 export async function downloadCliToResources() {
   const cli = getCurrentCli()
   const directory = await mkdtemp(join(tmpdir(), "prioricode-cli-"))
@@ -84,7 +101,8 @@ export async function downloadCliToResources() {
   }
   if (process.platform !== "win32") await chmod(dest, 0o755)
   if (process.platform === "win32" && process.env.GITHUB_ACTIONS === "true") {
-    await $`pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File ../../script/sign-windows.ps1 ${dest}`
+    const root = await findRepoRoot(import.meta.dirname)
+    await $`pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File ${join(root, "script/sign-windows.ps1")} ${dest}`
   }
   if (process.platform === "darwin") await $`codesign --force --sign - ${dest}`
 

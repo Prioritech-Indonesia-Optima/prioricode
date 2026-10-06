@@ -3,6 +3,7 @@
 import { $ } from "bun"
 import path from "path"
 import { fileURLToPath } from "url"
+import { existsSync } from "node:fs"
 import { createSolidTransformPlugin } from "@opentui/solid/bun-plugin"
 
 const __filename = fileURLToPath(import.meta.url)
@@ -10,6 +11,23 @@ const __dirname = path.dirname(__filename)
 const dir = path.resolve(__dirname, "..")
 
 process.chdir(dir)
+
+async function findRepoRoot(start: string): Promise<string> {
+  let current = path.resolve(start)
+  for (;;) {
+    const pkgPath = path.join(current, "package.json")
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = await Bun.file(pkgPath).json()
+        if (pkg?.workspaces) return current
+      } catch {}
+    }
+    const parent = path.dirname(current)
+    if (parent === current) throw new Error(`Could not find repo root from ${start}`)
+    current = parent
+  }
+}
+const root = await findRepoRoot(__dirname)
 
 const generated = await import("./generate.ts")
 
@@ -26,7 +44,7 @@ const noUploadFlag = process.argv.includes("--no-upload")
 
 const createEmbeddedWebUIBundle = async () => {
   console.log(`Building Web UI to embed in the binary`)
-  const appDir = path.join(import.meta.dirname, "../../app")
+  const appDir = path.join(root, "frontend/gui")
   const dist = path.join(appDir, "dist")
   await $`PRIORICODE_CHANNEL=${Script.channel} bun run --cwd ${appDir} build`
   const files = (await Array.fromAsync(new Bun.Glob("**/*").scan({ cwd: dist })))
@@ -245,7 +263,7 @@ if (Script.release) {
   // AVX2 builds came out byte-identical — a known bun artifact-download flake.
   // Paths are anchored to this file, not the caller's cwd (CI runs the script
   // from the repo root; `bun run build` runs it from packages/prioricode).
-  await $`bun ${path.join(import.meta.dirname, "../../../script/cli-release-check.ts")} --local ${path.join(import.meta.dirname, "../dist")}`
+  await $`bun ${path.join(root, "script/cli-release-check.ts")} --local ${path.join(import.meta.dirname, "../dist")}`
   if (noUploadFlag) {
     console.log(`--no-upload: skipping gh release upload (local preflight)`)
   } else {

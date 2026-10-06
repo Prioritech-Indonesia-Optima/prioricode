@@ -7,11 +7,11 @@ import path from "path"
 import { pathToFileURL } from "url"
 import { parseArgs } from "util"
 
-const root = path.resolve(import.meta.dirname, "../../..")
-const snapshot = path.join(root, "packages/core/schema.json")
-const tsDir = path.join(root, "packages/core/src/database/migration")
-const registry = path.join(root, "packages/core/src/database/migration.gen.ts")
-const schema = path.join(root, "packages/core/src/database/schema.gen.ts")
+const coreDir = path.resolve(import.meta.dirname, "..")
+const snapshot = path.join(coreDir, "schema.json")
+const tsDir = path.join(coreDir, "src/database/migration")
+const registry = path.join(coreDir, "src/database/migration.gen.ts")
+const schema = path.join(coreDir, "src/database/schema.gen.ts")
 const args = parseArgs({
   args: process.argv.slice(2),
   options: {
@@ -95,13 +95,13 @@ async function drizzle(temporary: string, output: string, name?: string) {
   const config = path.join(temporary, `${path.basename(output)}.config.ts`)
   await Bun.write(
     config,
-    `import config from ${JSON.stringify(pathToFileURL(path.join(root, "packages/core/drizzle.config.ts")).href)}
+    `import config from ${JSON.stringify(pathToFileURL(path.join(coreDir, "drizzle.config.ts")).href)}
 
 export default { ...config, out: ${JSON.stringify(output)} }
 `,
   )
   await $`bun drizzle-kit generate --config ${config} ${name ? ["--name", name] : []}`.cwd(
-    path.join(root, "packages/core"),
+    coreDir,
   )
 }
 

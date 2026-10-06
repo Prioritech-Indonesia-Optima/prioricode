@@ -6,10 +6,28 @@ process.chdir(dir)
 
 import { $ } from "bun"
 import path from "path"
+import { existsSync } from "node:fs"
 
 import { createClient } from "@hey-api/openapi-ts"
 
-const prioricode = path.resolve(dir, "../../prioricode")
+async function findRepoRoot(start: string): Promise<string> {
+  let current = path.resolve(start)
+  for (;;) {
+    const pkgPath = path.join(current, "package.json")
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = await Bun.file(pkgPath).json()
+        if (pkg?.workspaces) return current
+      } catch {}
+    }
+    const parent = path.dirname(current)
+    if (parent === current) throw new Error(`Could not find repo root from ${start}`)
+    current = parent
+  }
+}
+const root = await findRepoRoot(dir)
+
+const prioricode = path.join(root, "cli")
 
 await $`bun dev generate > ${dir}/openapi.json`.cwd(prioricode)
 

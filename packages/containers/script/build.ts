@@ -35,7 +35,7 @@ const platform = "linux/amd64,linux/arm64"
 
 for (const name of images) {
   const image = `${reg}/build/${name}:${tag}`
-  const file = `packages/containers/${name}/Dockerfile`
+  const file = `tooling/containers/${name}/Dockerfile`
   if (name === "base") {
     if (push) {
       console.log(`docker buildx build --platform ${platform} -f ${file} -t ${image} --push .`)
