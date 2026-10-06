@@ -1,5 +1,6 @@
 import { ScrollView } from "@prioricode/ui/scroll-view"
 import { createHomeController } from "./home/home-controller"
+import { HomeHero } from "./home/home-hero"
 import { createHomeProjectsController } from "./home/home-projects-controller"
 import { HomeUtilityNav } from "./home/home-projects-view"
 import { HomeProjects } from "./home/home-projects"
@@ -17,12 +18,15 @@ export function NewHome() {
   return (
     <div
       class={`
-        m-2 min-h-0 flex-1 self-stretch overflow-hidden rounded-[12px]
+        m-2 flex min-h-0 flex-1 self-stretch flex-col overflow-hidden rounded-[12px]
         bg-pc-bg-base shadow-[var(--pc-elevation-raised)]
       `}
     >
+      <div class="shrink-0 px-3 pt-3 lg:px-6 lg:pt-4">
+        <HomeHero language={projects.copy.language} />
+      </div>
       <ScrollView
-        class="h-full [container-type:size]"
+        class="min-h-0 flex-1 [container-type:size]"
         thumbContainer={scroll.viewport.thumbTrack}
         thumbHoverTarget={scroll.viewport.hoverTarget}
         viewportRef={scroll.viewport.setViewport}

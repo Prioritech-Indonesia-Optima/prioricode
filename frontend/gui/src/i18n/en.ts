@@ -686,6 +686,9 @@ export const dict = {
   "home.sessions.group.today": "Today",
   "home.sessions.group.yesterday": "Yesterday",
   "home.sessions.group.older": "Older",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip": "Connect to 75+ providers to use other models, including Claude, GPT, Gemini, etc",
 
   "session.tab.session": "Session",

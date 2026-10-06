@@ -85,7 +85,7 @@ export function HomeSessionsView(props: HomeSessionsViewProps) {
             <div class="pointer-events-none absolute right-0 top-[84px] z-20 flex lg:top-[108px]">
               <ButtonV2
                 data-action="home-new-session"
-                variant="ghost-muted"
+                variant="contrast"
                 size="normal"
                 icon="edit"
                 class="pointer-events-auto h-7 px-2 [font-weight:530]"
@@ -508,18 +508,19 @@ function HomeSessionProjectName(props: { name: string; search?: boolean }) {
 
 function HomeSessionsEmpty(props: { onNewSession?: () => void; language: ReturnType<typeof useLanguage> }) {
   return (
-    <div class="flex min-h-full flex-col items-center gap-4 px-6 pt-[52px] text-center">
+    <div class="flex min-h-full flex-col items-center gap-3 px-6 pt-[64px] text-center">
+      <span aria-hidden="true" class="size-2 bg-pc-gold-500" />
       <div
         class={`
-          shrink-0 text-[13px] leading-[13px] tracking-[-0.04px]
-          text-pc-text-base [font-weight:530]
+          shrink-0 text-[15px] leading-[15px] tracking-[-0.02em]
+          text-pc-text-base [font-weight:600]
         `}
       >
         {props.language.t("home.sessions.empty")}
       </div>
       <p
         class={`
-          mb-1 text-center text-[13px] leading-5 tracking-[-0.04px]
+          mb-1 max-w-[36ch] text-center text-[13px] leading-5 tracking-[-0.04px]
           text-pc-text-muted [font-weight:440]
         `}
       >
@@ -527,7 +528,7 @@ function HomeSessionsEmpty(props: { onNewSession?: () => void; language: ReturnT
       </p>
       <Show when={props.onNewSession}>
         {(onNewSession) => (
-          <ButtonV2 data-action="home-new-session" variant="neutral" size="normal" icon="edit" onClick={onNewSession()}>
+          <ButtonV2 data-action="home-new-session" variant="contrast" size="normal" icon="edit" onClick={onNewSession()}>
             {props.language.t("command.session.new")}
           </ButtonV2>
         )}
