@@ -236,6 +236,45 @@ describe("context economics in a live drain", () => {
     }),
   )
 
+  it.live("a completed step advances the session-row usage so the budget tier reflects real tokens", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const session = yield* SessionV2.Service
+      const { db } = yield* Database.Service
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Bill this" }), resume: false })
+      responses = [
+        [
+          LLMEvent.stepStart({ index: 0 }),
+          LLMEvent.textStart({ id: "text-billed" }),
+          LLMEvent.textDelta({ id: "text-billed", text: "Done" }),
+          LLMEvent.textEnd({ id: "text-billed" }),
+          LLMEvent.stepFinish({
+            index: 0,
+            reason: "stop",
+            usage: {
+              inputTokens: 4_000,
+              nonCachedInputTokens: 4_000,
+              outputTokens: 100,
+              reasoningTokens: 0,
+              cacheReadInputTokens: 0,
+            },
+          }),
+          LLMEvent.finish({ reason: "stop" }),
+        ],
+      ]
+      yield* session.resume(sessionID)
+
+      const row = yield* db
+        .select({ tokensInput: SessionTable.tokens_input, tokensOutput: SessionTable.tokens_output })
+        .from(SessionTable)
+        .where(eq(SessionTable.id, sessionID))
+        .get()
+        .pipe(Effect.orDie)
+      expect(row?.tokensInput).toBe(4_000)
+      expect(row?.tokensOutput).toBe(100)
+    }),
+  )
+
   it.live("pressure elides older large tool output in requests while history stays whole", () =>
     Effect.gen(function* () {
       yield* setup

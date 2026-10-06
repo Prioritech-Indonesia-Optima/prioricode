@@ -389,7 +389,14 @@ const layer = Layer.effectDiscard(
     yield* events.project(SessionEvent.Shell.Started, (event) => run(db, event))
     yield* events.project(SessionEvent.Shell.Ended, (event) => run(db, event))
     yield* events.project(SessionEvent.Step.Started, (event) => run(db, event))
-    yield* events.project(SessionEvent.Step.Ended, (event) => run(db, event))
+    yield* events.project(SessionEvent.Step.Ended, (event) =>
+      Effect.gen(function* () {
+        yield* run(db, event)
+        // V2 sessions emit only session.next.* events (no V1 PartUpdated), so the
+        // session-row usage must be advanced here or usagePercent stays at zero.
+        yield* applyUsage(db, event.data.sessionID, { cost: event.data.cost, tokens: event.data.tokens })
+      }),
+    )
     yield* events.project(SessionEvent.Step.Failed, (event) => run(db, event))
     yield* events.project(SessionEvent.Text.Started, (event) => run(db, event))
     yield* events.project(SessionEvent.Text.Ended, (event) => run(db, event))
