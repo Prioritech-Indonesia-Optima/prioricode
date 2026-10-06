@@ -27,6 +27,40 @@
         "turbo": "2.10.2",
       },
     },
+    "docs/web": {
+      "name": "@prioricode/web",
+      "version": "0.1.20",
+      "dependencies": {
+        "@astrojs/cloudflare": "12.6.3",
+        "@astrojs/markdown-remark": "6.3.1",
+        "@astrojs/solid-js": "5.1.0",
+        "@astrojs/starlight": "0.34.3",
+        "@fontsource/ibm-plex-mono": "5.2.5",
+        "@shikijs/transformers": "3.20.0",
+        "@solid-primitives/resize-observer": "2.1.5",
+        "@types/luxon": "catalog:",
+        "ai": "catalog:",
+        "astro": "5.7.13",
+        "diff": "catalog:",
+        "js-base64": "3.7.7",
+        "lang-map": "0.4.0",
+        "luxon": "catalog:",
+        "marked": "catalog:",
+        "marked-shiki": "catalog:",
+        "rehype-autolink-headings": "7.1.0",
+        "remeda": "catalog:",
+        "shiki": "catalog:",
+        "solid-js": "catalog:",
+        "toolbeam-docs-theme": "0.4.8",
+        "vscode-languageserver-types": "3.17.5",
+      },
+      "devDependencies": {
+        "@astrojs/check": "0.9.6",
+        "@types/node": "catalog:",
+        "prioricode": "workspace:*",
+        "typescript": "catalog:",
+      },
+    },
     "packages/app": {
       "name": "@prioricode/app",
       "version": "0.1.20",
@@ -469,20 +503,6 @@
         "vite": "catalog:",
       },
     },
-    "packages/eval": {
-      "name": "@prioricode/eval",
-      "dependencies": {
-        "@prioricode/core": "workspace:*",
-        "@prioricode/llm": "workspace:*",
-        "effect": "catalog:",
-      },
-      "devDependencies": {
-        "@tsconfig/bun": "catalog:",
-        "@types/bun": "catalog:",
-        "@typescript/native-preview": "catalog:",
-        "typescript": "catalog:",
-      },
-    },
     "packages/function": {
       "name": "@prioricode/function",
       "version": "0.1.20",
@@ -730,16 +750,6 @@
         "@tsconfig/bun": "catalog:",
         "@types/bun": "catalog:",
         "@typescript/native-preview": "catalog:",
-      },
-    },
-    "packages/script": {
-      "name": "@prioricode/script",
-      "dependencies": {
-        "semver": "^7.6.3",
-      },
-      "devDependencies": {
-        "@types/bun": "catalog:",
-        "@types/semver": "^7.5.8",
       },
     },
     "packages/sdk-next": {
@@ -1004,38 +1014,28 @@
         "solid-js": "^1.9.0",
       },
     },
-    "packages/web": {
-      "name": "@prioricode/web",
-      "version": "0.1.20",
+    "tooling/eval": {
+      "name": "@prioricode/eval",
       "dependencies": {
-        "@astrojs/cloudflare": "12.6.3",
-        "@astrojs/markdown-remark": "6.3.1",
-        "@astrojs/solid-js": "5.1.0",
-        "@astrojs/starlight": "0.34.3",
-        "@fontsource/ibm-plex-mono": "5.2.5",
-        "@shikijs/transformers": "3.20.0",
-        "@solid-primitives/resize-observer": "2.1.5",
-        "@types/luxon": "catalog:",
-        "ai": "catalog:",
-        "astro": "5.7.13",
-        "diff": "catalog:",
-        "js-base64": "3.7.7",
-        "lang-map": "0.4.0",
-        "luxon": "catalog:",
-        "marked": "catalog:",
-        "marked-shiki": "catalog:",
-        "rehype-autolink-headings": "7.1.0",
-        "remeda": "catalog:",
-        "shiki": "catalog:",
-        "solid-js": "catalog:",
-        "toolbeam-docs-theme": "0.4.8",
-        "vscode-languageserver-types": "3.17.5",
+        "@prioricode/core": "workspace:*",
+        "@prioricode/llm": "workspace:*",
+        "effect": "catalog:",
       },
       "devDependencies": {
-        "@astrojs/check": "0.9.6",
-        "@types/node": "catalog:",
-        "prioricode": "workspace:*",
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
         "typescript": "catalog:",
+      },
+    },
+    "tooling/script": {
+      "name": "@prioricode/script",
+      "dependencies": {
+        "semver": "^7.6.3",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/semver": "^7.5.8",
       },
     },
   },
@@ -2295,7 +2295,7 @@
 
     "@prioricode/enterprise": ["@prioricode/enterprise@workspace:packages/enterprise"],
 
-    "@prioricode/eval": ["@prioricode/eval@workspace:packages/eval"],
+    "@prioricode/eval": ["@prioricode/eval@workspace:tooling/eval"],
 
     "@prioricode/function": ["@prioricode/function@workspace:packages/function"],
 
@@ -2311,7 +2311,7 @@
 
     "@prioricode/schema": ["@prioricode/schema@workspace:packages/schema"],
 
-    "@prioricode/script": ["@prioricode/script@workspace:packages/script"],
+    "@prioricode/script": ["@prioricode/script@workspace:tooling/script"],
 
     "@prioricode/sdk": ["@prioricode/sdk@workspace:packages/sdk/js"],
 
@@ -2335,7 +2335,7 @@
 
     "@prioricode/ui": ["@prioricode/ui@workspace:packages/ui"],
 
-    "@prioricode/web": ["@prioricode/web@workspace:packages/web"],
+    "@prioricode/web": ["@prioricode/web@workspace:docs/web"],
 
     "@protobuf-ts/plugin": ["@protobuf-ts/plugin@2.11.1", "", { "dependencies": { "@bufbuild/protobuf": "^2.4.0", "@bufbuild/protoplugin": "^2.4.0", "@protobuf-ts/protoc": "^2.11.1", "@protobuf-ts/runtime": "^2.11.1", "@protobuf-ts/runtime-rpc": "^2.11.1", "typescript": "^3.9" }, "bin": { "protoc-gen-ts": "bin/protoc-gen-ts", "protoc-gen-dump": "bin/protoc-gen-dump" } }, "sha512-HyuprDcw0bEEJqkOWe1rnXUP0gwYLij8YhPuZyZk6cJbIgc/Q0IFgoHQxOXNIXAcXM4Sbehh6kjVnCzasElw1A=="],
 

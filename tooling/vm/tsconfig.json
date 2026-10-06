@@ -1,0 +1,12 @@
+{
+  // Typecheck the diagnostic harness against the same context as the TUI
+  // package it imports from (bun types, strict, bundler resolution).
+  "extends": "../../packages/tui/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    // @types/bun (node globals + node:* modules) is only linked into the TUI
+    // package's node_modules; point typeRoots there so this harness typechecks.
+    "typeRoots": ["../../packages/tui/node_modules/@types", "../../../node_modules/@types"]
+  },
+  "include": ["diagnose.ts"]
+}

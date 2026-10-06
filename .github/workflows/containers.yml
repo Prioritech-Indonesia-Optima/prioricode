@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - packages/containers/**
+      - tooling/containers/**
       - .github/workflows/containers.yml
       - package.json
   workflow_dispatch:
@@ -39,7 +39,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push containers
-        run: bun ./packages/containers/script/build.ts --push
+        run: bun ./tooling/containers/script/build.ts --push
         env:
           REGISTRY: ${{ env.REGISTRY }}
           TAG: ${{ env.TAG }}
