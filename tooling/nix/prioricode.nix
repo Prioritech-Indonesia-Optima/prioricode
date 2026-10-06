@@ -39,7 +39,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
     cp -R ${finalAttrs.node_modules}/. .
     patchShebangs node_modules
-    patchShebangs packages/*/node_modules
+    find backend frontend cli cloud integrations docs tooling -maxdepth 3 -type d -name node_modules 2>/dev/null | while read -r d; do patchShebangs "$d"; done
 
     runHook postConfigure
   '';

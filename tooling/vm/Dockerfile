@@ -1,7 +1,7 @@
 # Small VM: a headless Linux "remote host" for diagnosing Windows→Linux Ctrl+V.
 #
 # It runs the REAL PrioriCode paste modules (copied in, relative layout
-# preserved so `../../packages/tui/src/*` imports in tooling/vm/diagnose.ts
+# preserved so `../../frontend/tui/src/*` imports in tooling/vm/diagnose.ts
 # resolve) under bun, with no display server and no xclip/wl-paste/xsel —
 # exactly like a bare SSH host. The "Windows terminal" side is simulated
 # in-process by diagnose.ts.
@@ -12,11 +12,11 @@ FROM oven/bun:1
 
 WORKDIR /app
 
-COPY packages/tui/src/clipboard-terminal.ts /app/packages/tui/src/
-COPY packages/tui/src/clipboard.ts          /app/packages/tui/src/
-COPY packages/tui/src/clipboard-scenario.ts /app/packages/tui/src/
-COPY packages/tui/src/clipboard-win32.ts    /app/packages/tui/src/
-COPY packages/tui/src/component/prompt/paste-store.ts /app/packages/tui/src/component/prompt/
+COPY frontend/tui/src/clipboard-terminal.ts /app/frontend/tui/src/
+COPY frontend/tui/src/clipboard.ts          /app/frontend/tui/src/
+COPY frontend/tui/src/clipboard-scenario.ts /app/frontend/tui/src/
+COPY frontend/tui/src/clipboard-win32.ts    /app/frontend/tui/src/
+COPY frontend/tui/src/component/prompt/paste-store.ts /app/frontend/tui/src/component/prompt/
 COPY tooling/vm/diagnose.ts                 /app/tooling/vm/
 
 # Model a remote SSH session on a headless host (diagnose.ts also sets these,

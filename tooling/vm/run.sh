@@ -12,7 +12,7 @@
 #   bun vm/diagnose.ts
 set -euo pipefail
 
-# Build context must be the repo root so the Dockerfile can COPY packages/tui/src/*.
+# Build context must be the repo root so the Dockerfile can COPY frontend/tui/src/*.
 cd "$(dirname "$0")/.."
 
 IMAGE="${PC_PASTE_IMAGE:-pc-paste-diag}"

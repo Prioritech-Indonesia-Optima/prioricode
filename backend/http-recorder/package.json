@@ -10,7 +10,7 @@
     "url": "git+https://github.com/Prioritech-Indonesia-Optima/prioricode.git",
     "directory": "backend/http-recorder"
   },
-  "homepage": "https://github.com/Prioritech-Indonesia-Optima/prioricode/tree/dev/packages/http-recorder",
+  "homepage": "https://github.com/Prioritech-Indonesia-Optima/prioricode/tree/dev/backend/http-recorder",
   "bugs": "https://github.com/Prioritech-Indonesia-Optima/prioricode/issues",
   "keywords": [
     "effect",

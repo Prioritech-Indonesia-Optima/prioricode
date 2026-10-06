@@ -8,7 +8,7 @@ in PrioriCode — while text usually still works.
 
 - The container is a **headless Linux "remote host"**: no X11/Wayland, no
   `xclip`/`wl-paste`/`xsel`, `SSH_TTY` set — i.e. a bare SSH host.
-- It runs the **real** PrioriCode paste modules (`packages/tui/src/clipboard*`)
+- It runs the **real** PrioriCode paste modules (`frontend/tui/src/clipboard*`)
   under bun and simulates the **Windows terminal** in-process.
 - It drives the exact `prompt.paste` decision (terminal protocol → host
   clipboard) and prints a matrix + root cause + the user-facing hint.

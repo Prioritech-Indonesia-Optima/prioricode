@@ -21,9 +21,9 @@ Contents are injected with a header (`Instructions from: <path>`), so the model 
 # AGENTS.md
 
 - Bun monorepo. `bun run dev` starts the CLI, `bun test` per package.
-- Never edit `packages/sdk/openapi.json` — it's generated.
+- Never edit `backend/sdk/openapi.json` — it's generated.
 - Commits: `type(scope): summary`. Ask before pushing.
-- The DB schema is in `packages/core/src/**/sql.ts`; migrations via script/migration.ts.
+- The DB schema is in `backend/core/src/**/sql.ts`; migrations via script/migration.ts.
 ```
 
 Good AGENTS.md content: commands that must pass, files that are sacred, conventions the linter can't catch, "never do X" rules. Bad content: the README, a tutorial, your feelings about tabs. (And yes — the reason this repo's own AGENTS.md tells you how releases work is exactly this feature at work.)
