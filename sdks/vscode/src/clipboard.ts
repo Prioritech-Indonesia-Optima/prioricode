@@ -75,7 +75,7 @@ function osascriptClipboard(file: string, type: string): string[] {
 }
 
 // Screenshots land on the macOS pasteboard as TIFF, so PNGf needs a sips
-// fallback, mirroring packages/tui/src/clipboard.ts readDarwin.
+// fallback, mirroring frontend/tui/src/clipboard.ts readDarwin.
 async function readDarwin(): Promise<ClipboardImage | undefined> {
   const png = join(tmpdir(), "prioricode-vscode-clipboard.png")
   const tiff = join(tmpdir(), "prioricode-vscode-clipboard.tiff")

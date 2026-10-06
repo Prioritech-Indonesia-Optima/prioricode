@@ -21,7 +21,7 @@ import { $ } from "bun"
 import path from "path"
 
 const root = path.resolve(import.meta.dir, "..")
-const dirt = ["packages/prioricode/dist", "packages/app/dist"]
+const dirt = ["packages/prioricode/dist", "frontend/gui/dist"]
 
 function clean() {
   for (const dir of dirt) {

@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@kobalte/core": "catalog:",
-    "@prioricode/client": "file:../app/vendor/prioricode-ai-client-1.17.13-v2.tgz",
+    "@prioricode/client": "file:../gui/vendor/prioricode-ai-client-1.17.13-v2.tgz",
     "@prioricode/core": "workspace:*",
     "@prioricode/sdk": "workspace:*",
     "@prioricode/ui": "workspace:*",

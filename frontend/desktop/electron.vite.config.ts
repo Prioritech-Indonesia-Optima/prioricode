@@ -92,7 +92,7 @@ const require = __cjs_mod__.createRequire(import.meta.url);
   },
   renderer: {
     plugins: [appPlugin, sentry],
-    publicDir: "../../../app/public",
+    publicDir: "../../../gui/public",
     root: "src/renderer",
     build: {
       sourcemap: true,

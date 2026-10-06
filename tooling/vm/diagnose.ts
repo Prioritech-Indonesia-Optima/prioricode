@@ -2,7 +2,7 @@
 // does not work in PrioriCode.
 //
 // This runs INSIDE the small VM (a headless Linux "remote host") and drives the
-// REAL paste modules from packages/tui, so the diagnosis reflects the shipped
+// REAL paste modules from frontend/tui, so the diagnosis reflects the shipped
 // code, not a re-implementation:
 //   - clipboard-terminal.ts  (kitty OSC 5522 + OSC 52 read state machine)
 //   - clipboard.ts           (host clipboard read)
@@ -21,10 +21,10 @@ import { spawnSync } from "node:child_process"
 import { mkdtemp, readFile, rm, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { readTerminalClipboard, encodeOsc52Query, type OscTerminal } from "../../packages/tui/src/clipboard-terminal"
-import { readClipboard, type ClipboardEnvironment, type Content } from "../../packages/tui/src/clipboard"
-import { REMOTE_PASTE_DISABLED, clipboardSignals, resolveScenario } from "../../packages/tui/src/clipboard-scenario"
-import { pasteDirectory, savePastedImage } from "../../packages/tui/src/component/prompt/paste-store"
+import { readTerminalClipboard, encodeOsc52Query, type OscTerminal } from "../../frontend/tui/src/clipboard-terminal"
+import { readClipboard, type ClipboardEnvironment, type Content } from "../../frontend/tui/src/clipboard"
+import { REMOTE_PASTE_DISABLED, clipboardSignals, resolveScenario } from "../../frontend/tui/src/clipboard-scenario"
+import { pasteDirectory, savePastedImage } from "../../frontend/tui/src/component/prompt/paste-store"
 
 const ESC = "\x1b"
 const BEL = "\x07"
@@ -36,7 +36,7 @@ const CLIP_TEXT = "hello from the Windows clipboard"
 
 // ---------------------------------------------------------------------------
 // Terminal simulator (reuses the repo's fakeTerminal/frame pattern from
-// packages/tui/test/clipboard-terminal.test.ts).
+// frontend/tui/test/clipboard-terminal.test.ts).
 // ---------------------------------------------------------------------------
 
 function b64(value: string): string {
@@ -162,7 +162,7 @@ function hostEnvironment(overrides?: Partial<ClipboardEnvironment>): ClipboardEn
 }
 
 // ---------------------------------------------------------------------------
-// The exact prompt.paste decision (packages/tui/src/component/prompt/index.tsx):
+// The exact prompt.paste decision (frontend/tui/src/component/prompt/index.tsx):
 //   terminal protocol (kitty/OSC52) -> host clipboard. Fundamentals only.
 // ---------------------------------------------------------------------------
 
@@ -188,7 +188,7 @@ async function runPasteDecision(opts: {
 
 // ---------------------------------------------------------------------------
 // Bracketed paste: the text path a terminal delivers natively over the pty,
-// independent of the channels above (packages/tui/src/component/prompt/index.tsx).
+// independent of the channels above (frontend/tui/src/component/prompt/index.tsx).
 // ---------------------------------------------------------------------------
 
 function decodePasteBytes(bytes: string): string {

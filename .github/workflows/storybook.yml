@@ -7,18 +7,18 @@ on:
       - ".github/workflows/storybook.yml"
       - "package.json"
       - "bun.lock"
-      - "packages/storybook/**"
-      - "packages/ui/**"
-      - "packages/session-ui/**"
+      - "frontend/storybook/**"
+      - "frontend/ui/**"
+      - "frontend/session-ui/**"
   pull_request:
     branches: [main]
     paths:
       - ".github/workflows/storybook.yml"
       - "package.json"
       - "bun.lock"
-      - "packages/storybook/**"
-      - "packages/ui/**"
-      - "packages/session-ui/**"
+      - "frontend/storybook/**"
+      - "frontend/ui/**"
+      - "frontend/session-ui/**"
   workflow_dispatch:
 
 concurrency:
@@ -37,4 +37,4 @@ jobs:
         uses: ./.github/actions/setup-bun
 
       - name: Build Storybook
-        run: bun --cwd packages/storybook build
+        run: bun --cwd frontend/storybook build

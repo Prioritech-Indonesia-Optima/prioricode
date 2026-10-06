@@ -282,7 +282,7 @@ function windowStateFile(id: string) {
   return `window-state-${id.replace(/[^a-zA-Z0-9._-]/g, "-")}.json`
 }
 
-// Mirrors windowStorage() in packages/app/src/utils/persist.ts, which names
+// Mirrors windowStorage() in frontend/gui/src/utils/persist.ts, which names
 // the per-window renderer store this window persists its tabs into.
 function windowDataFile(id: string) {
   return `prioricode.window.${id.replace(/[^a-zA-Z0-9._-]/g, "-")}.dat`

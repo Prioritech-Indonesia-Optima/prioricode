@@ -49,7 +49,7 @@ if (hasNpmToken) {
   await $`bun ./packages/plugin/script/publish.ts`
 
   console.log("\n=== ui ===\n")
-  await $`bun ./packages/ui/script/publish.ts`
+  await $`bun ./frontend/ui/script/publish.ts`
 } else {
   console.log("\nno npm token; skipping sdk/plugin/ui npm publish\n")
 }
@@ -57,8 +57,8 @@ if (hasNpmToken) {
 // Desktop updater finalization runs in the publish-desktop job (which has the
 // desktop latest.yml artifacts). Skip it on the CLI-only publish path.
 if (Script.release && process.env.LATEST_YML_DIR) {
-  await $`bun ./packages/desktop/scripts/finalize-latest-json.ts`
-  await $`bun ./packages/desktop/scripts/finalize-latest-yml.ts`
+  await $`bun ./frontend/desktop/scripts/finalize-latest-json.ts`
+  await $`bun ./frontend/desktop/scripts/finalize-latest-yml.ts`
 }
 
 if (Script.release && !Script.preview) {
