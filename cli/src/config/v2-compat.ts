@@ -176,6 +176,10 @@ function normalizeCompaction(
       if (tokens !== undefined)
         preferLegacy(value, "preserve_recent_tokens", tokens, ["compaction", "keep", "tokens"], diagnostics)
     }
+    if (keep !== undefined && Object.hasOwn(keep, "turns")) {
+      const turns = decodeValue(NonNegativeInt, keep.turns, ["compaction", "keep", "turns"], diagnostics)
+      if (turns !== undefined) preferLegacy(value, "tail_turns", turns, ["compaction", "keep", "turns"], diagnostics)
+    }
   }
   if (Object.hasOwn(value, "buffer")) {
     const buffer = decodeValue(NonNegativeInt, value.buffer, ["compaction", "buffer"], diagnostics)

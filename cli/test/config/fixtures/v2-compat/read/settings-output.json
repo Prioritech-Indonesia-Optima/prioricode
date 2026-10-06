@@ -2,6 +2,7 @@
   "compaction": {
     "auto": false,
     "preserve_recent_tokens": 12000,
+    "tail_turns": 4,
     "reserved": 2048
   },
   "experimental": {
