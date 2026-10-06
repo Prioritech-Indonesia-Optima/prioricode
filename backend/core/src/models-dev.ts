@@ -4,7 +4,7 @@ import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/
 import { ModelsDev } from "@prioricode/schema/models-dev"
 import { Global } from "./global"
 import { Flag } from "./flag/flag"
-import { Flock } from "./util/flock"
+import { EffectFlock } from "./util/effect-flock"
 import { Hash } from "./util/hash"
 import { FSUtil } from "./fs-util"
 import { InstallationChannel, InstallationVersion } from "./installation/version"
@@ -147,6 +147,7 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
     const events = yield* EventV2.Service
+    const flock = yield* EffectFlock.Service
     const http = HttpClient.filterStatusOk(
       (yield* HttpClient.HttpClient).pipe(
         HttpClient.retryTransient({
@@ -223,7 +224,7 @@ const layer = Layer.effect(
       // Flock is cross-process: concurrent prioricode CLIs can race on this cache file.
       const text = yield* Effect.scoped(
         Effect.gen(function* () {
-          yield* Flock.effect(lockKey)
+          yield* flock.acquire(lockKey)
           return yield* fetchAndWrite()
         }),
       ).pipe(
@@ -245,7 +246,7 @@ const layer = Layer.effect(
       if (!force && (yield* fresh())) return
       yield* Effect.scoped(
         Effect.gen(function* () {
-          yield* Flock.effect(lockKey)
+          yield* flock.acquire(lockKey)
           // Re-check under the lock: another process may have refreshed between
           // our outer check and lock acquisition.
           if (!force && (yield* fresh())) return
@@ -268,6 +269,6 @@ const layer = Layer.effect(
   }),
 )
 
-export const node = makeGlobalNode({ service: Service, layer: layer, deps: [FSUtil.node, EventV2.node, httpClient] })
+export const node = makeGlobalNode({ service: Service, layer: layer, deps: [FSUtil.node, EventV2.node, httpClient, EffectFlock.node] })
 
 export * as ModelsDev from "./models-dev"
