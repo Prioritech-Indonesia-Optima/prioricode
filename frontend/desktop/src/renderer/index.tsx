@@ -12,6 +12,8 @@ import {
   createDraftStore,
   ServerConnection,
   useCommand,
+  useTabs,
+  tabKey,
   useWslServers,
   useSshServers,
   useLanguage,
@@ -19,7 +21,7 @@ import {
 import type { UpdaterState } from "@prioricode/app/updater"
 import * as Sentry from "@sentry/solid"
 import type { AsyncStorage } from "@solid-primitives/storage"
-import { createMemoryHistory, MemoryRouter, type BaseRouterProps } from "@solidjs/router"
+import { createMemoryHistory, MemoryRouter, useLocation, type BaseRouterProps } from "@solidjs/router"
 import { createEffect, createMemo, createResource, createSignal, onCleanup, Show } from "solid-js"
 import { render } from "solid-js/web"
 import pkg from "../../package.json"
@@ -364,6 +366,8 @@ function DesktopRoot(props: { windowState: DesktopWindowState }) {
     menuTrigger = (id) => cmd.trigger(id)
 
     const theme = useTheme()
+    const tabs = useTabs()
+    const location = useLocation()
 
     createEffect(() => {
       theme.themeId()
@@ -372,6 +376,17 @@ function DesktopRoot(props: { windowState: DesktopWindowState }) {
       if (bg) {
         void window.api.setBackgroundColor(bg)
       }
+    })
+
+    let lastTitle = ""
+    createEffect(() => {
+      const sessionId = location.pathname.match(/\/session\/([^/]+)/)?.[1]
+      const tab = sessionId ? tabs.store.find((item) => item.type === "session" && item.sessionId === sessionId) : undefined
+      const title = tab ? tabs.info[tabKey(tab)]?.title : undefined
+      const next = title ? `${title} — PrioriCode` : "PrioriCode"
+      if (next === lastTitle) return
+      lastTitle = next
+      void window.api.setWindowTitle(next)
     })
 
     return null

@@ -1205,6 +1205,7 @@ export default function Page() {
 
   const empty = (text: string) => (
     <div class="h-full pb-64 -mt-4 flex flex-col items-center justify-center text-center gap-6">
+      <span aria-hidden="true" class="size-2 bg-pc-gold-500" />
       <div class="text-14-regular text-text-weak max-w-56">{text}</div>
     </div>
   )

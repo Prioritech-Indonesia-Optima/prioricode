@@ -128,6 +128,10 @@ export function updateTitlebar(win: BrowserWindow) {
   win.setTitleBarOverlay(overlay(titlebarThemes.get(win), win.webContents.getZoomFactor()))
 }
 
+export function setWindowTitle(win: BrowserWindow, title: string) {
+  win.setTitle(title)
+}
+
 export function setPinchZoomEnabled(enabled: boolean) {
   getStore().set(PINCH_ZOOM_ENABLED_KEY, enabled)
   for (const win of BrowserWindow.getAllWindows()) {

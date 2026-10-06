@@ -63,8 +63,13 @@ function Version(props: { api: TuiPluginApi }) {
   const theme = () => props.api.theme.current
 
   return (
-    <box flexShrink={0}>
-      <text fg={theme().textMuted}>{props.api.app.version}</text>
+    <box flexShrink={0} gap={1} flexDirection="row">
+      <text fg={theme().primary} wrapMode="none">
+        PrioriCode
+      </text>
+      <text fg={theme().textMuted} wrapMode="none">
+        {props.api.app.version}
+      </text>
     </box>
   )
 }

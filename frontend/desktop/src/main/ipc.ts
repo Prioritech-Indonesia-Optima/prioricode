@@ -18,6 +18,7 @@ import {
   openLocalFileURL,
   setPinchZoomEnabled,
   setTitlebar,
+  setWindowTitle,
   updateTitlebar,
 } from "./windows"
 import type { UpdaterController } from "./updater-controller"
@@ -290,6 +291,11 @@ export function registerIpcHandlers(deps: Deps) {
     const win = BrowserWindow.fromWebContents(event.sender)
     if (!win) return
     setTitlebar(win, theme)
+  })
+  ipcMain.handle("set-window-title", (event: IpcMainInvokeEvent, title: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win || typeof title !== "string" || title.length === 0 || title.length > 200) return
+    setWindowTitle(win, title)
   })
   ipcMain.handle("run-desktop-menu-action", (event: IpcMainInvokeEvent, action: DesktopMenuAction) => {
     runDesktopMenuAction(BrowserWindow.fromWebContents(event.sender), action, {
