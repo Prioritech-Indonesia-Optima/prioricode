@@ -27,7 +27,7 @@ import { Pty } from "@prioricode/schema/pty"
 import { Reference } from "@prioricode/schema/reference"
 import { SessionTodo } from "@prioricode/schema/session-todo"
 import { Skill } from "@prioricode/schema/skill"
-import { AbsolutePath, DateTimeUtcFromMillis, optional, statics } from "@prioricode/schema/schema"
+import { AbsolutePath, optional, statics } from "@prioricode/schema/schema"
 import { ProviderV2 } from "@prioricode/core/provider"
 import { PluginV2 } from "@prioricode/core/plugin"
 
@@ -51,7 +51,6 @@ test("Core reuses the canonical shared schemas", async () => {
     coreSessionTodo,
     corePrompt,
     coreSkill,
-    coreV2Schema,
     coreSchema,
     coreWorkspace,
   ] = await Promise.all([
@@ -73,7 +72,6 @@ test("Core reuses the canonical shared schemas", async () => {
     import("@prioricode/core/session/todo"),
     import("@prioricode/core/session/prompt"),
     import("@prioricode/core/skill"),
-    import("@prioricode/core/v2-schema"),
     import("@prioricode/core/schema"),
     import("@prioricode/core/workspace"),
   ])
@@ -173,7 +171,6 @@ test("Core reuses the canonical shared schemas", async () => {
     [coreSkill.EmbeddedSource, Skill.EmbeddedSource],
     [coreSkill.Source, Skill.Source],
     [coreSkill.Info, Skill.Info],
-    [coreV2Schema.DateTimeUtcFromMillis, DateTimeUtcFromMillis],
     [coreSchema.optional, optional],
     [coreSchema.statics, statics],
     [coreWorkspace.ID, Workspace.ID],
