@@ -76,7 +76,7 @@ jobs:
 
       - name: Check generated client
         if: runner.os == 'Linux'
-        working-directory: packages/client
+        working-directory: backend/client
         run: bun run check:generated
 
       - name: Run HttpApi exerciser gates

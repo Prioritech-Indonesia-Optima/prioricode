@@ -144,7 +144,7 @@ export async function run(cmd: string[], opts: RunOptions = {}): Promise<Result>
   throw new RunFailedError(cmd, out.code, out.stdout, out.stderr)
 }
 
-// Duplicated in `packages/sdk/js/src/process.ts` because the SDK cannot import
+// Duplicated in `backend/sdk/src/process.ts` because the SDK cannot import
 // `prioricode` without creating a cycle. Keep both copies in sync.
 export async function stop(proc: ChildProcess) {
   if (proc.exitCode !== null || proc.signalCode !== null) return

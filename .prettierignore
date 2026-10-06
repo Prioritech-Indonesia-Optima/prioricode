@@ -1,4 +1,4 @@
 cloud/sst-env.d.ts
 frontend/desktop/src/bindings.ts
-packages/client/src/generated/
-packages/client/src/generated-effect/
+backend/client/src/generated/
+backend/client/src/generated-effect/

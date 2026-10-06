@@ -25,7 +25,7 @@ async function prepareReleaseFiles() {
   }
 
   await $`bun install`
-  await $`./packages/sdk/js/script/build.ts`
+  await $`./backend/sdk/script/build.ts`
 }
 
 if (Script.release && !Script.preview) {
@@ -43,10 +43,10 @@ await $`bun ./packages/prioricode/script/publish.ts`
 const hasNpmToken = Boolean(process.env.NPM_TOKEN || process.env.NODE_AUTH_TOKEN)
 if (hasNpmToken) {
   console.log("\n=== sdk ===\n")
-  await $`bun ./packages/sdk/js/script/publish.ts`
+  await $`bun ./backend/sdk/script/publish.ts`
 
   console.log("\n=== plugin ===\n")
-  await $`bun ./packages/plugin/script/publish.ts`
+  await $`bun ./backend/plugin/script/publish.ts`
 
   console.log("\n=== ui ===\n")
   await $`bun ./frontend/ui/script/publish.ts`

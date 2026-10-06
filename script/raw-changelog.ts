@@ -120,7 +120,7 @@ async function commits(from: string, to: string) {
   }
 
   const log =
-    await $`git log ${base}..${head} --format=%H -- packages/prioricode packages/sdk packages/plugin frontend/desktop frontend/gui sdks/vscode packages/extensions github`.text()
+    await $`git log ${base}..${head} --format=%H -- packages/prioricode backend/sdk backend/plugin frontend/desktop frontend/gui sdks/vscode packages/extensions github`.text()
 
   const list: Commit[] = []
   for (const hash of log.split("\n").filter(Boolean)) {
@@ -136,7 +136,7 @@ async function commits(from: string, to: string) {
       else if (file.startsWith("packages/prioricode/")) areas.add("core")
       else if (file.startsWith("frontend/desktop/src-tauri/")) areas.add("tauri")
       else if (file.startsWith("frontend/desktop/") || file.startsWith("frontend/gui/")) areas.add("app")
-      else if (file.startsWith("packages/sdk/") || file.startsWith("packages/plugin/")) areas.add("sdk")
+      else if (file.startsWith("backend/sdk/") || file.startsWith("backend/plugin/")) areas.add("sdk")
       else if (file.startsWith("sdks/vscode/") || file.startsWith("github/")) areas.add("extensions/vscode")
     }
 

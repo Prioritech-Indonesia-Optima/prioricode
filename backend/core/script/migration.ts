@@ -72,19 +72,19 @@ async function check() {
     await drizzle(temporary, incremental)
     if ((await generatedMigrations(incremental)).length > 0) {
       throw new Error(
-        "Core schema has ungenerated database migrations. Run `bun script/migration.ts` from packages/core.",
+        "Core schema has ungenerated database migrations. Run `bun script/migration.ts` from backend/core.",
       )
     }
 
     await fs.mkdir(full)
     await drizzle(temporary, full, "schema")
     if ((await Bun.file(schema).text()) !== (await formatTypescript(renderSchema(await generatedSql(full))))) {
-      throw new Error("Current database schema is stale. Run `bun script/migration.ts` from packages/core.")
+      throw new Error("Current database schema is stale. Run `bun script/migration.ts` from backend/core.")
     }
 
     const migrations = await typescriptMigrations()
     if ((await Bun.file(registry).text()) !== (await formatTypescript(renderRegistry(migrations)))) {
-      throw new Error("Database migration registry is stale. Run `bun script/migration.ts` from packages/core.")
+      throw new Error("Database migration registry is stale. Run `bun script/migration.ts` from backend/core.")
     }
   } finally {
     await fs.rm(temporary, { recursive: true, force: true })
