@@ -1145,7 +1145,8 @@ export type GlobalEvent = {
           timestamp: number
           sessionID: string
           messageID: string
-          reason: "auto" | "manual"
+          reason: "auto" | "manual" | "overflow"
+          decision?: SessionNextCompactionDecision
         }
       }
     | {
@@ -1165,9 +1166,11 @@ export type GlobalEvent = {
           timestamp: number
           sessionID: string
           messageID: string
-          reason: "auto" | "manual"
+          reason: "auto" | "manual" | "overflow"
           text: string
           recent: string
+          outcome?: "summarized" | "hard-truncated"
+          dropped_tokens?: number
         }
       }
     | {
@@ -3211,6 +3214,15 @@ export type SessionNextRetryError = {
   }
 }
 
+export type SessionNextCompactionDecision = {
+  trigger: "threshold" | "budget" | "overflow" | "manual"
+  context: number
+  context_source: "model" | "default"
+  estimated?: number
+  limit?: number
+  fallback: "none" | "progressive" | "hard-truncation" | "window-too-small"
+}
+
 export type FileDiff = {
   path: string
   status: "added" | "modified" | "deleted"
@@ -3860,7 +3872,8 @@ export type SyncEventSessionNextCompactionStarted = {
       timestamp: number
       sessionID: string
       messageID: string
-      reason: "auto" | "manual"
+      reason: "auto" | "manual" | "overflow"
+      decision?: SessionNextCompactionDecision
     }
   }
 }
@@ -3877,9 +3890,11 @@ export type SyncEventSessionNextCompactionEnded = {
       timestamp: number
       sessionID: string
       messageID: string
-      reason: "auto" | "manual"
+      reason: "auto" | "manual" | "overflow"
       text: string
       recent: string
+      outcome?: "summarized" | "hard-truncated"
+      dropped_tokens?: number
     }
   }
 }
@@ -4279,7 +4294,7 @@ export type SessionMessageAssistant = {
 
 export type SessionMessageCompaction = {
   type: "compaction"
-  reason: "auto" | "manual"
+  reason: "auto" | "manual" | "overflow"
   summary: string
   recent: string
   id: string
@@ -4829,7 +4844,8 @@ export type SessionNextCompactionStarted = {
     timestamp: number
     sessionID: string
     messageID: string
-    reason: "auto" | "manual"
+    reason: "auto" | "manual" | "overflow"
+    decision?: SessionNextCompactionDecision
   }
 }
 
@@ -4849,9 +4865,11 @@ export type SessionNextCompactionEnded = {
     timestamp: number
     sessionID: string
     messageID: string
-    reason: "auto" | "manual"
+    reason: "auto" | "manual" | "overflow"
     text: string
     recent: string
+    outcome?: "summarized" | "hard-truncated"
+    dropped_tokens?: number
   }
 }
 
@@ -6814,7 +6832,8 @@ export type EventSessionNextCompactionStarted = {
     timestamp: number
     sessionID: string
     messageID: string
-    reason: "auto" | "manual"
+    reason: "auto" | "manual" | "overflow"
+    decision?: SessionNextCompactionDecision
   }
 }
 
@@ -6836,9 +6855,11 @@ export type EventSessionNextCompactionEnded = {
     timestamp: number
     sessionID: string
     messageID: string
-    reason: "auto" | "manual"
+    reason: "auto" | "manual" | "overflow"
     text: string
     recent: string
+    outcome?: "summarized" | "hard-truncated"
+    dropped_tokens?: number
   }
 }
 

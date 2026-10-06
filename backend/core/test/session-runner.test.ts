@@ -1191,7 +1191,7 @@ describe("SessionRunnerLLM", () => {
     }),
   )
 
-  it.effect("summarizes an oversized newest message without retaining a fragment", () =>
+  it.effect("retains a truncated tail of an oversized newest message instead of summarizing it away", () =>
     Effect.gen(function* () {
       yield* setup
       const session = yield* SessionV2.Service
@@ -1212,11 +1212,58 @@ describe("SessionRunnerLLM", () => {
       expect(requests).toHaveLength(2)
       const summary = userTexts(requests[0])[0]
       const continuation = userTexts(requests[1])[0]
-      expect(summary.match(/OVERSIZED_BOUNDARY/g)).toHaveLength(1)
-      expect(summary).toContain(oversized)
+      // The oversized newest message is kept verbatim (truncated to the window),
+      // so it is never lost to summarization and the session cannot stall.
+      expect(summary).not.toContain("OVERSIZED_BOUNDARY")
+      expect(summary).toContain("Earlier question")
       expect(continuation).not.toContain("OVERSIZED_BOUNDARY")
-      expect(continuation).not.toContain("OVERSIZED_END")
-      expect(continuation).toContain("<recent-context>\n\n</recent-context>")
+      expect(continuation).toContain("OVERSIZED_END")
+      expect(continuation).toContain("[truncated to fit the model window]")
+    }),
+  )
+
+  it.effect("recovers a session whose context already exceeds the switched model window", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const session = yield* SessionV2.Service
+      // Build a context that exceeds compactModel's 4k window while on the default model.
+      response = fragmentFixture("text", "text-old-one", ["answer one"]).completeEvents
+      yield* session.prompt({
+        sessionID,
+        prompt: Prompt.make({ text: `OLD_ONE ${"a".repeat(12_000)}` }),
+        resume: false,
+      })
+      yield* session.resume(sessionID)
+      response = fragmentFixture("text", "text-old-two", ["answer two"]).completeEvents
+      yield* session.prompt({
+        sessionID,
+        prompt: Prompt.make({ text: `OLD_TWO ${"b".repeat(12_000)}` }),
+        resume: false,
+      })
+      yield* session.resume(sessionID)
+
+      currentModel = compactModel
+      requests.length = 0
+      responses = [
+        fragmentFixture("text", "text-summary", ["## Objective\n- Recover oversized context"]).completeEvents,
+        fragmentFixture("text", "text-final", ["Recovered"]).completeEvents,
+      ]
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Continue" }), resume: false })
+      yield* session.resume(sessionID)
+
+      // The summary prompt initially overflows the window, so the planner drops the
+      // oldest head message to fit; the turn completes instead of dying terminally.
+      expect(requests).toHaveLength(2)
+      const summary = userTexts(requests[0])[0]
+      expect(summary).toContain("OLD_TWO")
+      expect(summary).not.toContain("OLD_ONE")
+      const continuation = userTexts(requests[1])[0]
+      expect(continuation).toContain("<summary>\n## Objective\n- Recover oversized context\n</summary>")
+      expect(continuation).toContain("Continue")
+      expect(yield* session.context(sessionID)).toMatchObject([
+        { type: "compaction", summary: "## Objective\n- Recover oversized context" },
+        { type: "assistant", finish: "stop" },
+      ])
     }),
   )
 

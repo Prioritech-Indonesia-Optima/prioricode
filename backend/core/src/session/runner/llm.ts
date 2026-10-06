@@ -190,6 +190,12 @@ const layer = Layer.effect(
       readonly allowProjectHooks: boolean
     }
 
+    // A successful compaction strictly shrinks the model context, so a healthy
+    // drain needs at most a couple; the bound turns a non-converging path into
+    // an explainable terminal failure instead of a loop.
+    const MAX_AUTO_COMPACTIONS_PER_DRAIN = 3
+    type CompactionBudget = { readonly max: number; used: number }
+
     class TurnTransitionError extends Error {
       constructor(readonly transition: TurnTransition) {
         super()
@@ -246,6 +252,7 @@ const layer = Layer.effect(
       promotion: SessionInput.Delivery | undefined,
       step: number,
       policy: TurnPolicy,
+      budget: CompactionBudget,
       attempt = 1,
       recoverOverflow?: typeof compaction.compactAfterOverflow,
     ) {
@@ -254,7 +261,7 @@ const layer = Layer.effect(
         return yield* Effect.interrupt
       const agent = yield* agents.select(session.agent)
       const model = yield* models.resolve(session)
-      const contextLimit = model.route.defaults.limits?.context ?? DEFAULT_CONTEXT_TOKENS
+      const contextLimit = compaction.contextLimit(model)
       const usagePercent = contextLimit > 0 ? (session.tokens.input / contextLimit) * 100 : 0
       const loadContext = () => loadSystemContext(session.id, agent, usagePercent)
       const initialized = yield* SessionContextEpoch.initialize(db, loadContext(), session.id)
@@ -322,8 +329,13 @@ const layer = Layer.effect(
         tools: toolMaterialization?.definitions ?? [],
         toolChoice: isLastStep ? "none" : undefined,
       })
-      if (yield* compaction.compactIfNeeded({ sessionID: session.id, entries, model, request }))
+      if (
+        budget.used < budget.max &&
+        (yield* compaction.compactIfNeeded({ sessionID: session.id, entries, model, request }))
+      ) {
+        budget.used++
         return yield* Effect.die(continueAfterCompaction(currentStep))
+      }
       const startSnapshot = yield* snapshots.capture()
       const publisher = createLLMEventPublisher(events, {
         sessionID: session.id,
@@ -435,11 +447,14 @@ const layer = Layer.effect(
             stream._tag === "Failure" ? Option.getOrUndefined(Cause.findErrorOption(stream.cause)) : undefined
           if (
             recoverOverflow &&
+            budget.used < budget.max &&
             !publisher.hasAssistantStarted() &&
             isContextOverflowFailure(overflowFailure ?? failure) &&
             (yield* restore(recoverOverflow({ sessionID: session.id, entries, model, request })))
-          )
+          ) {
+            budget.used++
             return yield* Effect.die(continueAfterOverflowCompaction(currentStep))
+          }
           if (overflowFailure) yield* publish(overflowFailure)
           const llmFailure = failure instanceof LLMError ? failure : undefined
           if (
@@ -520,6 +535,7 @@ const layer = Layer.effect(
       promotion: SessionInput.Delivery | undefined,
       step: number,
       policy: TurnPolicy,
+      budget: CompactionBudget,
       attempt?: number,
     ) => Effect.Effect<{ readonly needsContinuation: boolean; readonly step: number }, RunError>
 
@@ -528,9 +544,10 @@ const layer = Layer.effect(
       promotion,
       step,
       policy,
+      budget,
       attempt = 1,
     ) {
-      return yield* runTurnAttempt(sessionID, promotion, step, policy, attempt).pipe(
+      return yield* runTurnAttempt(sessionID, promotion, step, policy, budget, attempt).pipe(
         Effect.catchDefect(
           Effect.fnUntraced(function* (defect) {
             if (!(defect instanceof TurnTransitionError)) return yield* Effect.die(defect)
@@ -544,34 +561,42 @@ const layer = Layer.effect(
                 undefined,
                 defect.transition.step,
                 policy,
+                budget,
                 defect.transition.attempt,
               )
             }
-            return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step, policy)
+            return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step, policy, budget)
           }),
         ),
       )
     })
 
-    const runTurn: RunTurn = Effect.fnUntraced(function* (sessionID, promotion, step, policy, attempt = 1) {
-      return yield* runTurnAttempt(sessionID, promotion, step, policy, attempt, compaction.compactAfterOverflow).pipe(
-        Effect.catchDefect(
-          Effect.fnUntraced(function* (defect) {
-            if (!(defect instanceof TurnTransitionError)) return yield* Effect.die(defect)
-            yield* Effect.yieldNow
-            if (defect.transition._tag === "RetryProviderTurn") {
-              yield* Effect.sleep(Duration.millis(defect.transition.delayMs))
-              return yield* runTurn(sessionID, undefined, defect.transition.step, policy, defect.transition.attempt)
-            }
-            if (defect.transition._tag === "ContinueAfterOverflowCompaction")
-              return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step, policy)
-            return yield* runTurn(sessionID, undefined, defect.transition.step, policy)
-          }),
-        ),
-      )
+    const runTurn: RunTurn = Effect.fnUntraced(function* (sessionID, promotion, step, policy, budget, attempt = 1) {
+      return yield* runTurnAttempt(sessionID, promotion, step, policy, budget, attempt, compaction.compactAfterOverflow)
+        .pipe(
+          Effect.catchDefect(
+            Effect.fnUntraced(function* (defect) {
+              if (!(defect instanceof TurnTransitionError)) return yield* Effect.die(defect)
+              yield* Effect.yieldNow
+              if (defect.transition._tag === "RetryProviderTurn") {
+                yield* Effect.sleep(Duration.millis(defect.transition.delayMs))
+                return yield* runTurn(
+                  sessionID,
+                  undefined,
+                  defect.transition.step,
+                  policy,
+                  budget,
+                  defect.transition.attempt,
+                )
+              }
+              if (defect.transition._tag === "ContinueAfterOverflowCompaction")
+                return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step, policy, budget)
+              return yield* runTurn(sessionID, undefined, defect.transition.step, policy, budget)
+            }),
+          ),
+        )
     })
 
-    const DEFAULT_CONTEXT_TOKENS = 128_000
     const sessionStartFired = new Set<string>()
 
     const stopHookGate = (sessionID: SessionSchema.ID, allowProjectHooks: boolean): SessionGate.Gate => {
@@ -657,11 +682,12 @@ const layer = Layer.effect(
       yield* failInterruptedTools(input.sessionID)
       let promotion: SessionInput.Delivery | undefined = hasSteer ? "steer" : hasQueue ? "queue" : undefined
       let shouldRun = input.force || hasSteer || hasQueue
+      const budget: CompactionBudget = { max: MAX_AUTO_COMPACTIONS_PER_DRAIN, used: 0 }
       while (shouldRun) {
         let needsContinuation = true
         let step = 1
         while (needsContinuation) {
-          const result = yield* runTurn(input.sessionID, promotion, step, policy)
+          const result = yield* runTurn(input.sessionID, promotion, step, policy, budget)
           needsContinuation = result.needsContinuation
           step = result.step + 1
           promotion = "steer"

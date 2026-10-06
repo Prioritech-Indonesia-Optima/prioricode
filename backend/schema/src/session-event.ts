@@ -406,6 +406,18 @@ export const Retried = Event.define({
 })
 export type Retried = typeof Retried.Type
 
+export const CompactionDecision = Schema.Struct({
+  trigger: Schema.Literals(["threshold", "budget", "overflow", "manual"]),
+  context: NonNegativeInt,
+  context_source: Schema.Literals(["model", "default"]),
+  estimated: NonNegativeInt.pipe(optional),
+  limit: NonNegativeInt.pipe(optional),
+  fallback: Schema.Literals(["none", "progressive", "hard-truncation", "window-too-small"]),
+}).annotate({
+  identifier: "session.next.compaction.decision",
+})
+export interface CompactionDecision extends Schema.Schema.Type<typeof CompactionDecision> {}
+
 export namespace Compaction {
   export const Started = Event.define({
     type: "session.next.compaction.started",
@@ -413,7 +425,8 @@ export namespace Compaction {
     schema: {
       ...Base,
       messageID: SessionMessage.ID,
-      reason: Schema.Union([Schema.Literal("auto"), Schema.Literal("manual")]),
+      reason: Schema.Union([Schema.Literal("auto"), Schema.Literal("manual"), Schema.Literal("overflow")]),
+      decision: CompactionDecision.pipe(optional),
     },
   })
   export type Started = typeof Started.Type
@@ -437,6 +450,8 @@ export namespace Compaction {
       reason: Started.data.fields.reason,
       text: Schema.String,
       recent: Schema.String,
+      outcome: Schema.Literals(["summarized", "hard-truncated"]).pipe(optional),
+      dropped_tokens: NonNegativeInt.pipe(optional),
     },
   })
   export type Ended = typeof Ended.Type

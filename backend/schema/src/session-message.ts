@@ -198,7 +198,7 @@ export const Assistant = Schema.Struct({
 export interface Compaction extends Schema.Schema.Type<typeof Compaction> {}
 export const Compaction = Schema.Struct({
   type: Schema.Literal("compaction"),
-  reason: Schema.Literals(["auto", "manual"]),
+  reason: Schema.Literals(["auto", "manual", "overflow"]),
   summary: Schema.String,
   recent: Schema.String,
   ...Base,

@@ -701,7 +701,7 @@ export type SessionsContextOutput = {
       }
     | {
         readonly type: "compaction"
-        readonly reason: "auto" | "manual"
+        readonly reason: "auto" | "manual" | "overflow"
         readonly summary: string
         readonly recent: string
         readonly id: string
@@ -1109,7 +1109,15 @@ export type SessionsHistoryOutput = {
           readonly timestamp: number
           readonly sessionID: string
           readonly messageID: string
-          readonly reason: "auto" | "manual"
+          readonly reason: "auto" | "manual" | "overflow"
+          readonly decision?: {
+            readonly trigger: "threshold" | "budget" | "overflow" | "manual"
+            readonly context: number
+            readonly context_source: "model" | "default"
+            readonly estimated?: number
+            readonly limit?: number
+            readonly fallback: "none" | "progressive" | "hard-truncation" | "window-too-small"
+          }
         }
       }
     | {
@@ -1122,9 +1130,11 @@ export type SessionsHistoryOutput = {
           readonly timestamp: number
           readonly sessionID: string
           readonly messageID: string
-          readonly reason: "auto" | "manual"
+          readonly reason: "auto" | "manual" | "overflow"
           readonly text: string
           readonly recent: string
+          readonly outcome?: "summarized" | "hard-truncated"
+          readonly dropped_tokens?: number
         }
       }
     | {
@@ -1580,7 +1590,15 @@ export type SessionsEventsOutput =
         readonly timestamp: number
         readonly sessionID: string
         readonly messageID: string
-        readonly reason: "auto" | "manual"
+        readonly reason: "auto" | "manual" | "overflow"
+        readonly decision?: {
+          readonly trigger: "threshold" | "budget" | "overflow" | "manual"
+          readonly context: number
+          readonly context_source: "model" | "default"
+          readonly estimated?: number
+          readonly limit?: number
+          readonly fallback: "none" | "progressive" | "hard-truncation" | "window-too-small"
+        }
       }
     }
   | {
@@ -1593,9 +1611,11 @@ export type SessionsEventsOutput =
         readonly timestamp: number
         readonly sessionID: string
         readonly messageID: string
-        readonly reason: "auto" | "manual"
+        readonly reason: "auto" | "manual" | "overflow"
         readonly text: string
         readonly recent: string
+        readonly outcome?: "summarized" | "hard-truncated"
+        readonly dropped_tokens?: number
       }
     }
   | {
@@ -1812,7 +1832,7 @@ export type SessionsMessageOutput = {
       }
     | {
         readonly type: "compaction"
-        readonly reason: "auto" | "manual"
+        readonly reason: "auto" | "manual" | "overflow"
         readonly summary: string
         readonly recent: string
         readonly id: string
@@ -1991,7 +2011,7 @@ export type MessagesListOutput = {
       }
     | {
         readonly type: "compaction"
-        readonly reason: "auto" | "manual"
+        readonly reason: "auto" | "manual" | "overflow"
         readonly summary: string
         readonly recent: string
         readonly id: string

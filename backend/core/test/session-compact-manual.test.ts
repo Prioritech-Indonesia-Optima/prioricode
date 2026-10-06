@@ -23,6 +23,7 @@ import { SessionProjector } from "@prioricode/core/session/projector"
 import { SessionStore } from "@prioricode/core/session/store"
 import { SessionTable } from "@prioricode/core/session/sql"
 import { Prompt } from "@prioricode/core/session/prompt"
+import { SessionEvent } from "@prioricode/core/session/event"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { SkillGuidance } from "@prioricode/core/skill/guidance"
 import { ReferenceGuidance } from "@prioricode/core/reference/guidance"
@@ -30,7 +31,8 @@ import { SystemContext } from "@prioricode/core/system-context"
 import { Snapshot } from "@prioricode/core/snapshot"
 import { ToolRegistry } from "@prioricode/core/tool/registry"
 import { Cause, Effect, Deferred, Fiber, Layer, Stream } from "effect"
-import { eq } from "drizzle-orm"
+import { asc, eq } from "drizzle-orm"
+import { EventTable } from "@prioricode/core/event/sql"
 import { testEffect } from "./lib/effect"
 
 const directory = "/compact-manual"
@@ -239,6 +241,41 @@ describe("manual compaction", () => {
       expect(summaryRequest).not.toContain("Latest context")
       const after = yield* session.context(sessionID)
       expect(after[0]).toMatchObject({ type: "compaction", summary: "FULL-SUMMARY" })
+    }),
+  )
+
+  it.live("records an explainable manual decision and outcome on the compaction events", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const session = yield* SessionV2.Service
+      const { db } = yield* Database.Service
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "First question alpha" }), resume: false })
+      responses = [textTurn("text-one", "answer one")]
+      yield* session.resume(sessionID)
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Second question beta" }), resume: false })
+      responses = [textTurn("text-two", "answer two")]
+      yield* session.resume(sessionID)
+
+      responses = [textTurn("text-summary", "SUMMARY-CHECKPOINT")]
+      expect(yield* session.compact({ sessionID })).toBe(true)
+
+      const rows = yield* db
+        .select({ type: EventTable.type, data: EventTable.data })
+        .from(EventTable)
+        .where(eq(EventTable.aggregate_id, sessionID))
+        .orderBy(asc(EventTable.seq))
+        .all()
+        .pipe(Effect.orDie)
+      const started = rows.find((row) => row.type === EventV2.versionedType(SessionEvent.Compaction.Started.type, 1))
+      const ended = rows.find((row) => row.type === EventV2.versionedType(SessionEvent.Compaction.Ended.type, 1))
+      expect(started).toBeDefined()
+      expect(ended).toBeDefined()
+      expect((started!.data as Record<string, unknown>).decision).toMatchObject({
+        trigger: "manual",
+        context_source: "default",
+        fallback: "none",
+      })
+      expect((ended!.data as Record<string, unknown>).outcome).toBe("summarized")
     }),
   )
 

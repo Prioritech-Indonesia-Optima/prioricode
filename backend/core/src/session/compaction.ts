@@ -13,6 +13,13 @@ const DEFAULT_BUFFER = 20_000
 const DEFAULT_KEEP_TOKENS = 8_000
 const TOOL_OUTPUT_MAX_CHARS = 2_000
 const SUMMARY_OUTPUT_TOKENS = 4_096
+// The <conversation-checkpoint> wrapper rendered around summary + recent in the
+// post-compaction request; reserved when capping the verbatim tail to the window.
+const CHECKPOINT_OVERHEAD = 64
+// Headroom kept inside the summary-request budget for the optional instructions
+// line and estimation rounding.
+const PROMPT_MARGIN = 256
+const TRUNCATION_MARKER = "[truncated to fit the model window]"
 const SUMMARY_TEMPLATE = `Output exactly the Markdown structure shown inside <template> and keep the section order unchanged. Do not include the <template> tags in your response.
 <template>
 ## Objective
@@ -54,15 +61,16 @@ When combining:
 - If a blocker has been resolved, update the summary to reflect that while keeping any details still needed to continue the work.
 - Update "Objective" and "Next Move" to reflect the current work state.`
 
-type Entry = {
+export type Entry = {
   readonly seq: number
   readonly message: SessionMessage.Message
 }
 
-type Settings = {
+export type Settings = {
   readonly auto: boolean
   readonly buffer: number
   readonly tokens: number
+  readonly turns: number | undefined
   readonly threshold: number | undefined
   readonly defaultContext: number
 }
@@ -80,9 +88,52 @@ type Input = {
   readonly entries: readonly Entry[]
   readonly model: Model
   readonly request?: LLMRequest
-  readonly reason?: "auto" | "manual"
+  readonly reason?: "auto" | "manual" | "overflow"
   readonly headCutSeq?: number
   readonly instructions?: string
+}
+
+export type ContextResolution = {
+  readonly context: number
+  readonly source: "model" | "default"
+  readonly declared: number | undefined
+}
+
+/** The effective window is always a function of the selected model; the config fallback is recorded as such. */
+export const resolveContext = (model: Model, defaultContext: number): ContextResolution => {
+  const declared = model.route.defaults.limits?.context
+  if (declared !== undefined && declared > 0) return { context: declared, source: "model", declared }
+  return { context: defaultContext, source: "default", declared }
+}
+
+type ConversationItem = {
+  readonly seq: number
+  readonly text: string
+  readonly user: boolean
+}
+
+export type CompactionPlan = {
+  readonly head: string
+  readonly recent: string
+  readonly priorRecent: string
+  readonly priorSummary: string | undefined
+  readonly droppedTokens: number
+  readonly truncatedPriorRecent: boolean
+  readonly hardTruncated: boolean
+  readonly headTokens: number
+  readonly recentTokens: number
+  readonly fallback: "none" | "progressive" | "hard-truncation"
+}
+
+export type PlanResult = CompactionPlan | { readonly fallback: "window-too-small" }
+
+export type CompactionDecision = {
+  readonly trigger: "threshold" | "budget" | "overflow" | "manual"
+  readonly context: number
+  readonly context_source: "model" | "default"
+  readonly estimated: number
+  readonly limit: number
+  readonly fallback: "none" | "progressive" | "hard-truncation" | "window-too-small"
 }
 
 const estimate = (value: unknown) => Token.estimate(JSON.stringify(value))
@@ -134,50 +185,146 @@ const settings = (documents: readonly Config.Entry[]) => {
       auto: current.auto ?? result.auto,
       buffer: current.buffer ?? result.buffer,
       tokens: current.keep?.tokens ?? result.tokens,
+      turns: current.keep?.turns ?? result.turns,
       threshold: current.threshold ?? result.threshold,
       defaultContext: current.default_context ?? result.defaultContext,
     }),
-    { auto: true, buffer: DEFAULT_BUFFER, tokens: DEFAULT_KEEP_TOKENS, threshold: undefined, defaultContext: 128_000 },
+    { auto: true, buffer: DEFAULT_BUFFER, tokens: DEFAULT_KEEP_TOKENS, turns: undefined, threshold: undefined, defaultContext: 128_000 },
   )
 }
 
-const select = (
+const truncateTail = (text: string, keepChars: number) =>
+  keepChars <= 0 ? "" : `${TRUNCATION_MARKER}\n${text.slice(-keepChars)}`
+
+/**
+ * Pure, terminating fit-or-shrink planner. The summary prompt (prior recent +
+ * head + prior summary) must fit `context - summaryOutput`; the verbatim tail
+ * must fit the window so the post-compaction request can. Reduction priority:
+ * drop oldest head (counted) → truncate prior recent (25%/step) → hard-truncate
+ * the prior summary → hard-truncate the tail. Always returns a fitting plan or
+ * an explainable `window-too-small`.
+ */
+export const plan = (
   entries: readonly Entry[],
-  tokens: number,
+  settings: Settings,
+  priorSummary: string | undefined,
+  priorRecent: string,
+  context: number,
+  summaryOutput: number,
   headCutSeq?: number,
-): { readonly head: string; readonly recent: string } | undefined => {
-  const conversation = entries
+): PlanResult | undefined => {
+  const conversation: ConversationItem[] = entries
     .filter((entry) => entry.message.type !== "compaction")
-    .map((entry) => ({ seq: entry.seq, text: serialize(entry.message) }))
+    .map((entry) => ({ seq: entry.seq, text: serialize(entry.message), user: entry.message.type === "user" }))
     .filter((item) => item.text !== "")
-  if (conversation.length === 0) return
-  let split: number
+  if (conversation.length === 0) return undefined
+
+  let head: ConversationItem[]
+  let recent: ConversationItem[]
   if (headCutSeq !== undefined) {
     // Summarize everything up to and including the anchor, then clamp so at
     // least one trailing message is retained verbatim. Idle-only callers
     // guarantee no unsettled tool call straddles the boundary.
-    split = conversation.findIndex((item) => item.seq > headCutSeq)
+    let split = conversation.findIndex((item) => item.seq > headCutSeq)
     if (split === -1) split = conversation.length
     split = Math.min(split, Math.max(conversation.length - 1, 1))
+    head = conversation.slice(0, split)
+    recent = conversation.slice(split)
   } else {
-    split = conversation.length
-    let total = 0
+    recent = []
+    let recentTokens = 0
+    let turns = 0
     for (let index = conversation.length - 1; index >= 0; index--) {
-      const next = total + Token.estimate(conversation[index]!.text)
-      if (next > tokens) break
-      total = next
-      split = index
+      const item = conversation[index]
+      if (recent.length >= 1) {
+        if (recentTokens + Token.estimate(item.text) > settings.tokens) break
+        if (settings.turns !== undefined && item.user && turns >= settings.turns) break
+      }
+      recent.unshift(item)
+      recentTokens += Token.estimate(item.text)
+      if (item.user) turns++
+    }
+    // The turn cap breaks at a user message, leaving the earlier turn's
+    // assistant messages at the front; trim them so the tail is whole turns.
+    if (settings.turns !== undefined) while (recent.length > 0 && !recent[0].user) recent.shift()
+    head = conversation.slice(0, conversation.length - recent.length)
+  }
+
+  let hardTruncated = false
+  // The checkpoint (summary + recent) must fit the window; cap the tail so an
+  // oversized message is truncated instead of stalling the session. Oldest
+  // items are reduced to the marker first; the newest keeps its tail.
+  const recentCap = Math.min(settings.tokens, Math.max(0, context - summaryOutput - CHECKPOINT_OVERHEAD))
+  if (recentCap > 0) {
+    let total = recent.reduce((sum, item) => sum + Token.estimate(item.text), 0)
+    for (let index = 0; index < recent.length - 1 && total > recentCap; index++) {
+      const item = recent[index]
+      total = total - Token.estimate(item.text) + Token.estimate(TRUNCATION_MARKER)
+      recent[index] = { ...item, text: TRUNCATION_MARKER }
+      hardTruncated = true
+    }
+    const newest = recent[recent.length - 1]
+    if (total > recentCap) {
+      const keepChars = Math.max(0, newest.text.length - (total - recentCap) * 4 - 64)
+      total = total - Token.estimate(newest.text) + Token.estimate(truncateTail(newest.text, keepChars))
+      recent[recent.length - 1] = { ...newest, text: truncateTail(newest.text, keepChars) }
+      hardTruncated = true
     }
   }
+
+  let summary = priorSummary
+  let droppedTokens = 0
+  let truncatedPriorRecent = false
+  let headText = head.map((item) => item.text).join("\n\n")
+  // Margin covers the optional instructions line and estimation rounding.
+  const budget = context - summaryOutput - PROMPT_MARGIN
+  if (budget <= 0) return { fallback: "window-too-small" }
+  const build = () =>
+    buildPrompt({
+      previousSummary: summary,
+      context: [priorRecent, headText].filter(Boolean),
+      instructions: undefined,
+    })
+  for (;;) {
+    const prompt = build()
+    if (Token.estimate(prompt) <= budget) break
+    if (head.length > 0) {
+      const oldest = head.shift()!
+      droppedTokens += Token.estimate(oldest.text)
+      headText = head.map((item) => item.text).join("\n\n")
+      continue
+    }
+    if (priorRecent.length > 0) {
+      priorRecent = priorRecent.slice(Math.ceil(priorRecent.length * 0.25))
+      truncatedPriorRecent = true
+      continue
+    }
+    if (summary !== undefined) {
+      const overflow = Token.estimate(prompt) - budget
+      summary = truncateTail(summary, summary.length - overflow * 4 - 64)
+      hardTruncated = true
+      continue
+    }
+    return { fallback: "window-too-small" }
+  }
+
+  const recentText = recent.map((item) => item.text).join("\n\n")
+  const fallback = hardTruncated
+    ? "hard-truncation"
+    : droppedTokens > 0 || truncatedPriorRecent
+      ? "progressive"
+      : "none"
   return {
-    head: conversation
-      .slice(0, split)
-      .map((item) => item.text)
-      .join("\n\n"),
-    recent: conversation
-      .slice(split)
-      .map((item) => item.text)
-      .join("\n\n"),
+    head: headText,
+    recent: recentText,
+    priorRecent,
+    priorSummary: summary,
+    droppedTokens,
+    truncatedPriorRecent,
+    hardTruncated,
+    headTokens: Token.estimate(headText),
+    recentTokens: Token.estimate(recentText),
+    fallback,
   }
 }
 
@@ -209,28 +356,76 @@ export const buildPrompt = (input: {
 
 export const make = (dependencies: Dependencies) => {
   const config = settings(dependencies.config)
+  const decide = (input: Input, resolution: ContextResolution, planned: PlanResult, output: number): CompactionDecision => {
+    const trigger =
+      input.reason === "manual"
+        ? "manual"
+        : input.reason === "overflow"
+          ? "overflow"
+          : config.threshold !== undefined
+            ? "threshold"
+            : "budget"
+    const limit = Math.max(
+      0,
+      config.threshold !== undefined
+        ? Math.floor((resolution.context * Math.min(config.threshold, 100)) / 100)
+        : resolution.context - Math.max(output, config.buffer),
+    )
+    const estimated =
+      input.request !== undefined
+        ? estimate({ system: input.request.system, messages: input.request.messages, tools: input.request.tools })
+        : estimate({ system: [], messages: input.entries.map((entry) => serialize(entry.message)), tools: [] })
+    return {
+      trigger,
+      context: resolution.context,
+      context_source: resolution.source,
+      estimated,
+      limit,
+      fallback: planned.fallback,
+    }
+  }
   const compact = Effect.fn("SessionCompaction.compact")(function* (input: Input) {
     const reason = input.reason ?? "auto"
-    const rawContext = input.model.route.defaults.limits?.context
-    const context = rawContext && rawContext > 0 ? rawContext : config.defaultContext
-    if (context <= 0) return false
+    const resolution = resolveContext(input.model, config.defaultContext)
+    if (resolution.context <= 0) {
+      yield* Effect.log("compaction skipped: no usable context window", {
+        sessionID: input.sessionID,
+        reason,
+        context: resolution.context,
+        source: resolution.source,
+      })
+      return false
+    }
     const output = input.request?.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
-    const selected = select(input.entries, config.tokens, input.headCutSeq)
-    const previousSummary = input.entries.find((entry) => entry.message.type === "compaction")?.message
-    if (!selected || (selected.head.length === 0 && previousSummary?.type !== "compaction")) return false
-    const summaryPrompt = buildPrompt({
-      previousSummary: previousSummary?.type === "compaction" ? previousSummary.summary : undefined,
-      context: [previousSummary?.type === "compaction" ? previousSummary.recent : "", selected.head].filter(Boolean),
-      instructions: input.instructions,
-    })
     const summaryOutput = Math.min(output || SUMMARY_OUTPUT_TOKENS, SUMMARY_OUTPUT_TOKENS)
-    if (Token.estimate(summaryPrompt) > context - summaryOutput) return false
+    const prior = input.entries.find((entry) => entry.message.type === "compaction")?.message
+    const planned = plan(
+      input.entries,
+      config,
+      prior?.type === "compaction" ? prior.summary : undefined,
+      prior?.type === "compaction" ? prior.recent : "",
+      resolution.context,
+      summaryOutput,
+      input.headCutSeq,
+    )
+    if (planned === undefined) return false
+    if (planned.fallback === "window-too-small") {
+      yield* Effect.log("compaction unavailable: model window too small to hold a summary", {
+        sessionID: input.sessionID,
+        reason,
+        context: resolution.context,
+        summaryOutput,
+      })
+      return false
+    }
+    const decision = decide(input, resolution, planned, output)
     const messageID = SessionMessage.ID.create()
     yield* dependencies.events.publish(SessionEvent.Compaction.Started, {
       sessionID: input.sessionID,
       messageID,
       timestamp: yield* DateTime.now,
       reason,
+      decision,
     })
 
     const chunks: string[] = []
@@ -240,41 +435,71 @@ export const make = (dependencies: Dependencies) => {
         LLM.request({
           model: input.model,
           http: input.request?.http,
-          messages: [Message.user(summaryPrompt)],
+          messages: [
+            Message.user(
+              buildPrompt({
+                previousSummary: planned.priorSummary,
+                context: [planned.priorRecent, planned.head].filter(Boolean),
+                instructions: input.instructions,
+              }),
+            ),
+          ],
           tools: [],
           generation: { maxTokens: summaryOutput },
         }),
       )
       .pipe(
-        Stream.runForEach((event) => {
-          if (LLMEvent.is.providerError(event)) failed = true
-          if (LLMEvent.is.textDelta(event)) chunks.push(event.text)
-          return Effect.void
-        }),
+        Stream.runForEach((event) =>
+          Effect.gen(function* () {
+            if (LLMEvent.is.providerError(event)) failed = true
+            if (LLMEvent.is.textDelta(event)) {
+              chunks.push(event.text)
+              yield* dependencies.events.publish(SessionEvent.Compaction.Delta, {
+                sessionID: input.sessionID,
+                messageID,
+                timestamp: yield* DateTime.now,
+                text: event.text,
+              })
+            }
+          }),
+        ),
         Effect.as(true),
         Effect.catchTag("LLM.Error", () => Effect.succeed(false)),
       )
     const summary = chunks.join("")
-    if (!summarized || failed || !summary.trim()) return false
+    if (!summarized || failed || !summary.trim()) {
+      yield* Effect.log("compaction failed: summary request failed", { sessionID: input.sessionID, reason })
+      return false
+    }
     yield* dependencies.events.publish(SessionEvent.Compaction.Ended, {
       sessionID: input.sessionID,
       messageID,
       timestamp: yield* DateTime.now,
       reason,
       text: summary,
-      recent: selected.recent,
+      recent: planned.recent,
+      outcome: planned.hardTruncated ? "hard-truncated" : "summarized",
+      dropped_tokens: planned.droppedTokens > 0 ? planned.droppedTokens : undefined,
+    })
+    yield* Effect.log("compaction completed", {
+      sessionID: input.sessionID,
+      reason,
+      outcome: planned.hardTruncated ? "hard-truncated" : "summarized",
+      fallback: planned.fallback,
+      dropped_tokens: planned.droppedTokens,
+      head_tokens: planned.headTokens,
+      recent_tokens: planned.recentTokens,
     })
     return true
   })
-  const compactAfterOverflow = (input: Input) => compact(input)
+  const compactAfterOverflow = (input: Input) => compact({ ...input, reason: "overflow" })
   const compactManual = (input: Input) => compact({ ...input, reason: "manual" })
   const compactIfNeeded = Effect.fn("SessionCompaction.compactIfNeeded")(function* (
     input: Input & { readonly request: LLMRequest },
   ) {
     if (!config.auto) return false
-    const rawContext = input.model.route.defaults.limits?.context
-    const context = rawContext && rawContext > 0 ? rawContext : config.defaultContext
-    if (context <= 0) return false
+    const resolution = resolveContext(input.model, config.defaultContext)
+    if (resolution.context <= 0) return false
     const output = input.request.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
     const estimated = estimate({
       system: input.request.system,
@@ -283,14 +508,35 @@ export const make = (dependencies: Dependencies) => {
     })
     const limit =
       config.threshold !== undefined
-        ? Math.floor((context * Math.min(config.threshold, 100)) / 100)
-        : context - Math.max(output, config.buffer)
+        ? Math.floor((resolution.context * Math.min(config.threshold, 100)) / 100)
+        : resolution.context - Math.max(output, config.buffer)
     if (estimated <= limit) return false
-    return yield* compactAfterOverflow(input)
+    if (limit <= 0) {
+      yield* Effect.log("compaction skipped: model window cannot fit output plus reserved buffer", {
+        sessionID: input.sessionID,
+        context: resolution.context,
+        source: resolution.source,
+        output,
+        buffer: config.buffer,
+        threshold: config.threshold,
+      })
+      return false
+    }
+    yield* Effect.log("compaction triggered", {
+      sessionID: input.sessionID,
+      trigger: config.threshold !== undefined ? "threshold" : "budget",
+      context: resolution.context,
+      context_source: resolution.source,
+      estimated,
+      limit,
+    })
+    return yield* compact({ ...input, reason: "auto" })
   })
+  const contextLimit = (model: Model) => resolveContext(model, config.defaultContext).context
   return {
     compactIfNeeded,
     compactAfterOverflow,
     compactManual,
+    contextLimit,
   }
 }
