@@ -60,7 +60,13 @@ const prepareOnce = Effect.fnUntraced(function* (
   const result = replacementSeq
     ? yield* SystemContext.replace(value, snapshot)
     : yield* SystemContext.reconcile(value, snapshot)
-  if (result._tag === "Unchanged" || result._tag === "ReplacementBlocked") {
+  if (result._tag === "Unchanged") {
+    return { baseline: stored.baseline, baselineSeq: stored.baseline_seq }
+  }
+  if (result._tag === "ReplacementBlocked") {
+    // A post-compaction baseline cannot be rendered completely yet; keep the old
+    // baseline and its chronological updates. Log so the preserved state is explainable.
+    yield* Effect.log("context epoch replacement blocked; preserving prior baseline", { sessionID })
     return { baseline: stored.baseline, baselineSeq: stored.baseline_seq }
   }
   if (result._tag === "ReplacementReady") {
