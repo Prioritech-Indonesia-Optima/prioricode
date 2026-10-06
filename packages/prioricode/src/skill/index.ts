@@ -6,7 +6,6 @@ import type { Agent } from "@/agent/agent"
 import { EventV2Bridge } from "@/event-v2-bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { Global } from "@prioricode/core/global"
-import { SkillPlugin } from "@prioricode/core/plugin/skill"
 import { Permission } from "@/permission"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Config } from "@/config/config"
@@ -23,16 +22,6 @@ const AGENTS_EXTERNAL_DIR = ".agents"
 const EXTERNAL_SKILL_PATTERN = "skills/**/SKILL.md"
 const PRIORICODE_SKILL_PATTERN = "{skill,skills}/**/SKILL.md"
 const SKILL_PATTERN = "**/SKILL.md"
-
-// Built-in skill that ships with prioricode. The model's intuition for what an
-// prioricode.json should look like is often wrong, and prioricode hard-fails on
-// invalid config, so users hit cryptic startup errors. Loading this skill
-// when the model is asked to touch prioricode's own config files gives it the
-// actual schemas instead of guesses.
-const CUSTOMIZE_PRIORICODE_SKILL_NAME = "customize-prioricode"
-const CUSTOMIZE_PRIORICODE_SKILL_DESCRIPTION =
-  "Use ONLY when the user is editing or creating prioricode's own configuration: prioricode.json, prioricode.jsonc, files under .prioricode/, or files under ~/.config/prioricode/. Also use when creating or fixing prioricode agents, subagents, skills, plugins, MCP servers, or permission rules. Do not use for the user's own application code, or for any project that is not configuring prioricode itself."
-const CUSTOMIZE_PRIORICODE_SKILL_BODY = SkillPlugin.CustomizePrioricodeContent
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -273,14 +262,6 @@ const layer = Layer.effect(
     const state = yield* InstanceState.make(
       Effect.fn("Skill.state")(function* () {
         const s: State = { skills: {}, dirs: new Set() }
-        // Register the built-in skill BEFORE disk discovery so a user-disk
-        // skill with the same name can override it.
-        s.skills[CUSTOMIZE_PRIORICODE_SKILL_NAME] = {
-          name: CUSTOMIZE_PRIORICODE_SKILL_NAME,
-          description: CUSTOMIZE_PRIORICODE_SKILL_DESCRIPTION,
-          location: "<built-in>",
-          content: CUSTOMIZE_PRIORICODE_SKILL_BODY,
-        }
         yield* loadSkills(s, yield* InstanceState.get(discovered), events)
         return s
       }),

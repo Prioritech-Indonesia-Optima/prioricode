@@ -52,7 +52,7 @@ Scanned at startup, in this order:
 
 Each URL must serve `index.json` shaped as `{ "skills": [{ "name", "files": ["SKILL.md", …], "version"? }] }`. Files are cached under the cache dir with atomic version-swaps, so an updated pack lands whole or not at all.
 
-Duplicate names: last one wins and you get a warning — intentional, project skills override global ones. A built-in skill (`customize-prioricode`, for editing PrioriCode's own config) ships with the binary and can be overridden on disk.
+Duplicate names: last one wins and you get a warning — intentional, project skills override global ones.
 
 ## Using them
 
