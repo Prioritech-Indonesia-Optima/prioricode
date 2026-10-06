@@ -37,6 +37,7 @@ jobs:
           aws-region: us-east-1
 
       - run: bun sst unlock --stage=${{ inputs.stage }}
+        working-directory: cloud
         env:
           GITHUB_TOKEN: ${{ github.token }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
