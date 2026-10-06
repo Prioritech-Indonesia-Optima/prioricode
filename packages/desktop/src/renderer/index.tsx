@@ -13,6 +13,7 @@ import {
   ServerConnection,
   useCommand,
   useWslServers,
+  useSshServers,
   useLanguage,
 } from "@prioricode/app"
 import type { UpdaterState } from "@prioricode/app/updater"
@@ -28,6 +29,7 @@ import { DesktopFirstLaunchOnboarding } from "./onboarding"
 import { resetZoom, setPinchZoomEnabled, webviewZoom, zoomIn, zoomOut } from "./webview-zoom"
 import { windowFullscreen } from "./window-fullscreen"
 import { availableStartupServer, readyWslConnections } from "./wsl/connections"
+import { availableSshStartupServer, readySshConnections } from "./ssh/connections"
 import "./styles.css"
 import { Splash } from "@prioricode/ui/logo"
 import { useTheme } from "@prioricode/ui/theme/context"
@@ -164,6 +166,7 @@ const createPlatform = (windowState: DesktopWindowState): Platform => {
   })()
 
   const wslServersApi = os === "windows" ? window.api.wslServers : undefined
+  const sshServersApi = window.api.sshServers
 
   return {
     platform: "desktop",
@@ -283,6 +286,7 @@ const createPlatform = (windowState: DesktopWindowState): Platform => {
     },
 
     wslServers: wslServersApi,
+    sshServers: sshServersApi,
 
     getDisplayBackend: async () => {
       return window.api.getDisplayBackend().catch(() => null)
@@ -375,9 +379,11 @@ function DesktopRoot(props: { windowState: DesktopWindowState }) {
 
   function App() {
     const wslServers = useWslServers()
+    const sshServers = useSshServers()
     const language = useLanguage()
     const ready = createMemo(
-      () => !defaultServer.loading && !sidecar.loading && !locale.loading && !wslServers.isLoading,
+      () =>
+        !defaultServer.loading && !sidecar.loading && !locale.loading && !wslServers.isLoading && !sshServers.isLoading,
     )
     const servers = createMemo(() => {
       const data = initializationData(sidecar)
@@ -395,10 +401,13 @@ function DesktopRoot(props: { windowState: DesktopWindowState }) {
         })
       }
       list.push(...readyWslConnections(wslServers.data, language.t("wsl.server.label")))
+      list.push(...readySshConnections(sshServers.data, language.t("ssh.server.label")))
       return list
     })
     const effectiveDefaultServer = createMemo(() =>
-      ServerConnection.Key.make(availableStartupServer(defaultServer.latest, wslServers.data)),
+      ServerConnection.Key.make(
+        availableSshStartupServer(availableStartupServer(defaultServer.latest, wslServers.data), sshServers.data),
+      ),
     )
     return (
       <Show when={ready()} fallback={<LoadingSplash />}>

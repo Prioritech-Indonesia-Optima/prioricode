@@ -63,6 +63,10 @@ export const big = [
   "█     █      ███   ███  █      ███   ████  ███   ██ █  ███",
 ]
 
+// Brand tagline shown beneath the home hero wordmark. Part of the brand art,
+// intentionally kept byte-for-byte identical across locales.
+export const tagline = "the open source AI coding agent"
+
 export type Tone = "space" | "light" | "base" | "accent" | "text"
 
 const LIGHT = new Set([".", ",", ":", "'"])

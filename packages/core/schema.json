@@ -1,8 +1,8 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "19c21123-d505-4cea-b183-86ecd9e7a324",
-  "prevIds": ["99f42616-1b3b-4a2a-8b49-09996dc0dc15"],
+  "id": "0e22380a-b6bd-4275-9b09-c5caed27d7d4",
+  "prevIds": ["19c21123-d505-4cea-b183-86ecd9e7a324"],
   "ddl": [
     {
       "name": "workspace",
@@ -1535,6 +1535,16 @@
       "default": null,
       "generated": null,
       "name": "agent",
+      "entityType": "columns",
+      "table": "session"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "goal",
       "entityType": "columns",
       "table": "session"
     },

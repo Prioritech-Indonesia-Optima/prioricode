@@ -4,6 +4,7 @@ import {
   LLMError,
   LLMEvent,
   Model,
+  RateLimitReason,
   TransportReason,
   InvalidRequestReason,
   type LLMClientShape,
@@ -40,6 +41,7 @@ import { ApplicationTools } from "@prioricode/core/tool/application-tools"
 import { AgentV2 } from "@prioricode/core/agent"
 import { Config } from "@prioricode/core/config"
 import { ConfigCompaction } from "@prioricode/core/config/compaction"
+import { ConfigLoop } from "@prioricode/core/config/loop"
 import { Tool } from "@prioricode/core/tool/tool"
 import {
   SessionContextEpochTable,
@@ -55,7 +57,8 @@ import { ReferenceGuidance } from "@prioricode/core/reference/guidance"
 import { ModelV2 } from "@prioricode/core/model"
 import { Location } from "@prioricode/core/location"
 import { ProviderV2 } from "@prioricode/core/provider"
-import { Cause, DateTime, Deferred, Effect, Exit, Fiber, Layer, Schema, Stream } from "effect"
+import { Cause, DateTime, Deferred, Duration, Effect, Exit, Fiber, Layer, Schema, Stream } from "effect"
+import * as TestClock from "effect/testing/TestClock"
 import { asc, eq } from "drizzle-orm"
 import { testEffect } from "./lib/effect"
 
@@ -66,6 +69,8 @@ let responseStream: Stream.Stream<LLMEvent, LLMError> | undefined
 let streamGate: Deferred.Deferred<void> | undefined
 let streamStarted: Deferred.Deferred<void> | undefined
 let streamFailure: LLMError | undefined
+let streamFailureQueue: LLMError[] = []
+let loopInfo: ConfigLoop.Info | undefined
 let toolExecutionGate: Deferred.Deferred<void> | undefined
 let toolExecutionsStarted: Deferred.Deferred<void> | undefined
 let toolExecutionsReady = 5
@@ -82,8 +87,10 @@ const client = Layer.succeed(
         responseStream = undefined
         return stream
       }
-      const events = streamFailure
-        ? Stream.fail(streamFailure)
+      const queued = streamFailureQueue.shift()
+      const failure = queued ?? streamFailure
+      const events = failure
+        ? Stream.fail(failure)
         : Stream.fromIterable(responses === undefined ? response : (responses.shift() ?? []))
       if (!streamGate) return events
       return Stream.unwrap(
@@ -220,6 +227,7 @@ const config = Layer.succeed(
               buffer: 3_000,
               keep: new ConfigCompaction.Keep({ tokens: 1_000 }),
             }),
+            ...(loopInfo === undefined ? {} : { loop: loopInfo }),
           }),
         }),
       ]),
@@ -248,6 +256,7 @@ const execution = Layer.effect(
       resume: coordinator.run,
       wake: coordinator.wake,
       interrupt: coordinator.interrupt,
+      compact: () => Effect.succeed(false),
     })
   }),
 ).pipe(Layer.provide(runnerLayer))
@@ -321,6 +330,8 @@ const setup = Effect.gen(function* () {
   skillBaselines.clear()
   responses = undefined
   streamFailure = undefined
+  streamFailureQueue = []
+  loopInfo = undefined
   responseStream = undefined
   streamGate = undefined
   streamStarted = undefined
@@ -3461,6 +3472,192 @@ describe("SessionRunnerLLM", () => {
       expect(yield* session.resume(sessionID).pipe(Effect.catchDefect(Effect.succeed))).toBe(
         "Tool input delta before start: call-1",
       )
+    }),
+  )
+
+  const retriedNotices = Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    const rows = yield* db
+      .select()
+      .from(EventTable)
+      .where(eq(EventTable.aggregate_id, sessionID))
+      .orderBy(asc(EventTable.seq))
+      .all()
+      .pipe(Effect.orDie)
+    return rows
+      .filter((row) => String(row.type).includes("retried"))
+      .map((row) => Number((row.data as { attempt?: unknown }).attempt))
+  })
+
+  const rateLimited = (message: string) =>
+    new LLMError({ module: "test", method: "stream", reason: new RateLimitReason({ message, retryAfterMs: 5 }) })
+
+  const drainSettled = <A, E>(effect: Effect.Effect<A, E>) =>
+    Effect.scoped(
+      Effect.gen(function* () {
+        const fiber = yield* Effect.forkScoped(effect)
+        yield* Effect.forkScoped(
+          Effect.gen(function* () {
+            for (;;) {
+              yield* TestClock.adjust(Duration.seconds(1))
+              yield* Effect.yieldNow
+            }
+          }),
+        )
+        return yield* Fiber.await(fiber)
+      }),
+    )
+
+  const echoTurn = (id: string, events: LLMEvent[]) => [LLMEvent.stepStart({ index: 0 }), ...events]
+
+  it.effect("re-attempts a retryable provider failure with durable notices and recovers", () =>
+    Effect.gen(function* () {
+      yield* setup
+      loopInfo = new ConfigLoop.Info({ retry: new ConfigLoop.Retry({ max_attempts: 3 }) })
+      const session = yield* SessionV2.Service
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Retry me" }), resume: false })
+      requests.length = 0
+      responses = [
+        echoTurn("text-recovered", [
+          LLMEvent.textStart({ id: "text-recovered" }),
+          LLMEvent.textDelta({ id: "text-recovered", text: "Recovered" }),
+          LLMEvent.textEnd({ id: "text-recovered" }),
+          LLMEvent.stepFinish({ index: 0, reason: "stop" }),
+          LLMEvent.finish({ reason: "stop" }),
+        ]),
+      ]
+      streamFailureQueue = [rateLimited("busy once"), rateLimited("busy twice")]
+      const exit = yield* drainSettled(session.resume(sessionID))
+      expect(Exit.isFailure(exit)).toBe(false)
+      expect(requests).toHaveLength(3)
+      expect(yield* retriedNotices).toEqual([2, 3])
+      expect(yield* session.context(sessionID)).toMatchObject([
+        { type: "user", text: "Retry me" },
+        {
+          type: "assistant",
+          finish: "stop",
+          content: [{ type: "text", id: "text-recovered", text: "Recovered" }],
+        },
+      ])
+    }),
+  )
+
+  it.effect("exhausts the provider attempt budget then records one terminal failure", () =>
+    Effect.gen(function* () {
+      yield* setup
+      loopInfo = new ConfigLoop.Info({ retry: new ConfigLoop.Retry({ max_attempts: 2 }) })
+      const session = yield* SessionV2.Service
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Out of retries" }), resume: false })
+      requests.length = 0
+      const finalFailure = rateLimited("still down")
+      streamFailureQueue = [rateLimited("down first"), finalFailure]
+      const exit = yield* drainSettled(session.resume(sessionID))
+      expect(Exit.isFailure(exit)).toBe(true)
+      expect(requests).toHaveLength(2)
+      expect(yield* retriedNotices).toEqual([2])
+      expect(yield* session.context(sessionID)).toMatchObject([
+        { type: "user", text: "Out of retries" },
+        { type: "assistant", finish: "error", error: { type: "unknown", message: "still down" } },
+      ])
+    }),
+  )
+
+  it.effect("warns once on an identical repeat and blocks the next within the drain", () =>
+    Effect.gen(function* () {
+      yield* setup
+      loopInfo = new ConfigLoop.Info({ repeat_warn: 2, repeat_block: 3 })
+      const session = yield* SessionV2.Service
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Echo forever" }), resume: false })
+      requests.length = 0
+      executions.length = 0
+      responses = [
+        echoTurn("calls", [
+          LLMEvent.toolCall({ id: "call-repeat-1", name: "echo", input: { text: "again" } }),
+          LLMEvent.toolCall({ id: "call-repeat-2", name: "echo", input: { text: "again" } }),
+          LLMEvent.toolCall({ id: "call-repeat-3", name: "echo", input: { text: "again" } }),
+          LLMEvent.stepFinish({ index: 0, reason: "tool-calls" }),
+          LLMEvent.finish({ reason: "tool-calls" }),
+        ]),
+        echoTurn("text-done", [
+          LLMEvent.textStart({ id: "text-done" }),
+          LLMEvent.textDelta({ id: "text-done", text: "Moved on" }),
+          LLMEvent.textEnd({ id: "text-done" }),
+          LLMEvent.stepFinish({ index: 0, reason: "stop" }),
+          LLMEvent.finish({ reason: "stop" }),
+        ]),
+      ]
+      yield* session.resume(sessionID)
+      expect(requests).toHaveLength(2)
+      expect(executions).toEqual(["again", "again"])
+      const context = yield* session.context(sessionID)
+      const caller = context[1]
+      expect(caller?.type).toBe("assistant")
+      if (caller?.type !== "assistant") return yield* Effect.die("expected assistant message")
+      expect(caller.content).toMatchObject([
+        {
+          type: "tool",
+          id: "call-repeat-1",
+          state: { status: "completed", content: [{ type: "text", text: "again" }] },
+        },
+        {
+          type: "tool",
+          id: "call-repeat-2",
+          state: {
+            status: "completed",
+            content: [
+              { type: "text", text: "again" },
+              { type: "text", text: expect.stringContaining("identical call repeated") },
+            ],
+          },
+        },
+        {
+          type: "tool",
+          id: "call-repeat-3",
+          state: { status: "error", error: { message: expect.stringContaining("TOOL CALL BLOCKED") } },
+        },
+      ])
+      expect(context[2]).toMatchObject({ type: "assistant", finish: "stop" })
+    }),
+  )
+
+  it.effect("caps locally executed tool calls within one provider turn", () =>
+    Effect.gen(function* () {
+      yield* setup
+      loopInfo = new ConfigLoop.Info({ tool_calls_per_turn: 2 })
+      const session = yield* SessionV2.Service
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Call everything" }), resume: false })
+      requests.length = 0
+      executions.length = 0
+      responses = [
+        echoTurn("calls", [
+          LLMEvent.toolCall({ id: "call-cap-1", name: "echo", input: { text: "p1" } }),
+          LLMEvent.toolCall({ id: "call-cap-2", name: "echo", input: { text: "p2" } }),
+          LLMEvent.toolCall({ id: "call-cap-3", name: "echo", input: { text: "p3" } }),
+          LLMEvent.stepFinish({ index: 0, reason: "tool-calls" }),
+          LLMEvent.finish({ reason: "tool-calls" }),
+        ]),
+        echoTurn("text-capped", [
+          LLMEvent.textStart({ id: "text-capped" }),
+          LLMEvent.textDelta({ id: "text-capped", text: "Wrapped" }),
+          LLMEvent.textEnd({ id: "text-capped" }),
+          LLMEvent.stepFinish({ index: 0, reason: "stop" }),
+          LLMEvent.finish({ reason: "stop" }),
+        ]),
+      ]
+      yield* session.resume(sessionID)
+      expect(executions).toEqual(["p1", "p2"])
+      const context = yield* session.context(sessionID)
+      const caller = context[1]
+      if (caller?.type !== "assistant") return yield* Effect.die("expected assistant message")
+      expect(caller.content).toMatchObject([
+        { type: "tool", id: "call-cap-1", state: { status: "completed" } },
+        { type: "tool", id: "call-cap-2", state: { status: "completed" } },
+        {
+          type: "tool",
+          id: "call-cap-3",
+          state: { status: "error", error: { message: expect.stringContaining("TOOL CALL LIMIT REACHED") } },
+        },
+      ])
     }),
   )
 })

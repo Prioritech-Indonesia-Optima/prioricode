@@ -137,6 +137,15 @@ function createV1Api(input: CompatibleInput): CompatibleApi {
     ...input.current,
     session: {
       ...input.current.session,
+      async switchAgent(value: Parameters<SessionApi["switchAgent"]>[0]) {
+        await legacy().v2.session.switchAgent({ sessionID: value.sessionID, agent: value.agent })
+      },
+      async switchModel(value: Parameters<SessionApi["switchModel"]>[0]) {
+        await legacy().v2.session.switchModel({
+          sessionID: value.sessionID,
+          model: { id: value.model.id, providerID: value.model.providerID, variant: value.model.variant },
+        })
+      },
       async list(
         value?: Parameters<ServerApi["session"]["list"]>[0],
         options?: Parameters<ServerApi["session"]["list"]>[1],
@@ -490,6 +499,15 @@ function createV1Api(input: CompatibleInput): CompatibleApi {
       //   if (!result.data) throw new Error(`Failed to connect terminal: ${value.ptyID}`)
       //   return located(result.data, value.location)
       // },
+    },
+    skill: {
+      async list(value?: Parameters<ServerApi["skill"]["list"]>[0]) {
+        const result = await legacy(value?.location).app.skills()
+        return located(
+          (result.data ?? []).map((skill) => ({ id: skill.name, ...skill })),
+          value?.location,
+        )
+      },
     },
     permission: {
       ...input.current.permission,

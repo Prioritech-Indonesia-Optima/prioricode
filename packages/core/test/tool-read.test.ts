@@ -539,7 +539,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-read", name: "read", input: { path: "README.md" } },
         }),
-      ).toEqual({ type: "error", value: expect.stringContaining("Unable to read README.md") })
+      ).toEqual({ type: "error", value: expect.stringContaining("Blocked by permission rules") })
       expect(readCalls).toEqual([])
     }),
   )
@@ -594,7 +594,7 @@ describe("ReadTool", () => {
           ...toolIdentity,
           call: { type: "tool-call", id: "call-read-directory-denied", name: "read", input: { path: "src" } },
         }),
-      ).toEqual({ type: "error", value: expect.stringContaining("Unable to read src") })
+      ).toEqual({ type: "error", value: expect.stringContaining("Blocked by permission rules") })
       expect(listCalls).toEqual([])
     }),
   )

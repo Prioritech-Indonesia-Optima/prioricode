@@ -28,11 +28,24 @@ const layer = Layer.effect(
       }),
     })
 
+    const compact = Effect.fnUntraced(function* (input: {
+      readonly sessionID: SessionSchema.ID
+      readonly headCutSeq?: number
+      readonly instructions?: string
+    }) {
+      const session = yield* store.get(input.sessionID)
+      if (!session) return yield* Effect.die(`Session not found: ${input.sessionID}`)
+      return yield* SessionRunner.Service.use((runner) => runner.compact(input)).pipe(
+        Effect.provide(locations.get(session.location)),
+      )
+    })
+
     return SessionExecution.Service.of({
       active: coordinator.active,
       interrupt: coordinator.interrupt,
       resume: coordinator.run,
       wake: coordinator.wake,
+      compact,
     })
   }),
 )

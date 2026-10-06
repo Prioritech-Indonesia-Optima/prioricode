@@ -1,5 +1,6 @@
 import type { DesktopMenuAction } from "@prioricode/app/desktop-menu"
 import type { WslServersPlatform } from "@prioricode/app/wsl/types"
+import type { SshServersPlatform } from "@prioricode/app/ssh/types"
 import type { UpdaterState } from "@prioricode/app/updater"
 import type { DesktopNativeBundle } from "@prioricode/app/i18n/desktop-native"
 export type {
@@ -15,6 +16,16 @@ export type {
   WslServersEvent,
   WslServersState,
 } from "@prioricode/app/wsl/types"
+export type {
+  SshHostProfile,
+  SshJob,
+  SshPrioricodeCheck,
+  SshServerConfig,
+  SshServerItem,
+  SshServerRuntime,
+  SshServersEvent,
+  SshServersState,
+} from "@prioricode/app/ssh/types"
 
 export type ServerReadyData = {
   url: string
@@ -23,6 +34,7 @@ export type ServerReadyData = {
 }
 
 export type WslServersAPI = WslServersPlatform
+export type SshServersAPI = SshServersPlatform
 export type UpdaterAPI = {
   subscribe: (cb: (state: UpdaterState) => void) => Promise<() => void>
   check: () => Promise<UpdaterState>
@@ -47,6 +59,7 @@ export type ElectronAPI = {
   installCli: () => Promise<string>
   awaitInitialization: () => Promise<ServerReadyData>
   wslServers: WslServersAPI
+  sshServers: SshServersAPI
   updater: UpdaterAPI
   consumeInitialDeepLinks: () => Promise<string[]>
   getDefaultServerUrl: () => Promise<string | null>

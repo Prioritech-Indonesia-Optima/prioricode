@@ -10,6 +10,15 @@ const DEFAULT_TOAST_DURATION = 5000
 
 export const PromptAppend = Event.define({ type: "tui.prompt.append", schema: { text: Schema.String } })
 
+export const PromptAttach = Event.define({
+  type: "tui.prompt.attach",
+  schema: {
+    filename: optional(Schema.String),
+    mime: Schema.String,
+    data: Schema.String.annotate({ description: "Base64-encoded file contents" }),
+  },
+})
+
 export const CommandExecute = Event.define({
   type: "tui.command.execute",
   schema: {
@@ -56,4 +65,4 @@ export const SessionSelect = Event.define({
   },
 })
 
-export const Definitions = Event.inventory(PromptAppend, CommandExecute, ToastShow, SessionSelect)
+export const Definitions = Event.inventory(PromptAppend, PromptAttach, CommandExecute, ToastShow, SessionSelect)

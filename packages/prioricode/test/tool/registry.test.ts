@@ -569,4 +569,33 @@ describe("tool.registry", () => {
       expect(ids).toContain("cowsay")
     }),
   )
+
+  it.instance("skips a custom tool whose import fails (missing dependency) without crashing", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const tools = path.join(test.directory, ".prioricode", "tools")
+      yield* Effect.promise(() => fs.mkdir(tools, { recursive: true }))
+      yield* Effect.promise(() =>
+        Bun.write(
+          path.join(tools, "broken.ts"),
+          [
+            "import { missing } from 'definitely-not-installed-pkg'",
+            "export default {",
+            "  description: 'tool with a missing dependency',",
+            "  args: {},",
+            "  execute: async () => missing(),",
+            "}",
+            "",
+          ].join("\n"),
+        ),
+      )
+
+      const registry = yield* ToolRegistry.Service
+      const ids = yield* registry.ids()
+      // A single broken custom tool must be skipped (with a warning), not crash
+      // the whole registry — built-in tools must still load.
+      expect(ids).toContain("read")
+      expect(ids).not.toContain("broken")
+    }),
+  )
 })

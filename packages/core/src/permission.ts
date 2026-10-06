@@ -11,8 +11,9 @@ import { SessionStore } from "./session/store"
 import { Wildcard } from "./util/wildcard"
 import { PermissionSaved } from "./permission/saved"
 import { DestructiveCommand } from "./permission/destructive"
+import { SafeCommand } from "./permission/safe"
 
-export { Effect, Rule, Ruleset } from "@prioricode/schema/permission"
+export { Effect, Mode, Rule, Ruleset } from "@prioricode/schema/permission"
 const missingAgentPermissions: Permission.Ruleset = [{ action: "*", resource: "*", effect: "deny" }]
 
 export const ID = Permission.ID
@@ -40,6 +41,12 @@ export const AssertInput = Schema.Struct({
   id: ID.pipe(Schema.optional),
   ...RequestFields,
   agent: AgentV2.ID.pipe(Schema.optional),
+  /**
+   * Full original text behind reduced `resources` (for example shell command
+   * prefixes). Safety heuristics evaluate it so approval reduction cannot hide
+   * destructive arguments from the always-allow guard.
+   */
+  fullText: Schema.String.pipe(Schema.optional),
 }).annotate({ identifier: "PermissionV2.AssertInput" })
 export type AssertInput = typeof AssertInput.Type
 
@@ -149,6 +156,25 @@ const layer = Layer.effect(
       )
     })
 
+    const effectiveMode = EffectRuntime.fnUntraced(function* (session: SessionV2.Info) {
+      // An explicit mode on this Session always wins; the parent walk only
+      // applies when its own mode is unset.
+      if (session.permissionMode !== undefined) return session.permissionMode
+      if (session.parentID === undefined) return undefined
+      const visited = new Set<SessionV2.ID>([session.id])
+      let current = session
+      for (;;) {
+        const parentID = current.parentID
+        if (parentID === undefined || visited.has(parentID)) break
+        visited.add(parentID)
+        const parent = yield* sessions.get(parentID)
+        if (!parent) break
+        if (parent.permissionMode !== undefined) return parent.permissionMode
+        current = parent
+      }
+      return session.permissionMode
+    })
+
     const configured = EffectRuntime.fn("PermissionV2.configured")(function* (
       sessionID: SessionV2.ID,
       agentID?: AgentV2.ID,
@@ -157,9 +183,39 @@ const layer = Layer.effect(
       if (!session) return yield* new SessionV2.NotFoundError({ sessionID })
       const agent = yield* agents.resolve(agentID ?? session.agent)
       const base = agent?.permissions ?? missingAgentPermissions
-      const mode = session.permissionMode
+      // A subagent (child) Session has no explicit mode of its own; it follows
+      // the nearest ancestor Session that does. Without this walk a parent set
+      // to `always-allow` or `ask-first` would leave its subagents on the unset
+      // default mode, silently escaping the main Session's permission posture.
+      const mode = yield* effectiveMode(session)
       return { rules: [...base, ...modeRulesFor(mode)], mode }
     })
+
+    // Saved approvals carry the resource granularity the user actually approved.
+    // A saved allow satisfies an `ask` only when it is at least as specific as the
+    // governing configured ask, so one "always" on a wildcard read can never
+    // silently defeat a configured `read *.env ask`. A configured deny always
+    // dominates (checked before saved rules are consulted).
+    function resourceSpecificity(resource: string) {
+      if (resource === "*") return 0
+      return resource.endsWith("*") ? 1 : 2
+    }
+
+    function resolveEffect(
+      action: string,
+      resource: string,
+      configured: Permission.Ruleset,
+      saved: Permission.Ruleset,
+    ): Permission.Effect {
+      const governing = evaluate(action, resource, configured)
+      if (governing.effect !== "ask") return governing.effect
+      const remembered = saved.findLast(
+        (rule) => Wildcard.match(action, rule.action) && Wildcard.match(resource, rule.resource),
+      )
+      return remembered && resourceSpecificity(remembered.resource) >= resourceSpecificity(governing.resource)
+        ? "allow"
+        : "ask"
+    }
 
     function denied(input: AssertInput, rules: Permission.Ruleset) {
       return input.resources.some((resource) => evaluate(input.action, resource, rules).effect === "deny")
@@ -172,14 +228,29 @@ const layer = Layer.effect(
     const evaluateInput = EffectRuntime.fnUntraced(function* (input: AssertInput) {
       const { rules, mode } = yield* configured(input.sessionID, input.agent)
       if (denied(input, rules)) return { effect: "deny" as const, rules }
-      const all = [...rules, ...(yield* savedRules())]
+      const saved = yield* savedRules()
+      const all = [...rules, ...saved]
       const effects = input.resources.map((resource) => {
-        const effect = evaluate(input.action, resource, all).effect
-        if (mode === "always-allow" && input.action === "bash" && DestructiveCommand.isDestructive(resource))
+        const effect = resolveEffect(input.action, resource, rules, saved)
+        if (
+          mode === "always-allow" &&
+          input.action === "bash" &&
+          (input.fullText !== undefined
+            ? DestructiveCommand.isDestructive(input.fullText)
+            : DestructiveCommand.isDestructive(resource))
+        )
           return "ask" as const
         return effect
       })
-      const effect: Permission.Effect = effects.includes("deny") ? "deny" : effects.includes("ask") ? "ask" : "allow"
+      let effect: Permission.Effect = effects.includes("deny") ? "deny" : effects.includes("ask") ? "ask" : "allow"
+      if (
+        mode === "ask-first" &&
+        effect === "ask" &&
+        input.action === "bash" &&
+        input.resources.length > 0 &&
+        input.resources.every((resource) => SafeCommand.isSafe(resource))
+      )
+        effect = "allow"
       return { effect, rules: all }
     })
 
@@ -282,16 +353,13 @@ const layer = Layer.effect(
 
           const rememberedRules = yield* savedRules()
           for (const [id, item] of pending) {
-            const input = { ...item.request }
             const result = yield* configured(item.request.sessionID, item.agent).pipe(
               EffectRuntime.catchTag("Session.NotFoundError", () => EffectRuntime.succeed(undefined)),
             )
             if (!result) continue
-            if (denied(input, result.rules)) continue
-            const effective = [...result.rules, ...rememberedRules]
             if (
               !item.request.resources.every(
-                (resource) => evaluate(item.request.action, resource, effective).effect === "allow",
+                (resource) => resolveEffect(item.request.action, resource, result.rules, rememberedRules) === "allow",
               )
             )
               continue

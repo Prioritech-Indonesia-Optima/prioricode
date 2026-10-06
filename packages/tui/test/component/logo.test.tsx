@@ -74,7 +74,7 @@ test("home hero reveals the block-letter wordmark once, then settles", async () 
   }
 })
 
-test("block letters carry a multi-stop warm gradient and stay static after the glint", async () => {
+test("block letters use a solid brand color and stay static after the glint", async () => {
   const { app, cleanup } = await harness(100)
   try {
     await Bun.sleep(1400)
@@ -90,7 +90,10 @@ test("block letters carry a multi-stop warm gradient and stay static after the g
     }
     await app.renderOnce()
     const first = warmFg()
-    expect(first.size).toBeGreaterThan(2)
+    // Solid fill: one dominant brand color (allow a lone glint-edge variant),
+    // not the old multi-stop gradient.
+    expect(first.size).toBeLessThanOrEqual(2)
+    expect(first.size).toBeGreaterThan(0)
 
     await Bun.sleep(1500)
     await app.renderOnce()

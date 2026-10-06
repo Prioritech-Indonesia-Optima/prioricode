@@ -16,12 +16,17 @@ import { ConfigCompaction } from "./config/compaction"
 import { ConfigCommand } from "./config/command"
 import { ConfigExperimental } from "./config/experimental"
 import { ConfigFormatter } from "./config/formatter"
+import { ConfigGoal } from "./config/goal"
+import { ConfigHooks } from "./config/hooks"
+import { ConfigPrune } from "./config/prune"
+import { ConfigLoop } from "./config/loop"
 import { ConfigLSP } from "./config/lsp"
 import { ConfigMCP } from "./config/mcp"
 import { ConfigPlugin } from "./config/plugin"
 import { ConfigProvider } from "./config/provider"
 import { ConfigReference } from "./config/reference"
 import { ConfigToolOutput } from "./config/tool-output"
+import { ConfigVerify } from "./config/verify"
 import { ConfigWatcher } from "./config/watcher"
 import { ConfigV1 } from "./v1/config/config"
 import { ConfigMigrateV1 } from "./v1/config/migrate"
@@ -86,6 +91,22 @@ export class Info extends Schema.Class<Info>("Config.Info")({
   }),
   compaction: ConfigCompaction.Info.pipe(Schema.optional).annotate({
     description: "Conversation compaction behavior",
+  }),
+  loop: ConfigLoop.Info.pipe(Schema.optional).annotate({
+    description: "Agent-loop robustness bounds: provider retries, per-turn tool-call caps, and repeated-call detection",
+  }),
+  verify: ConfigVerify.Info.pipe(Schema.optional).annotate({
+    description: "Automatic verification pass before the agent may finish after mutating files",
+  }),
+  goal: ConfigGoal.Info.pipe(Schema.optional).annotate({
+    description: "Finish gate that verifies work against the durable session goal before the drain may end",
+  }),
+  prune: ConfigPrune.Info.pipe(Schema.optional).annotate({
+    description: "Context-economics projection of stale tool output when provider requests approach the context window",
+  }),
+  hooks: ConfigHooks.Info.pipe(Schema.optional).annotate({
+    description:
+      "Deterministic lifecycle shell hooks (PreToolUse/PostToolUse/Stop/SessionStart) that run regardless of model instructions",
   }),
   skills: Schema.String.pipe(Schema.Array, Schema.optional).annotate({
     description: "Additional paths or URLs to discover skills from",

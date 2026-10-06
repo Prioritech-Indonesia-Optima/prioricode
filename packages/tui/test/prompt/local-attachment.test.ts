@@ -1,6 +1,33 @@
 import { describe, expect, test } from "bun:test"
-import { readLocalAttachmentWith } from "../../src/component/prompt/local-attachment"
+import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { readLocalAttachment, readLocalAttachmentWith } from "../../src/component/prompt/local-attachment"
 import type { LocalFiles } from "../../src/component/prompt/local-attachment"
+
+function bmpBytes() {
+  const bmp = Buffer.alloc(54 + 4)
+  bmp.write("BM", 0)
+  bmp.writeUInt32LE(bmp.length, 2)
+  bmp.writeUInt32LE(54, 10)
+  bmp.writeUInt32LE(40, 14)
+  bmp.writeInt32LE(1, 18)
+  bmp.writeInt32LE(1, 22)
+  bmp.writeUInt16LE(1, 26)
+  bmp.writeUInt16LE(24, 28)
+  return bmp
+}
+
+async function withFile<T>(name: string, bytes: Uint8Array, run: (file: string) => Promise<T>) {
+  const dir = await mkdtemp(path.join(tmpdir(), "prioricode-local-attachment-"))
+  const file = path.join(dir, name)
+  try {
+    await writeFile(file, bytes)
+    return await run(file)
+  } finally {
+    await rm(dir, { recursive: true, force: true })
+  }
+}
 
 function files(input: { mime: string; text?: string; bytes?: Uint8Array }): LocalFiles {
   return {
@@ -26,6 +53,13 @@ describe("prompt local attachments", () => {
       mime: "application/pdf",
       content,
     })
+  })
+
+  test("attached .bmp copied files resolve by extension; .tif stays plain text", async () => {
+    const attachment = await withFile("shot.bmp", bmpBytes(), readLocalAttachment)
+    expect(attachment?.type).toBe("binary")
+    if (attachment?.type === "binary") expect(attachment.mime).toBe("image/bmp")
+    expect(await withFile("scan.tif", bmpBytes(), readLocalAttachment)).toBeUndefined()
   })
 
   test("ignores unsupported and unreadable local files", async () => {

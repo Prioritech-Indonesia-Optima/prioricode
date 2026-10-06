@@ -34,6 +34,13 @@ export const AgentSwitched = Schema.Struct({
   agent: Schema.String,
 }).annotate({ identifier: "Session.Message.AgentSwitched" })
 
+export interface GoalSet extends Schema.Schema.Type<typeof GoalSet> {}
+export const GoalSet = Schema.Struct({
+  ...Base,
+  type: Schema.Literal("goal-set"),
+  goal: Schema.String,
+}).annotate({ identifier: "Session.Message.GoalSet" })
+
 export interface ModelSwitched extends Schema.Schema.Type<typeof ModelSwitched> {}
 export const ModelSwitched = Schema.Struct({
   ...Base,
@@ -200,6 +207,7 @@ export const Compaction = Schema.Struct({
 export const Message = Schema.Union([
   AgentSwitched,
   ModelSwitched,
+  GoalSet,
   User,
   Synthetic,
   System,
@@ -209,5 +217,14 @@ export const Message = Schema.Union([
 ])
   .pipe(Schema.toTaggedUnion("type"))
   .annotate({ identifier: "Session.Message" })
-export type Message = AgentSwitched | ModelSwitched | User | Synthetic | System | Shell | Assistant | Compaction
+export type Message =
+  | AgentSwitched
+  | ModelSwitched
+  | GoalSet
+  | User
+  | Synthetic
+  | System
+  | Shell
+  | Assistant
+  | Compaction
 export type Type = Message["type"]

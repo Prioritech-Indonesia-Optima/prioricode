@@ -3,6 +3,7 @@ import { AgentV2 } from "./agent"
 import { AISDK } from "./aisdk"
 import { Catalog } from "./catalog"
 import { CommandV2 } from "./command"
+import { CommandBuiltIns } from "./command/builtins"
 import { Config } from "./config"
 import { LayerNode } from "./effect/layer-node"
 import { Node } from "./effect/app-node"
@@ -13,6 +14,8 @@ import { Watcher } from "./filesystem/watcher"
 import { Image } from "./image"
 import { Integration } from "./integration"
 import { Location } from "./location"
+import { Hook } from "./hook"
+import { MCPv2 } from "./mcp/mcp"
 import { LocationMutation } from "./location-mutation"
 import { LocationServiceMap } from "./location-service-map"
 import { PermissionV2 } from "./permission"
@@ -45,6 +48,7 @@ export const locationServices = LayerNode.group([
   Config.node,
   AgentV2.node,
   CommandV2.node,
+  CommandBuiltIns.node,
   Reference.node,
   Integration.node,
   Catalog.node,
@@ -73,6 +77,12 @@ export const locationServices = LayerNode.group([
   QuestionV2.node,
   ReadToolFileSystem.node,
   BuiltInTools.node,
+  // MCP connects and registers only servers named in config; with an empty
+  // `mcp.servers` map this layer performs no external work at Location boot.
+  MCPv2.node,
+  // The hook engine only reads config and spawns processes when a caller
+  // invokes its event methods; registration itself is inert.
+  Hook.node,
   SessionRunnerModel.node,
   Snapshot.node,
   SessionRunnerLLM.node,

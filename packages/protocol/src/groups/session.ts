@@ -9,6 +9,7 @@ import { Context, Effect, Encoding, Result, Schema, Struct } from "effect"
 import { HttpApiEndpoint, HttpApiGroup, HttpApiMiddleware, HttpApiSchema, OpenApi } from "effect/unstable/httpapi"
 import {
   ConflictError,
+  SessionBusyError,
   InvalidCursorError,
   InvalidRequestError,
   MessageNotFoundError,
@@ -202,6 +203,23 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         ),
     )
     .add(
+      HttpApiEndpoint.post("session.setGoal", "/api/session/:sessionID/goal", {
+        params: { sessionID: Session.ID },
+        payload: Schema.Struct({ goal: Schema.String }),
+        success: HttpApiSchema.NoContent,
+        error: SessionNotFoundError,
+      })
+        .middleware(sessionLocationMiddleware)
+        .annotateMerge(
+          OpenApi.annotations({
+            identifier: "v2.session.setGoal",
+            summary: "Set durable session goal",
+            description:
+              "Set, update, or (with an empty value) clear the durable goal re-anchored into every provider turn.",
+          }),
+        ),
+    )
+    .add(
       HttpApiEndpoint.post("session.prompt", "/api/session/:sessionID/prompt", {
         params: { sessionID: Session.ID },
         payload: Schema.Struct({
@@ -211,7 +229,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
           resume: Schema.Boolean.pipe(Schema.optional),
         }),
         success: Schema.Struct({ data: SessionInput.Admitted }),
-        error: [ConflictError, SessionNotFoundError],
+        error: [ConflictError, SessionBusyError, SessionNotFoundError],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(
@@ -225,15 +243,27 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
     .add(
       HttpApiEndpoint.post("session.compact", "/api/session/:sessionID/compact", {
         params: { sessionID: Session.ID },
+        payload: Schema.Struct({
+          anchor: SessionMessage.ID.pipe(Schema.optional),
+          instructions: Schema.String.pipe(Schema.optional),
+        }),
         success: HttpApiSchema.NoContent,
-        error: [SessionNotFoundError, ServiceUnavailableError],
+        error: [
+          ConflictError,
+          SessionBusyError,
+          SessionNotFoundError,
+          ServiceUnavailableError,
+          MessageNotFoundError,
+          UnknownError,
+        ],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(
           OpenApi.annotations({
             identifier: "v2.session.compact",
             summary: "Compact session",
-            description: "Compact a session conversation.",
+            description:
+              "Summarize durable history now; optionally only up to an anchor message, with focus instructions.",
           }),
         ),
     )
@@ -241,7 +271,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
       HttpApiEndpoint.post("session.wait", "/api/session/:sessionID/wait", {
         params: { sessionID: Session.ID },
         success: HttpApiSchema.NoContent,
-        error: [SessionNotFoundError, ServiceUnavailableError],
+        error: [SessionNotFoundError, ServiceUnavailableError, ConflictError],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(
@@ -257,7 +287,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
         params: { sessionID: Session.ID },
         payload: Schema.Struct({ messageID: SessionMessage.ID, files: Schema.Boolean.pipe(Schema.optional) }),
         success: Schema.Struct({ data: Revert.State }),
-        error: [MessageNotFoundError, SessionNotFoundError, UnknownError],
+        error: [MessageNotFoundError, SessionNotFoundError, ConflictError, SessionBusyError, UnknownError],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(
@@ -272,7 +302,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
       HttpApiEndpoint.post("session.revert.clear", "/api/session/:sessionID/revert/clear", {
         params: { sessionID: Session.ID },
         success: HttpApiSchema.NoContent,
-        error: [SessionNotFoundError, UnknownError],
+        error: [SessionNotFoundError, ConflictError, SessionBusyError, UnknownError],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(OpenApi.annotations({ identifier: "v2.session.revert.clear", summary: "Clear staged revert" })),
@@ -281,7 +311,7 @@ export const makeSessionGroup = <I extends HttpApiMiddleware.AnyId, S>(sessionLo
       HttpApiEndpoint.post("session.revert.commit", "/api/session/:sessionID/revert/commit", {
         params: { sessionID: Session.ID },
         success: HttpApiSchema.NoContent,
-        error: SessionNotFoundError,
+        error: [ConflictError, SessionBusyError, SessionNotFoundError],
       })
         .middleware(sessionLocationMiddleware)
         .annotateMerge(

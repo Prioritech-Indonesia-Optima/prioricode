@@ -39,6 +39,7 @@ export const externalDirectoryPermission = (input: ExternalDirectoryAuthorizatio
   action: input.action,
   resources: [input.resource],
   save: [input.save],
+  metadata: { parentDir: slash(input.directory), filepath: input.resource },
 })
 
 export interface Target {

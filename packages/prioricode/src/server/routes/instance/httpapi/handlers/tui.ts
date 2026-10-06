@@ -38,6 +38,14 @@ export const tuiHandlers = HttpApiBuilder.group(InstanceHttpApi, "tui", (handler
       return true
     })
 
+    const attachPrompt = Effect.fn("TuiHttpApi.attachPrompt")(function* (ctx: {
+      payload: typeof TuiEvent.PromptAttach.data.Type
+    }) {
+      if (!ctx.payload.data.length) return yield* new HttpApiError.BadRequest({})
+      yield* events.publish(TuiEvent.PromptAttach, ctx.payload)
+      return true
+    })
+
     const openHelp = Effect.fn("TuiHttpApi.openHelp")(function* () {
       yield* publishCommand("help.show")
       return true
@@ -86,6 +94,8 @@ export const tuiHandlers = HttpApiBuilder.group(InstanceHttpApi, "tui", (handler
     const publish = Effect.fn("TuiHttpApi.publish")(function* (ctx: { payload: typeof TuiPublishPayload.Type }) {
       if (ctx.payload.type === TuiEvent.PromptAppend.type)
         yield* events.publish(TuiEvent.PromptAppend, ctx.payload.properties)
+      if (ctx.payload.type === TuiEvent.PromptAttach.type)
+        yield* events.publish(TuiEvent.PromptAttach, ctx.payload.properties)
       if (ctx.payload.type === TuiEvent.CommandExecute.type)
         yield* events.publish(TuiEvent.CommandExecute, ctx.payload.properties)
       if (ctx.payload.type === TuiEvent.ToastShow.type)
@@ -115,6 +125,7 @@ export const tuiHandlers = HttpApiBuilder.group(InstanceHttpApi, "tui", (handler
 
     return handlers
       .handle("appendPrompt", appendPrompt)
+      .handle("attachPrompt", attachPrompt)
       .handle("openHelp", openHelp)
       .handle("openSessions", openSessions)
       .handle("openThemes", openThemes)

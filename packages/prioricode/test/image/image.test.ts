@@ -56,6 +56,39 @@ describe("Image", () => {
     }),
   )
 
+  it.effect("re-encodes small provider-rejected images (bmp) instead of passing them through", () =>
+    Effect.gen(function* () {
+      const bmp = Buffer.alloc(54 + 4)
+      bmp.write("BM", 0)
+      bmp.writeUInt32LE(bmp.length, 2)
+      bmp.writeUInt32LE(54, 10)
+      bmp.writeUInt32LE(40, 14)
+      bmp.writeInt32LE(1, 18)
+      bmp.writeInt32LE(1, 22)
+      bmp.writeUInt16LE(1, 26)
+      bmp.writeUInt16LE(24, 28)
+      bmp[54] = 255
+
+      const image = yield* Image.Service
+      const result = yield* image.normalize(part("image/bmp", bmp.toString("base64")))
+
+      expect(result.mime).toBe("image/png")
+      expect(result.url.startsWith("data:image/png;base64,")).toBe(true)
+    }),
+  )
+
+  it.effect("fails undecodable images instead of passing unsupported mimes through", () =>
+    Effect.gen(function* () {
+      const image = yield* Image.Service
+      const exit = yield* image
+        .normalize(part("image/tiff", Buffer.from("not-a-real-tiff").toString("base64")))
+        .pipe(Effect.exit)
+
+      expect(Exit.isFailure(exit)).toBe(true)
+      if (Exit.isFailure(exit)) expect(Cause.pretty(exit.cause)).toContain("Image could not be decoded")
+    }),
+  )
+
   it.effect("resizes images that fit the byte limit but exceed dimension limits", () =>
     Effect.gen(function* () {
       const photon = yield* Effect.promise(() => import("@silvia-odwyer/photon-node"))

@@ -8,6 +8,7 @@ import { SessionID, MessageID } from "../session/schema"
 import { MessageV2 } from "../session/message-v2"
 import { Agent } from "../agent/agent"
 import { deriveSubagentSessionPermission } from "../agent/subagent-permissions"
+import { Permission } from "@/permission"
 import type { SessionPrompt } from "../session/prompt"
 import { Config } from "@/config/config"
 import { Effect, Exit, Schema, Scope } from "effect"
@@ -136,8 +137,16 @@ export const TaskTool = Tool.define(
       const session = params.task_id
         ? yield* sessions.get(SessionID.make(params.task_id)).pipe(Effect.catchCause(() => Effect.succeed(undefined)))
         : undefined
+      // The subagent inherits the parent's permission posture: deny and
+      // external_directory rules from BOTH the parent agent config (plan-mode
+      // edit denies live there, not on the Session row) and the parent
+      // Session ruleset. The parent's effective permission mode governs the
+      // child live through `Session.effectivePermissionMode`'s parent-chain
+      // walk, so we deliberately do NOT stamp a copy on the child row (a copy
+      // would go stale when the parent switches modes mid-run).
+      const parentAgent = yield* agent.get(parent.agent ?? ctx.agent)
       const childPermission = deriveSubagentSessionPermission({
-        parentSessionPermission: parent.permission ?? [],
+        parentSessionPermission: Permission.merge(parentAgent?.permission ?? [], parent.permission ?? []),
         subagent: next,
       })
       const childToolDenies = [

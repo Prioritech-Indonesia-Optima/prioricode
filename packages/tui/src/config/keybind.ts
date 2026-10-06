@@ -46,6 +46,7 @@ export const Definitions = {
   leader: keybind(LeaderDefault, "Leader key for keybind combinations"),
 
   app_exit: keybind("ctrl+c,ctrl+d,<leader>q", "Exit the application"),
+  toast_dismiss: keybind("<leader>k", "Dismiss notification"),
   app_debug: keybind("none", "Toggle debug panel"),
   app_console: keybind("none", "Toggle console"),
   app_heap_snapshot: keybind("none", "Write heap snapshot"),
@@ -53,6 +54,7 @@ export const Definitions = {
   app_toggle_file_context: keybind("none", "Toggle file context"),
   app_toggle_diffwrap: keybind("none", "Toggle diff wrapping"),
   app_toggle_paste_summary: keybind("none", "Toggle paste summary"),
+  app_toggle_terminal_clipboard: keybind("none", "Toggle OSC clipboard image reads"),
   app_toggle_session_directory_filter: keybind("none", "Toggle session directory filtering"),
   command_list: keybind("ctrl+p", "List available commands"),
   help_show: keybind("none", "Open help dialog"),
@@ -99,7 +101,7 @@ export const Definitions = {
   session_compact: keybind("<leader>c", "Compact the session"),
   session_toggle_timestamps: keybind("none", "Toggle message timestamps"),
   session_toggle_generic_tool_output: keybind("none", "Toggle generic tool output"),
-  session_queued_prompts: keybind("<leader>q", "Manage queued prompts"),
+  session_queued_prompts: keybind("<leader>i", "Manage queued prompts"),
   session_child_first: keybind("<leader>down", "Go to first child session"),
   session_child_cycle: keybind("right", "Go to next child session"),
   session_child_cycle_reverse: keybind("left", "Go to previous child session"),
@@ -218,6 +220,7 @@ export const Definitions = {
   "prompt.autocomplete.select": keybind("return", "Select autocomplete item"),
   "prompt.autocomplete.complete": keybind("tab", "Complete autocomplete item"),
   "permission.prompt.fullscreen": keybind("ctrl+f", "Toggle permission prompt fullscreen"),
+  permission_mode_cycle: keybind("<leader>p", "Cycle permission mode"),
   "plugins.toggle": keybind("space", "Toggle plugin"),
   "dialog.plugins.install": keybind("shift+i", "Install plugin from plugin dialog"),
 
@@ -256,6 +259,7 @@ export const Descriptions = Object.fromEntries(
 ) as Record<KeybindName, string>
 export const CommandMap = {
   app_exit: "app.exit",
+  toast_dismiss: "toast.dismiss",
   app_debug: "app.debug",
   app_console: "app.console",
   app_heap_snapshot: "app.heap_snapshot",
@@ -263,6 +267,7 @@ export const CommandMap = {
   app_toggle_file_context: "app.toggle.file_context",
   app_toggle_diffwrap: "app.toggle.diffwrap",
   app_toggle_paste_summary: "app.toggle.paste_summary",
+  app_toggle_terminal_clipboard: "app.toggle.terminal_clipboard",
   app_toggle_session_directory_filter: "app.toggle.session_directory_filter",
   command_list: "command.palette.show",
   help_show: "help.show",
@@ -308,6 +313,7 @@ export const CommandMap = {
   session_toggle_timestamps: "session.toggle.timestamps",
   session_toggle_generic_tool_output: "session.toggle.generic_tool_output",
   session_queued_prompts: "session.queued_prompts",
+  permission_mode_cycle: "permission.mode",
   session_child_first: "session.child.first",
   session_child_cycle: "session.child.next",
   session_child_cycle_reverse: "session.child.previous",

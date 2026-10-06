@@ -1,0 +1,67 @@
+---
+title: Windows & remote clipboard
+description: How image paste, copy, and self-update behave on native Windows, WSL, and when you SSH from Windows into a Linux machine.
+---
+
+PrioriCode reads and writes the clipboard on **the machine it runs on**, not the machine you are physically typing on. That single fact explains almost every "paste doesn't work" report, especially when you connect from Windows to a remote Linux box. This page maps each setup to what actually happens, and how to upgrade safely on Windows.
+
+## Scenarios at a glance
+
+| Setup                                                | Copy from PrioriCode                          | Paste image (Ctrl+V)                                                                     | Paste text                                        |
+| ---------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------- |
+| Native Windows (Windows Terminal, cmd, PowerShell)   | Native clipboard                              | Works (FFI DIB→PNG, PowerShell fallback, copied files attach by path)                    | Works                                             |
+| WSL1 / WSL2                                          | Native clipboard via `powershell.exe` interop | Works when interop is available; copied Windows files attach through `/mnt/c/...`        | Works                                             |
+| Linux desktop (X11 / Wayland)                        | `xclip` / `wl-copy` / `xsel`                  | Works if a clipboard tool is installed                                                   | Works                                             |
+| SSH from a modern terminal (kitty, WezTerm, Ghostty) | **OSC 52 escape → your local terminal**       | **Works over SSH via the terminal clipboard protocol** (permission prompt on first use)  | Works (also Ctrl+Shift+V via the terminal)        |
+| SSH into headless Linux from VS Code / others        | OSC 52 escape                                 | VS Code: use the **PrioriCode VS Code extension** (see below). Else: attach by file path | Terminal-level paste (Ctrl+Shift+V / right-click) |
+| macOS                                                | `osascript` / `pbpaste`                       | Works (PNG, TIFF via `sips`, copied files)                                               | Works                                             |
+
+:::note
+The TUI detects your environment (SSH env, display server, terminal, multiplexer) and the **Debug** dialog (`/debug`) lists the detected scenario, terminal, clipboard tools, and the last terminal-clipboard attempt.
+:::
+
+## Remote sessions: how an image crosses SSH
+
+PrioriCode reads your terminal's clipboard over the connection itself using the **kitty clipboard protocol (OSC 5522)**. Press Ctrl+V in a remote session and the app asks the terminal on your machine for its clipboard; the terminal streams the image (or text) back through the connection. On terminals that gate clipboard reads — kitty does by default — you get a one-time permission popup. If your terminal does not implement the protocol, PrioriCode falls back to a plain text clipboard query and, failing that, tells you the exact remedy.
+
+Notes and limits:
+
+- **Works:** kitty, and other terminals implementing the kitty clipboard protocol (WezTerm, Ghostty). Check `/debug` for the detected terminal.
+- **tmux/screen:** the clipboard protocol is skipped inside a multiplexer because replies may not round-trip; exit the multiplexer or use the file-path method below.
+- **Turn it off:** the toggle lives in the TUI key-value store as `terminal_clipboard_enabled`.
+- **Universal fallback (any terminal):** copy the file to the server (`scp`, WinSCP, MobaXterm drag), then paste its path (for example `/home/you/shot.png`) into the prompt — PrioriCode reads it and attaches the image exactly like a dropped file.
+
+### VS Code and Remote-SSH
+
+In a VS Code integrated terminal, Ctrl+V is handled by VS Code itself and image bytes never reach the shell — this is true locally and over Remote-SSH. The **PrioriCode VS Code extension** closes that gap: in a prioricode terminal it sends your clipboard image to the running app (and falls through to normal text paste when the clipboard holds no image). Install it from the marketplace, open prioricode with the extension's "Open prioricode" command, then:
+
+- **Local window:** Ctrl+V attaches the clipboard image directly (the extension reads it with the same OS tools PrioriCode uses).
+- **Remote window (SSH/WSL):** the extension opens a small "Paste your clipboard image" panel — press Ctrl+V there once and the image is delivered to the remote session. Ctrl+Alt+V works anywhere as an alias.
+
+### A note on WSL
+
+WSL is not a remote session — the Linux side can call into the Windows clipboard through `powershell.exe`. Both WSL1 (`-Microsoft` kernel strings) and WSL2 (`-microsoft-standard-WSL2`) are detected. When you copy an image _file_ in Explorer, PrioriCode translates the Windows path (`C:\shots\a.png`) onto the automount (`/mnt/c/shots/a.png`) and attaches it. This requires the default WSL automount to be enabled.
+
+## Self-update on Windows
+
+PrioriCode ships a real `prioricode.exe`, so "update" means replacing a binary that may be running.
+
+- **`prioricode upgrade` and the in-app update** run the release's own pinned `install.ps1` from a local file — never a remote one-liner — and `install.ps1` swaps the locked, in-use executable safely.
+- **PowerShell resolution** falls back from `powershell.exe` on PATH, to the absolute `System32` copy, to `pwsh`. If none is found you get a clear, actionable message rather than `exit code 1`.
+- **Failures are categorized** so the fix is obvious:
+
+| Cause you'll see    | What it means                                            | Fix                                                              |
+| ------------------- | -------------------------------------------------------- | ---------------------------------------------------------------- |
+| locked-binary       | A running `prioricode.exe` (or editor) holds the file    | Close all PrioriCode terminals/editors and retry                 |
+| elevation-required  | choco can't write without admin                          | Run the terminal as Administrator                                |
+| shell-not-found     | No PowerShell/pwsh available                             | Install PowerShell 5.1 or pwsh 7, or update from GitHub Releases |
+| verification-failed | The manager reported success but the version didn't move | Re-run; if it repeats, reinstall from GitHub Releases            |
+| command-failed      | The upgrade tool itself errored                          | Read the printed command output                                  |
+
+If the TUI shows an update failure, it now displays the real reason and the matching remediation instead of a bare "Update failed".
+
+## See also
+
+- [Windows (WSL) setup](/docs/windows-wsl)
+- [Troubleshooting](/docs/troubleshooting)
+- [Keybinds](/docs/keybinds)

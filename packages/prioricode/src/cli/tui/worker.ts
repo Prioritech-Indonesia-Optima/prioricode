@@ -8,8 +8,11 @@ import { ServerAuth } from "@/server/auth"
 import { writeHeapSnapshot } from "node:v8"
 import { Heap } from "@/cli/heap"
 import { AppRuntime } from "@/effect/app-runtime"
+import { Global } from "@prioricode/core/global"
 import { Effect } from "effect"
 import { disposeAllInstancesAndEmitGlobalDisposed } from "@/server/global-lifecycle"
+import path from "node:path"
+import fs from "node:fs"
 
 Heap.start()
 
@@ -26,6 +29,26 @@ GlobalBus.on("event", (event) => {
 })
 
 let server: Awaited<ReturnType<typeof Server.listen>> | undefined
+
+// The VS Code extension discovers this session's HTTP port from this file so
+// clipboard-image push keeps working after window reloads, when the terminal's
+// original creation options are gone. Stale entries are harmless: consumers
+// health-check the port before use.
+const TUI_PORT_FILE = path.join(Global.Path.state, "tui.json")
+
+function writePortFile(port: number) {
+  try {
+    fs.mkdirSync(Global.Path.state, { recursive: true })
+    fs.writeFileSync(TUI_PORT_FILE, JSON.stringify({ port, pid: process.pid, started: Date.now() }), { mode: 0o600 })
+  } catch {}
+}
+
+function removePortFile() {
+  try {
+    const raw = fs.readFileSync(TUI_PORT_FILE, "utf8")
+    if (JSON.parse(raw)?.pid === process.pid) fs.unlinkSync(TUI_PORT_FILE)
+  } catch {}
+}
 
 export const rpc = {
   async fetch(input: { url: string; method: string; headers: Record<string, string>; body?: string }) {
@@ -54,6 +77,7 @@ export const rpc = {
   async server(input: { port: number; hostname: string; mdns?: boolean; cors?: string[] }) {
     if (server) await server.stop(true)
     server = await Server.listen(input)
+    writePortFile(server.port)
     return { url: server.url.toString() }
   },
   async checkUpgrade(input: { directory: string }) {
@@ -72,9 +96,26 @@ export const rpc = {
   async shutdown() {
     await InstanceRuntime.disposeAllInstances()
     if (server) await server.stop(true)
+    removePortFile()
     process.off("unhandledRejection", onUnhandledRejection)
     process.off("uncaughtException", onUncaughtException)
   },
 }
 
 Rpc.listen(rpc)
+
+// Editor integration: inside a VS Code terminal the extension pushes clipboard
+// images to this session over loopback HTTP. Sessions started by hand (no
+// --port) previously had no listener at all, so expose one automatically when
+// we can tell we are running under VS Code. Loopback-only; auth middleware
+// still applies when PRIORICODE_SERVER_PASSWORD is set.
+if (process.env.TERM_PROGRAM === "vscode" || process.env.PRIORICODE_CALLER === "vscode") {
+  void Server.listen({ port: 0, hostname: "127.0.0.1" })
+    .then((listener) => {
+      if (!server) {
+        server = listener
+        writePortFile(listener.port)
+      }
+    })
+    .catch(() => {})
+}

@@ -312,3 +312,5 @@ export DISPLAY=:99.0
 ```
 
 prioricode will detect if you're using Wayland and prefer `wl-clipboard`, otherwise it will try to find clipboard tools in order of: `xclip` and `xsel`.
+
+**Connecting remotely (SSH):** on a remote host there is no local clipboard to read — paste goes through different channels depending on your terminal. kitty/WezTerm/Ghostty-class terminals support the clipboard-protocol read (a permission popup may appear), VS Code terminals need the PrioriCode VS Code extension, and everywhere else can attach images by copying the file to the server and pasting its path. Run `/debug` to see which scenario was detected and the outcome of the last terminal-clipboard attempt. Details: [Windows & remote clipboard](/docs/windows-clipboard).

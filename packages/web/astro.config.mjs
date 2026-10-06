@@ -200,7 +200,7 @@ export default defineConfig({
             "zh-CN": "Windows",
             "zh-TW": "Windows",
           },
-          link: "windows-wsl",
+          items: ["windows-wsl", "windows-clipboard"],
         },
         {
           label: "Usage",

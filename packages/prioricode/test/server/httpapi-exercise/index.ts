@@ -1682,6 +1682,18 @@ const scenarios: Scenario[] = [
     .at((ctx) => ({ path: "/tui/append-prompt", headers: ctx.headers(), body: { text: "hello" } }))
     .json(200, boolean, "status"),
   http.protected
+    .post("/tui/attach", "tui.attachPrompt")
+    .at((ctx) => ({
+      path: "/tui/attach",
+      headers: ctx.headers(),
+      body: { mime: "image/png", data: "cGVzbm9pcg==" },
+    }))
+    .json(200, boolean, "status"),
+  http.protected
+    .post("/tui/attach", "tui.attachPrompt.empty")
+    .at((ctx) => ({ path: "/tui/attach", headers: ctx.headers(), body: { mime: "image/png", data: "" } }))
+    .status(400),
+  http.protected
     .post("/tui/select-session", "tui.selectSession.invalid")
     .at((ctx) => ({ path: "/tui/select-session", headers: ctx.headers(), body: { sessionID: "invalid" } }))
     .status(400),

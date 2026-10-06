@@ -116,7 +116,7 @@ describe("TodoWriteTool", () => {
         yield* executeTool(registry, call([{ content: "blocked", status: "completed", priority: "high" }])),
       ).toEqual({
         type: "error",
-        value: expect.stringContaining("Unable to update todos"),
+        value: expect.stringContaining("Blocked by permission rules"),
       })
       expect(yield* service.get(sessionID)).toEqual([{ content: "keep", status: "pending", priority: "low" }])
       expect(assertions).toMatchObject([{ sessionID, action: "todowrite", resources: ["*"], save: ["*"] }])

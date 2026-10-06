@@ -550,6 +550,81 @@ it.instance("loop exits without an LLM request for interrupted orphan tool calls
   }),
 )
 
+it.instance("loop settles stale running tool parts left by a lost drain", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "Pinned" })
+    const seeded = yield* seed(chat.id, { finish: "stop" })
+    const running = yield* sessions.updatePart({
+      id: PartID.ascending(),
+      messageID: seeded.assistant.id,
+      sessionID: chat.id,
+      type: "tool",
+      callID: "lost-drain-call",
+      tool: "task",
+      state: {
+        status: "running",
+        input: { description: "bg", prompt: "run" },
+        time: { start: 1 },
+      },
+    })
+
+    const result = yield* prompt.loop({ sessionID: chat.id })
+    expect(result.info.id).toBe(seeded.assistant.id)
+    expect(yield* llm.hits).toHaveLength(0)
+
+    const stored = yield* sessions.getPart({
+      sessionID: chat.id,
+      messageID: seeded.assistant.id,
+      partID: running.id,
+    })
+    expect(stored?.type).toBe("tool")
+    if (stored?.type === "tool" && stored.state.status === "error") {
+      expect(stored.state.error).toBe("Tool execution aborted")
+      expect(stored.state.metadata?.interrupted).toBe(true)
+      expect(stored.state.time.end).toBeGreaterThanOrEqual(stored.state.time.start)
+    } else {
+      throw new Error(`expected settled error state, got ${stored?.type}/${(stored as any)?.state?.status}`)
+    }
+  }),
+)
+
+it.instance("loop leaves provider-executed running parts untouched", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig(providerCfg)
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const chat = yield* sessions.create({ title: "Pinned" })
+    const seeded = yield* seed(chat.id, { finish: "stop" })
+    const hosted = yield* sessions.updatePart({
+      id: PartID.ascending(),
+      messageID: seeded.assistant.id,
+      sessionID: chat.id,
+      type: "tool",
+      callID: "hosted-call",
+      tool: "web_search",
+      metadata: { providerExecuted: true },
+      state: {
+        status: "running",
+        input: {},
+        time: { start: 1 },
+      },
+    })
+
+    yield* prompt.loop({ sessionID: chat.id })
+
+    const stored = yield* sessions.getPart({
+      sessionID: chat.id,
+      messageID: seeded.assistant.id,
+      partID: hosted.id,
+    })
+    if (stored?.type === "tool") expect(stored.state.status).toBe("running")
+    expect(yield* llm.hits).toHaveLength(0)
+  }),
+)
+
 it.instance("loop calls LLM and returns assistant message", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig(providerCfg)
@@ -4084,3 +4159,69 @@ describe("sessions tool receipts and delegation", () => {
     20_000,
   )
 })
+
+it.instance("provider media rejection replays the step with attachments stripped", () =>
+  Effect.gen(function* () {
+    const { llm } = yield* useServerConfig((url) => {
+      const base = providerCfg(url)
+      const model = base.provider.test.models["test-model"]
+      return {
+        ...base,
+        provider: {
+          ...base.provider,
+          test: {
+            ...base.provider.test,
+            models: {
+              "test-model": {
+                ...model,
+                attachment: true,
+                modalities: { input: ["text", "image"], output: ["text"] },
+              },
+            },
+          },
+        },
+      }
+    })
+    const prompt = yield* SessionPrompt.Service
+    const sessions = yield* Session.Service
+    const session = yield* sessions.create({
+      title: "Media rejection",
+      permission: [{ permission: "*", pattern: "*", action: "allow" }],
+    })
+
+    yield* llm.error(400, {
+      error: {
+        code: "invalid_parameter_error",
+        message: "Image download failed",
+        type: "invalid_request_error",
+      },
+    })
+    yield* llm.text("recovered")
+
+    yield* prompt.prompt({
+      sessionID: session.id,
+      agent: "build",
+      noReply: true,
+      parts: [
+        { type: "text", text: "look at this" },
+        {
+          type: "file",
+          mime: "image/png",
+          filename: "shot.png",
+          url: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        },
+      ],
+    })
+
+    const result = yield* prompt.loop({ sessionID: session.id })
+    if (result.info.role === "assistant") expect(result.info.error).toBeUndefined()
+    expect(result.parts.some((part) => part.type === "text" && part.text === "recovered")).toBe(true)
+
+    const hits = yield* llm.hits
+    expect(hits).toHaveLength(2)
+    expect(JSON.stringify(hits[0].body)).toContain("data:image/png;base64")
+    const replayed = JSON.stringify(hits[1].body)
+    expect(replayed).not.toContain("data:image/png")
+    expect(replayed).toContain("[Attached image/png: shot.png]")
+  }),
+)

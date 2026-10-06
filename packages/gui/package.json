@@ -1,0 +1,46 @@
+{
+  "name": "@prioricode/gui",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:webview": "GUI_TARGET=webview vite build",
+    "preview": "vite preview",
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test --preload ./happydom.ts ./src"
+  },
+  "dependencies": {
+    "@prioricode/client": "workspace:*",
+    "@tanstack/react-query": "catalog:",
+    "@tanstack/react-virtual": "catalog:",
+    "@xterm/addon-fit": "catalog:",
+    "@xterm/xterm": "catalog:",
+    "class-variance-authority": "catalog:",
+    "clsx": "catalog:",
+    "diff": "catalog:",
+    "dompurify": "catalog:",
+    "fuzzysort": "catalog:",
+    "lucide-react": "catalog:",
+    "marked": "catalog:",
+    "radix-ui": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "shiki": "catalog:",
+    "tailwind-merge": "catalog:",
+    "tailwindcss": "catalog:",
+    "zustand": "catalog:"
+  },
+  "devDependencies": {
+    "@happy-dom/global-registrator": "20.12.0",
+    "@tailwindcss/vite": "catalog:",
+    "@types/bun": "catalog:",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "@vitejs/plugin-react": "catalog:"
+  }
+}

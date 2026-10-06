@@ -26,6 +26,8 @@ import { Spinner } from "../../component/spinner"
 import { createSyntaxStyleMemo, generateSubtleSyntax, selectedForeground, useTheme } from "../../context/theme"
 import { BoxRenderable, ScrollBoxRenderable, addDefaultParsers, TextAttributes, RGBA } from "@opentui/core"
 import { Prompt, type PromptRef } from "../../component/prompt"
+import { StatusBar } from "../../component/status-bar"
+import { DialogQueuedPrompts, collectQueuedPrompts, type QueuedPrompt } from "../../component/dialog-queued-prompts"
 import type {
   AssistantMessage,
   Part,
@@ -118,6 +120,7 @@ const sessionBindingCommands = [
   "session.timeline",
   "session.fork",
   "session.compact",
+  "session.queued_prompts",
   "session.unshare",
   "session.undo",
   "session.redo",
@@ -247,6 +250,9 @@ export function Session() {
     )
     return pending === -1 ? undefined : pending
   })
+  const queuedPrompts = createMemo<QueuedPrompt[]>(() =>
+    collectQueuedPrompts(messages(), (messageID) => sync.data.part[messageID] ?? []),
+  )
 
   const lastAssistant = createMemo(() => {
     return messages().findLast((x) => x.role === "assistant")
@@ -275,7 +281,7 @@ export function Session() {
     return false
   })
   const showTimestamps = createMemo(() => timestamps() === "show")
-  const contentWidth = createMemo(() => dimensions().width - (sidebarVisible() ? 42 : 0) - 4)
+  const contentWidth = createMemo(() => Math.max(20, dimensions().width - (sidebarVisible() ? 42 : 0) - 4))
   const providers = createMemo(() => Model.index(sync.data.provider))
 
   const scrollAcceleration = createMemo(() => getScrollAcceleration(tuiConfig))
@@ -584,6 +590,15 @@ export function Session() {
           providerID: selectedModel.providerID,
         })
         dialog.clear()
+      },
+    },
+    {
+      title: "Manage queued prompts",
+      value: "session.queued_prompts",
+      category: "Session",
+      enabled: queuedPrompts().length > 0,
+      run: () => {
+        dialog.replace(() => <DialogQueuedPrompts prompts={queuedPrompts} />)
       },
     },
     {
@@ -1300,6 +1315,7 @@ export function Session() {
                   <PermissionPrompt
                     request={permissions()[0]}
                     directory={sync.session.get(permissions()[0].sessionID)?.directory}
+                    pending={() => permissions().length}
                   />
                 </Show>
                 <Show when={permissions().length === 0 && questions().length > 0}>
@@ -1334,6 +1350,9 @@ export function Session() {
                   </pluginRuntime.Slot>
                 </Show>
               </box>
+              <Show when={!session()?.parentID}>
+                <StatusBar sessionID={route.sessionID} permissions={permissions} />
+              </Show>
             </Show>
             <Toast />
           </box>
@@ -1440,10 +1459,13 @@ function UserMessage(props: {
                     const directory = file.mime === "application/x-directory"
                     return (
                       <text fg={theme.text}>
-                        <span style={{ bg: theme.secondary, fg: theme.background }}>
+                        <span style={{ bg: theme.secondary, fg: selectedForeground(theme, theme.secondary) }}>
                           {directory ? " Directory " : " File "}
                         </span>
-                        <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}> {file.filename} </span>
+                        <span style={{ bg: theme.backgroundElement, fg: theme.textMuted }}>
+                          {" "}
+                          {Locale.truncateMiddle(file.filename ?? "", 60)}{" "}
+                        </span>
                       </text>
                     )
                   }}

@@ -8,11 +8,12 @@ import { useSettings } from "@/context/settings"
 import { useProviders } from "@/hooks/use-providers"
 import { resolveDefaultModel } from "@/hooks/provider-catalog"
 import { Persist, persisted } from "@/utils/persist"
-import { hasCustomAgent, resolveAgent } from "./local-agent"
+import { hasCustomAgent, resolveAgent, selectionFromSessionInfo } from "./local-agent"
 import { cycleModelVariant, getConfiguredAgentVariant, resolveModelVariant } from "./model-variant"
 import { useSDK } from "./sdk"
 import { useSync } from "./sync"
 import { useServerSDK } from "./server-sdk"
+import { useServerSync } from "./server-sync"
 import { ScopedKey, type ServerScope } from "@/utils/server-scope"
 
 export type ModelKey = { providerID: string; modelID: string; variant?: string }
@@ -62,6 +63,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
     const params = useParams()
     const sdk = useSDK()
     const sync = useSync()
+    const serverSync = useServerSync()
     const serverSDK = useServerSDK()
     const providers = useProviders(() => sdk().directory)
     const models = useModels()
@@ -213,6 +215,8 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           }
           setStore("draft", next)
         })
+        pinAgent(item.name)
+        pinModel()
       },
       move(direction: 1 | -1) {
         const items = list()
@@ -275,6 +279,50 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
       setStore("draft", state)
     }
 
+    const pinnedAgent = new Map<string, string>()
+    const pinnedModel = new Map<string, { providerID: string; modelID: string; variant?: string | null }>()
+    const pinAgent = (name: string | undefined) => {
+      const session = id()
+      if (!session || !name) return
+      if (pinnedAgent.get(session) === name) return
+      pinnedAgent.set(session, name)
+      sdk()
+        .api.session.switchAgent({ sessionID: session, agent: name })
+        .catch(() => {
+          if (pinnedAgent.get(session) === name) pinnedAgent.delete(session)
+        })
+    }
+    const pinModel = () => {
+      const session = id()
+      const item = current()
+      if (!session || !item) return
+      const next = { providerID: item.provider.id, modelID: item.id, variant: selected() ?? null }
+      const last = pinnedModel.get(session)
+      if (last && last.providerID === next.providerID && last.modelID === next.modelID && last.variant === next.variant)
+        return
+      pinnedModel.set(session, next)
+      sdk()
+        .api.session.switchModel({
+          sessionID: session,
+          model: { id: next.modelID, providerID: next.providerID, variant: next.variant ?? undefined },
+        })
+        .catch(() => {
+          if (pinnedModel.get(session) === next) pinnedModel.delete(session)
+        })
+    }
+
+    createEffect(() => {
+      const session = id()
+      if (!session) return
+      if (!savedReady()) return
+      if (saved.session[session] !== undefined) return
+      const next = selectionFromSessionInfo(serverSync().session.data.info[session], validModel)
+      if (!next) return
+      setSaved("session", session, next)
+      if (next.agent) pinnedAgent.set(session, next.agent)
+      if (next.model) pinnedModel.set(session, { ...next.model, variant: next.variant })
+    })
+
     const recent = createMemo(() => models.recent.list().map(models.find).filter(Boolean))
 
     const model = {
@@ -299,7 +347,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
         model.set({ providerID: entry.provider.id, modelID: entry.id })
       },
       set(item: ModelKey | undefined, options?: { recent?: boolean }) {
-        startTransition(() =>
+        startTransition(() => {
           batch(() => {
             setStore("last", {
               type: "model",
@@ -312,8 +360,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
             models.setVisibility(item, true)
             if (!options?.recent) return
             models.recent.push(item)
-          }),
-        )
+          })
+          if (item) pinModel()
+        })
       },
       visible(item: ModelKey) {
         return models.visible(item)
@@ -342,7 +391,7 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
           return Object.keys(item.variants)
         },
         set(value: string | undefined) {
-          startTransition(() =>
+          startTransition(() => {
             batch(() => {
               const model = current()
               setStore("last", {
@@ -355,8 +404,9 @@ export const { use: useLocal, provider: LocalProvider } = createSimpleContext({
               if (model) {
                 models.variant.set({ providerID: model.provider.id, modelID: model.id }, value ?? undefined)
               }
-            }),
-          )
+            })
+            pinModel()
+          })
         },
         cycle() {
           const items = this.list()

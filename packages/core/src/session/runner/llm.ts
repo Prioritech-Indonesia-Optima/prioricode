@@ -5,13 +5,23 @@ import {
   LLMEvent,
   Message,
   SystemPart,
+  ToolOutput,
   isContextOverflowFailure,
   type ProviderErrorEvent,
+  type ToolResultValue,
 } from "@prioricode/llm"
-import { Cause, DateTime, Effect, FiberSet, Layer, Option, Semaphore, Stream } from "effect"
+import { Cause, DateTime, Duration, Effect, FiberSet, Layer, Option, Semaphore, Stream } from "effect"
 import { AgentV2 } from "../../agent"
 import { Config } from "../../config"
+import { Hook } from "../../hook"
 import { Database } from "../../database/database"
+import { FSUtil } from "../../fs-util"
+import { AppProcess } from "../../process"
+import { SessionVerify } from "./verify"
+import { SessionGate } from "./gate"
+import { Token } from "../../util/token"
+import { SessionGoalGate } from "./goal-gate"
+import { SessionReviewGate } from "./review-gate"
 import { EventV2 } from "../../event"
 import { Location } from "../../location"
 import { ModelV2 } from "../../model"
@@ -19,6 +29,7 @@ import { PermissionV2 } from "../../permission"
 import { ProviderV2 } from "../../provider"
 import { QuestionV2 } from "../../question"
 import { SystemContext } from "../../system-context/index"
+import { SystemContextBudget } from "../../system-context/budget"
 import { SystemContextRegistry } from "../../system-context/registry"
 import { SkillGuidance } from "../../skill/guidance"
 import { ReferenceGuidance } from "../../reference/guidance"
@@ -28,7 +39,10 @@ import { SessionContextEpoch } from "../context-epoch"
 import { SessionCompaction } from "../compaction"
 import { SessionEvent } from "../event"
 import { SessionHistory } from "../history"
+import { SessionGoal } from "../goal"
 import { SessionInput } from "../input"
+import { SessionMessage } from "../message"
+import { Prompt } from "../prompt"
 import { SessionSchema } from "../schema"
 import { SessionStore } from "../store"
 import { type RunError, Service } from "./index"
@@ -36,6 +50,9 @@ import { SessionRunnerModel } from "./model"
 import { createLLMEventPublisher } from "./publish-llm-event"
 import { toLLMMessages } from "./to-llm-message"
 import { MAX_STEPS_PROMPT } from "./max-steps"
+import { ProviderRetry } from "./provider-retry"
+import { ToolGuard } from "./tool-guard"
+import { SessionPrune } from "./prune"
 import { Snapshot } from "../../snapshot"
 import { makeLocationNode } from "../../effect/app-node"
 import { llmClient } from "../../effect/app-node-platform"
@@ -52,7 +69,7 @@ import { llmClient } from "../../effect/app-node-platform"
  *   - [ ] Mark busy, retrying, idle, interrupted, or terminal-failure status durably.
  *   - [ ] Honor interruption and reject stale work after runtime attachment replacement.
  *   - [x] Honor optional agent step limits.
- *   - [ ] Bound provider retries and repeated identical tool calls.
+ *   - [x] Bound provider retries and repeated identical tool calls.
  *
  * - Runtime context assembly
  *   - Track V1 runtime-context parity canonically in `specs/v2/session.md`.
@@ -105,6 +122,10 @@ const layer = Layer.effect(
     const referenceGuidance = yield* ReferenceGuidance.Service
     const config = yield* Config.Service
     const snapshots = yield* Snapshot.Service
+    const fs = yield* FSUtil.Service
+    const appProcess = yield* AppProcess.Service
+    const hooks = yield* Hook.Service
+    const permissions = yield* PermissionV2.Service
     const db = (yield* Database.Service).db
     const compaction = SessionCompaction.make({ events, llm, config: yield* config.entries() })
     const getSession = Effect.fn("SessionRunner.getSession")(function* (sessionID: SessionSchema.ID) {
@@ -154,6 +175,20 @@ const layer = Layer.effect(
       | { readonly _tag: "ContinueAfterCompaction"; readonly step: number }
       // Overflow compaction completed; rebuild once through the path without overflow recovery.
       | { readonly _tag: "ContinueAfterOverflowCompaction"; readonly step: number }
+      // A retryable provider failure happened before any assistant output; re-attempt after backoff.
+      | {
+          readonly _tag: "RetryProviderTurn"
+          readonly step: number
+          readonly attempt: number
+          readonly delayMs: number
+        }
+
+    interface TurnPolicy {
+      readonly guard: ToolGuard.Guard
+      readonly gates: SessionGate.Pipeline
+      readonly retry: ProviderRetry.Settings
+      readonly allowProjectHooks: boolean
+    }
 
     class TurnTransitionError extends Error {
       constructor(readonly transition: TurnTransition) {
@@ -164,24 +199,67 @@ const layer = Layer.effect(
     const continueAfterCompaction = (step: number) => new TurnTransitionError({ _tag: "ContinueAfterCompaction", step })
     const continueAfterOverflowCompaction = (step: number) =>
       new TurnTransitionError({ _tag: "ContinueAfterOverflowCompaction", step })
+    const retryProviderTurn = (step: number, attempt: number, delayMs: number) =>
+      new TurnTransitionError({ _tag: "RetryProviderTurn", step, attempt, delayMs })
 
-    const loadSystemContext = (agent: AgentV2.Selection) =>
-      Effect.all([systemContext.load(), skillGuidance.load(agent), referenceGuidance.load()], {
+    const loadSystemContext = (sessionID: SessionSchema.ID, agent: AgentV2.Selection, usagePercent: number) =>
+      Effect.all([systemContext.load(), skillGuidance.load(agent), referenceGuidance.load(), store.get(sessionID)], {
         concurrency: "unbounded",
-      }).pipe(Effect.map(SystemContext.combine))
+      }).pipe(
+        Effect.map(([environment, skills, references, session]) =>
+          SystemContext.combine([
+            environment,
+            skills,
+            references,
+            SessionGoal.context(session?.goal),
+            SystemContextBudget.context(usagePercent),
+          ]),
+        ),
+      )
+
+    const hookResultText = (result: ToolResultValue) =>
+      typeof result.value === "string" ? result.value : JSON.stringify(result.value)
+
+    const settlementBytes = (settlement: { readonly result: ToolResultValue; readonly output?: ToolOutput }) => {
+      try {
+        return Buffer.byteLength(JSON.stringify(settlement.output ?? settlement.result), "utf8")
+      } catch {
+        return 0
+      }
+    }
+
+    const warnedOutput = (
+      settlement: { readonly result: ToolResultValue; readonly output?: ToolOutput },
+      ...notes: ReadonlyArray<string | undefined>
+    ): ToolOutput | undefined => {
+      if (settlement.result.type === "error") return settlement.output
+      const base = settlement.output ?? ToolOutput.fromResultValue(settlement.result)
+      const additions = notes.filter((note): note is string => note !== undefined && note !== "")
+      if (!base) return settlement.output
+      return additions.length === 0
+        ? base
+        : { ...base, content: [...base.content, ...additions.map((text) => ({ type: "text" as const, text }))] }
+    }
 
     const runTurnAttempt = Effect.fn("SessionRunner.runTurn")(function* (
       sessionID: SessionSchema.ID,
       promotion: SessionInput.Delivery | undefined,
       step: number,
+      policy: TurnPolicy,
+      attempt = 1,
       recoverOverflow?: typeof compaction.compactAfterOverflow,
     ) {
       const session = yield* getSession(sessionID)
       if (session.location.directory !== location.directory || session.location.workspaceID !== location.workspaceID)
         return yield* Effect.interrupt
       const agent = yield* agents.select(session.agent)
-      const initialized = yield* SessionContextEpoch.initialize(db, loadSystemContext(agent), session.id)
+      const model = yield* models.resolve(session)
+      const contextLimit = model.route.defaults.limits?.context ?? DEFAULT_CONTEXT_TOKENS
+      const usagePercent = contextLimit > 0 ? (session.tokens.input / contextLimit) * 100 : 0
+      const loadContext = () => loadSystemContext(session.id, agent, usagePercent)
+      const initialized = yield* SessionContextEpoch.initialize(db, loadContext(), session.id)
       const toolFibers = yield* FiberSet.make<void, ToolOutputStore.Error>()
+      policy.guard.beginTurn()
       let needsContinuation = false
       let currentStep = step
       if (promotion) {
@@ -194,14 +272,37 @@ const layer = Layer.effect(
         }
         if (promoted > 0) currentStep = 1
       }
-      const system =
-        initialized ?? (yield* SessionContextEpoch.prepare(db, events, loadSystemContext(agent), session.id))
-      const model = yield* models.resolve(session)
+      const system = initialized ?? (yield* SessionContextEpoch.prepare(db, events, loadContext(), session.id))
       const entries = yield* SessionHistory.entriesForRunner(db, session.id, system.baselineSeq)
       const context = entries.map((entry) => entry.message)
+      if (
+        context.length > 0 &&
+        !context.some((message) => message.type === "assistant") &&
+        !sessionStartFired.has(session.id)
+      ) {
+        sessionStartFired.add(session.id)
+        yield* hooks.sessionStart({ sessionID: session.id, allowProject: policy.allowProjectHooks })
+      }
       const isLastStep = agent.info?.steps !== undefined && currentStep >= agent.info.steps
       const toolMaterialization = isLastStep ? undefined : yield* tools.materialize(agent.info?.permissions)
       const promptCacheKey = /^ses_[0-9a-f]{64}$/.test(session.id) ? session.id.slice(4) : session.id
+      const pruneConfig = Config.latest(yield* config.entries(), "prune")
+      const fullMessages = [
+        ...toLLMMessages(context, model),
+        ...(isLastStep ? [Message.assistant(MAX_STEPS_PROMPT)] : []),
+      ]
+      const systemParts = [agent.info?.system, system.baseline].filter(
+        (part): part is string => part !== undefined && part.length > 0,
+      )
+      const pressure =
+        contextLimit > 0 &&
+        Token.estimate(
+          JSON.stringify({
+            system: systemParts,
+            messages: fullMessages,
+            tools: toolMaterialization?.definitions ?? [],
+          }),
+        ) >= Math.floor((contextLimit * (pruneConfig?.pressure_percent ?? 70)) / 100)
       const request = LLM.request({
         model,
         http: {
@@ -212,10 +313,12 @@ const layer = Layer.effect(
           },
         },
         providerOptions: { openai: { promptCacheKey } },
-        system: [agent.info?.system, system.baseline]
-          .filter((part): part is string => part !== undefined && part.length > 0)
-          .map(SystemPart.make),
-        messages: [...toLLMMessages(context, model), ...(isLastStep ? [Message.assistant(MAX_STEPS_PROMPT)] : [])],
+        system: systemParts.map(SystemPart.make),
+        messages: SessionPrune.projectForRequest(fullMessages, {
+          pressure,
+          keepRecentSteps: pruneConfig?.keep_recent_steps ?? 15,
+          minBytes: pruneConfig?.min_bytes ?? 8_000,
+        }),
         tools: toolMaterialization?.definitions ?? [],
         toolChoice: isLastStep ? "none" : undefined,
       })
@@ -254,6 +357,34 @@ const layer = Layer.effect(
             }
             needsContinuation = true
             const assistantMessageID = yield* publisher.assistantMessageID(event.id)
+            const verdict = policy.guard.verdict(event.name, event.input)
+            if (verdict.type === "block") {
+              yield* publish(
+                LLMEvent.toolResult({
+                  id: event.id,
+                  name: event.name,
+                  result: { type: "error", value: verdict.reason },
+                }),
+              )
+              return
+            }
+            const preHook = yield* hooks.preToolUse({
+              sessionID: session.id,
+              allowProject: policy.allowProjectHooks,
+              tool: event.name,
+              callID: event.id,
+              toolInput: event.input,
+            })
+            if (preHook._tag === "Block") {
+              yield* publish(
+                LLMEvent.toolResult({
+                  id: event.id,
+                  name: event.name,
+                  result: { type: "error", value: preHook.reason },
+                }),
+              )
+              return
+            }
             yield* Effect.uninterruptibleMask((restore) =>
               restore(
                 toolMaterialization.settle({
@@ -264,15 +395,31 @@ const layer = Layer.effect(
                 }),
               ).pipe(
                 Effect.flatMap((settlement) =>
-                  publish(
-                    LLMEvent.toolResult({
-                      id: event.id,
-                      name: event.name,
-                      result: settlement.result,
-                      output: settlement.output,
-                    }),
-                    settlement.outputPaths ?? [],
-                  ),
+                  Effect.gen(function* () {
+                    policy.guard.recordOutput(settlementBytes(settlement))
+                    policy.gates.observe(event.name, settlement.result.type !== "error")
+                    const postHook = yield* hooks.postToolUse({
+                      sessionID: session.id,
+                      allowProject: policy.allowProjectHooks,
+                      tool: event.name,
+                      callID: event.id,
+                      toolInput: event.input,
+                      toolOutput: hookResultText(settlement.result),
+                    })
+                    return yield* publish(
+                      LLMEvent.toolResult({
+                        id: event.id,
+                        name: event.name,
+                        result: settlement.result,
+                        output: warnedOutput(
+                          settlement,
+                          verdict.type === "warn" ? verdict.warning : undefined,
+                          postHook._tag === "Note" ? postHook.note : undefined,
+                        ),
+                      }),
+                      settlement.outputPaths ?? [],
+                    )
+                  }),
                 ),
               ),
             ).pipe(FiberSet.run(toolFibers))
@@ -295,6 +442,21 @@ const layer = Layer.effect(
             return yield* Effect.die(continueAfterOverflowCompaction(currentStep))
           if (overflowFailure) yield* publish(overflowFailure)
           const llmFailure = failure instanceof LLMError ? failure : undefined
+          if (
+            llmFailure &&
+            !publisher.hasProviderError() &&
+            !publisher.hasAssistantStarted() &&
+            ProviderRetry.shouldRetry(llmFailure, attempt, policy.retry)
+          ) {
+            const delayMs = ProviderRetry.delay(llmFailure, attempt + 1, policy.retry)
+            yield* events.publish(SessionEvent.Retried, {
+              sessionID: session.id,
+              timestamp: yield* DateTime.now,
+              attempt: attempt + 1,
+              error: ProviderRetry.eventError(llmFailure),
+            })
+            return yield* Effect.die(retryProviderTurn(currentStep, attempt + 1, delayMs))
+          }
           if (llmFailure && !publisher.hasProviderError()) {
             yield* withPublication(publisher.failUnsettledTools("Provider did not return a tool result", true))
             yield* withPublication(publisher.failAssistant(llmFailure.reason.message))
@@ -357,40 +519,138 @@ const layer = Layer.effect(
       sessionID: SessionSchema.ID,
       promotion: SessionInput.Delivery | undefined,
       step: number,
+      policy: TurnPolicy,
+      attempt?: number,
     ) => Effect.Effect<{ readonly needsContinuation: boolean; readonly step: number }, RunError>
 
-    const runAfterOverflowCompaction: RunTurn = Effect.fnUntraced(function* (sessionID, promotion, step) {
-      return yield* runTurnAttempt(sessionID, promotion, step).pipe(
+    const runAfterOverflowCompaction: RunTurn = Effect.fnUntraced(function* (
+      sessionID,
+      promotion,
+      step,
+      policy,
+      attempt = 1,
+    ) {
+      return yield* runTurnAttempt(sessionID, promotion, step, policy, attempt).pipe(
         Effect.catchDefect(
           Effect.fnUntraced(function* (defect) {
             if (!(defect instanceof TurnTransitionError)) return yield* Effect.die(defect)
             if (defect.transition._tag === "ContinueAfterOverflowCompaction")
               return yield* Effect.die("Post-compaction provider attempt cannot recover another overflow")
             yield* Effect.yieldNow
-            return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step)
+            if (defect.transition._tag === "RetryProviderTurn") {
+              yield* Effect.sleep(Duration.millis(defect.transition.delayMs))
+              return yield* runAfterOverflowCompaction(
+                sessionID,
+                undefined,
+                defect.transition.step,
+                policy,
+                defect.transition.attempt,
+              )
+            }
+            return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step, policy)
           }),
         ),
       )
     })
 
-    const runTurn: RunTurn = Effect.fnUntraced(function* (sessionID, promotion, step) {
-      return yield* runTurnAttempt(sessionID, promotion, step, compaction.compactAfterOverflow).pipe(
+    const runTurn: RunTurn = Effect.fnUntraced(function* (sessionID, promotion, step, policy, attempt = 1) {
+      return yield* runTurnAttempt(sessionID, promotion, step, policy, attempt, compaction.compactAfterOverflow).pipe(
         Effect.catchDefect(
           Effect.fnUntraced(function* (defect) {
             if (!(defect instanceof TurnTransitionError)) return yield* Effect.die(defect)
             yield* Effect.yieldNow
+            if (defect.transition._tag === "RetryProviderTurn") {
+              yield* Effect.sleep(Duration.millis(defect.transition.delayMs))
+              return yield* runTurn(sessionID, undefined, defect.transition.step, policy, defect.transition.attempt)
+            }
             if (defect.transition._tag === "ContinueAfterOverflowCompaction")
-              return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step)
-            return yield* runTurn(sessionID, undefined, defect.transition.step)
+              return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step, policy)
+            return yield* runTurn(sessionID, undefined, defect.transition.step, policy)
           }),
         ),
       )
     })
+
+    const DEFAULT_CONTEXT_TOKENS = 128_000
+    const sessionStartFired = new Set<string>()
+
+    const stopHookGate = (sessionID: SessionSchema.ID, allowProjectHooks: boolean): SessionGate.Gate => {
+      let fired = false
+      return {
+        id: "stop-hook",
+        observe: () => {},
+        beforeFinish: () =>
+          hooks.stop({ sessionID, allowProject: allowProjectHooks, stopHookActive: fired }).pipe(
+            Effect.flatMap((outcome) => {
+              if (outcome._tag !== "Continue") return Effect.succeed(SessionGate.pass)
+              fired = true
+              return SessionInput.admit(db, events, {
+                id: SessionMessage.ID.create(),
+                sessionID,
+                prompt: Prompt.make({
+                  text: [
+                    `A configured Stop hook prevented completion:\n${outcome.reason}`,
+                    "Address the hook's requirement before ending the task; the drain will not finish while it blocks.",
+                  ].join("\n"),
+                }),
+                delivery: "steer",
+              }).pipe(
+                Effect.map(() => SessionGate.continued),
+                Effect.catch(() => Effect.succeed(SessionGate.pass)),
+              )
+            }),
+          ),
+      }
+    }
 
     const run = Effect.fn("SessionRunner.run")(function* (input: {
       readonly sessionID: SessionSchema.ID
       readonly force: boolean
     }) {
+      const entries = yield* config.entries()
+      const loop = Config.latest(entries, "loop")
+      let allowProjectHooks = true
+      if (yield* hooks.hasProjectHooks()) {
+        const hash = yield* hooks.projectHash()
+        allowProjectHooks = yield* permissions
+          .assert({ sessionID: input.sessionID, action: "hooks.project", resources: [hash], save: [hash] })
+          .pipe(
+            Effect.map(() => true),
+            Effect.catch(() => Effect.succeed(false)),
+          )
+      }
+      const gates = SessionGate.makePipeline({
+        gates: [
+          stopHookGate(input.sessionID, allowProjectHooks),
+          yield* SessionVerify.asGate({
+            db,
+            events,
+            fs,
+            process: appProcess,
+            directory: location.directory,
+            sessionID: input.sessionID,
+            config: Config.latest(entries, "verify"),
+          }),
+          SessionGoalGate.asGate({
+            db,
+            events,
+            store,
+            process: appProcess,
+            judge: (request) => llm.stream(request),
+            models,
+            directory: location.directory,
+            sessionID: input.sessionID,
+            config: Config.latest(entries, "goal"),
+          }),
+        ],
+        maxRounds: loop?.gate_max_rounds ?? 6,
+      })
+      const policy: TurnPolicy = {
+        guard: ToolGuard.make(ToolGuard.settings(loop)),
+        retry: ProviderRetry.settings(loop?.retry),
+        gates,
+        allowProjectHooks,
+      }
       const hasSteer = yield* SessionInput.hasPending(db, input.sessionID, "steer")
       const hasQueue = hasSteer ? false : yield* SessionInput.hasPending(db, input.sessionID, "queue")
       if (!input.force && !hasSteer && !hasQueue) return
@@ -401,19 +661,37 @@ const layer = Layer.effect(
         let needsContinuation = true
         let step = 1
         while (needsContinuation) {
-          const result = yield* runTurn(input.sessionID, promotion, step)
+          const result = yield* runTurn(input.sessionID, promotion, step, policy)
           needsContinuation = result.needsContinuation
           step = result.step + 1
           promotion = "steer"
-          if (!needsContinuation) needsContinuation = yield* SessionInput.hasPending(db, input.sessionID, "steer")
+          if (!needsContinuation && (yield* policy.gates.beforeFinish())) needsContinuation = true
+          else if (!needsContinuation) needsContinuation = yield* SessionInput.hasPending(db, input.sessionID, "steer")
         }
         shouldRun = yield* SessionInput.hasPending(db, input.sessionID, "queue")
         promotion = shouldRun ? "queue" : undefined
       }
     })
 
+    const compact = Effect.fn("SessionRunner.compact")(function* (input: {
+      readonly sessionID: SessionSchema.ID
+      readonly headCutSeq?: number
+      readonly instructions?: string
+    }) {
+      const session = yield* getSession(input.sessionID)
+      const entries = yield* SessionHistory.entriesForRunner(db, session.id, 0)
+      const compactable = entries.filter((entry) => entry.message.type !== "compaction")
+      if (compactable.length < 2) return false
+      const model = yield* models.resolve(session)
+      // unanchored manual compaction keeps the final exchange verbatim
+      const headCutSeq =
+        input.headCutSeq ?? (compactable.length > 2 ? compactable[compactable.length - 3]?.seq : compactable[0]?.seq)
+      return yield* compaction.compactManual({ ...input, headCutSeq, entries, model, sessionID: session.id })
+    })
+
     return Service.of({
       run,
+      compact,
     })
   }),
 )
@@ -435,5 +713,9 @@ export const node = makeLocationNode({
     Config.node,
     Snapshot.node,
     Database.node,
+    FSUtil.node,
+    AppProcess.node,
+    Hook.node,
+    PermissionV2.node,
   ],
 })

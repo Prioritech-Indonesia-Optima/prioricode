@@ -12,7 +12,6 @@ import type { CommandContext } from "@opentui/keymap"
 import { createEffect, createMemo, onMount, createSignal, onCleanup, on, Show, Switch, Match } from "solid-js"
 import { registerPrioricodeSpinner } from "../register-spinner"
 import path from "path"
-import { fileURLToPath } from "url"
 import { useLocal } from "../../context/local"
 import { Flag } from "@prioricode/core/flag/flag"
 import { tint, useTheme } from "../../context/theme"
@@ -37,8 +36,15 @@ import { usePromptStash } from "../../prompt/stash"
 import { DialogStash } from "../dialog-stash"
 import { type AutocompleteRef, Autocomplete } from "./autocomplete"
 import { useRenderer, useTerminalDimensions, type JSX } from "@opentui/solid"
-import type { AssistantMessage, FilePart, UserMessage } from "@prioricode/sdk/v2"
+import type { FilePart, UserMessage } from "@prioricode/sdk/v2"
 import { Locale } from "../../util/locale"
+import {
+  completedToolCount,
+  computeUsage,
+  estimateStreamingTokens,
+  formatTurnHud,
+  runningTool,
+} from "../../util/context-usage"
 import { errorMessage } from "../../util/error"
 import { formatDuration } from "../../util/format"
 import { createColors, createFrames } from "../../ui/spinner"
@@ -62,6 +68,10 @@ import { useTuiConfig } from "../../config"
 import { usePromptWorkspace } from "./workspace"
 import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
+import { pastedFilepath } from "./pasted-filepath"
+import { pasteDirectory, savePastedImage } from "./paste-store"
+import { REMOTE_PASTE_DISABLED, pasteMissHint } from "../../clipboard-scenario"
+import { readTerminalClipboard } from "../../clipboard-terminal"
 import { useLocation } from "../../context/location"
 
 registerPrioricodeSpinner()
@@ -81,17 +91,6 @@ export type PromptProps = {
   }
 }
 
-function pastedFilepath(value: string, platform: string) {
-  const raw = value.replace(/^['"]+|['"]+$/g, "")
-  if (raw.startsWith("file://")) {
-    try {
-      return fileURLToPath(raw)
-    } catch {}
-  }
-  if (platform === "win32") return raw
-  return raw.replace(/\\(.)/g, "$1")
-}
-
 export type PromptRef = {
   focused: boolean
   current: PromptInfo
@@ -102,12 +101,9 @@ export type PromptRef = {
   submit(): void
 }
 
-const money = new Intl.NumberFormat("en-US", {
-  style: "currency",
-  currency: "USD",
-})
-
 const DRAFT_RETENTION_MIN_CHARS = 20
+// Matches the server image pipeline ceiling (packages/prioricode/src/image/image.ts).
+const MAX_CLIPBOARD_BASE64_BYTES = 5 * 1024 * 1024
 
 function randomIndex(count: number) {
   if (count <= 0) return 0
@@ -167,6 +163,54 @@ export function Prompt(props: PromptProps) {
   const dialog = useDialog()
   const toast = useToast()
   const status = createMemo(() => sync.data.session_status?.[props.sessionID ?? ""] ?? { type: "idle" })
+  const [turnStart, setTurnStart] = createSignal<number>()
+  createEffect(
+    on(
+      () => status().type === "idle",
+      (idle) => {
+        if (idle) {
+          setTurnStart(undefined)
+          return
+        }
+        if (turnStart() === undefined) setTurnStart(Date.now())
+      },
+    ),
+  )
+  const [turnTick, setTurnTick] = createSignal(0)
+  createEffect(() => {
+    if (status().type === "idle") return
+    const timer = setInterval(() => setTurnTick((n) => n + 1), 1000)
+    onCleanup(() => clearInterval(timer))
+  })
+  const turn = createMemo(() => {
+    const id = props.sessionID
+    if (!id || status().type === "idle") return
+    const messages = sync.data.message[id] ?? []
+    const completed = messages.findLastIndex((message) => message.role === "assistant" && message.time.completed)
+    const index = messages.findLastIndex(
+      (message, position) => position > completed && message.role === "assistant" && !message.time.completed,
+    )
+    if (index === -1) return
+    const parts = sync.data.part[messages[index]!.id] ?? []
+    const tool = runningTool(parts)
+    const done = completedToolCount(parts)
+    const estimate = estimateStreamingTokens(parts)
+    if (!tool && done === 0 && estimate === 0) return
+    return { tool, done, estimate }
+  })
+  const turnHud = createMemo(() => {
+    if (status().type !== "busy") return ""
+    const start = turnStart()
+    if (!start) return ""
+    turnTick()
+    const active = turn()
+    return formatTurnHud({
+      tool: active?.tool,
+      done: active?.done ?? 0,
+      estimate: active?.estimate ?? 0,
+      elapsedMs: Date.now() - start,
+    })
+  })
   const history = usePromptHistory()
   const stash = usePromptStash()
   const keymap = usePrioricodeKeymap()
@@ -238,7 +282,28 @@ export function Prompt(props: PromptProps) {
   const agentStyleId = syntax().getStyleId("extmark.agent")!
   const pasteStyleId = syntax().getStyleId("extmark.paste")!
   let promptPartTypeId = 0
+  let lastPasteProbe = 0
   const event = useEvent()
+
+  // Windows Terminal 1.25+ handles Ctrl+V on keydown itself, so the press never
+  // reaches the app; it still reports the kitty key-release event when the
+  // renderer requests event reporting. Probe releases on Windows only.
+  let pasteImageOnlyRequest = false
+  onMount(() => {
+    if (process.platform !== "win32") return
+    const listener = (probe: KeyEvent) => {
+      if (props.disabled) return
+      if (!input || input.isDestroyed || !input.focused) return
+      if (probe.name === "v" && probe.ctrl && !probe.shift && !probe.meta && !probe.option) {
+        // The terminal has already pasted any clipboard text itself, so this
+        // probe only looks for clipboard images.
+        pasteImageOnlyRequest = true
+        keymap.dispatchCommand("prompt.paste")
+      }
+    }
+    renderer.keyInput.on("keyrelease", listener)
+    onCleanup(() => renderer.keyInput.off("keyrelease", listener))
+  })
 
   event.on("tui.prompt.append", (evt, { workspace }) => {
     if (workspace !== project.workspace.current()) return
@@ -251,6 +316,21 @@ export function Prompt(props: PromptProps) {
       input.gotoBufferEnd()
       renderer.requestRender()
     }, 0)
+  })
+
+  // Companion channels (VS Code extension Ctrl+V bridge) hand clipboard files
+  // to the running TUI over the event bus; attach them like a local paste.
+  event.on("tui.prompt.attach", (evt, { workspace }) => {
+    if (workspace !== project.workspace.current()) return
+    const file = evt.properties
+    if (!file.mime.startsWith("image/") && file.mime !== "application/pdf") return
+    if (file.data.length > MAX_CLIPBOARD_BASE64_BYTES) {
+      toast.show({ message: "Clipboard image is too large (5 MB limit)", variant: "error" })
+      return
+    }
+    void saveClipboardImage(file.data, file.mime).then((filepath) => {
+      void pasteAttachment({ filename: file.filename ?? "clipboard", filepath, mime: file.mime, content: file.data })
+    })
   })
 
   createEffect(() => {
@@ -269,22 +349,11 @@ export function Prompt(props: PromptProps) {
 
   const usage = createMemo(() => {
     if (!props.sessionID) return
-    const session = sync.session.get(props.sessionID)
-    const msg = sync.data.message[props.sessionID] ?? []
-    const last = msg.findLast((item): item is AssistantMessage => item.role === "assistant" && item.tokens.output > 0)
-    if (!last) return
-
-    const tokens =
-      last.tokens.input + last.tokens.output + last.tokens.reasoning + last.tokens.cache.read + last.tokens.cache.write
-    if (tokens <= 0) return
-
-    const model = sync.data.provider.find((item) => item.id === last.providerID)?.models[last.modelID]
-    const pct = model?.limit.context ? `${Math.round((tokens / model.limit.context) * 100)}%` : undefined
-    const cost = session?.cost ?? 0
-    return {
-      context: pct ? `${Locale.number(tokens)} (${pct})` : Locale.number(tokens),
-      cost: cost > 0 ? money.format(cost) : undefined,
-    }
+    return computeUsage({
+      session: sync.session.get(props.sessionID),
+      messages: sync.data.message[props.sessionID] ?? [],
+      providers: sync.data.provider,
+    })
   })
 
   const [store, setStore] = createStore<{
@@ -303,6 +372,12 @@ export function Prompt(props: PromptProps) {
     extmarkToPartIndex: new Map(),
     interrupt: 0,
   })
+
+  // The session route renders a persistent StatusBar that already shows the
+  // agent, permission mode, and context/cost. In that context the prompt meta
+  // row drops those duplicates and keeps only model/provider/variant; on home
+  // (no sessionID) and in shell mode the meta row stays self-contained.
+  const sessionChrome = createMemo(() => !!props.sessionID && store.mode === "normal")
 
   createEffect(
     on(
@@ -381,18 +456,52 @@ export function Prompt(props: PromptProps) {
         run: async (ctx: CommandContext<Renderable, KeyEvent>) => {
           ctx.event.preventDefault()
           ctx.event.stopPropagation()
-          const content = await clipboard.read?.()
+          // Terminals may surface one Ctrl+V as both a press and a release
+          // (kitty protocol); collapse bursts into a single paste attempt.
+          const now = Date.now()
+          if (now - lastPasteProbe < 250) return
+          lastPasteProbe = now
+          const imageOnly = pasteImageOnlyRequest
+          pasteImageOnlyRequest = false
+          // Remote image fetching is opt-in. By default a remote session never
+          // probes the terminal clipboard protocol, so Ctrl+V answers instantly
+          // with the terse disabled note instead of a multi-second stall. The
+          // "Enable OSC clipboard reads" command restores the kitty OSC 5522 /
+          // OSC 52 round-trip (only some emulators answer; tmux may block it).
+          const terminalChannel =
+            terminalEnvironment.remote &&
+            !terminalEnvironment.multiplexer &&
+            kv.get("terminal_clipboard_enabled", false)
+          let content = terminalChannel
+            ? await readTerminalClipboard(renderer, {
+                write: (sequence) => void process.stdout.write(sequence),
+              })
+            : undefined
+          if (!content) content = await clipboard.read?.()
           if (content?.mime.startsWith("image/")) {
             await pasteAttachment({
               filename: "clipboard",
+              filepath: await saveClipboardImage(content.data, content.mime),
               mime: content.mime,
               content: content.data,
             })
             return
           }
+          // A key-release probe must not re-paste text Windows Terminal already
+          // delivered through its own Ctrl+V bracketed paste.
           if (content?.mime === "text/plain") {
+            if (imageOnly) return
             await pasteInputText(content.data)
+            return
           }
+          if (!imageOnly)
+            toast.show({
+              message:
+                terminalEnvironment.remote && !terminalChannel
+                  ? REMOTE_PASTE_DISABLED
+                  : pasteMissHint(terminalEnvironment),
+              variant: "info",
+            })
         },
       },
       {
@@ -1190,8 +1299,7 @@ export function Prompt(props: PromptProps) {
     const normalizedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n")
     const pastedContent = normalizedText.trim()
     const filepath = pastedFilepath(pastedContent, terminalEnvironment.platform)
-    const isUrl = /^(https?):\/\//.test(filepath)
-    if (!isUrl) {
+    if (filepath) {
       const attachment = await readLocalAttachment(filepath)
       const filename = path.basename(filepath)
       if (attachment?.type === "text") {
@@ -1225,6 +1333,18 @@ export function Prompt(props: PromptProps) {
       input.getLayoutNode().markDirty()
       renderer.requestRender()
     }, 0)
+  }
+
+  // Every clipboard image also lands as a private file under the state dir so
+  // the attachment references a real on-host path — local host reads, the OSC
+  // 5522 terminal protocol, and extension uploads all converge here. A failed
+  // write must not lose the paste: inline content still travels to the model.
+  async function saveClipboardImage(base64: string, mime: string): Promise<string | undefined> {
+    try {
+      return await savePastedImage({ directory: pasteDirectory(paths.state), mime, base64 })
+    } catch {
+      return undefined
+    }
   }
 
   async function pasteAttachment(file: { filename?: string; filepath?: string; content: string; mime: string }) {
@@ -1452,22 +1572,31 @@ export function Prompt(props: PromptProps) {
                 <Show when={local.agent.current()} fallback={<box height={1} />}>
                   {(agent) => (
                     <>
-                      <text fg={fadeColor(highlight(), agentMetaAlpha())}>
-                        {store.mode === "shell" ? "Shell" : Locale.titlecase(agent().name)}
-                      </text>
-                      <Show when={store.mode === "normal" && local.permission.mode !== "default"}>
-                        <text fg={fadeColor(theme.textMuted, agentMetaAlpha())}>{local.permission.mode}</text>
+                      <Show when={!sessionChrome()}>
+                        <text flexShrink={0} wrapMode="none" fg={fadeColor(highlight(), agentMetaAlpha())}>
+                          {store.mode === "shell" ? "Shell" : Locale.titlecase(agent().name)}
+                        </text>
+                      </Show>
+                      <Show when={store.mode === "normal" && local.permission.mode !== "default" && !sessionChrome()}>
+                        <text flexShrink={0} wrapMode="none" fg={fadeColor(theme.textMuted, agentMetaAlpha())}>
+                          {local.permission.mode}
+                        </text>
                       </Show>
                       <Show when={store.mode === "normal"}>
                         <box flexDirection="row" gap={1}>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                          <Show when={!sessionChrome()}>
+                            <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>·</text>
+                          </Show>
                           <text
                             flexShrink={0}
+                            wrapMode="none"
                             fg={fadeColor(leader() ? theme.textMuted : theme.text, modelMetaAlpha())}
                           >
                             {local.model.parsed().model}
                           </text>
-                          <text fg={fadeColor(theme.textMuted, modelMetaAlpha())}>{currentProviderLabel()}</text>
+                          <text flexShrink={0} wrapMode="none" fg={fadeColor(theme.textMuted, modelMetaAlpha())}>
+                            {currentProviderLabel()}
+                          </text>
                           <Show when={showVariant()}>
                             <text fg={fadeColor(theme.textMuted, variantMetaAlpha())}>·</text>
                             <text>
@@ -1531,6 +1660,13 @@ export function Prompt(props: PromptProps) {
                       <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
                     </Show>
                   </box>
+                  <Show when={turnHud()}>
+                    <box flexDirection="row" flexShrink={0}>
+                      <text fg={theme.textMuted} wrapMode="none">
+                        {turnHud()}
+                      </text>
+                    </box>
+                  </Show>
                   <box flexDirection="row" gap={1} flexShrink={0}>
                     {(() => {
                       const retry = createMemo(() => {
@@ -1651,8 +1787,10 @@ export function Prompt(props: PromptProps) {
             <Match when={true}>
               {props.hint ?? (
                 <Show when={props.sessionID} fallback={<text />}>
-                  <box marginLeft={1}>
-                    <text fg={theme.textMuted}>{location()?.directory ?? paths.cwd}</text>
+                  <box marginLeft={1} minWidth={0}>
+                    <text fg={theme.textMuted} wrapMode="none">
+                      {Locale.truncateMiddle(location()?.directory ?? paths.cwd, Math.max(16, dimensions().width - 12))}
+                    </text>
                   </box>
                 </Show>
               )}
@@ -1668,7 +1806,7 @@ export function Prompt(props: PromptProps) {
               <Switch>
                 <Match when={store.mode === "normal"}>
                   <Switch>
-                    <Match when={usage()}>
+                    <Match when={sessionChrome() ? undefined : usage()}>
                       {(item) => (
                         <text fg={theme.textMuted} wrapMode="none">
                           {[item().context, item().cost].filter(Boolean).join(" · ")}
@@ -1676,12 +1814,12 @@ export function Prompt(props: PromptProps) {
                       )}
                     </Match>
                     <Match when={true}>
-                      <text fg={theme.text}>
+                      <text flexShrink={0} wrapMode="none" fg={theme.text}>
                         {agentShortcut()} <span style={{ fg: theme.textMuted }}>agents</span>
                       </text>
                     </Match>
                   </Switch>
-                  <text fg={theme.text}>
+                  <text flexShrink={0} wrapMode="none" fg={theme.text}>
                     {paletteShortcut()} <span style={{ fg: theme.textMuted }}>commands</span>
                   </text>
                 </Match>

@@ -5,11 +5,13 @@ import { FileDiff } from "@prioricode/schema/file-diff"
 import { createTwoFilesPatch, diffLines } from "diff"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
+import { EditObserver } from "../edit-observer"
 import { FileMutation } from "../file-mutation"
 import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
 import { Patch } from "../patch"
 import { PermissionV2 } from "../permission"
+import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
@@ -31,6 +33,9 @@ export const Applied = Schema.Struct({
 export const Output = Schema.Struct({
   applied: Schema.Array(Applied),
   files: Schema.Array(FileDiff.Info),
+  formatted: Schema.Boolean.pipe(Schema.optional),
+  diagnostics: Schema.String.pipe(Schema.optional),
+  snapshot: Schema.String.pipe(Schema.optional),
 })
 export type Output = typeof Output.Type
 
@@ -40,6 +45,9 @@ export const toModelOutput = (output: Output) =>
     ...output.applied.map(
       (item) => `${item.type === "add" ? "A" : item.type === "delete" ? "D" : "M"} ${item.resource}`,
     ),
+    ...(output.diagnostics === undefined
+      ? []
+      : [`LSP errors detected in these files, please fix:\n${output.diagnostics}`]),
   ].join("\n")
 
 type Prepared =
@@ -63,13 +71,14 @@ const layer = Layer.effectDiscard(
     const files = yield* FileMutation.Service
     const fs = yield* FSUtil.Service
     const permission = yield* PermissionV2.Service
+    const observer = yield* EditObserver.Service
 
     yield* tools
       .register({
         [name]: Tool.withPermission(
           Tool.make({
             description:
-              "Apply one patch containing add, update, and delete file operations. All targets are resolved and approved before target contents are read. Operations apply sequentially; if a later operation fails, earlier operations remain applied and the failure reports them explicitly. Moves and atomic rollback are not supported yet.",
+              "Apply one patch containing add, update, and delete file operations. Targets are resolved and operations are prepared into a diff preview before approval; a denied call discloses only the permission outcome. Operations apply sequentially; if a later operation fails, earlier operations remain applied and the failure reports them explicitly. Moves and atomic rollback are not supported yet.",
             input: Input,
             output: Output,
             toModelOutput: ({ output }) => [{ type: "text", text: toModelOutput(output) }],
@@ -100,62 +109,93 @@ const layer = Layer.effectDiscard(
                 const targets: Array<{ readonly hunk: Patch.Hunk; readonly target: LocationMutation.Target }> = []
                 for (const hunk of hunks)
                   targets.push({ hunk, target: yield* mutation.resolve({ path: hunk.path, kind: "file" }) })
+                // Operations are prepared (targets stat'ed and read, replacements derived) before
+                // approval so the permission dialog can show the resulting diff. A denied call
+                // always settles as the permission outcome: preparation failures stay model-invisible
+                // until the approval decision, and writes never happen without approval.
+                const preparation = yield* Effect.gen(function* () {
+                  const prepared: Prepared[] = []
+                  for (const { hunk, target } of targets) {
+                    yield* Effect.gen(function* () {
+                      if (hunk.type === "add") {
+                        prepared.push({
+                          ...hunk,
+                          target,
+                          before: "",
+                          after:
+                            hunk.contents.endsWith("\n") || hunk.contents === "" ? hunk.contents : `${hunk.contents}\n`,
+                        })
+                        return
+                      }
+                      if ((yield* fs.stat(target.canonical)).type !== "File") yield* fail(hunk.path)
+                      const source = yield* fs.readFile(target.canonical)
+                      const original = new TextDecoder("utf-8", { ignoreBOM: true }).decode(source)
+                      const before = original.replace(/^\uFEFF/, "")
+                      if (hunk.type === "delete") {
+                        prepared.push({ ...hunk, target, before, after: "" })
+                        return
+                      }
+                      const update = yield* Effect.try({
+                        try: () => Patch.derive(hunk.path, hunk.chunks, original),
+                        catch: (cause) => fail(hunk.path, cause),
+                      })
+                      prepared.push({
+                        ...hunk,
+                        target,
+                        source,
+                        content: Patch.joinBom(update.content, update.bom),
+                        before,
+                        after: update.content,
+                      })
+                    }).pipe(Effect.mapError((error) => (error instanceof ToolFailure ? error : fail(hunk.path, error))))
+                  }
+                  return prepared
+                }).pipe(
+                  Effect.map((prepared) => ({ _tag: "ready" as const, prepared, patchFiles: prepared.map(patchFile) })),
+                  Effect.catch((error) =>
+                    Effect.succeed({
+                      _tag: "failure" as const,
+                      failure: error instanceof ToolFailure ? error : fail("patch", error),
+                    }),
+                  ),
+                )
+
                 const externalDirectories = new Map<string, LocationMutation.ExternalDirectoryAuthorization>()
                 for (const { target } of targets) {
                   const external = target.externalDirectory
                   if (external) externalDirectories.set(external.resource, external)
                 }
                 for (const external of externalDirectories.values()) {
-                  yield* permission.assert({
-                    ...LocationMutation.externalDirectoryPermission(external),
+                  yield* permission
+                    .assert({
+                      ...LocationMutation.externalDirectoryPermission(external),
+                      sessionID: context.sessionID,
+                      agent: context.agent,
+                      source,
+                    })
+                    .pipe(Effect.mapError(PermissionFailure.fromError))
+                }
+                yield* permission
+                  .assert({
+                    action: "edit",
+                    resources: [...new Set(targets.map(({ target }) => target.resource))],
+                    save: ["*"],
+                    metadata:
+                      preparation._tag === "ready"
+                        ? {
+                            filepath: targets[0]?.target.resource ?? "",
+                            diff: preparation.patchFiles.map((file) => file.patch).join("\n"),
+                          }
+                        : { filepath: targets[0]?.target.resource ?? "" },
                     sessionID: context.sessionID,
                     agent: context.agent,
                     source,
                   })
-                }
-                yield* permission.assert({
-                  action: "edit",
-                  resources: [...new Set(targets.map(({ target }) => target.resource))],
-                  save: ["*"],
-                  sessionID: context.sessionID,
-                  agent: context.agent,
-                  source,
-                })
+                  .pipe(Effect.mapError(PermissionFailure.fromError))
 
-                const prepared: Prepared[] = []
-                for (const { hunk, target } of targets) {
-                  yield* Effect.gen(function* () {
-                    if (hunk.type === "add") {
-                      prepared.push({
-                        ...hunk,
-                        target,
-                        before: "",
-                        after:
-                          hunk.contents.endsWith("\n") || hunk.contents === "" ? hunk.contents : `${hunk.contents}\n`,
-                      })
-                      return
-                    }
-                    if ((yield* fs.stat(target.canonical)).type !== "File") yield* fail(hunk.path)
-                    const source = yield* fs.readFile(target.canonical)
-                    const original = new TextDecoder("utf-8", { ignoreBOM: true }).decode(source)
-                    const before = original.replace(/^\uFEFF/, "")
-                    if (hunk.type === "delete") {
-                      prepared.push({ ...hunk, target, before, after: "" })
-                      return
-                    }
-                    const update = Patch.derive(hunk.path, hunk.chunks, original)
-                    prepared.push({
-                      ...hunk,
-                      target,
-                      source,
-                      content: Patch.joinBom(update.content, update.bom),
-                      before,
-                      after: update.content,
-                    })
-                  }).pipe(Effect.mapError((error) => (error instanceof ToolFailure ? error : fail(hunk.path, error))))
-                }
-
-                const patchFiles = prepared.map(patchFile)
+                if (preparation._tag === "failure") return yield* preparation.failure
+                const prepared = preparation.prepared
+                const patchFiles = preparation.patchFiles
                 yield* Effect.forEach(
                   prepared,
                   (change) =>
@@ -185,7 +225,8 @@ const layer = Layer.effectDiscard(
                     }).pipe(Effect.mapError((error) => fail(change.path, error))),
                   { discard: true },
                 )
-                return { applied, files: patchFiles }
+                const observation = yield* observer.afterEdit(applied.map((item) => item.target))
+                return { applied, files: patchFiles, ...observation }
               }).pipe(Effect.mapError((error) => (error instanceof ToolFailure ? error : fail("patch", error))))
             },
           }),
@@ -199,7 +240,14 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/apply-patch",
   layer,
-  deps: [ToolRegistry.node, LocationMutation.node, FileMutation.node, FSUtil.node, PermissionV2.node],
+  deps: [
+    ToolRegistry.node,
+    LocationMutation.node,
+    FileMutation.node,
+    FSUtil.node,
+    PermissionV2.node,
+    EditObserver.node,
+  ],
 })
 
 function patchFile(change: Prepared): typeof FileDiff.Info.Type {

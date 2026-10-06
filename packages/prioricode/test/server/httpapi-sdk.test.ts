@@ -840,6 +840,8 @@ describe("HttpApi SDK", () => {
         const session = yield* capture(() => sdk.session.create({ title: "tui" }))
         const sessionID = String(record(session.data).id)
         const appendPrompt = yield* capture(() => sdk.tui.appendPrompt({ text: "hello" }))
+        const attachPrompt = yield* capture(() => sdk.tui.attachPrompt({ mime: "image/png", data: "aW1hZ2U=" }))
+        const emptyAttach = yield* capture(() => sdk.tui.attachPrompt({ mime: "image/png", data: "" }))
         const openHelp = yield* capture(() => sdk.tui.openHelp())
         const openSessions = yield* capture(() => sdk.tui.openSessions())
         const openThemes = yield* capture(() => sdk.tui.openThemes())
@@ -856,6 +858,8 @@ describe("HttpApi SDK", () => {
           statuses: statuses({
             session,
             appendPrompt,
+            attachPrompt,
+            emptyAttach,
             openHelp,
             openSessions,
             openThemes,
@@ -870,6 +874,7 @@ describe("HttpApi SDK", () => {
           }),
           data: {
             appendPrompt: appendPrompt.data,
+            attachPrompt: attachPrompt.data,
             openHelp: openHelp.data,
             openSessions: openSessions.data,
             openThemes: openThemes.data,

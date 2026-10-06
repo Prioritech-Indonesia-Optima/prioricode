@@ -424,8 +424,23 @@ export interface Interface {
     model?: Schema.Schema.Type<typeof Model>
     metadata?: typeof Metadata.Type
     permission?: PermissionV1.Ruleset
+    permissionMode?: Permission.Mode
     workspaceID?: WorkspaceV2.ID
   }) => Effect.Effect<Info>
+  /**
+   * The permission mode that governs this Session. Child (subagent) Sessions
+   * follow their parent chain: the nearest ancestor with an explicitly set
+   * mode wins, so a parent in `always-allow` or `ask-first` governs its
+   * subagents instead of leaving them on the unset default.
+   */
+  readonly effectivePermissionMode: (sessionID: SessionID) => Effect.Effect<Permission.Mode | undefined>
+  /**
+   * Whether this Session runs unattended (`--auto`/yolo): true when this
+   * Session or any ancestor carries `metadata.autonomous`. Autonomous
+   * Sessions resolve questions and permission asks themselves instead of
+   * waiting for a human who is not there.
+   */
+  readonly effectiveAutonomous: (sessionID: SessionID) => Effect.Effect<boolean>
   readonly fork: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Info, NotFound>
   readonly touch: (sessionID: SessionID) => Effect.Effect<void>
   readonly get: (id: SessionID) => Effect.Effect<Info, NotFound>
@@ -512,6 +527,7 @@ const layer: Layer.Layer<
       path?: string
       metadata?: typeof Metadata.Type
       permission?: PermissionV1.Ruleset
+      permissionMode?: Permission.Mode
     }) {
       const ctx = yield* InstanceState.context
       const result: Info = {
@@ -528,6 +544,7 @@ const layer: Layer.Layer<
         model: input.model,
         metadata: input.metadata,
         permission: input.permission ? [...input.permission] : undefined,
+        permissionMode: input.permissionMode,
         cost: 0,
         tokens: EmptyTokens,
         time: {
@@ -546,6 +563,44 @@ const layer: Layer.Layer<
       const row = yield* db.select().from(SessionTable).where(eq(SessionTable.id, id)).get().pipe(Effect.orDie)
       if (!row) return yield* Effect.fail(new NotFoundError({ message: `Session not found: ${id}` }))
       return fromRow(row)
+    })
+
+    const effectivePermissionMode = Effect.fn("Session.effectivePermissionMode")(function* (sessionID: SessionID) {
+      const session = yield* get(sessionID).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
+      if (!session) return undefined
+      // An explicit mode on this Session always wins. A subagent child row is
+      // left unset by TaskTool, so it follows the nearest ancestor with an
+      // explicit mode; a parent switching modes mid-run therefore keeps
+      // governing its subagents instead of escaping through a stale copy.
+      if (session.permissionMode !== undefined) return session.permissionMode
+      if (session.parentID === undefined) return undefined
+      const visited = new Set<SessionID>([sessionID])
+      let current = session
+      for (;;) {
+        const parentID = current.parentID
+        if (parentID === undefined || visited.has(parentID)) break
+        visited.add(parentID)
+        const parent = yield* get(parentID).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
+        if (!parent) break
+        if (parent.permissionMode !== undefined) return parent.permissionMode
+        current = parent
+      }
+      return session.permissionMode
+    })
+
+    const effectiveAutonomous = Effect.fn("Session.effectiveAutonomous")(function* (sessionID: SessionID) {
+      const visited = new Set<SessionID>()
+      let current: SessionID | undefined = sessionID
+      while (current !== undefined && !visited.has(current)) {
+        visited.add(current)
+        const found: Info | undefined = yield* get(current).pipe(
+          Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)),
+        )
+        if (!found) return false
+        if (found.metadata?.autonomous === true) return true
+        current = found.parentID
+      }
+      return false
     })
 
     const list = Effect.fn("Session.list")(function* (input?: ListInput) {
@@ -669,6 +724,30 @@ const layer: Layer.Layer<
       } as SessionV1.Part
     })
 
+    /**
+     * A fresh root Session starts with the permission mode the user last
+     * selected in this directory (Claude Code behavior): the most recently
+     * updated non-archived root Session's explicit mode. Child Sessions are
+     * excluded; they follow their parent through `effectivePermissionMode`.
+     */
+    const inheritedPermissionMode = Effect.fnUntraced(function* (directory: string) {
+      const row = yield* db
+        .select({ permission_mode: SessionTable.permission_mode })
+        .from(SessionTable)
+        .where(
+          and(
+            isNull(SessionTable.parent_id),
+            eq(SessionTable.directory, directory),
+            isNull(SessionTable.time_archived),
+          ),
+        )
+        .orderBy(desc(SessionTable.time_updated), desc(SessionTable.id))
+        .limit(1)
+        .get()
+        .pipe(Effect.orDie)
+      return row?.permission_mode ?? undefined
+    })
+
     const create = Effect.fn("Session.create")(function* (input?: {
       parentID?: SessionID
       title?: string
@@ -676,6 +755,7 @@ const layer: Layer.Layer<
       model?: Schema.Schema.Type<typeof Model>
       metadata?: typeof Metadata.Type
       permission?: PermissionV1.Ruleset
+      permissionMode?: Permission.Mode
       workspaceID?: WorkspaceV2.ID
     }) {
       const ctx = yield* InstanceState.context
@@ -689,6 +769,9 @@ const layer: Layer.Layer<
         model: input?.model,
         metadata: input?.metadata,
         permission: input?.permission,
+        permissionMode:
+          input?.permissionMode ??
+          (input?.parentID === undefined ? yield* inheritedPermissionMode(ctx.directory) : undefined),
         workspaceID: input?.workspaceID ?? workspace,
       })
     })
@@ -703,6 +786,8 @@ const layer: Layer.Layer<
         workspaceID: original.workspaceID,
         title,
         metadata: structuredClone(original.metadata),
+        permission: original.permission ? [...original.permission] : undefined,
+        permissionMode: original.permissionMode,
       })
       const msgs = yield* messages({ sessionID: input.sessionID })
       const idMap = new Map<string, MessageID>()
@@ -922,6 +1007,8 @@ const layer: Layer.Layer<
       fork,
       touch,
       get,
+      effectivePermissionMode,
+      effectiveAutonomous,
       setTitle,
       setArchived,
       setMetadata,

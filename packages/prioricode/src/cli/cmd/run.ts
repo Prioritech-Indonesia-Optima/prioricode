@@ -1,4 +1,5 @@
 import type { PermissionV1 } from "@prioricode/core/v1/permission"
+import { DestructiveCommand } from "@prioricode/core/permission/destructive"
 import { FSUtil } from "@prioricode/core/fs-util"
 // CLI entry point for `prioricode run` and `prioricode --mini`.
 //
@@ -519,6 +520,7 @@ export const RunCommand = effectCmd({
         const result = await sdk.session.create({
           title: name,
           permission: [...rules],
+          metadata: auto ? { autonomous: true } : undefined,
         })
         const id = result.data?.id
         if (!id) {
@@ -562,6 +564,7 @@ export const RunCommand = effectCmd({
               }
             : undefined,
           permission: [...rules],
+          metadata: auto ? { autonomous: true } : undefined,
         })
         const id = result.data?.id
         if (!id) {
@@ -803,6 +806,22 @@ export const RunCommand = effectCmd({
               if (!sessions.has(permission.sessionID)) continue
 
               if (auto) {
+                const dangerous =
+                  permission.permission === "doom_loop" ||
+                  (permission.permission === "bash" &&
+                    permission.patterns.some((pattern: string) => DestructiveCommand.isDestructive(pattern)))
+                if (dangerous) {
+                  UI.println(
+                    UI.Style.TEXT_WARNING_BOLD + "!",
+                    UI.Style.TEXT_NORMAL +
+                      `permission requested: ${permission.permission} (${permission.patterns.join(", ")}); auto-rejecting unsafe request`,
+                  )
+                  await client.permission.reply({
+                    requestID: permission.id,
+                    reply: "reject",
+                  })
+                  continue
+                }
                 await client.permission.reply({
                   requestID: permission.id,
                   reply: "once",
@@ -817,6 +836,25 @@ export const RunCommand = effectCmd({
                   requestID: permission.id,
                   reply: "reject",
                 })
+              }
+            }
+
+            // Safety net for sessions that resumed without the autonomous
+            // flag (pre-feature rows): never let a question block a headless
+            // run. Autonomous runs pick the first option; attended-less runs
+            // reject so the model can proceed without it.
+            if (event.type === "question.asked") {
+              const request = event.properties
+              if (!sessions.has(request.sessionID)) continue
+              if (auto) {
+                await client.question.reply({
+                  requestID: request.id,
+                  answers: request.questions.map((q: { options: { label: string }[] }) => [
+                    q.options[0]?.label ?? "yes",
+                  ]),
+                })
+              } else {
+                await client.question.reject({ requestID: request.id })
               }
             }
           }

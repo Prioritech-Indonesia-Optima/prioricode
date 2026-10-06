@@ -15,6 +15,7 @@ import semver from "semver"
 import { InstallationChannel, InstallationVersion } from "@prioricode/core/installation/version"
 import { NpmConfig } from "@prioricode/core/npm-config"
 import { InstallationEvent } from "@prioricode/schema/installation-event"
+import { isMissingShell, windowsShellCandidates } from "./windows-shell"
 
 export type Method = "curl" | "npm" | "yarn" | "pnpm" | "bun" | "brew" | "scoop" | "choco" | "unknown"
 
@@ -53,12 +54,71 @@ export function isLocal() {
   return InstallationChannel === "local"
 }
 
+export const UPGRADE_CAUSES = [
+  "command-failed",
+  "shell-not-found",
+  "locked-binary",
+  "elevation-required",
+  "verification-failed",
+] as const
+export type UpgradeCause = (typeof UPGRADE_CAUSES)[number]
+
 export class UpgradeFailedError extends Schema.TaggedErrorClass<UpgradeFailedError>()("UpgradeFailedError", {
   stderr: Schema.String,
+  cause: Schema.optional(Schema.Literals(UPGRADE_CAUSES)),
+  target: Schema.optional(Schema.String),
 }) {
   override get message() {
-    return this.stderr
+    const remediation = upgradeRemediation(this.cause)
+    return remediation ? `${this.stderr} ${remediation}` : this.stderr
   }
+}
+
+// One cause→remediation table so the CLI, the HTTP handler, and the TUI all
+// render the same actionable hint instead of re-matching locale-fragile
+// stderr substrings at each call site.
+export function upgradeRemediation(cause?: UpgradeCause): string | undefined {
+  switch (cause) {
+    case "elevation-required":
+      return "Please run the terminal as Administrator and try again."
+    case "locked-binary":
+      return "Close all running PrioriCode terminals and editors, then retry."
+    case "shell-not-found":
+      return "Install Windows PowerShell 5.1 or pwsh 7, or update manually from the GitHub Releases page."
+    case "verification-failed":
+      return "The upgrade did not take effect; if it repeats, reinstall from the GitHub Releases page."
+    case "command-failed":
+    case undefined:
+      return undefined
+  }
+}
+
+// Pure failure classifier: sanitized, deterministic, cause-tagged messages.
+// Never echoes raw command output — package-manager stderr has leaked tokens
+// in the past, and localized choco output cannot be matched verbatim.
+export function classifyUpgradeFailure(
+  method: Method,
+  platform: NodeJS.Platform,
+  result?: { code: number; stderr: string },
+): { stderr: string; cause: UpgradeCause } {
+  const stderr = result?.stderr ?? ""
+  if (method === "choco" && /elevat/i.test(stderr))
+    return { stderr: "not running from an elevated command shell", cause: "elevation-required" }
+  if (platform === "win32" && /EPERM|EBUSY|being used by another process/i.test(stderr))
+    return { stderr: `Upgrade failed for ${method} (exit code ${result?.code}).`, cause: "locked-binary" }
+  if (result) return { stderr: `Upgrade failed for ${method} (exit code ${result.code}).`, cause: "command-failed" }
+  return { stderr: `Upgrade failed for ${method}.`, cause: "command-failed" }
+}
+
+// A 200 response can still be an HTML error/captive-portal page or an empty
+// body; refuse to pipe that into a shell. Real installers (both the bash and
+// PowerShell variants) always mention "install", so this also catches gross
+// truncation without rejecting legitimate release copies.
+function installerBodyLooksValid(body: string) {
+  const text = body.trim()
+  if (!text) return false
+  if (/^<(!doctype|html)/i.test(text)) return false
+  return /install/i.test(text)
 }
 
 // Response schemas for external version APIs
@@ -133,11 +193,79 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
         return "prioricode"
       })
 
-      const upgradeFailure = (method: Method, result?: { code: number; stdout: string; stderr: string }) => {
-        if (method === "choco") return "not running from an elevated command shell"
-        if (result) return `Upgrade failed for ${method} (exit code ${result.code}).`
-        return `Upgrade failed for ${method}.`
+      const fail = (method: Method, result?: { code: number; stdout: string; stderr: string }, target?: string) => {
+        const classified = classifyUpgradeFailure(method, process.platform, result)
+        return new UpgradeFailedError({ stderr: classified.stderr, cause: classified.cause, target })
       }
+
+      // Post-upgrade truth check. `curl` confirms the exact binary path;
+      // package managers are confirmed from their own list output (never by
+      // exec'ing through PATH, which can resolve a different copy). A concrete
+      // version that differs from the target proves the "successful" command
+      // left the install stale (Windows EBUSY, PATH shims, half swaps). An
+      // empty or unparsable result is unverifiable, not a false failure.
+      const verifyInstall = Effect.fnUntraced(function* (m: Method, target: string) {
+        if (m === "curl") {
+          if (!path.basename(process.execPath).toLowerCase().startsWith("prioricode")) return
+          const installed = yield* run([process.execPath, "--version"])
+          if (installed.code !== 0) return `Upgrade did not produce a runnable binary (exit ${installed.code}).`
+          const version = installed.stdout.trim()
+          if (version !== target)
+            return `Upgrade reported success but ${process.execPath} still runs ${version || "an unknown version"} instead of ${target}.`
+          return
+        }
+        const formula = m === "brew" ? yield* getBrewFormula() : undefined
+        const probe: { command: string[]; pattern: RegExp; label: string } | undefined =
+          m === "npm"
+            ? {
+                command: ["npm", "list", "-g", "--depth=0", "prioricode-ai"],
+                pattern: /prioricode-ai@(\d+\.\d+\.\d+[^\s()]*)/,
+                label: "prioricode-ai",
+              }
+            : m === "pnpm"
+              ? {
+                  command: ["pnpm", "list", "-g", "prioricode-ai"],
+                  pattern: /prioricode-ai (\d+\.\d+\.\d+[^\s]*)/,
+                  label: "prioricode-ai",
+                }
+              : m === "bun"
+                ? {
+                    command: ["bun", "pm", "ls", "-g"],
+                    pattern: /prioricode-ai@(\d+\.\d+\.\d+[^\s]*)/,
+                    label: "prioricode-ai",
+                  }
+                : m === "yarn"
+                  ? {
+                      command: ["yarn", "global", "list"],
+                      pattern: /prioricode-ai@(\d+\.\d+\.\d+[^\s"]*)/,
+                      label: "prioricode-ai",
+                    }
+                  : m === "scoop"
+                    ? {
+                        command: ["scoop", "list", "prioricode"],
+                        pattern: /prioricode\s+v?(\d+\.\d+\.\d+[^\s]*)/,
+                        label: "prioricode",
+                      }
+                    : m === "choco"
+                      ? {
+                          command: ["choco", "list", "--limit-output", "prioricode"],
+                          pattern: /prioricode\|(\d+\.\d+\.\d+[^\s|]*)/,
+                          label: "prioricode",
+                        }
+                      : m === "brew" && formula
+                        ? {
+                            command: ["brew", "list", "--versions", formula],
+                            pattern: /prioricode\s+(\d+\.\d+\.\d+[^\s]*)/,
+                            label: formula,
+                          }
+                        : undefined
+        if (!probe) return
+        const output = yield* text(probe.command)
+        const reported = output.match(probe.pattern)?.[1]
+        if (reported && semver.valid(reported) && semver.neq(reported, target)) {
+          return `Upgrade reported success but ${m} still lists ${probe.label} at ${reported} instead of ${target}.`
+        }
+      })
 
       const upgradeScriptShell = Effect.fnUntraced(function* () {
         const bashVersion = yield* text(["bash", "--version"])
@@ -178,6 +306,13 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
             PRIORICODE_INSTALL_DIR: path.dirname(process.execPath),
           }
 
+          const rejected = (stderr: string, failure: UpgradeCause) => ({
+            code: 1,
+            stdout: "",
+            stderr,
+            failure,
+          })
+
           if (process.platform === "win32") {
             // Run the installer from a local pinned copy instead of
             // `irm <domain>/install.ps1 | iex`: a domain-only fetch has no
@@ -185,31 +320,39 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
             // installer runs while prioricode.exe is still executing —
             // install.ps1 handles the locked-image swap itself.
             const body = yield* fetchInstaller("install.ps1", target)
+            if (!installerBodyLooksValid(body))
+              return rejected("Upgrade failed for curl: fetched installer was empty or not a script.", "command-failed")
             const scriptPath = path.join(os.tmpdir(), `prioricode-install-${target}-${process.pid}.ps1`)
-            const result = yield* fs.writeFileString(scriptPath, body).pipe(
+            let result = { code: 1, stdout: "", stderr: "no Windows PowerShell or pwsh installation was found" }
+            const ran = yield* fs.writeFileString(scriptPath, body).pipe(
               Effect.andThen(
-                appProcess.run(
-                  ChildProcess.make(
-                    "powershell.exe",
-                    ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath],
-                    {
-                      env: installEnv,
-                      extendEnv: true,
-                    },
-                  ),
-                ),
+                Effect.gen(function* () {
+                  for (const shell of windowsShellCandidates(process.env)) {
+                    const spawned = yield* run(
+                      [shell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath],
+                      {
+                        env: installEnv,
+                      },
+                    )
+                    // ENOENT means this candidate is absent; a real nonzero
+                    // exit is the installer's own verdict and must propagate.
+                    if (isMissingShell(spawned.stderr)) continue
+                    result = spawned
+                    return true
+                  }
+                  return false
+                }),
               ),
               Effect.ensuring(fs.remove(scriptPath).pipe(Effect.ignore)),
             )
-            return {
-              code: result.exitCode,
-              stdout: result.stdout.toString("utf8"),
-              stderr: result.stderr.toString("utf8"),
-            }
+            if (!ran) return rejected(result.stderr, "shell-not-found")
+            return result
           }
 
-          const body = yield* fetchInstaller("install", target)
-          const bodyBytes = new TextEncoder().encode(body)
+          const posixBody = yield* fetchInstaller("install", target)
+          if (!installerBodyLooksValid(posixBody))
+            return rejected("Upgrade failed for curl: fetched installer was empty or not a script.", "command-failed")
+          const bodyBytes = new TextEncoder().encode(posixBody)
           const shell = yield* upgradeScriptShell()
           const result = yield* appProcess.run(
             ChildProcess.make(shell, [], {
@@ -224,7 +367,7 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
             stderr: result.stderr.toString("utf8"),
           }
         },
-        Effect.mapError(() => new UpgradeFailedError({ stderr: upgradeFailure("curl") })),
+        Effect.mapError(() => new UpgradeFailedError({ stderr: "Upgrade failed for curl.", cause: "command-failed" })),
       )
 
       const result: Interface = {
@@ -327,7 +470,7 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
           return data.tag_name.replace(/^v/, "")
         }, Effect.orDie),
         upgrade: Effect.fn("Installation.upgrade")(function* (m: Method, target: string) {
-          let upgradeResult: { code: number; stdout: string; stderr: string } | undefined
+          let upgradeResult: { code: number; stdout: string; stderr: string; failure?: UpgradeCause } | undefined
           switch (m) {
             case "curl":
               upgradeResult = yield* upgradeCurl(target)
@@ -370,32 +513,21 @@ const layer: Layer.Layer<Service, never, HttpClient.HttpClient | AppProcess.Serv
               upgradeResult = yield* run(["scoop", "install", `prioricode@${target}`])
               break
             default:
-              return yield* new UpgradeFailedError({ stderr: `Unknown installation method: ${m}` })
+              return yield* new UpgradeFailedError({ stderr: `Unknown installation method: ${m}`, target })
+          }
+          if (upgradeResult?.failure) {
+            return yield* new UpgradeFailedError({ stderr: upgradeResult.stderr, cause: upgradeResult.failure, target })
           }
           if (!upgradeResult || upgradeResult.code !== 0) {
-            return yield* new UpgradeFailedError({ stderr: upgradeFailure(m, upgradeResult) })
+            return yield* fail(m, upgradeResult, target)
           }
-          // The installer exits 0 when the target binary already "looks" right,
-          // so confirm the binary at this exact path really reports the target
-          // version. Without this a no-op install (e.g. a stale PATH copy) is
-          // reported to the user as a successful upgrade. Skipped for dev runs
-          // where execPath is bun itself rather than an installed prioricode.
-          if (m === "curl" && path.basename(process.execPath).toLowerCase().startsWith("prioricode")) {
-            const installed = yield* run([process.execPath, "--version"])
-            const version = installed.stdout.trim()
-            if (installed.code !== 0) {
-              return yield* new UpgradeFailedError({
-                stderr: `Upgrade did not produce a runnable binary: ${
-                  installed.stderr.trim().split("\n").pop() || `exit ${installed.code}`
-                }`,
-              })
-            }
-            if (version !== target) {
-              return yield* new UpgradeFailedError({
-                stderr: `Upgrade reported success but ${process.execPath} still runs ${version || "an unknown version"} instead of ${target}.`,
-              })
-            }
-          }
+          // Package managers can exit 0 while the requested version did not
+          // actually land (stale PATH copy, pinned-but-present, offline
+          // no-op). Verify from the manager's own state — never by exec'ing
+          // `prioricode --version` through PATH, which can resolve a
+          // different copy than the one just upgraded.
+          const verify = yield* verifyInstall(m, target)
+          if (verify) return yield* new UpgradeFailedError({ stderr: verify, cause: "verification-failed", target })
           yield* Effect.logInfo("upgraded", {
             method: m,
             target,

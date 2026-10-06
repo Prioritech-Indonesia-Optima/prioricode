@@ -1,6 +1,6 @@
 import { RGBA, TextAttributes } from "@opentui/core"
 import open from "open"
-import { createSignal } from "solid-js"
+import { createMemo, createSignal } from "solid-js"
 import { selectedForeground, useTheme } from "../context/theme"
 import { useDialog, type DialogContext } from "../ui/dialog"
 import { Link } from "../ui/link"
@@ -39,7 +39,7 @@ function panelOverlay(color: RGBA) {
 export function DialogRetryAction(props: DialogRetryActionProps) {
   const dialog = useDialog()
   const { theme } = useTheme()
-  const fg = selectedForeground(theme)
+  const fg = createMemo(() => selectedForeground(theme, theme.primary))
   const showGoTreatment = () => props.link === GO_URL
   const textBg = () => (showGoTreatment() ? panelOverlay(theme.backgroundPanel) : undefined)
   const [selected, setSelected] = createSignal<"dismiss" | "action">("action")
@@ -119,7 +119,7 @@ export function DialogRetryAction(props: DialogRetryActionProps) {
             onMouseUp={() => dismiss(props, dialog)}
           >
             <text
-              fg={selected() === "dismiss" ? fg : theme.textMuted}
+              fg={selected() === "dismiss" ? fg() : theme.textMuted}
               bg={selected() === "dismiss" ? undefined : textBg()}
               attributes={selected() === "dismiss" ? TextAttributes.BOLD : undefined}
             >
@@ -134,7 +134,7 @@ export function DialogRetryAction(props: DialogRetryActionProps) {
             onMouseUp={() => runAction(props, dialog)}
           >
             <text
-              fg={selected() === "action" ? fg : theme.text}
+              fg={selected() === "action" ? fg() : theme.text}
               bg={selected() === "action" ? undefined : textBg()}
               attributes={selected() === "action" ? TextAttributes.BOLD : undefined}
             >

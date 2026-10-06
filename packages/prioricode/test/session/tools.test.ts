@@ -64,6 +64,9 @@ const fakeTruncate = Truncate.Service.of({
 
 const layer = Layer.mergeAll(
   Layer.succeed(Plugin.Service, fakePlugin),
+  Layer.mock(Session.Service, {
+    effectivePermissionMode: () => Effect.succeed(undefined),
+  }),
   Layer.succeed(Hook.Service, {
     init: () => Effect.void,
     preToolUse: () => Effect.succeed(undefined),

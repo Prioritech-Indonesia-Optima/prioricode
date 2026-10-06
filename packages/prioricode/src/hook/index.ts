@@ -137,14 +137,13 @@ const layer = Layer.effect(
             } satisfies RunResult),
           ),
         )
-      const failed =
-        !result.ran
-          ? `hook process could not start: ${result.error ?? "unknown error"}`
-          : result.exitCode === 2 && name !== "PreToolUse"
-            ? `hook exited 2 (ignored for ${name}; only PreToolUse can block): ${result.stderr || hook.command}`
-            : result.exitCode !== 0
-              ? `hook exited ${result.exitCode ?? "null"}: ${result.stderr || hook.command}`
-              : undefined
+      const failed = !result.ran
+        ? `hook process could not start: ${result.error ?? "unknown error"}`
+        : result.exitCode === 2 && name !== "PreToolUse"
+          ? `hook exited 2 (ignored for ${name}; only PreToolUse can block): ${result.stderr || hook.command}`
+          : result.exitCode !== 0
+            ? `hook exited ${result.exitCode ?? "null"}: ${result.stderr || hook.command}`
+            : undefined
       if (failed !== undefined) {
         yield* Effect.logWarning("shell hook failed", { event: name, command: hook.command, reason: failed })
         yield* events.publish(HookEvent.Failed, { event: name, command: hook.command, reason: failed }).pipe(
@@ -227,14 +226,19 @@ const layer = Layer.effect(
               })
             }
             if (event.type === "session.error") {
-              const data = event.data as { sessionID?: SessionID; error?: { name?: string; data?: { message?: string } } }
+              const data = event.data as {
+                sessionID?: SessionID
+                error?: { name?: string; data?: { message?: string } }
+              }
               const message = data.error?.data?.message ?? data.error?.name ?? "session error"
               yield* fireForked("Notification", ctx.directory, data.sessionID ?? "", {
                 message: `prioricode session encountered an error: ${message}`,
                 notification_type: "error",
               })
             }
-          }).pipe(Effect.catchCause((cause) => Effect.logError("hook event dispatch crashed", { cause: String(cause) })))
+          }).pipe(
+            Effect.catchCause((cause) => Effect.logError("hook event dispatch crashed", { cause: String(cause) })),
+          )
         })
         yield* Effect.addFinalizer(() => unsubscribe)
         return {}

@@ -237,6 +237,7 @@ export default {
           \`permission\` text,
           \`permission_mode\` text,
           \`agent\` text,
+          \`goal\` text,
           \`model\` text,
           \`time_created\` integer NOT NULL,
           \`time_updated\` integer NOT NULL,

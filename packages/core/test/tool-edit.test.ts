@@ -228,10 +228,11 @@ describe("EditTool", () => {
             ),
           ).toEqual({
             type: "error",
-            value: expect.stringContaining(`Unable to edit ${external}`),
+            value: expect.stringContaining("Blocked by permission rules"),
           })
           expect(assertions.map((input) => input.action)).toEqual(["external_directory"])
-          expect(reads).toBe(0)
+          // Content is read for the approval diff preview but never disclosed on denial.
+          expect(reads).toBe(1)
           expect(writes).toEqual([])
 
           reset()
@@ -242,10 +243,10 @@ describe("EditTool", () => {
             ),
           ).toEqual({
             type: "error",
-            value: expect.stringContaining(`Unable to edit ${external}`),
+            value: expect.stringContaining("Blocked by permission rules"),
           })
           expect(assertions.map((input) => input.action)).toEqual(["external_directory", "edit"])
-          expect(reads).toBe(0)
+          expect(reads).toBe(1)
           expect(writes).toEqual([])
           expect(yield* Effect.promise(() => fs.readFile(external, "utf8"))).toBe("before")
         }),
@@ -256,7 +257,7 @@ describe("EditTool", () => {
     ),
   )
 
-  it.live("denied edit reads no target content and does not disclose whether oldString matches", () =>
+  it.live("denied edit does not disclose whether oldString matches", () =>
     Effect.acquireUseRelease(
       Effect.promise(() => tmpdir()),
       (tmp) => {
@@ -276,10 +277,13 @@ describe("EditTool", () => {
                   call({ path: "secret.txt", oldString: "not present", newString: "replacement" }),
                 )
 
-                expect(matching).toEqual({ type: "error", value: expect.stringContaining("Unable to edit secret.txt") })
+                expect(matching).toEqual({
+                  type: "error",
+                  value: expect.stringContaining("Blocked by permission rules"),
+                })
                 expect(missing).toEqual(matching)
                 expect(assertions.map((input) => input.action)).toEqual(["edit", "edit"])
-                expect(reads).toBe(0)
+                expect(reads).toBe(2)
                 expect(writes).toEqual([])
               }),
             ),
@@ -423,12 +427,22 @@ test("keeps the locked edit schema, semantics docstring, and deferred TODOs visi
     "absolute external paths retain mutation capability through a separate\n * external_directory approval before edit approval.",
   )
   for (const todo of [
-    "Port V1 fuzzy correction strategies only after exact-edit behavior is established: line-trimmed matching, block-anchor fallback, indentation correction, and similarity-threshold review.",
-    "Add formatter integration after V2 formatter runtime exists.",
     "Publish watcher/file-edit events after V2 watcher integration exists.",
-    "Add snapshots / undo after design exists.",
-    "Add LSP notification and diagnostics after V2 LSP runtime exists.",
+    "Add external formatter command runtime behind the V2 formatter config (LSP formatting already wired).",
   ]) {
     expect(source).toContain(`TODO: ${todo}`)
+  }
+  expect(source).not.toContain("Port V1 fuzzy correction strategies")
+  for (const strategy of [
+    "lineTrimmedReplacer",
+    "blockAnchorReplacer",
+    "whitespaceNormalizedReplacer",
+    "indentationFlexibleReplacer",
+    "escapeNormalizedReplacer",
+    "trimmedBoundaryReplacer",
+    "contextAwareReplacer",
+    "isDisproportionateMatch",
+  ]) {
+    expect(source).toContain(strategy)
   }
 })

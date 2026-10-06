@@ -1151,4 +1151,73 @@ export const dict: Record<string, string> = {
   "workspace.reset.archived.many": "සැසි {{count}} සංරක්ෂිත වනු ඇත.",
   "workspace.reset.note": "මෙය පෙරනිමි ශාඛාවට ගැලපෙන පරිදි වැඩබිම නැවත සකසනු ඇත.",
   "dialog.usageExceeded.dontShowAgain": "නැවත නොපෙන්වන්න",
+  "ssh.server.add": "Add SSH host",
+  "ssh.server.label": "SSH",
+  "ssh.server.menu.label": "SSH server",
+  "ssh.server.retryStart": "Retry connect",
+  "ssh.server.start": "Connect",
+  "ssh.server.stop": "Disconnect",
+  "ssh.server.updating": "Installing...",
+  "ssh.server.install": "Install PrioriCode",
+  "ssh.server.update": "Update PrioriCode",
+  "ssh.server.refresh": "Refresh",
+  "ssh.server.checking": "Checking...",
+  "ssh.server.empty": "No hosts found in this machine's SSH config file.",
+  "ssh.server.viaJump": "Jump host",
+  "ssh.server.manual.placeholder": "SSH alias or user@host",
+  "ssh.server.manual.add": "Add host",
+  "ssh.server.dialog.title": "Connect to an SSH host",
+  "ssh.server.dialog.description":
+    "Hosts come from this machine's SSH config. PrioriCode runs on the remote machine and this app connects to it through an encrypted tunnel.",
+  "ssh.server.dialog.search": "Search hosts",
+  "ssh.server.dialog.add": "Connect",
+  "ssh.server.status.starting": "Connecting...",
+  "ssh.server.status.connected": "Connected",
+  "desktop.ssh.error.prioricodeNotInstalled":
+    "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
+  "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
+  "desktop.ssh.error.bootstrapTimeout": "PrioriCode bootstrap on {{host}} timed out after {{timeout}}ms",
+  "desktop.ssh.error.healthTimeout": "SSH server for {{host}} health check timed out after {{timeout}}ms",
+  "desktop.ssh.error.serverExitedBeforeHealthy":
+    "SSH tunnel to {{host}} exited before becoming healthy (code={{code}} signal={{signal}}){{output}}",
+  "desktop.ssh.error.serverExited": "SSH tunnel to {{host}} exited after startup (code={{code}} signal={{signal}})",
+  "desktop.ssh.error.alreadyAdded": "{{host}} is already added",
+  "desktop.ssh.error.installPrioricode": "PrioriCode installation on {{host}} failed",
+  "desktop.ssh.error.hostsReadFailed": "Failed to read the SSH config file",
+  "desktop.ssh.error.invalidHost": "Enter a valid SSH host alias",
+  "desktop.ssh.error.updateVersion":
+    "PrioriCode install finished but {{host}} still reports {{installed}}; expected {{expected}}",
+  "desktop.ssh.error.noVersion": "no version",
+  "command.category.skills": "Skills",
+  "command.skills": "Browse skills",
+  "command.skills.description": "Pick a skill and insert its command into the prompt",
+  "dialog.skill.title": "Skills",
+  "dialog.skill.search": "Search skills",
+  "dialog.skill.empty": "No skills found",
+  "dialog.skill.error": "Failed to load skills",
+  "desktop.ssh.error.sshMissing":
+    "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
+  "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDenied":
+    "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
+  "desktop.ssh.error.hostUnresolved":
+    "Could not resolve {{host}}. Check the HostName in your SSH config and your network connection.",
+  "desktop.ssh.error.unreachable":
+    "Could not reach {{host}}. Check that the machine is online and that its SSH port is open.",
+  "desktop.ssh.error.hostKeyChanged":
+    "The host key for {{host}} no longer matches ~/.ssh/known_hosts. Verify the new key with the server administrator and update known_hosts before connecting.",
+  "desktop.ssh.error.invalidAlias":
+    "SSH host names cannot start with a dash, contain spaces, or contain control characters.",
+  "desktop.ssh.error.busy":
+    "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
+  "desktop.ssh.error.insecureBind":
+    "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "settings.general.row.savedPermissions.title": "Saved permissions",
+  "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
+  "settings.general.row.savedPermissions.manage": "Manage",
+  "dialog.savedPermissions.title": "Saved permissions",
+  "dialog.savedPermissions.empty": "No always-allow rules are saved.",
+  "dialog.savedPermissions.error": "Failed to load saved permissions.",
+  "dialog.savedPermissions.remove": "Remove rule",
+  "dialog.savedPermissions.close": "Close",
 }

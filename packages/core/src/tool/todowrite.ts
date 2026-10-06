@@ -3,6 +3,7 @@ export * as TodoWriteTool from "./todowrite"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
 import { PermissionV2 } from "../permission"
+import { PermissionFailure } from "./permission-failure"
 import { SessionTodo } from "../session/todo"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
@@ -37,17 +38,23 @@ const layer = Layer.effectDiscard(
           toModelOutput: ({ output }) => [{ type: "text", text: toModelOutput(output) }],
           execute: (input, context) =>
             Effect.gen(function* () {
-              yield* permission.assert({
-                action: name,
-                resources: ["*"],
-                save: ["*"],
-                sessionID: context.sessionID,
-                agent: context.agent,
-                source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
-              })
+              yield* permission
+                .assert({
+                  action: name,
+                  resources: ["*"],
+                  save: ["*"],
+                  sessionID: context.sessionID,
+                  agent: context.agent,
+                  source: { type: "tool", messageID: context.assistantMessageID, callID: context.toolCallID },
+                })
+                .pipe(Effect.mapError(PermissionFailure.fromError))
               yield* todos.update({ sessionID: context.sessionID, todos: input.todos })
               return { todos: input.todos }
-            }).pipe(Effect.mapError((error) => Tool.failure("Unable to update todos", error))),
+            }).pipe(
+              Effect.mapError((error) =>
+                error instanceof Tool.Failure ? error : Tool.failure("Unable to update todos", error),
+              ),
+            ),
         }),
       })
       .pipe(Effect.orDie)

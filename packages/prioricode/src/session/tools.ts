@@ -57,6 +57,11 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   const mcp = yield* MCP.Service
   const truncate = yield* Truncate.Service
   const flags = yield* RuntimeFlags.Service
+  const sessions = yield* Session.Service
+  // Subagent Sessions follow the main Session's mode: resolve through the
+  // parent chain once per provider turn so every tool ask below is governed
+  // by the mode the user actually set, not by the child's unset row.
+  const permissionMode = yield* sessions.effectivePermissionMode(input.session.id)
 
   const context = (args: Record<string, unknown>, options: ToolExecutionOptions): Tool.Context => ({
     sessionID: input.session.id,
@@ -87,7 +92,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
           sessionID: input.session.id,
           tool: { messageID: input.processor.message.id, callID: options.toolCallId },
           ruleset: Permission.merge(input.agent.permission, input.session.permission ?? []),
-          mode: input.session.permissionMode,
+          mode: permissionMode,
         })
         .pipe(Effect.orDie),
   })

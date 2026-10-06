@@ -56,3 +56,66 @@ jobs:
           $got = & ".\prev\bin\prioricode.exe" --version
           Write-Host "after upgrade: $got (want ${{ steps.rel.outputs.latest }})"
           if ("$got".Trim() -ne "${{ steps.rel.outputs.latest }}") { throw "upgrade did not produce the latest release" }
+
+  # The TUI does not spawn `prioricode upgrade`; it POSTs /global/upgrade to
+  # the in-process server while the same prioricode.exe image is executing.
+  # The nightly CLI job above never exercises that request-during-self-rename
+  # boundary: install.ps1 parks the running image mid-response, and the
+  # response JSON must still reach the client. This job reproduces it with
+  # `serve` hosting the very same handlers.
+  windows-http:
+    name: upgrade over live HTTP server (windows)
+    runs-on: windows-latest
+    shell: pwsh
+    steps:
+      - name: Resolve releases
+        id: rel
+        run: |
+          $tags = gh api "repos/Prioritech-Indonesia-Optima/prioricode/releases?per_page=20" --jq '[.[] | select(.prerelease == false) | select(.tag_name | test("^v[0-9]+\\.[0-9]+\\.[0-9]+$"))] | .[0].tag_name, .[1].tag_name'
+          $tags = $tags -split "`n"
+          $latest = $tags[0] -replace '^v',''
+          $prev = $tags[1] -replace '^v',''
+          if (-not $prev) { throw "no previous release found" }
+          "latest=$latest" >> $env:GITHUB_OUTPUT
+          "prev=$prev" >> $env:GITHUB_OUTPUT
+          Write-Host "upgrading $prev -> $latest"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install previous release
+        run: |
+          $zip = "prioricode-windows-x64.zip"
+          $url = "https://github.com/Prioritech-Indonesia-Optima/prioricode/releases/download/v${{ steps.rel.outputs.prev }}/$zip"
+          curl.exe -sSL --fail -o prev.zip $url
+          Expand-Archive prev.zip -DestinationPath prev
+
+      - name: Upgrade through the live server endpoint
+        run: |
+          $env:PRIORICODE_SERVER_PASSWORD = "e2e-test-password"
+          $port = 18234
+          $server = Start-Process -FilePath ".\prev\bin\prioricode.exe" `
+            -ArgumentList @("serve", "--port", "$port", "--hostname", "127.0.0.1") `
+            -PassThru -WindowStyle Hidden
+          $base = "http://127.0.0.1:$port"
+          $auth = "Basic " + [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("prioricode:e2e-test-password"))
+          $healthy = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            try {
+              Invoke-RestMethod -Uri "$base/global/health" -Headers @{ Authorization = $auth } -TimeoutSec 2 | Out-Null
+              $healthy = $true
+              break
+            } catch { Start-Sleep -Milliseconds 1000 }
+          }
+          if (-not $healthy) { throw "server never became healthy" }
+          $result = Invoke-RestMethod -Method Post -Uri "$base/global/upgrade" `
+            -Headers @{ Authorization = $auth } -ContentType "application/json" `
+            -Body (@{ target = "${{ steps.rel.outputs.latest }}" } | ConvertTo-Json) -TimeoutSec 300
+          Write-Host "upgrade response: $($result | ConvertTo-Json -Compress)"
+          if ($result.success -ne $true) { throw "HTTP upgrade did not report success: $($result | ConvertTo-Json -Compress)" }
+          Stop-Process -Id $server.Id -Force -ErrorAction SilentlyContinue
+
+      - name: Assert served binary was swapped on disk
+        run: |
+          $got = & ".\prev\bin\prioricode.exe" --version
+          Write-Host "after HTTP upgrade: $got (want ${{ steps.rel.outputs.latest }})"
+          if ("$got".Trim() -ne "${{ steps.rel.outputs.latest }}") { throw "live HTTP upgrade did not replace the running binary" }

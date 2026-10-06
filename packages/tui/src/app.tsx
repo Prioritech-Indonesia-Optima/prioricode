@@ -6,6 +6,8 @@ import { Global } from "@prioricode/core/global"
 import { Flag } from "@prioricode/core/flag/flag"
 import { ProductVersion } from "@prioricode/core/installation/version"
 import { ClipboardProvider, useClipboard } from "./context/clipboard"
+import { clipboardSignals } from "./clipboard-scenario"
+import { copyWithToast } from "./util/copy-clipboard"
 import { ExitProvider, useExit } from "./context/exit"
 import { EpilogueProvider } from "./context/epilogue"
 import * as Selection from "./util/selection"
@@ -50,6 +52,7 @@ import { DialogSettings } from "./component/dialog-settings"
 import { DialogHelp } from "./ui/dialog-help"
 import { DialogAgent } from "./component/dialog-agent"
 import { DialogPermission } from "./component/dialog-permission"
+import { DialogPermissionHistory } from "./component/dialog-permission-history"
 import { DialogSessionList } from "./component/dialog-session-list"
 import { DialogWorkspaceList } from "./component/dialog-workspace-list"
 import { DialogConsoleOrg } from "./component/dialog-console-org"
@@ -126,6 +129,7 @@ const appBindingCommands = [
   "theme.switch",
   "theme.switch_mode",
   "theme.mode.lock",
+  "permission.mode",
   "help.show",
   "docs.open",
   "diff.open",
@@ -139,7 +143,9 @@ const appBindingCommands = [
   "app.toggle.file_context",
   "app.toggle.diffwrap",
   "app.toggle.paste_summary",
+  "app.toggle.terminal_clipboard",
   "app.toggle.session_directory_filter",
+  "toast.dismiss",
 ] as const
 
 export type TuiInput = {
@@ -200,7 +206,9 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
               targetFps: 60,
               gatherStats: false,
               exitOnCtrlC: false,
-              useKittyKeyboard: {},
+              // Windows Terminal 1.25+ consumes Ctrl+V on keydown but still reports the
+              // kitty key-release event, which the prompt uses to detect image pastes.
+              useKittyKeyboard: process.platform === "win32" ? { events: true } : {},
               autoFocus: false,
               openConsoleOnError: false,
               useMouse: !Flag.PRIORICODE_DISABLE_MOUSE && input.config.mouse,
@@ -245,6 +253,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
         void renderer.getPalette({ size: 16 }).catch(() => undefined)
         const mode = (await renderer.waitForThemeMode(1000)) ?? "dark"
         if (renderer.isDestroyed) return
+        const terminalSignals = clipboardSignals()
 
         await render(() => {
           return (
@@ -265,17 +274,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                       worktree: global.data + "/worktree",
                     }}
                   >
-                    <TuiTerminalEnvironmentProvider
-                      value={{
-                        platform: process.platform,
-                        multiplexer: process.env.TMUX ? "tmux" : process.env.STY ? "screen" : undefined,
-                        displayServer: process.env.WAYLAND_DISPLAY
-                          ? "wayland"
-                          : process.env.DISPLAY
-                            ? "x11"
-                            : undefined,
-                      }}
-                    >
+                    <TuiTerminalEnvironmentProvider value={terminalSignals}>
                       <TuiStartupProvider
                         value={{
                           initialRoute: process.env.PRIORICODE_ROUTE
@@ -443,10 +442,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
   renderer.console.onCopySelection = async (text: string) => {
     if (!text || text.length === 0) return
 
-    await clipboard
-      .write?.(text)
-      .then(() => toast.show({ message: "Copied to clipboard", variant: "info" }))
-      .catch(toast.error)
+    await copyWithToast(clipboard, toast, text)
 
     renderer.clearSelection()
   }
@@ -707,6 +703,16 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         },
       },
       {
+        name: "permission.history",
+        title: "Permission history",
+        category: "Agent",
+        slashName: "permission-history",
+        enabled: () => route.data.type === "session",
+        run: () => {
+          dialog.replace(() => <DialogPermissionHistory />)
+        },
+      },
+      {
         name: "mcp.list",
         title: "Toggle MCPs",
         category: "Agent",
@@ -875,6 +881,13 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         category: "System",
       },
       {
+        name: "toast.dismiss",
+        title: "Dismiss notification",
+        category: "System",
+        enabled: () => toast.queue().length > 0,
+        run: () => toast.dismiss(),
+      },
+      {
         name: "app.debug",
         title: "Toggle debug panel",
         category: "System",
@@ -956,6 +969,17 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         run: () => {
           const current = kv.get("diff_wrap_mode", "word")
           kv.set("diff_wrap_mode", current === "word" ? "none" : "word")
+          dialog.clear()
+        },
+      },
+      {
+        name: "app.toggle.terminal_clipboard",
+        title: kv.get("terminal_clipboard_enabled", false)
+          ? "Disable OSC clipboard image reads (remote)"
+          : "Enable OSC clipboard image reads (remote)",
+        category: "System",
+        run: () => {
+          kv.set("terminal_clipboard_enabled", !kv.get("terminal_clipboard_enabled", false))
           dialog.clear()
         },
       },
@@ -1098,12 +1122,13 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
     const result = await sdk.client.global.upgrade({ target: version })
 
     if (result.error || !result.data?.success) {
-      toast.show({
-        variant: "error",
-        title: "Update Failed",
-        message: "Update failed",
-        duration: 10000,
-      })
+      const detail =
+        (result.data && !result.data.success ? result.data.error : undefined) ||
+        (typeof result.error === "object" && result.error && "error" in result.error
+          ? String(result.error.error)
+          : undefined) ||
+        "The server did not report a reason."
+      await DialogAlert.show(dialog, "Update Failed", detail.slice(0, 400))
       return
     }
 

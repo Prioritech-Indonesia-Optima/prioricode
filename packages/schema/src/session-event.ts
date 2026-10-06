@@ -73,6 +73,17 @@ export const ModelSwitched = Event.define({
 })
 export type ModelSwitched = typeof ModelSwitched.Type
 
+export const GoalSet = Event.define({
+  type: "session.next.goal.set",
+  ...options,
+  schema: {
+    ...Base,
+    messageID: SessionMessage.ID,
+    goal: Schema.String,
+  },
+})
+export type GoalSet = typeof GoalSet.Type
+
 export const Moved = Event.define({
   type: "session.next.moved",
   ...options,
@@ -474,6 +485,7 @@ export const DurableDefinitions = Event.inventory(
   RevertEvent.Staged,
   RevertEvent.Cleared,
   RevertEvent.Committed,
+  GoalSet,
 )
 
 export const Definitions = Event.inventory(
@@ -509,6 +521,7 @@ export const Definitions = Event.inventory(
   RevertEvent.Staged,
   RevertEvent.Cleared,
   RevertEvent.Committed,
+  GoalSet,
 )
 
 export const Durable = Schema.Union(DurableDefinitions, { mode: "oneOf" })

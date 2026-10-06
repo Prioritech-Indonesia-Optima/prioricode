@@ -108,7 +108,7 @@ function TextBody(props: { title: string; description?: string; icon?: string })
   )
 }
 
-export function PermissionPrompt(props: { request: PermissionRequest; directory?: string }) {
+export function PermissionPrompt(props: { request: PermissionRequest; directory?: string; pending?: () => number }) {
   const sdk = useSDK()
   const project = useProject()
   const sync = useSync()
@@ -387,6 +387,9 @@ export function PermissionPrompt(props: { request: PermissionRequest; directory?
               <box flexDirection="row" gap={1} flexShrink={0}>
                 <text fg={theme.warning}>{"△"}</text>
                 <text fg={theme.text}>Permission required</text>
+                <Show when={(props.pending?.() ?? 0) > 1}>
+                  <text fg={theme.warning}>· {props.pending!() - 1} more pending</text>
+                </Show>
               </box>
               <box flexDirection="row" gap={1} paddingLeft={2} flexShrink={0}>
                 <text fg={theme.textMuted} flexShrink={0}>
@@ -636,10 +639,16 @@ function Prompt<const T extends Record<string, string>>(props: {
       borderColor={theme.warning}
       customBorderChars={SplitBorder.customBorderChars}
       {...(store.expanded
-        ? { top: dimensions().height * -1 + 1, bottom: 1, left: 2, right: 2, position: "absolute" }
+        ? {
+            top: Math.min(-1, dimensions().height * -1 + 1),
+            bottom: 1,
+            left: 2,
+            right: 2,
+            position: "absolute",
+          }
         : {
             top: 0,
-            maxHeight: 15,
+            maxHeight: Math.max(1, Math.min(15, Math.floor(dimensions().height / 2))),
             bottom: 0,
             left: 0,
             right: 0,
@@ -674,12 +683,13 @@ function Prompt<const T extends Record<string, string>>(props: {
         justifyContent={narrow() ? "flex-start" : "space-between"}
         alignItems={narrow() ? "flex-start" : "center"}
       >
-        <box flexDirection="row" gap={1} flexShrink={0}>
+        <box flexDirection="row" gap={1} flexShrink={0} overflow="hidden">
           <For each={keys}>
             {(option) => (
               <box
                 paddingLeft={1}
                 paddingRight={1}
+                flexShrink={0}
                 backgroundColor={option === store.selected ? theme.warning : theme.backgroundMenu}
                 onMouseOver={() => setStore("selected", option)}
                 onMouseUp={() => {
@@ -687,7 +697,10 @@ function Prompt<const T extends Record<string, string>>(props: {
                   props.onSelect(option)
                 }}
               >
-                <text fg={option === store.selected ? selectedForeground(theme, theme.warning) : theme.textMuted}>
+                <text
+                  wrapMode="none"
+                  fg={option === store.selected ? selectedForeground(theme, theme.warning) : theme.textMuted}
+                >
                   {props.options[option]}
                 </text>
               </box>

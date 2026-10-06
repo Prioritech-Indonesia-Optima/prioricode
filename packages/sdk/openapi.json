@@ -519,6 +519,16 @@
                         },
                         "error": {
                           "type": "string"
+                        },
+                        "cause": {
+                          "type": "string",
+                          "enum": [
+                            "command-failed",
+                            "shell-not-found",
+                            "locked-binary",
+                            "elevation-required",
+                            "verification-failed"
+                          ]
                         }
                       },
                       "required": ["success", "error"],
@@ -8760,6 +8770,91 @@
         ]
       }
     },
+    "/tui/attach": {
+      "post": {
+        "tags": ["tui"],
+        "operationId": "tui.attachPrompt",
+        "parameters": [
+          {
+            "name": "directory",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          },
+          {
+            "name": "workspace",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Attachment queued successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "boolean",
+                  "description": "Attachment queued successfully"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "BadRequest | InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/effect_HttpApiError_BadRequest"
+                    },
+                    {
+                      "$ref": "#/components/schemas/InvalidRequestError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Attach a base64 file (image or PDF clipboard payload) to the TUI prompt.",
+        "summary": "Attach clipboard file to TUI prompt",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "filename": {
+                    "type": "string"
+                  },
+                  "mime": {
+                    "type": "string"
+                  },
+                  "data": {
+                    "type": "string",
+                    "description": "Base64-encoded file contents"
+                  }
+                },
+                "required": ["mime", "data"],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createPrioricodeClient } from \"@prioricode/sdk\n\nconst client = createPrioricodeClient()\nawait client.tui.attachPrompt({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/tui/open-help": {
       "post": {
         "tags": ["tui"],
@@ -9311,6 +9406,9 @@
                 "anyOf": [
                   {
                     "$ref": "#/components/schemas/EventTuiPromptAppend"
+                  },
+                  {
+                    "$ref": "#/components/schemas/EventTuiPromptAttach"
                   },
                   {
                     "$ref": "#/components/schemas/EventTuiCommandExecute"
@@ -10773,6 +10871,91 @@
         ]
       }
     },
+    "/api/session/{sessionID}/goal": {
+      "post": {
+        "tags": ["sessions"],
+        "operationId": "v2.session.setGoal",
+        "parameters": [
+          {
+            "name": "sessionID",
+            "in": "path",
+            "schema": {
+              "type": "string",
+              "pattern": "^ses"
+            },
+            "required": true
+          }
+        ],
+        "security": [],
+        "responses": {
+          "204": {
+            "description": "<No Content>"
+          },
+          "400": {
+            "description": "InvalidRequestError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvalidRequestError"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UnauthorizedError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnauthorizedError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "SessionNotFoundError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SessionNotFoundError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionNotFoundError"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "description": "Set, update, or (with an empty value) clear the durable goal re-anchored into every provider turn.",
+        "summary": "Set durable session goal",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "goal": {
+                    "type": "string"
+                  }
+                },
+                "required": ["goal"],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
+        "x-codeSamples": [
+          {
+            "lang": "js",
+            "source": "import { createPrioricodeClient } from \"@prioricode/sdk\n\nconst client = createPrioricodeClient()\nawait client.v2.session.setGoal({\n  ...\n})"
+          }
+        ]
+      }
+    },
     "/api/session/{sessionID}/prompt": {
       "post": {
         "tags": ["sessions"],
@@ -10845,11 +11028,18 @@
             }
           },
           "409": {
-            "description": "ConflictError",
+            "description": "ConflictError | SessionBusyError",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ConflictError"
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionBusyError"
+                    }
+                  ]
                 }
               }
             }
@@ -10934,11 +11124,14 @@
             }
           },
           "404": {
-            "description": "SessionNotFoundError",
+            "description": "SessionNotFoundError | MessageNotFoundError",
             "content": {
               "application/json": {
                 "schema": {
                   "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/MessageNotFoundError"
+                    },
                     {
                       "$ref": "#/components/schemas/SessionNotFoundError"
                     },
@@ -10946,6 +11139,33 @@
                       "$ref": "#/components/schemas/SessionNotFoundError"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError | SessionBusyError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionBusyError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "UnknownError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnknownError1"
                 }
               }
             }
@@ -10961,8 +11181,28 @@
             }
           }
         },
-        "description": "Compact a session conversation.",
+        "description": "Summarize durable history now; optionally only up to an anchor message, with focus instructions.",
         "summary": "Compact session",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "anchor": {
+                    "type": "string",
+                    "pattern": "^msg_"
+                  },
+                  "instructions": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": true
+        },
         "x-codeSamples": [
           {
             "lang": "js",
@@ -11024,6 +11264,16 @@
                       "$ref": "#/components/schemas/SessionNotFoundError"
                     }
                   ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConflictError"
                 }
               }
             }
@@ -11117,6 +11367,23 @@
                     },
                     {
                       "$ref": "#/components/schemas/SessionNotFoundError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError | SessionBusyError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionBusyError"
                     }
                   ]
                 }
@@ -11222,6 +11489,23 @@
               }
             }
           },
+          "409": {
+            "description": "ConflictError | SessionBusyError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionBusyError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
           "500": {
             "description": "UnknownError",
             "content": {
@@ -11293,6 +11577,23 @@
                     },
                     {
                       "$ref": "#/components/schemas/SessionNotFoundError"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ConflictError | SessionBusyError",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/ConflictError"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SessionBusyError"
                     }
                   ]
                 }
@@ -15663,6 +15964,9 @@
             "$ref": "#/components/schemas/EventSessionNextRevertCommitted"
           },
           {
+            "$ref": "#/components/schemas/EventSessionNextGoalSet"
+          },
+          {
             "$ref": "#/components/schemas/EventMessagePartDelta"
           },
           {
@@ -15720,6 +16024,12 @@
             "$ref": "#/components/schemas/EventQuestionV2Rejected"
           },
           {
+            "$ref": "#/components/schemas/EventSandboxUnavailable"
+          },
+          {
+            "$ref": "#/components/schemas/EventHookFailed"
+          },
+          {
             "$ref": "#/components/schemas/EventTodoUpdated"
           },
           {
@@ -15733,6 +16043,9 @@
           },
           {
             "$ref": "#/components/schemas/Event.tui.prompt.append"
+          },
+          {
+            "$ref": "#/components/schemas/Event.tui.prompt.attach"
           },
           {
             "$ref": "#/components/schemas/Event.tui.command.execute"
@@ -19307,6 +19620,42 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["session.next.goal.set"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "timestamp": {
+                        "type": "number"
+                      },
+                      "sessionID": {
+                        "type": "string",
+                        "pattern": "^ses"
+                      },
+                      "messageID": {
+                        "type": "string",
+                        "pattern": "^msg_"
+                      },
+                      "goal": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["timestamp", "sessionID", "messageID", "goal"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["message.part.delta"]
                   },
                   "properties": {
@@ -19901,6 +20250,67 @@
                   },
                   "type": {
                     "type": "string",
+                    "enum": ["sandbox.unavailable"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "reason": {
+                        "type": "string"
+                      },
+                      "mode": {
+                        "type": "string",
+                        "enum": ["best-effort", "require"]
+                      }
+                    },
+                    "required": ["reason", "mode"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["hook.failed"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "event": {
+                        "type": "string",
+                        "enum": ["PreToolUse", "PostToolUse", "SessionStart", "Stop", "Notification"]
+                      },
+                      "command": {
+                        "type": "string"
+                      },
+                      "reason": {
+                        "type": "string"
+                      }
+                    },
+                    "required": ["event", "command", "reason"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
                     "enum": ["todo.updated"]
                   },
                   "properties": {
@@ -20057,6 +20467,38 @@
                       }
                     },
                     "required": ["text"],
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["id", "type", "properties"],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "pattern": "^evt_"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["tui.prompt.attach"]
+                  },
+                  "properties": {
+                    "type": "object",
+                    "properties": {
+                      "filename": {
+                        "type": "string"
+                      },
+                      "mime": {
+                        "type": "string"
+                      },
+                      "data": {
+                        "type": "string",
+                        "description": "Base64-encoded file contents"
+                      }
+                    },
+                    "required": ["mime", "data"],
                     "additionalProperties": false
                   }
                 },
@@ -20803,6 +21245,9 @@
               },
               {
                 "$ref": "#/components/schemas/SyncEventSessionNextRevertCommitted"
+              },
+              {
+                "$ref": "#/components/schemas/SyncEventSessionNextGoalSet"
               }
             ]
           }
@@ -21360,6 +21805,60 @@
         "required": ["type", "url"],
         "additionalProperties": false
       },
+      "HookCommand": {
+        "type": "object",
+        "properties": {
+          "matcher": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string",
+            "description": "Shell command to run. Receives a JSON payload on stdin"
+          },
+          "timeout": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": ["command"],
+        "additionalProperties": false
+      },
+      "HooksConfig": {
+        "type": "object",
+        "properties": {
+          "PreToolUse": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          },
+          "PostToolUse": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          },
+          "SessionStart": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          },
+          "Stop": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          },
+          "Notification": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HookCommand"
+            }
+          }
+        },
+        "additionalProperties": false
+      },
       "LayoutConfig": {
         "type": "string",
         "enum": ["auto", "stretch"],
@@ -21403,6 +21902,26 @@
           },
           "shell": {
             "type": "string"
+          },
+          "bashSandbox": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": ["off", "best-effort", "require"]
+              },
+              "network": {
+                "type": "string",
+                "enum": ["allow", "deny"]
+              },
+              "writablePaths": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "additionalProperties": false
           },
           "logLevel": {
             "$ref": "#/components/schemas/LogLevel"
@@ -21745,6 +22264,9 @@
             "items": {
               "type": "string"
             }
+          },
+          "hooks": {
+            "$ref": "#/components/schemas/HooksConfig"
           },
           "layout": {
             "$ref": "#/components/schemas/LayoutConfig"
@@ -23570,6 +24092,34 @@
         "required": ["type", "properties"],
         "additionalProperties": false
       },
+      "EventTuiPromptAttach": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["tui.prompt.attach"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "mime": {
+                "type": "string"
+              },
+              "data": {
+                "type": "string",
+                "description": "Base64-encoded file contents"
+              }
+            },
+            "required": ["mime", "data"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["type", "properties"],
+        "additionalProperties": false
+      },
       "EventTuiCommandExecute": {
         "type": "object",
         "properties": {
@@ -23904,23 +24454,6 @@
         "required": ["_tag", "message"],
         "additionalProperties": false
       },
-      "ServiceUnavailableError": {
-        "type": "object",
-        "properties": {
-          "_tag": {
-            "type": "string",
-            "enum": ["ServiceUnavailableError"]
-          },
-          "message": {
-            "type": "string"
-          },
-          "service": {
-            "type": "string"
-          }
-        },
-        "required": ["_tag", "message"],
-        "additionalProperties": false
-      },
       "MessageNotFoundError": {
         "type": "object",
         "properties": {
@@ -23939,6 +24472,23 @@
           }
         },
         "required": ["_tag", "sessionID", "messageID", "message"],
+        "additionalProperties": false
+      },
+      "ServiceUnavailableError": {
+        "type": "object",
+        "properties": {
+          "_tag": {
+            "type": "string",
+            "enum": ["ServiceUnavailableError"]
+          },
+          "message": {
+            "type": "string"
+          },
+          "service": {
+            "type": "string"
+          }
+        },
+        "required": ["_tag", "message"],
         "additionalProperties": false
       },
       "UnknownError1": {
@@ -24043,6 +24593,9 @@
           },
           {
             "$ref": "#/components/schemas/SessionNextRevertCommitted"
+          },
+          {
+            "$ref": "#/components/schemas/SessionNextGoalSet"
           }
         ]
       },
@@ -24437,6 +24990,9 @@
             "$ref": "#/components/schemas/SessionNextRevertCommitted"
           },
           {
+            "$ref": "#/components/schemas/SessionNextGoalSet"
+          },
+          {
             "$ref": "#/components/schemas/MessagePartDelta"
           },
           {
@@ -24494,6 +25050,12 @@
             "$ref": "#/components/schemas/QuestionV2Rejected"
           },
           {
+            "$ref": "#/components/schemas/SandboxUnavailable"
+          },
+          {
+            "$ref": "#/components/schemas/HookFailed"
+          },
+          {
             "$ref": "#/components/schemas/TodoUpdated"
           },
           {
@@ -24507,6 +25069,9 @@
           },
           {
             "$ref": "#/components/schemas/TuiPromptAppend"
+          },
+          {
+            "$ref": "#/components/schemas/TuiPromptAttach"
           },
           {
             "$ref": "#/components/schemas/TuiCommandExecute"
@@ -24648,6 +25213,38 @@
               }
             },
             "required": ["text"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "Event.tui.prompt.attach": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["tui.prompt.attach"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "mime": {
+                "type": "string"
+              },
+              "data": {
+                "type": "string",
+                "description": "Base64-encoded file contents"
+              }
+            },
+            "required": ["mime", "data"],
             "additionalProperties": false
           }
         },
@@ -27322,6 +27919,63 @@
         "required": ["type", "id", "syncEvent"],
         "additionalProperties": false
       },
+      "SyncEventSessionNextGoalSet": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["sync"]
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "syncEvent": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": ["session.next.goal.set.1"]
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^evt_"
+              },
+              "seq": {
+                "type": "number"
+              },
+              "aggregateID": {
+                "type": "string"
+              },
+              "data": {
+                "type": "object",
+                "properties": {
+                  "timestamp": {
+                    "type": "number"
+                  },
+                  "sessionID": {
+                    "type": "string",
+                    "pattern": "^ses"
+                  },
+                  "messageID": {
+                    "type": "string",
+                    "pattern": "^msg_"
+                  },
+                  "goal": {
+                    "type": "string"
+                  }
+                },
+                "required": ["timestamp", "sessionID", "messageID", "goal"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["type", "id", "seq", "aggregateID", "data"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["type", "id", "syncEvent"],
+        "additionalProperties": false
+      },
       "ConfigV2ReferenceGit": {
         "type": "object",
         "properties": {
@@ -27563,6 +28217,9 @@
           "model": {
             "$ref": "#/components/schemas/ModelRef"
           },
+          "goal": {
+            "type": "string"
+          },
           "cost": {
             "type": "number"
           },
@@ -27742,6 +28399,37 @@
           }
         },
         "required": ["id", "time", "type", "model"],
+        "additionalProperties": false
+      },
+      "SessionMessageGoalSet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^msg_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "time": {
+            "type": "object",
+            "properties": {
+              "created": {
+                "type": "number"
+              }
+            },
+            "required": ["created"],
+            "additionalProperties": false
+          },
+          "type": {
+            "type": "string",
+            "enum": ["goal-set"]
+          },
+          "goal": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "time", "type", "goal"],
         "additionalProperties": false
       },
       "SessionMessageUser": {
@@ -28265,6 +28953,9 @@
           },
           {
             "$ref": "#/components/schemas/SessionMessageModelSwitched"
+          },
+          {
+            "$ref": "#/components/schemas/SessionMessageGoalSet"
           },
           {
             "$ref": "#/components/schemas/SessionMessageUser"
@@ -30045,6 +30736,64 @@
               }
             },
             "required": ["timestamp", "sessionID", "messageID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
+      "SessionNextGoalSet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.next.goal.set"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "number"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "messageID": {
+                "type": "string",
+                "pattern": "^msg_"
+              },
+              "goal": {
+                "type": "string"
+              }
+            },
+            "required": ["timestamp", "sessionID", "messageID", "goal"],
             "additionalProperties": false
           }
         },
@@ -32797,6 +33546,111 @@
         "required": ["id", "type", "data"],
         "additionalProperties": false
       },
+      "SandboxUnavailable": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["sandbox.unavailable"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["best-effort", "require"]
+              }
+            },
+            "required": ["reason", "mode"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
+      "HookFailed": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["hook.failed"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": ["PreToolUse", "PostToolUse", "SessionStart", "Stop", "Notification"]
+              },
+              "command": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": ["event", "command", "reason"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
       "TodoUpdated": {
         "type": "object",
         "properties": {
@@ -33072,6 +33926,60 @@
               }
             },
             "required": ["text"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "data"],
+        "additionalProperties": false
+      },
+      "TuiPromptAttach": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "metadata": {
+            "type": "object"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["tui.prompt.attach"]
+          },
+          "durable": {
+            "type": "object",
+            "properties": {
+              "aggregateID": {
+                "type": "string"
+              },
+              "seq": {
+                "type": "integer"
+              },
+              "version": {
+                "type": "integer"
+              }
+            },
+            "required": ["aggregateID", "seq", "version"],
+            "additionalProperties": false
+          },
+          "location": {
+            "$ref": "#/components/schemas/LocationRef"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "mime": {
+                "type": "string"
+              },
+              "data": {
+                "type": "string",
+                "description": "Base64-encoded file contents"
+              }
+            },
+            "required": ["mime", "data"],
             "additionalProperties": false
           }
         },
@@ -35732,6 +36640,42 @@
         "required": ["id", "type", "properties"],
         "additionalProperties": false
       },
+      "EventSessionNextGoalSet": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["session.next.goal.set"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "type": "number"
+              },
+              "sessionID": {
+                "type": "string",
+                "pattern": "^ses"
+              },
+              "messageID": {
+                "type": "string",
+                "pattern": "^msg_"
+              },
+              "goal": {
+                "type": "string"
+              }
+            },
+            "required": ["timestamp", "sessionID", "messageID", "goal"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
       "EventMessagePartDelta": {
         "type": "object",
         "properties": {
@@ -36320,6 +37264,67 @@
               }
             },
             "required": ["sessionID", "requestID"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventSandboxUnavailable": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["sandbox.unavailable"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string",
+                "enum": ["best-effort", "require"]
+              }
+            },
+            "required": ["reason", "mode"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "type", "properties"],
+        "additionalProperties": false
+      },
+      "EventHookFailed": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^evt_"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["hook.failed"]
+          },
+          "properties": {
+            "type": "object",
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": ["PreToolUse", "PostToolUse", "SessionStart", "Stop", "Notification"]
+              },
+              "command": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": ["event", "command", "reason"],
             "additionalProperties": false
           }
         },

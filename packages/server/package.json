@@ -1,7 +1,7 @@
 {
   "$schema": "https://json.schemastore.org/package.json",
   "name": "@prioricode/server",
-  "version": "0.1.9",
+  "version": "0.1.20",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -9,7 +9,8 @@
     "./*": "./src/*.ts"
   },
   "scripts": {
-    "typecheck": "tsgo --noEmit"
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test"
   },
   "dependencies": {
     "@prioricode/core": "workspace:*",

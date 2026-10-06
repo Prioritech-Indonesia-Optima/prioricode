@@ -36,6 +36,9 @@ const RETRYABLE_MESSAGE_PATTERNS = [
   /overloaded|service unavailable|service_unavailable|service-unavailable|internal error|internal_error|internal server error|server error|server_error|server-error|provider returned error|provider_returned_error|provider-returned-error/i,
   /terminated|fetch failed|failed to fetch|network[-_\s]error|upstream connect|connection error|connection refused|connection lost|socket connection was closed|socket hang up|reset before headers|getaddrinfo|enotfound|eai_again|econnrefused|econnreset|etimedout/i,
   /^timeout$|\b(?:request|response|connection|network|stream|read) (?:timeout|timed out|time out)\b/i,
+  // Gateway-side attachment ingestion failures, e.g. DashScope-compatible
+  // endpoints answering 400 "Download multimodal file timed out".
+  /\bdownload[\s\S]{0,40}?\btimed out\b/i,
   /try your request again|retry your request|resource exhausted|resource_exhausted/i,
   /\btry again (?:later|in\b)|\b(?:currently|temporarily) at capacity\b/i,
 ]
@@ -156,6 +159,24 @@ export function retryable(error: Err, provider: string) {
 
 function matchesRetryableMessage(value: unknown) {
   return typeof value === "string" && RETRYABLE_MESSAGE_PATTERNS.some((pattern) => pattern.test(value))
+}
+
+// Providers that host or relay image inputs can reject an otherwise valid
+// request when they fail to ingest the attachment (e.g. DashScope-compatible
+// gateways returning "Download multimodal file timed out" as a 400). These
+// requests should not be replayed with the same media payload forever.
+const MEDIA_REJECTION_PATTERNS = [
+  /download(?:ed|ing)?[\s\S]{0,40}?\b(multimodal|image|media|file)[\s\S]{0,40}?\b(timed out|timeout|fail)/i,
+  /\b(multimodal|image|media)[\s\S]{0,40}?\b(download|fetch)[\s\S]{0,40}?\b(timed out|timeout|fail)/i,
+]
+
+export function isMediaRejection(error: Err): boolean {
+  if (!SessionV1.APIError.isInstance(error)) return false
+  const status = error.data.statusCode
+  if (status !== undefined && status >= 500) return false
+  return [error.data.message, error.data.responseBody].some(
+    (value) => typeof value === "string" && MEDIA_REJECTION_PATTERNS.some((pattern) => pattern.test(value)),
+  )
 }
 
 function str(value: unknown) {

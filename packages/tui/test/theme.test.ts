@@ -2,7 +2,16 @@ import { expect, test } from "bun:test"
 import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import type { TerminalColors } from "@opentui/core"
-import { DEFAULT_THEMES, addTheme, allThemes, hasTheme, resolveTheme, terminalMode } from "../src/theme"
+import {
+  DEFAULT_THEMES,
+  addTheme,
+  allThemes,
+  contrastRatio,
+  hasTheme,
+  resolveTheme,
+  selectedForeground,
+  terminalMode,
+} from "../src/theme"
 import { discoverThemes } from "../src/context/theme"
 import { tmpdir } from "./fixture/fixture"
 
@@ -78,4 +87,26 @@ test("custom theme precedence follows directory order", async () => {
   await writeFile(path.join(project, "themes", "custom.json"), JSON.stringify({ source: "project" }))
 
   await expect(discoverThemes([global, project])).resolves.toEqual({ custom: { source: "project" } })
+})
+
+test("selectedForeground clears 3:1 on primary and warning surfaces in both schemes", () => {
+  for (const mode of ["dark", "light"] as const) {
+    const theme = resolveTheme(DEFAULT_THEMES.prioricode, mode)
+    for (const surface of [theme.primary, theme.warning]) {
+      const fg = selectedForeground(theme, surface)
+      expect(contrastRatio(fg, surface)).toBeGreaterThanOrEqual(3)
+    }
+  }
+})
+
+test("selectedForeground honors explicit selectedListItemText", () => {
+  const theme = resolveTheme(DEFAULT_THEMES.prioricode, "dark")
+  const withText = { ...theme, _hasSelectedListItemText: true, selectedListItemText: theme.textMuted }
+  expect(selectedForeground(withText as never, theme.primary).toInts()).toEqual(theme.textMuted.toInts())
+})
+
+test("selectedForeground keeps dark-mode prioricode background-on-primary (no regression)", () => {
+  const theme = resolveTheme(DEFAULT_THEMES.prioricode, "dark")
+  const fg = selectedForeground(theme, theme.primary)
+  expect(fg.toInts()).toEqual(theme.background.toInts())
 })

@@ -294,7 +294,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
     >
       <box gap={1} paddingLeft={1} paddingRight={3} paddingTop={1} paddingBottom={1}>
         <Show when={!single()}>
-          <box flexDirection="row" gap={1} paddingLeft={1}>
+          <box flexDirection="row" flexWrap="wrap" gap={1} paddingLeft={1}>
             <For each={questions()}>
               {(q, index) => {
                 const isActive = () => index() === store.tab
@@ -305,6 +305,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                   <box
                     paddingLeft={1}
                     paddingRight={1}
+                    flexShrink={0}
                     backgroundColor={
                       isActive()
                         ? theme.accent
@@ -320,6 +321,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                     }}
                   >
                     <text
+                      wrapMode="none"
                       fg={
                         isActive()
                           ? selectedForeground(theme, theme.accent)
@@ -337,6 +339,7 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
             <box
               paddingLeft={1}
               paddingRight={1}
+              flexShrink={0}
               backgroundColor={
                 confirm() ? theme.accent : tabHover() === "confirm" ? theme.backgroundElement : theme.backgroundPanel
               }
@@ -347,7 +350,9 @@ export function QuestionPrompt(props: { request: QuestionRequest; directory?: st
                 selectTab(questions().length)
               }}
             >
-              <text fg={confirm() ? selectedForeground(theme, theme.accent) : theme.textMuted}>Confirm</text>
+              <text wrapMode="none" fg={confirm() ? selectedForeground(theme, theme.accent) : theme.textMuted}>
+                Confirm
+              </text>
             </box>
           </box>
         </Show>

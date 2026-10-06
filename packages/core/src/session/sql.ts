@@ -51,6 +51,7 @@ export const SessionTable = sqliteTable(
     permission: text({ mode: "json" }).$type<PermissionV1.Ruleset>(),
     permission_mode: text().$type<Permission.Mode>(),
     agent: text(),
+    goal: text(),
     model: text({ mode: "json" }).$type<{
       id: string
       providerID: string

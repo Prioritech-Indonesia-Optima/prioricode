@@ -29,7 +29,7 @@ import { SessionStore } from "./session/store"
 import { SessionExecution } from "./session/execution"
 import { makeGlobalNode } from "./effect/app-node"
 import { LocationServiceMap } from "./location-service-map"
-import { MessageDecodeError } from "./session/error"
+import { BusyError, MessageDecodeError, NotFoundError, PromptConflictError } from "./session/error"
 import { SessionEvent } from "./session/event"
 import { SessionInput } from "./session/input"
 import { Snapshot } from "./snapshot"
@@ -81,16 +81,15 @@ type CreateInput = {
   agent?: AgentV2.ID
   model?: ModelV2.Ref
   location: Location.Ref
+  parentID?: SessionSchema.ID
+  title?: string
 }
 
 type CompactInput = {
   sessionID: SessionSchema.ID
-  prompt?: Prompt
+  anchor?: SessionMessage.ID
+  instructions?: string
 }
-
-export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Session.NotFoundError", {
-  sessionID: SessionSchema.ID,
-}) {}
 
 export class OperationUnavailableError extends Schema.TaggedErrorClass<OperationUnavailableError>()(
   "Session.OperationUnavailableError",
@@ -99,16 +98,26 @@ export class OperationUnavailableError extends Schema.TaggedErrorClass<Operation
   },
 ) {}
 
-export { ContextSnapshotDecodeError, MessageDecodeError } from "./session/error"
+export {
+  BusyError,
+  ContextSnapshotDecodeError,
+  MessageDecodeError,
+  NotFoundError,
+  PromptConflictError,
+} from "./session/error"
 
-export class PromptConflictError extends Schema.TaggedErrorClass<PromptConflictError>()("Session.PromptConflictError", {
-  sessionID: SessionSchema.ID,
-  messageID: SessionMessage.ID,
-}) {}
+/**
+ * SessionV2.Service operations are classified by how they behave while a Session
+ * drain is active in this process. Always-safe operations (prompt, switchAgent,
+ * switchModel, resume, interrupt, active, and reads) are either coordinated by
+ * the run coordinator or sampled at the next provider-turn boundary. Idle-only
+ * operations (compact, revert stage/clear/commit) mutate durable history or the
+ * workspace and must not race an active drain; they fail with BusyError first.
+ */
 export const MessageNotFoundError = SessionRevert.MessageNotFoundError
 export type MessageNotFoundError = SessionRevert.MessageNotFoundError
 
-export type Error = NotFoundError | MessageDecodeError | OperationUnavailableError | PromptConflictError
+export type Error = NotFoundError | MessageDecodeError | OperationUnavailableError | PromptConflictError | BusyError
 
 export interface Interface {
   readonly list: (input?: ListInput) => Effect.Effect<SessionSchema.Info[]>
@@ -140,6 +149,7 @@ export interface Interface {
     limit: number
   }) => Effect.Effect<{ events: ReadonlyArray<SessionEvent.DurableEvent>; hasMore: boolean }, NotFoundError>
   readonly switchAgent: (input: { sessionID: SessionSchema.ID; agent: string }) => Effect.Effect<void, NotFoundError>
+  readonly setGoal: (input: { sessionID: SessionSchema.ID; goal: string }) => Effect.Effect<void, NotFoundError>
   readonly switchModel: (input: {
     sessionID: SessionSchema.ID
     model: ModelV2.Ref
@@ -163,8 +173,10 @@ export interface Interface {
     skill: string
     resume?: boolean
   }) => Effect.Effect<void, OperationUnavailableError>
-  readonly compact: (input: CompactInput) => Effect.Effect<void, NotFoundError | OperationUnavailableError>
-  readonly wait: (id: SessionSchema.ID) => Effect.Effect<void, NotFoundError | OperationUnavailableError>
+  readonly compact: (
+    input: CompactInput,
+  ) => Effect.Effect<boolean, NotFoundError | MessageNotFoundError | BusyError | SessionRunner.RunError>
+  readonly wait: (id: SessionSchema.ID) => Effect.Effect<void, NotFoundError | OperationUnavailableError | BusyError>
   readonly active: Effect.Effect<ReadonlySet<SessionSchema.ID>>
   readonly resume: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError | SessionRunner.RunError>
   readonly interrupt: (sessionID: SessionSchema.ID) => Effect.Effect<void>
@@ -173,9 +185,9 @@ export interface Interface {
       sessionID: SessionSchema.ID
       messageID: SessionMessage.ID
       files?: boolean
-    }) => Effect.Effect<Revert.State, NotFoundError | MessageNotFoundError | Snapshot.Error>
-    readonly clear: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError | Snapshot.Error>
-    readonly commit: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError>
+    }) => Effect.Effect<Revert.State, NotFoundError | MessageNotFoundError | Snapshot.Error | BusyError>
+    readonly clear: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError | Snapshot.Error | BusyError>
+    readonly commit: (sessionID: SessionSchema.ID) => Effect.Effect<void, NotFoundError | BusyError>
   }
 }
 
@@ -189,6 +201,14 @@ const layer = Layer.effect(
     const events = yield* EventV2.Service
     const projects = yield* ProjectV2.Service
     const execution = yield* SessionExecution.Service
+    const requireIdle = (sessionID: SessionSchema.ID): Effect.Effect<void, BusyError> =>
+      execution.active.pipe(
+        Effect.flatMap((active) => (active.has(sessionID) ? Effect.fail(new BusyError({ sessionID })) : Effect.void)),
+      )
+    const requireMessage = Effect.fnUntraced(function* (sessionID: SessionSchema.ID, messageID: SessionMessage.ID) {
+      const found = yield* store.message(messageID)
+      if (found === undefined) return yield* new MessageNotFoundError({ sessionID, messageID })
+    })
     const store = yield* SessionStore.Service
     const locations = yield* LocationServiceMap.Service
     const decodeMessage = Schema.decodeUnknownEffect(SessionMessage.Message)
@@ -225,8 +245,9 @@ const layer = Layer.effect(
           directory: input.location.directory,
           path: path.relative(project.directory, input.location.directory).replaceAll("\\", "/"),
           workspaceID: input.location.workspaceID ? WorkspaceV2.ID.make(input.location.workspaceID) : undefined,
-          title: `New session - ${new Date(now).toISOString()}`,
+          title: input.title ?? `New session - ${new Date(now).toISOString()}`,
           agent: input.agent,
+          parentID: input.parentID,
           model: input.model
             ? {
                 id: ModelV2.ID.make(input.model.id),
@@ -399,6 +420,16 @@ const layer = Layer.effect(
           agent: input.agent,
         })
       }),
+      setGoal: Effect.fn("V2Session.setGoal")(function* (input) {
+        const session = yield* result.get(input.sessionID)
+        if ((session.goal ?? "") === input.goal) return
+        yield* events.publish(SessionEvent.GoalSet, {
+          sessionID: input.sessionID,
+          messageID: SessionMessage.ID.create(),
+          timestamp: yield* DateTime.now,
+          goal: input.goal,
+        })
+      }),
       switchModel: Effect.fn("V2Session.switchModel")(function* (input) {
         const session = yield* result.get(input.sessionID)
         if (
@@ -414,12 +445,25 @@ const layer = Layer.effect(
           model: input.model,
         })
       }),
+      // Idle-only: compact rewrites durable history and must not race an active drain.
       compact: Effect.fn("V2Session.compact")(function* (input) {
-        yield* result.get(input.sessionID)
-        return yield* new OperationUnavailableError({ operation: "compact" })
+        const session = yield* result.get(input.sessionID)
+        yield* requireIdle(session.id)
+        if (input.anchor !== undefined) {
+          const anchored = yield* store.message(input.anchor)
+          if (anchored === undefined || anchored.sessionID !== session.id)
+            return yield* new MessageNotFoundError({ sessionID: session.id, messageID: input.anchor })
+          return yield* execution.compact({
+            sessionID: session.id,
+            headCutSeq: anchored.seq,
+            instructions: input.instructions,
+          })
+        }
+        return yield* execution.compact({ sessionID: session.id, instructions: input.instructions })
       }),
       wait: Effect.fn("V2Session.wait")(function* (sessionID) {
         yield* result.get(sessionID)
+        yield* requireIdle(sessionID)
         return yield* new OperationUnavailableError({ operation: "wait" })
       }),
       active: execution.active,
@@ -431,8 +475,12 @@ const layer = Layer.effect(
         Effect.uninterruptible(execution.interrupt(sessionID)),
       ),
       revert: {
+        // Idle-only: revert rewrites the workspace and message projection, so it
+        // never runs concurrently with a drain owning the same Session.
         stage: Effect.fn("V2Session.revert.stage")(function* (input) {
           const session = yield* result.get(input.sessionID)
+          yield* requireIdle(session.id)
+          yield* requireMessage(session.id, input.messageID)
           return yield* SessionRevert.stage({ session, messageID: input.messageID, files: input.files }).pipe(
             Effect.provideService(Database.Service, database),
             Effect.provideService(EventV2.Service, events),
@@ -441,6 +489,7 @@ const layer = Layer.effect(
         }),
         clear: Effect.fn("V2Session.revert.clear")(function* (sessionID) {
           const session = yield* result.get(sessionID)
+          yield* requireIdle(session.id)
           yield* SessionRevert.clear(session).pipe(
             Effect.provideService(EventV2.Service, events),
             Effect.provide(locations.get(session.location)),
@@ -448,6 +497,7 @@ const layer = Layer.effect(
         }),
         commit: Effect.fn("V2Session.revert.commit")(function* (sessionID) {
           const session = yield* result.get(sessionID)
+          yield* requireIdle(session.id)
           yield* SessionRevert.commit(session).pipe(Effect.provideService(EventV2.Service, events))
         }),
       },

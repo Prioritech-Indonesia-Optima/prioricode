@@ -210,7 +210,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
   })
 
   const dimensions = useTerminalDimensions()
-  const height = createMemo(() => Math.min(rows(), Math.floor(dimensions().height / 2) - 6))
+  const height = createMemo(() => Math.max(1, Math.min(rows(), Math.floor(dimensions().height / 2) - 6)))
 
   const selected = createMemo(() => flat()[store.selected])
 
@@ -536,7 +536,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
     const item = action.item
     const active = createMemo(() => isActionFocused(item))
     const disabled = createMemo(() => isActionDisabled(item))
-    const fg = selectedForeground(theme)
+    const fg = createMemo(() => selectedForeground(theme, active() ? theme.primary : undefined))
     return (
       <box
         flexDirection="row"
@@ -544,12 +544,17 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         onMouseUp={() => triggerAction(item)}
       >
         <text
-          fg={disabled() ? theme.textMuted : active() ? fg : theme.text}
+          flexShrink={0}
+          wrapMode="none"
+          fg={disabled() ? theme.textMuted : active() ? fg() : theme.text}
           attributes={active() ? TextAttributes.BOLD : undefined}
         >
           {item.title}
         </text>
-        <text fg={disabled() ? theme.textMuted : active() ? fg : theme.textMuted}> {item.label}</text>
+        <text flexShrink={0} wrapMode="none" fg={disabled() ? theme.textMuted : active() ? fg() : theme.textMuted}>
+          {" "}
+          {item.label}
+        </text>
       </box>
     )
   }
@@ -559,11 +564,11 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
       <box paddingLeft={4} paddingRight={4}>
         <box flexDirection="row" justifyContent="space-between">
           {props.titleView ?? (
-            <text fg={theme.text} attributes={TextAttributes.BOLD}>
+            <text flexShrink={0} wrapMode="none" fg={theme.text} attributes={TextAttributes.BOLD}>
               {props.title}
             </text>
           )}
-          <text fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
+          <text flexShrink={0} wrapMode="none" fg={theme.textMuted} onMouseUp={() => dialog.clear()}>
             esc
           </text>
         </box>
@@ -666,6 +671,7 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
                         >
                           <box
                             flexDirection="row"
+                            minWidth={0}
                             paddingLeft={current() || option.gutter ? 1 : 3}
                             paddingRight={3}
                             gap={1}
@@ -715,12 +721,21 @@ export function DialogSelect<T>(props: DialogSelectProps<T>) {
         </Show>
       </box>
       <Show when={props.footer || visibleActions().length} fallback={<box flexShrink={0} />}>
-        <box paddingRight={2} paddingLeft={4} flexDirection="row" justifyContent="space-between" flexShrink={0}>
-          <box flexDirection="row" gap={2}>
+        {/* space-between with two over-wide shrink-0 groups overlaps (Yoga parks
+            the right group under the left one); wrapping keeps both readable. */}
+        <box
+          paddingRight={2}
+          paddingLeft={4}
+          flexDirection="row"
+          justifyContent="space-between"
+          flexWrap="wrap"
+          flexShrink={0}
+        >
+          <box flexDirection="row" gap={2} flexWrap="wrap" minWidth={0}>
             {props.footer}
             <For each={left()}>{(item) => <FooterAction item={item} />}</For>
           </box>
-          <box flexDirection="row" gap={2}>
+          <box flexDirection="row" gap={2} flexWrap="wrap" justifyContent="flex-end" minWidth={0}>
             <For each={right()}>{(item) => <FooterAction item={item} />}</For>
           </box>
         </box>
@@ -743,9 +758,9 @@ function Option(props: {
   onMouseOver?: () => void
 }) {
   const { theme } = useTheme()
-  const fg = selectedForeground(theme)
+  const fg = createMemo(() => selectedForeground(theme))
   const text = createMemo(() => {
-    if (props.active && !props.muted) return fg
+    if (props.active && !props.muted) return fg()
     if (props.muted && (props.active || props.current)) return theme.textMuted
     if (props.current) return theme.primary
     return theme.text
@@ -778,12 +793,14 @@ function Option(props: {
               ? Locale.truncateLeft(props.title, props.titleWidth ?? 61)
               : Locale.truncate(props.title, props.titleWidth ?? 61))}
         <Show when={props.description}>
-          <span style={{ fg: props.active && !props.muted ? fg : theme.textMuted }}> {props.description}</span>
+          <span style={{ fg: props.active && !props.muted ? fg() : theme.textMuted }}> {props.description}</span>
         </Show>
       </text>
       <Show when={props.footer}>
         <box flexShrink={0}>
-          <text fg={props.active && !props.muted ? fg : theme.textMuted}>{props.footer}</text>
+          <text wrapMode="none" fg={props.active && !props.muted ? fg() : theme.textMuted}>
+            {props.footer}
+          </text>
         </box>
       </Show>
     </>

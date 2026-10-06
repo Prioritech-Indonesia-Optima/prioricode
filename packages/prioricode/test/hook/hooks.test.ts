@@ -39,7 +39,11 @@ const it = testEffect(
 )
 
 const readFile = (dir: string, name: string) =>
-  Effect.promise(() => Bun.file(path.join(dir, name)).text().catch(() => ""))
+  Effect.promise(() =>
+    Bun.file(path.join(dir, name))
+      .text()
+      .catch(() => ""),
+  )
 
 const lineCount = (text: string) => text.split("\n").filter((line) => line.length > 0).length
 

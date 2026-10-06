@@ -48,6 +48,7 @@ export type Event =
   | EventSessionNextRevertStaged
   | EventSessionNextRevertCleared
   | EventSessionNextRevertCommitted
+  | EventSessionNextGoalSet
   | EventMessagePartDelta
   | EventSessionDiff
   | EventSessionError
@@ -74,6 +75,7 @@ export type Event =
   | EventPermissionAsked
   | EventPermissionReplied
   | EventTuiPromptAppend2
+  | EventTuiPromptAttach2
   | EventTuiCommandExecute2
   | EventTuiToastShow2
   | EventTuiSessionSelect2
@@ -1196,6 +1198,16 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "session.next.goal.set"
+        properties: {
+          timestamp: number
+          sessionID: string
+          messageID: string
+          goal: string
+        }
+      }
+    | {
+        id: string
         type: "message.part.delta"
         properties: {
           sessionID: string
@@ -1430,6 +1442,18 @@ export type GlobalEvent = {
       }
     | {
         id: string
+        type: "tui.prompt.attach"
+        properties: {
+          filename?: string
+          mime: string
+          /**
+           * Base64-encoded file contents
+           */
+          data: string
+        }
+      }
+    | {
+        id: string
         type: "tui.command.execute"
         properties: {
           command:
@@ -1657,6 +1681,7 @@ export type GlobalEvent = {
     | SyncEventSessionNextRevertStaged
     | SyncEventSessionNextRevertCleared
     | SyncEventSessionNextRevertCommitted
+    | SyncEventSessionNextGoalSet
 }
 
 /**
@@ -2659,6 +2684,18 @@ export type EventTuiPromptAppend = {
   }
 }
 
+export type EventTuiPromptAttach = {
+  type: "tui.prompt.attach"
+  properties: {
+    filename?: string
+    mime: string
+    /**
+     * Base64-encoded file contents
+     */
+    data: string
+  }
+}
+
 export type EventTuiCommandExecute = {
   type: "tui.command.execute"
   properties: {
@@ -2768,17 +2805,17 @@ export type ConflictError = {
   resource?: string
 }
 
-export type ServiceUnavailableError = {
-  _tag: "ServiceUnavailableError"
-  message: string
-  service?: string
-}
-
 export type MessageNotFoundError = {
   _tag: "MessageNotFoundError"
   sessionID: string
   messageID: string
   message: string
+}
+
+export type ServiceUnavailableError = {
+  _tag: "ServiceUnavailableError"
+  message: string
+  service?: string
 }
 
 export type UnknownError1 = {
@@ -2816,6 +2853,7 @@ export type SessionDurableEvent =
   | SessionNextRevertStaged
   | SessionNextRevertCleared
   | SessionNextRevertCommitted
+  | SessionNextGoalSet
 
 export type SessionHistory = {
   data: Array<SessionDurableEvent>
@@ -2947,6 +2985,7 @@ export type V2Event =
   | SessionNextRevertStaged
   | SessionNextRevertCleared
   | SessionNextRevertCommitted
+  | SessionNextGoalSet
   | MessagePartDelta
   | SessionDiff
   | SessionError
@@ -2973,6 +3012,7 @@ export type V2Event =
   | PermissionAsked
   | PermissionReplied
   | TuiPromptAppend
+  | TuiPromptAttach
   | TuiCommandExecute
   | TuiToastShow
   | TuiSessionSelect
@@ -3019,6 +3059,19 @@ export type EventTuiPromptAppend2 = {
   type: "tui.prompt.append"
   properties: {
     text: string
+  }
+}
+
+export type EventTuiPromptAttach2 = {
+  id: string
+  type: "tui.prompt.attach"
+  properties: {
+    filename?: string
+    mime: string
+    /**
+     * Base64-encoded file contents
+     */
+    data: string
   }
 }
 
@@ -3878,6 +3931,23 @@ export type SyncEventSessionNextRevertCommitted = {
   }
 }
 
+export type SyncEventSessionNextGoalSet = {
+  type: "sync"
+  id: string
+  syncEvent: {
+    type: "session.next.goal.set.1"
+    id: string
+    seq: number
+    aggregateID: string
+    data: {
+      timestamp: number
+      sessionID: string
+      messageID: string
+      goal: string
+    }
+  }
+}
+
 export type ConfigV2ReferenceGit = {
   repository: string
   branch?: string
@@ -3963,6 +4033,7 @@ export type SessionV2Info = {
   projectID: string
   agent?: string
   model?: ModelRef
+  goal?: string
   cost: number
   tokens: {
     input: number
@@ -4024,6 +4095,18 @@ export type SessionMessageModelSwitched = {
   }
   type: "model-switched"
   model: ModelRef
+}
+
+export type SessionMessageGoalSet = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  time: {
+    created: number
+  }
+  type: "goal-set"
+  goal: string
 }
 
 export type SessionMessageUser = {
@@ -4211,6 +4294,7 @@ export type SessionMessageCompaction = {
 export type SessionMessage =
   | SessionMessageAgentSwitched
   | SessionMessageModelSwitched
+  | SessionMessageGoalSet
   | SessionMessageUser
   | SessionMessageSynthetic
   | SessionMessageSystem
@@ -4824,6 +4908,26 @@ export type SessionNextRevertCommitted = {
     timestamp: number
     sessionID: string
     messageID: string
+  }
+}
+
+export type SessionNextGoalSet = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "session.next.goal.set"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    timestamp: number
+    sessionID: string
+    messageID: string
+    goal: string
   }
 }
 
@@ -5850,6 +5954,28 @@ export type TuiPromptAppend = {
   }
 }
 
+export type TuiPromptAttach = {
+  id: string
+  metadata?: {
+    [key: string]: unknown
+  }
+  type: "tui.prompt.attach"
+  durable?: {
+    aggregateID: string
+    seq: number
+    version: number
+  }
+  location?: LocationRef
+  data: {
+    filename?: string
+    mime: string
+    /**
+     * Base64-encoded file contents
+     */
+    data: string
+  }
+}
+
 export type TuiCommandExecute = {
   id: string
   metadata?: {
@@ -6745,6 +6871,17 @@ export type EventSessionNextRevertCommitted = {
   }
 }
 
+export type EventSessionNextGoalSet = {
+  id: string
+  type: "session.next.goal.set"
+  properties: {
+    timestamp: number
+    sessionID: string
+    messageID: string
+    goal: string
+  }
+}
+
 export type EventMessagePartDelta = {
   id: string
   type: "message.part.delta"
@@ -7493,6 +7630,7 @@ export type GlobalUpgradeResponses = {
     | {
         success: false
         error: string
+        cause?: "command-failed" | "shell-not-found" | "locked-binary" | "elevation-required" | "verification-failed"
       }
 }
 
@@ -10818,6 +10956,41 @@ export type TuiAppendPromptResponses = {
 
 export type TuiAppendPromptResponse = TuiAppendPromptResponses[keyof TuiAppendPromptResponses]
 
+export type TuiAttachPromptData = {
+  body?: {
+    filename?: string
+    mime: string
+    /**
+     * Base64-encoded file contents
+     */
+    data: string
+  }
+  path?: never
+  query?: {
+    directory?: string
+    workspace?: string
+  }
+  url: "/tui/attach"
+}
+
+export type TuiAttachPromptErrors = {
+  /**
+   * BadRequest | InvalidRequestError
+   */
+  400: EffectHttpApiErrorBadRequest | InvalidRequestError
+}
+
+export type TuiAttachPromptError = TuiAttachPromptErrors[keyof TuiAttachPromptErrors]
+
+export type TuiAttachPromptResponses = {
+  /**
+   * Attachment queued successfully
+   */
+  200: boolean
+}
+
+export type TuiAttachPromptResponse = TuiAttachPromptResponses[keyof TuiAttachPromptResponses]
+
 export type TuiOpenHelpData = {
   body?: never
   path?: never
@@ -11050,7 +11223,12 @@ export type TuiShowToastResponses = {
 export type TuiShowToastResponse = TuiShowToastResponses[keyof TuiShowToastResponses]
 
 export type TuiPublishData = {
-  body?: EventTuiPromptAppend | EventTuiCommandExecute | EventTuiToastShow | EventTuiSessionSelect
+  body?:
+    | EventTuiPromptAppend
+    | EventTuiPromptAttach
+    | EventTuiCommandExecute
+    | EventTuiToastShow
+    | EventTuiSessionSelect
   path?: never
   query?: {
     directory?: string
@@ -11723,6 +11901,43 @@ export type V2SessionSwitchModelResponses = {
 
 export type V2SessionSwitchModelResponse = V2SessionSwitchModelResponses[keyof V2SessionSwitchModelResponses]
 
+export type V2SessionSetGoalData = {
+  body: {
+    goal: string
+  }
+  path: {
+    sessionID: string
+  }
+  query?: never
+  url: "/api/session/{sessionID}/goal"
+}
+
+export type V2SessionSetGoalErrors = {
+  /**
+   * InvalidRequestError
+   */
+  400: InvalidRequestError
+  /**
+   * UnauthorizedError
+   */
+  401: UnauthorizedError
+  /**
+   * SessionNotFoundError
+   */
+  404: SessionNotFoundError
+}
+
+export type V2SessionSetGoalError = V2SessionSetGoalErrors[keyof V2SessionSetGoalErrors]
+
+export type V2SessionSetGoalResponses = {
+  /**
+   * <No Content>
+   */
+  204: void
+}
+
+export type V2SessionSetGoalResponse = V2SessionSetGoalResponses[keyof V2SessionSetGoalResponses]
+
 export type V2SessionPromptData = {
   body: {
     id?: string
@@ -11751,9 +11966,9 @@ export type V2SessionPromptErrors = {
    */
   404: SessionNotFoundError
   /**
-   * ConflictError
+   * ConflictError | SessionBusyError
    */
-  409: ConflictError
+  409: ConflictError | SessionBusyError
 }
 
 export type V2SessionPromptError = V2SessionPromptErrors[keyof V2SessionPromptErrors]
@@ -11770,7 +11985,10 @@ export type V2SessionPromptResponses = {
 export type V2SessionPromptResponse = V2SessionPromptResponses[keyof V2SessionPromptResponses]
 
 export type V2SessionCompactData = {
-  body?: never
+  body: {
+    anchor?: string
+    instructions?: string
+  }
   path: {
     sessionID: string
   }
@@ -11788,9 +12006,17 @@ export type V2SessionCompactErrors = {
    */
   401: UnauthorizedError
   /**
-   * SessionNotFoundError
+   * SessionNotFoundError | MessageNotFoundError
    */
-  404: SessionNotFoundError
+  404: MessageNotFoundError | SessionNotFoundError
+  /**
+   * ConflictError | SessionBusyError
+   */
+  409: ConflictError | SessionBusyError
+  /**
+   * UnknownError
+   */
+  500: UnknownError1
   /**
    * ServiceUnavailableError
    */
@@ -11830,6 +12056,10 @@ export type V2SessionWaitErrors = {
    * SessionNotFoundError
    */
   404: SessionNotFoundError
+  /**
+   * ConflictError
+   */
+  409: ConflictError
   /**
    * ServiceUnavailableError
    */
@@ -11873,6 +12103,10 @@ export type V2SessionRevertStageErrors = {
    */
   404: MessageNotFoundError | SessionNotFoundError
   /**
+   * ConflictError | SessionBusyError
+   */
+  409: ConflictError | SessionBusyError
+  /**
    * UnknownError
    */
   500: UnknownError1
@@ -11914,6 +12148,10 @@ export type V2SessionRevertClearErrors = {
    */
   404: SessionNotFoundError
   /**
+   * ConflictError | SessionBusyError
+   */
+  409: ConflictError | SessionBusyError
+  /**
    * UnknownError
    */
   500: UnknownError1
@@ -11952,6 +12190,10 @@ export type V2SessionRevertCommitErrors = {
    * SessionNotFoundError
    */
   404: SessionNotFoundError
+  /**
+   * ConflictError | SessionBusyError
+   */
+  409: ConflictError | SessionBusyError
 }
 
 export type V2SessionRevertCommitError = V2SessionRevertCommitErrors[keyof V2SessionRevertCommitErrors]

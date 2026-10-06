@@ -3,7 +3,7 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { For, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import { useKV } from "../context/kv"
 import { tint, useTheme } from "../context/theme"
-import { big } from "../logo"
+import { big, tagline as TAGLINE } from "../logo"
 
 // Home screen hero: an oversized block-letter "PrioriCode" wordmark (the `big`
 // bitmap in ../logo.ts) rendered as full-block cells. The letters carry a
@@ -14,16 +14,21 @@ import { big } from "../logo"
 // shimmer loop, no requestLive, zero idle repaints. Narrow terminals fall back
 // to the compact one-line wordmark so the art is never clipped.
 const WORDMARK = "PrioriCode"
-const TAGLINE = "the open source AI coding agent"
 
 const FRAME_MS = 33
 const REVEAL_MS = 700
 const GLINT_MS = 520
 const GLINT_WIDTH = 4
 const GLINT_STRENGTH = 0.9
-const GRADIENT_END = 0.85
 const REVEAL_SKEW = 0.6
-const MIN_ART_WIDTH = 76
+export const MIN_ART_WIDTH = 76
+// The 10-row wordmark band plus the prompt block needs vertical headroom;
+// below this height both heroes fall back to the 2-row compact wordmark so
+// the prompt is never pushed off-screen.
+export const MIN_ART_HEIGHT = 22
+export function heroFits(input: { width: number; height: number; animationsEnabled: boolean }) {
+  return input.animationsEnabled && input.width >= MIN_ART_WIDTH && input.height >= MIN_ART_HEIGHT
+}
 
 const ART_W = Math.max(...big.map((row) => row.length))
 const GLOW_W = 71
@@ -57,30 +62,36 @@ for (let gy = 0; gy < GLOW_ROWS; gy++) {
   ART.push(cells)
 }
 ART.push(
-  Array.from(TAGLINE, (char, x): Cell => ({
-    char,
-    x: x + Math.floor((GLOW_W - TAGLINE.length) / 2),
-    y: big.length + 1,
-    kind: char === " " ? "glow" : "tag",
-    wordIndex: -1,
-  })),
+  Array.from(
+    TAGLINE,
+    (char, x): Cell => ({
+      char,
+      x: x + Math.floor((GLOW_W - TAGLINE.length) / 2),
+      y: big.length + 1,
+      kind: char === " " ? "glow" : "tag",
+      wordIndex: -1,
+    }),
+  ),
 )
 
 const COMPACT: Cell[][] = [
-  Array.from(WORDMARK, (char, x): Cell => ({
-    char,
-    x: x + Math.floor((TAGLINE.length - WORDMARK.length) / 2),
-    y: 0,
-    kind: "word",
-    wordIndex: x,
-  })),
+  Array.from(
+    WORDMARK,
+    (char, x): Cell => ({
+      char,
+      x: x + Math.floor((TAGLINE.length - WORDMARK.length) / 2),
+      y: 0,
+      kind: "word",
+      wordIndex: x,
+    }),
+  ),
   Array.from(TAGLINE, (char, x): Cell => ({ char, x, y: 1, kind: "tag", wordIndex: -1 })),
 ]
 
 const SWEEP = GLOW_W + ART.length * REVEAL_SKEW + 8
 
 export function Logo() {
-  const { theme } = useTheme()
+  const { theme, mode } = useTheme()
   const kv = useKV()
   const dimensions = useTerminalDimensions()
   const [animationsEnabled] = kv.signal("animations_enabled", true)
@@ -101,7 +112,7 @@ export function Logo() {
     onCleanup(() => clearInterval(timer))
   })
 
-  const showArt = createMemo(() => dimensions().width >= MIN_ART_WIDTH)
+  const showArt = createMemo(() => dimensions().width >= MIN_ART_WIDTH && dimensions().height >= MIN_ART_HEIGHT)
   const rows = createMemo(() => (showArt() ? ART : COMPACT))
   const sweep = createMemo(() => (showArt() ? SWEEP : TAGLINE.length + COMPACT.length * REVEAL_SKEW + 8))
 
@@ -117,13 +128,10 @@ export function Logo() {
     return -6 + (elapsed / GLINT_MS) * (sweep() + 6)
   })
 
-  const columns = createMemo(() =>
-    Array.from({ length: ART_W }, (_, x) => tint(theme.primary, theme.text, (x / (ART_W - 1)) * GRADIENT_END)),
-  )
+  // Solid brand color across the wordmark (no gradient), matching HomeHero.
+  const columns = createMemo(() => Array.from({ length: ART_W }, () => theme.primary))
 
-  const wordGradient = createMemo(() =>
-    WORDMARK.split("").map((_, i) => tint(theme.primary, theme.text, (i / (WORDMARK.length - 1)) * GRADIENT_END)),
-  )
+  const wordGradient = createMemo(() => WORDMARK.split("").map(() => theme.primary))
 
   const renderLine = (cells: Cell[]): JSX.Element[] =>
     cells.map((cell) => {
@@ -131,7 +139,8 @@ export function Logo() {
         const bg = createMemo(() => {
           if (!showArt()) return theme.background
           const falloff = Math.max(0, 1 - Math.abs(cell.y - ART_CY) / (ART_CY + 1.5))
-          const alpha = gauss(cell.x, GLOW_CX, 20) * falloff * 0.35 * reveal()
+          const glowScale = mode() === "light" ? 0.14 : 0.35
+          const alpha = gauss(cell.x, GLOW_CX, 20) * falloff * glowScale * reveal()
           return alpha < 0.01 ? theme.background : tint(theme.background, theme.primary, alpha)
         })
         return (
@@ -141,9 +150,7 @@ export function Logo() {
         )
       }
       if (cell.char === " ") return <text> </text>
-      const edge = createMemo(() =>
-        Math.max(0, Math.min(1, reveal() * sweep() - cell.x - cell.y * REVEAL_SKEW - 3)),
-      )
+      const edge = createMemo(() => Math.max(0, Math.min(1, reveal() * sweep() - cell.x - cell.y * REVEAL_SKEW - 3)))
       const glint = createMemo(() => {
         const raw = 1 - Math.abs(cell.x + cell.y * 0.7 - glintX()) / GLINT_WIDTH
         return raw <= 0 ? 0 : raw * raw * (3 - 2 * raw) * GLINT_STRENGTH
@@ -153,11 +160,14 @@ export function Logo() {
         if (fade <= 0) return theme.background
         const base =
           cell.kind === "block"
-            ? columns()[cell.x - ART_X] ?? theme.text
+            ? (columns()[cell.x - ART_X] ?? theme.text)
             : cell.kind === "word"
-              ? wordGradient()[cell.wordIndex] ?? theme.text
+              ? (wordGradient()[cell.wordIndex] ?? theme.text)
               : theme.textMuted
-        return tint(tint(theme.background, base, fade), RGBA.fromInts(255, 250, 235), glint() * fade)
+        // Dark mode shines toward warm-white; on a light background white
+        // erases the glyph, so light mode shines toward a dark ink instead.
+        const shine = mode() === "light" ? tint(theme.text, RGBA.fromInts(0, 0, 0), 0.7) : RGBA.fromInts(255, 250, 235)
+        return tint(tint(theme.background, base, fade), shine, glint() * fade)
       })
       const content = createMemo(() => (edge() <= 0 ? " " : cell.char))
       return (

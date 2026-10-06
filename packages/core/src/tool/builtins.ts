@@ -6,9 +6,12 @@ import { BashTool } from "./bash"
 import { ApplyPatchTool } from "./apply-patch"
 import { EditTool } from "./edit"
 import { GlobTool } from "./glob"
+import { GoalTool } from "./goal"
 import { GrepTool } from "./grep"
+import { PlanTool } from "./plan"
 import { QuestionTool } from "./question"
 import { ReadTool } from "./read"
+import { TaskTool } from "./task"
 import { SkillTool } from "./skill"
 import { TodoWriteTool } from "./todowrite"
 import { WebFetchTool } from "./webfetch"
@@ -23,10 +26,14 @@ import { WriteTool } from "./write"
  * than this static list. The caller intentionally supplies shared Location
  * services once to this merged set.
  *
- * TODO: Port the remaining launch-follow-up leaves deliberately: edit fuzzy
- * parity, task, LSP,
- * repo_clone, repo_overview, plan_exit, and Rune/code mode. Keep MCP and plugin
- * transforms separate from this static built-in list.
+ * TaskTool is deliberately absent: it captures the run coordinator through
+ * SessionExecution, and any Location-scoped node that captures it makes
+ * buildLocationServiceMap construct SessionExecutionLocal inside its own
+ * LayerMap body (a detected layer cycle). It is registered through the future
+ * Session-scoped canonical tool registration designed in specs/v2/tools.md and
+ * tool/AGENTS.md "Current Gaps". PlanTool is not affected: its durable writes
+ * go through map-free leaves (Database, EventV2, SessionStore, QuestionV2), so
+ * it registers normally here.
  */
 export const node = makeLocationNode({
   name: "built-in-tools",
@@ -36,7 +43,9 @@ export const node = makeLocationNode({
     BashTool.node,
     EditTool.node,
     GlobTool.node,
+    GoalTool.node,
     GrepTool.node,
+    PlanTool.node,
     QuestionTool.node,
     ReadTool.node,
     SkillTool.node,

@@ -519,3 +519,49 @@ describe("session.message-v2.fromError", () => {
     })
   })
 })
+
+describe("session.retry.isMediaRejection", () => {
+  const media =
+    'Bad Request: data: {"error":{"code":"invalid_parameter_error","param":null,"message":"Download multimodal file timed out","type":"invalid_request_error"},"id":"chatcmpl-5f9c4d47"}'
+
+  const error = (message: string, fields?: { statusCode?: number; responseBody?: string }) =>
+    new SessionV1.APIError({
+      message,
+      statusCode: fields?.statusCode ?? 400,
+      isRetryable: false,
+      responseBody: fields?.responseBody,
+    }).toObject()
+
+  test("matches gateway multimodal download timeouts in the message", () => {
+    expect(SessionRetry.isMediaRejection(error(media))).toBeTrue()
+  })
+
+  test("matches multimodal download failures only in the response body", () => {
+    expect(SessionRetry.isMediaRejection(error("Bad Request", { responseBody: media }))).toBeTrue()
+  })
+
+  test("does not match unrelated 400 errors", () => {
+    expect(SessionRetry.isMediaRejection(error("invalid api key"))).toBeFalse()
+  })
+
+  test("does not match 5xx errors", () => {
+    expect(SessionRetry.isMediaRejection(error(media, { statusCode: 503 }))).toBeFalse()
+  })
+
+  test("does not match non-API errors", () => {
+    expect(SessionRetry.isMediaRejection(wrap(media))).toBeFalse()
+  })
+})
+
+describe("session.retry.retryable multimodal download timeouts", () => {
+  test("retries gateway attachment ingestion failures", () => {
+    const message =
+      'Bad Request: data: {"error":{"code":"invalid_parameter_error","message":"Download multimodal file timed out","type":"invalid_request_error"}}'
+    const error = new SessionV1.APIError({
+      message,
+      statusCode: 400,
+      isRetryable: false,
+    }).toObject()
+    expect(SessionRetry.retryable(error, retryProvider)).toEqual({ message })
+  })
+})

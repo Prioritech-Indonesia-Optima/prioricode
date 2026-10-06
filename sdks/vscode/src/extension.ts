@@ -1,8 +1,16 @@
 // This method is called when your extension is deactivated
-export function deactivate() {}
+let chatProvider: ChatViewProvider | undefined
+export function deactivate() {
+  chatProvider?.dispose()
+}
 
 import * as vscode from "vscode"
 import { spawnSync } from "child_process"
+import { readFile } from "fs/promises"
+import { pickClipboardImageViaPanel } from "./pastePanel"
+import { readClipboardImage, type ClipboardImage } from "./clipboard"
+import { discoverTuiPort, tuiStateDirectory } from "./tui-port"
+import { ChatViewProvider } from "./chat/panel"
 
 const TERMINAL_NAME = "prioricode"
 
@@ -14,6 +22,122 @@ function hasCli() {
 }
 
 export function activate(context: vscode.ExtensionContext) {
+  // The server's base64 image ceiling is 5 MiB; keep raw bytes well under it.
+  const MAX_CLIPBOARD_IMAGE_BYTES = 3_500_000
+
+  chatProvider = new ChatViewProvider(context)
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider("prioricode.chat", chatProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    vscode.commands.registerCommand("prioricode.openChat", async () => {
+      await vscode.commands.executeCommand("prioricode.chat.focus")
+    }),
+    vscode.commands.registerCommand("prioricode.connectServer", async () => {
+      const url = await vscode.window.showInputBox({
+        title: "Connect to a prioricode server",
+        prompt: "Server URL, for example http://192.168.1.20:4096 (leave empty to go back to the local daemon)",
+        ignoreFocusOut: true,
+        validateInput: (value) => {
+          if (!value.trim()) return undefined
+          try {
+            const parsed = new URL(value.trim())
+            return parsed.protocol === "http:" || parsed.protocol === "https:" ? undefined : "Use an http(s) URL"
+          } catch {
+            return "Invalid URL"
+          }
+        },
+      })
+      if (url === undefined) return
+      const trimmed = url.trim()
+      if (!trimmed) {
+        await context.globalState.update("prioricode.serverUrl", undefined)
+        await context.secrets.delete("prioricode.serverPassword")
+        await vscode.window.showInformationMessage("prioricode: back to the local daemon.")
+      } else {
+        let password: string | undefined
+        try {
+          const parsed = new URL(trimmed)
+          if (!parsed.password) {
+            password = await vscode.window.showInputBox({
+              title: "prioricode server password",
+              prompt: "Leave empty if the server is unauthenticated",
+              password: true,
+              ignoreFocusOut: true,
+            })
+          }
+        } catch {
+          return
+        }
+        await context.globalState.update("prioricode.serverUrl", trimmed)
+        if (password) await context.secrets.store("prioricode.serverPassword", password)
+        else await context.secrets.delete("prioricode.serverPassword")
+      }
+      await chatProvider?.refresh()
+    }),
+    vscode.commands.registerCommand("prioricode.disconnectServer", async () => {
+      await context.globalState.update("prioricode.serverUrl", undefined)
+      await context.secrets.delete("prioricode.serverPassword")
+      await chatProvider?.refresh()
+      await vscode.window.showInformationMessage("prioricode: disconnected from remote server.")
+    }),
+  )
+
+  function portOf(terminal: vscode.Terminal | undefined) {
+    if (!terminal) return undefined
+    // @ts-ignore
+    const port = Number(terminal.creationOptions?.env?.["_EXTENSION_PRIORICODE_PORT"])
+    return Number.isInteger(port) && port > 0 ? port : undefined
+  }
+
+  // Restored terminals (after a window reload) lose their creation options, so
+  // the env port is gone. The TUI worker publishes its port in the state dir;
+  // prefer the terminal's own port, then fall back to the published one.
+  // terminal.processId is the shell, so look one level down for the foreground
+  // job (Linux /proc children; other platforms fall back to the terminal name).
+  async function terminalRunsPrioricode(terminal: vscode.Terminal): Promise<boolean> {
+    if (terminal.name === TERMINAL_NAME) return true
+    const pid = await terminal.processId
+    if (pid === undefined) return false
+    const read = async (path: string) => {
+      try {
+        return await readFile(path, "utf8")
+      } catch {
+        return ""
+      }
+    }
+    if ((await read(`/proc/${pid}/cmdline`)).includes("prioricode")) return true
+    const children = await read(`/proc/${pid}/task/${pid}/children`)
+    for (const child of children.trim().split(/\s+/).filter(Boolean)) {
+      if ((await read(`/proc/${child}/cmdline`)).includes("prioricode")) return true
+    }
+    return false
+  }
+
+  async function resolvePort(terminal: vscode.Terminal | undefined): Promise<number | undefined> {
+    const own = portOf(terminal)
+    if (own !== undefined) return own
+    if (!terminal) return undefined
+    if (!(await terminalRunsPrioricode(terminal))) return undefined
+    return discoverTuiPort({ readFile: (file) => readFile(file, "utf8"), stateDirectory: tuiStateDirectory() })
+  }
+
+  let pasteContext = false
+  const setPasteContext = (terminal: vscode.Terminal | undefined) => {
+    void resolvePort(terminal).then((port) => {
+      const next = port !== undefined
+      if (next === pasteContext) return
+      pasteContext = next
+      void vscode.commands.executeCommand("setContext", "prioricodeTerminalFocused", next)
+    })
+  }
+  setPasteContext(vscode.window.activeTerminal)
+  // The foreground command changes without any terminal event we can rely on
+  // (prioricode starts after the terminal is already active), so re-evaluate
+  // on a slow heartbeat: two tiny /proc reads, and one health fetch only when
+  // a prioricode session is actually detected.
+  const pasteContextTimer = setInterval(() => setPasteContext(vscode.window.activeTerminal), 4000)
+
   const openNewTerminalDisposable = vscode.commands.registerCommand("prioricode.openNewTerminal", async () => {
     await openTerminal()
   })
@@ -41,14 +165,65 @@ export function activate(context: vscode.ExtensionContext) {
     }
 
     if (terminal.name === TERMINAL_NAME) {
-      // @ts-ignore
-      const port = terminal.creationOptions.env?.["_EXTENSION_PRIORICODE_PORT"]
-      port ? await appendPrompt(parseInt(port), fileRef) : terminal.sendText(fileRef, false)
+      const port = await resolvePort(terminal)
+      port ? await appendPrompt(port, fileRef) : terminal.sendText(fileRef, false)
       terminal.show()
     }
   })
 
-  context.subscriptions.push(openNewTerminalDisposable, openTerminalDisposable, addFilepathDisposable)
+  async function attachToTerminal(port: number, image: ClipboardImage) {
+    if (Buffer.from(image.data, "base64").byteLength > MAX_CLIPBOARD_IMAGE_BYTES) {
+      await vscode.window.showWarningMessage(
+        "Clipboard image is too large for PrioriCode (max ~3.5 MB). Paste a file path instead.",
+      )
+      return
+    }
+    const body = JSON.stringify({ filename: "clipboard", mime: image.mime, data: image.data })
+    try {
+      const response = await fetch(`http://localhost:${port}/tui/attach`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body,
+      })
+      if (response.status === 404) {
+        await vscode.window.showWarningMessage("Update prioricode to enable clipboard image paste in terminals.")
+        return
+      }
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+    } catch (error) {
+      await vscode.window.showWarningMessage(
+        `Could not reach the prioricode terminal server (${String(error)}). Is prioricode running in this terminal?`,
+      )
+    }
+  }
+
+  const pasteIntoTerminalDisposable = vscode.commands.registerCommand("prioricode.pasteIntoTerminal", async () => {
+    const terminal = vscode.window.activeTerminal
+    const port = await resolvePort(terminal)
+    if (!port) {
+      await vscode.commands.executeCommand("workbench.action.terminal.paste")
+      return
+    }
+    // Local windows can read the real clipboard directly (the extension host
+    // runs on the user's machine). Remote windows cannot — their host is the
+    // remote box — so a small local webview panel captures the native paste
+    // event and hands the bytes back. The stable API has no clipboard image.
+    const image = vscode.env.remoteName ? await pickClipboardImageViaPanel() : await readClipboardImage()
+    if (!image) {
+      await vscode.commands.executeCommand("workbench.action.terminal.paste")
+      return
+    }
+    await attachToTerminal(port, image)
+  })
+
+  context.subscriptions.push(
+    openNewTerminalDisposable,
+    openTerminalDisposable,
+    addFilepathDisposable,
+    pasteIntoTerminalDisposable,
+    new vscode.Disposable(() => clearInterval(pasteContextTimer)),
+    vscode.window.onDidChangeActiveTerminal((terminal) => setPasteContext(terminal)),
+  )
 
   async function openTerminal() {
     if (!hasCli()) {

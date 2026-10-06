@@ -75,13 +75,34 @@ function setRules(rules: PermissionV2.Ruleset) {
   })
 }
 
-function setMode(mode: "default" | "ask-first" | "always-allow" | null) {
+function setMode(mode: PermissionV2.Mode | null) {
   return Effect.gen(function* () {
     const { db } = yield* Database.Service
     yield* db
       .update(SessionTable)
       .set({ permission_mode: mode })
       .where(eq(SessionTable.id, SessionV2.ID.make("ses_test")))
+      .run()
+      .pipe(Effect.orDie)
+  })
+}
+
+function insertSession(id: string, input: { parentID?: string; mode?: PermissionV2.Mode } = {}) {
+  return Effect.gen(function* () {
+    const { db } = yield* Database.Service
+    yield* db
+      .insert(SessionTable)
+      .values({
+        id: SessionV2.ID.make(id),
+        project_id: Project.ID.global,
+        slug: id,
+        directory: "/project",
+        title: id,
+        version: "test",
+        agent: "test",
+        parent_id: input.parentID === undefined ? undefined : SessionV2.ID.make(input.parentID),
+        permission_mode: input.mode,
+      })
       .run()
       .pipe(Effect.orDie)
   })
@@ -325,6 +346,82 @@ describe("PermissionV2", () => {
     }),
   )
 
+  it.effect("a saved wildcard allow satisfies broad asks but never a configured specific ask", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "read", resource: "*.env", effect: "ask" }])
+      const saved = yield* PermissionSaved.Service
+      yield* saved.add({ projectID: Project.ID.global, action: "read", resources: ["*"] })
+
+      const service = yield* PermissionV2.Service
+      // The default no-rule-matches ask (wildcard specificity) is satisfied by a saved wildcard.
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_law_src"), resources: ["src/index.ts"] })),
+      ).toEqual({ id: PermissionV2.ID.create("per_law_src"), effect: "allow" })
+      // A more-specific configured ask (`read *.env`) outranks the saved wildcard.
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_law_env"), resources: ["project.env"] })),
+      ).toEqual({ id: PermissionV2.ID.create("per_law_env"), effect: "ask" })
+      expect(yield* service.list()).toMatchObject([{ id: PermissionV2.ID.create("per_law_env") }])
+
+      // An equally- or more-specific saved approval does satisfy the specific ask.
+      yield* saved.add({ projectID: Project.ID.global, action: "read", resources: ["project.env"] })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_law_env2"), resources: ["project.env"] })),
+      ).toEqual({ id: PermissionV2.ID.create("per_law_env2"), effect: "allow" })
+    }),
+  )
+
+  it.effect("a configured deny still defeats a saved wildcard allow", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "read", resource: "*", effect: "deny" }])
+      const saved = yield* PermissionSaved.Service
+      yield* saved.add({ projectID: Project.ID.global, action: "read", resources: ["*"] })
+
+      const service = yield* PermissionV2.Service
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create("per_char_deny"), resources: ["src/index.ts"] })),
+      ).toEqual({ id: PermissionV2.ID.create("per_char_deny"), effect: "deny" })
+    }),
+  )
+
+  it.effect("the always-reply fan-out never auto-approves a request a configured specific ask governs", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "read", resource: "*.env", effect: "ask" }])
+      const service = yield* PermissionV2.Service
+      const events = yield* EventV2.Service
+      const askedFor = (requestID: PermissionV2.ID) =>
+        Effect.gen(function* () {
+          const asked = yield* Deferred.make<PermissionV2.Request>()
+          const unsubscribe = yield* events.listen((event) =>
+            event.type === PermissionV2.Event.Asked.type && (event.data as PermissionV2.Request).id === requestID
+              ? Deferred.succeed(asked, event.data as PermissionV2.Request).pipe(Effect.asVoid)
+              : Effect.void,
+          )
+          yield* Effect.addFinalizer(() => unsubscribe)
+          return asked
+        })
+      const wideAsked = yield* askedFor(PermissionV2.ID.create("per_char_src"))
+      const envAsked = yield* askedFor(PermissionV2.ID.create("per_char_env2"))
+      const envFiber = yield* service
+        .assert(assertion({ id: PermissionV2.ID.create("per_char_env2"), resources: ["project.env"] }))
+        .pipe(Effect.forkScoped)
+      const srcFiber = yield* service
+        .assert(assertion({ id: PermissionV2.ID.create("per_char_src"), resources: ["src/index.ts"], save: ["*"] }))
+        .pipe(Effect.forkScoped)
+
+      const srcRequest = yield* Deferred.await(wideAsked)
+      expect(yield* Deferred.await(envAsked)).toMatchObject({ resources: ["project.env"] })
+      yield* service.reply({ requestID: srcRequest.id, reply: "always" })
+      yield* Fiber.join(srcFiber)
+      // The saved wildcard from the "always" reply is less specific than the configured
+      // `read *.env` ask, so the pending .env request stays pending.
+      expect(yield* service.list()).toMatchObject([{ id: PermissionV2.ID.create("per_char_env2") }])
+      yield* service.reply({ requestID: PermissionV2.ID.create("per_char_env2"), reply: "once" })
+      yield* Fiber.join(envFiber)
+      expect(yield* service.list()).toEqual([])
+    }),
+  )
+
   it.effect("ask-first mode prompts for modifying actions but not reads", () =>
     Effect.gen(function* () {
       yield* setup([{ action: "*", resource: "*", effect: "allow" }])
@@ -339,7 +436,18 @@ describe("PermissionV2", () => {
       ).toMatchObject({ effect: "ask" })
       expect(
         yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["pwd"] })),
+      ).toMatchObject({ effect: "allow" })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["git push *"] })),
       ).toMatchObject({ effect: "ask" })
+      expect(
+        yield* service.ask(
+          assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["bun test *", "git push *"] }),
+        ),
+      ).toMatchObject({ effect: "ask" })
+      expect(
+        yield* service.ask(assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["bun test *"] })),
+      ).toMatchObject({ effect: "allow" })
     }),
   )
 
@@ -363,6 +471,74 @@ describe("PermissionV2", () => {
           assertion({ id: PermissionV2.ID.create(), action: "bash", resources: ["mkfs.ext4 /dev/sda1"] }),
         ),
       ).toMatchObject({ effect: "ask" })
+    }),
+  )
+
+  it.effect("child session follows the nearest ancestor's permission mode", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "*", resource: "*", effect: "deny" }])
+      yield* setMode("always-allow")
+      yield* insertSession("ses_child", { parentID: "ses_test" })
+      const service = yield* PermissionV2.Service
+      expect(
+        yield* service.ask(
+          assertion({
+            id: PermissionV2.ID.create(),
+            sessionID: SessionV2.ID.make("ses_child"),
+            action: "edit",
+            resources: ["src/index.ts"],
+          }),
+        ),
+      ).toMatchObject({ effect: "allow" })
+    }),
+  )
+
+  it.effect("explicit child mode overrides the ancestor mode", () =>
+    Effect.gen(function* () {
+      yield* setup([])
+      yield* setMode("always-allow")
+      yield* insertSession("ses_child", { parentID: "ses_test", mode: "ask-first" })
+      const service = yield* PermissionV2.Service
+      expect(
+        yield* service.ask(
+          assertion({
+            id: PermissionV2.ID.create(),
+            sessionID: SessionV2.ID.make("ses_child"),
+            action: "edit",
+            resources: ["src/index.ts"],
+          }),
+        ),
+      ).toMatchObject({ effect: "ask" })
+    }),
+  )
+
+  it.effect("mode resolves through an unset middle ancestor", () =>
+    Effect.gen(function* () {
+      yield* setup([{ action: "*", resource: "*", effect: "deny" }])
+      yield* setMode("ask-first")
+      yield* insertSession("ses_mid", { parentID: "ses_test" })
+      yield* insertSession("ses_leaf", { parentID: "ses_mid" })
+      const service = yield* PermissionV2.Service
+      expect(
+        yield* service.ask(
+          assertion({
+            id: PermissionV2.ID.create(),
+            sessionID: SessionV2.ID.make("ses_leaf"),
+            action: "edit",
+            resources: ["src/index.ts"],
+          }),
+        ),
+      ).toMatchObject({ effect: "ask" })
+      expect(
+        yield* service.ask(
+          assertion({
+            id: PermissionV2.ID.create(),
+            sessionID: SessionV2.ID.make("ses_leaf"),
+            action: "read",
+            resources: ["src/index.ts"],
+          }),
+        ),
+      ).toMatchObject({ effect: "deny" })
     }),
   )
 

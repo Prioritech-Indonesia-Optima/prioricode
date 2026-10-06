@@ -116,24 +116,21 @@ export const probeCapability = (ctx: ProbeContext) =>
     }
     const result = yield* ctx
       .run(
-        ChildProcess.make(
-          "bwrap",
-          [
-            "--ro-bind",
-            "/",
-            "/",
-            "--dev",
-            "/dev",
-            "--proc",
-            "/proc",
-            "--unshare-user",
-            "--unshare-pid",
-            "--unshare-ipc",
-            "--unshare-uts",
-            "--die-with-parent",
-            "true",
-          ],
-        ),
+        ChildProcess.make("bwrap", [
+          "--ro-bind",
+          "/",
+          "/",
+          "--dev",
+          "/dev",
+          "--proc",
+          "/proc",
+          "--unshare-user",
+          "--unshare-pid",
+          "--unshare-ipc",
+          "--unshare-uts",
+          "--die-with-parent",
+          "true",
+        ]),
       )
       .pipe(
         Effect.map((run) => ({ ok: run.exitCode === 0, detail: run.stderr.trim() })),
@@ -161,9 +158,9 @@ const layer = Layer.effect(
         platform: process.platform,
         exists: (file) => fs.existsSafe(file),
         run: (command) =>
-          app.run(command, { timeout: Duration.seconds(2), maxOutputBytes: 8192 }).pipe(
-            Effect.map((run) => ({ exitCode: run.exitCode, stderr: run.stderr.toString("utf8") })),
-          ),
+          app
+            .run(command, { timeout: Duration.seconds(2), maxOutputBytes: 8192 })
+            .pipe(Effect.map((run) => ({ exitCode: run.exitCode, stderr: run.stderr.toString("utf8") }))),
       })(),
     )
 
@@ -228,13 +225,9 @@ const layer = Layer.effect(
       }
 
       const ctx = yield* InstanceState.context
-      const cacheCandidates = [
-        path.join(global.home, ".npm"),
-        path.join(global.home, ".bun", "install", "cache"),
-      ]
-      const existingCaches = yield* Effect.forEach(
-        cacheCandidates,
-        (dir) => fs.existsSafe(dir).pipe(Effect.map((has) => (has ? dir : undefined))),
+      const cacheCandidates = [path.join(global.home, ".npm"), path.join(global.home, ".bun", "install", "cache")]
+      const existingCaches = yield* Effect.forEach(cacheCandidates, (dir) =>
+        fs.existsSafe(dir).pipe(Effect.map((has) => (has ? dir : undefined))),
       )
       const writable = [
         ctx.directory,

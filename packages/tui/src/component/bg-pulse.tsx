@@ -14,6 +14,7 @@ type GoUpsellArtOptions = RenderableOptions<FrameBufferRenderable> & {
   backgroundPanel?: RGBA
   primary?: RGBA
   logoBase?: RGBA
+  scheme?: "dark" | "light"
 }
 
 class GoUpsellArtRenderable extends FrameBufferRenderable {
@@ -35,6 +36,13 @@ class GoUpsellArtRenderable extends FrameBufferRenderable {
     this.painter.setBackgroundPanel(options.backgroundPanel)
     this.painter.setPrimary(options.primary)
     this.painter.setLogoBase(options.logoBase)
+    if (options.scheme) this.painter.setScheme(options.scheme)
+  }
+
+  set scheme(value: "dark" | "light" | undefined) {
+    if (value === "dark" || value === "light") {
+      if (this.painter.setScheme(value)) this.requestRender()
+    }
   }
 
   set backgroundPanel(value: RGBA | undefined) {
@@ -69,7 +77,7 @@ declare module "@opentui/solid" {
 extend({ go_upsell_art: GoUpsellArtRenderable })
 
 export function BgPulse() {
-  const { theme } = useTheme()
+  const { theme, mode } = useTheme()
   const renderer = useRenderer()
   let targetFps = renderer.targetFps
   let maxFps = renderer.maxFps
@@ -93,6 +101,7 @@ export function BgPulse() {
       backgroundPanel={theme.backgroundPanel}
       primary={theme.primary}
       logoBase={tint(theme.background, theme.text, 0.62)}
+      scheme={mode()}
       live
     />
   )

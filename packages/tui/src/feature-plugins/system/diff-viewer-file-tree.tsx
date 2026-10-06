@@ -2,6 +2,7 @@
 import type { ColorInput, RGBA, ScrollBoxRenderable } from "@opentui/core"
 import { Locale } from "../../util/locale"
 import { tint } from "../../context/theme"
+import { contrastRatio } from "../../theme"
 import { createEffect, createMemo, For, Match, Switch } from "solid-js"
 import { buildFileTree, flattenFileTree, type FileTreeItem, type FileTreeRow } from "./diff-viewer-file-tree-utils"
 import { Panel } from "./diff-viewer-ui"
@@ -12,8 +13,8 @@ export type DiffViewerFileTreeTheme = {
   readonly background: RGBA
   readonly backgroundPanel: ColorInput
   readonly backgroundElement: ColorInput
-  readonly primary: ColorInput
-  readonly secondary: ColorInput
+  readonly primary: RGBA
+  readonly secondary: RGBA
   readonly selectedListItemText: ColorInput
   readonly text: RGBA
   readonly textMuted: RGBA
@@ -50,6 +51,14 @@ export function DiffViewerFileTree(props: DiffViewerFileTreeProps) {
   })
 
   const fadedColor = () => tint(props.theme.text, props.theme.background, 0.75)
+  // Highlighted rows sit on theme.primary; raw background-as-fg is unreadable
+  // on light themes. Pick the higher-contrast of background/text against the
+  // surface (matches selectedForeground's opaque branch) without requiring
+  // the full Theme shape this plugin contract narrows.
+  const selectedFg = () =>
+    contrastRatio(props.theme.text, props.theme.primary) > contrastRatio(props.theme.background, props.theme.primary)
+      ? props.theme.text
+      : props.theme.background
 
   return (
     <Panel border="both" width={props.width}>
@@ -85,14 +94,14 @@ export function DiffViewerFileTree(props: DiffViewerFileTreeProps) {
                     backgroundColor={highlighted() ? props.theme.primary : undefined}
                     onMouseUp={() => props.onRowClick?.(row)}
                   >
-                    <text fg={highlighted() ? props.theme.background : fadedColor()} wrapMode="none" flexShrink={0}>
+                    <text fg={highlighted() ? selectedFg() : fadedColor()} wrapMode="none" flexShrink={0}>
                       {prefix()}
                     </text>
                     <box flexGrow={1} minWidth={0}>
                       <text
                         fg={
                           highlighted()
-                            ? props.theme.background
+                            ? selectedFg()
                             : selected()
                               ? props.theme.primary
                               : reviewed() || row.kind === "directory"
@@ -104,11 +113,7 @@ export function DiffViewerFileTree(props: DiffViewerFileTreeProps) {
                         {name()}
                       </text>
                     </box>
-                    <text
-                      fg={highlighted() ? props.theme.background : props.theme.textMuted}
-                      wrapMode="none"
-                      flexShrink={0}
-                    >
+                    <text fg={highlighted() ? selectedFg() : props.theme.textMuted} wrapMode="none" flexShrink={0}>
                       {status()}
                     </text>
                   </box>

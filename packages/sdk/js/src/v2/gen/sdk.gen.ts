@@ -27,6 +27,7 @@ import type {
   EventSubscribeResponses,
   EventTuiCommandExecute,
   EventTuiPromptAppend,
+  EventTuiPromptAttach,
   EventTuiSessionSelect,
   EventTuiToastShow,
   ExperimentalCapabilitiesGetErrors,
@@ -242,6 +243,8 @@ import type {
   ToolListResponses,
   TuiAppendPromptErrors,
   TuiAppendPromptResponses,
+  TuiAttachPromptErrors,
+  TuiAttachPromptResponses,
   TuiClearPromptErrors,
   TuiClearPromptResponses,
   TuiControlNextErrors,
@@ -380,6 +383,8 @@ import type {
   V2SessionRevertCommitResponses,
   V2SessionRevertStageErrors,
   V2SessionRevertStageResponses,
+  V2SessionSetGoalErrors,
+  V2SessionSetGoalResponses,
   V2SessionSwitchAgentErrors,
   V2SessionSwitchAgentResponses,
   V2SessionSwitchModelErrors,
@@ -4719,6 +4724,47 @@ export class Tui extends HeyApiClient {
   }
 
   /**
+   * Attach clipboard file to TUI prompt
+   *
+   * Attach a base64 file (image or PDF clipboard payload) to the TUI prompt.
+   */
+  public attachPrompt<ThrowOnError extends boolean = false>(
+    parameters?: {
+      directory?: string
+      workspace?: string
+      filename?: string
+      mime?: string
+      data?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "query", key: "directory" },
+            { in: "query", key: "workspace" },
+            { in: "body", key: "filename" },
+            { in: "body", key: "mime" },
+            { in: "body", key: "data" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<TuiAttachPromptResponses, TuiAttachPromptErrors, ThrowOnError>({
+      url: "/tui/attach",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Open help dialog
    *
    * Open the help dialog in the TUI to display user assistance information.
@@ -4987,7 +5033,12 @@ export class Tui extends HeyApiClient {
     parameters?: {
       directory?: string
       workspace?: string
-      body?: EventTuiPromptAppend | EventTuiCommandExecute | EventTuiToastShow | EventTuiSessionSelect
+      body?:
+        | EventTuiPromptAppend
+        | EventTuiPromptAttach
+        | EventTuiCommandExecute
+        | EventTuiToastShow
+        | EventTuiSessionSelect
     },
     options?: Options<never, ThrowOnError>,
   ) {
@@ -5652,6 +5703,41 @@ export class Session3 extends HeyApiClient {
   }
 
   /**
+   * Set durable session goal
+   *
+   * Set, update, or (with an empty value) clear the durable goal re-anchored into every provider turn.
+   */
+  public setGoal<ThrowOnError extends boolean = false>(
+    parameters: {
+      sessionID: string
+      goal?: string
+    },
+    options?: Options<never, ThrowOnError>,
+  ) {
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "goal" },
+          ],
+        },
+      ],
+    )
+    return (options?.client ?? this.client).post<V2SessionSetGoalResponses, V2SessionSetGoalErrors, ThrowOnError>({
+      url: "/api/session/{sessionID}/goal",
+      ...options,
+      ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
+    })
+  }
+
+  /**
    * Send message
    *
    * Durably admit one session input and schedule agent-loop execution unless resume is false.
@@ -5695,19 +5781,37 @@ export class Session3 extends HeyApiClient {
   /**
    * Compact session
    *
-   * Compact a session conversation.
+   * Summarize durable history now; optionally only up to an anchor message, with focus instructions.
    */
   public compact<ThrowOnError extends boolean = false>(
     parameters: {
       sessionID: string
+      anchor?: string
+      instructions?: string
     },
     options?: Options<never, ThrowOnError>,
   ) {
-    const params = buildClientParams([parameters], [{ args: [{ in: "path", key: "sessionID" }] }])
+    const params = buildClientParams(
+      [parameters],
+      [
+        {
+          args: [
+            { in: "path", key: "sessionID" },
+            { in: "body", key: "anchor" },
+            { in: "body", key: "instructions" },
+          ],
+        },
+      ],
+    )
     return (options?.client ?? this.client).post<V2SessionCompactResponses, V2SessionCompactErrors, ThrowOnError>({
       url: "/api/session/{sessionID}/compact",
       ...options,
       ...params,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+        ...params.headers,
+      },
     })
   }
 

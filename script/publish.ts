@@ -62,7 +62,10 @@ if (Script.release && process.env.LATEST_YML_DIR) {
 }
 
 if (Script.release && !Script.preview) {
-  await $`git commit -am "release: ${tag}"`
+  // Re-releasing the same version (e.g. retract + re-ship) leaves every
+  // package.json already at the target version, so these commits are no-ops;
+  // "nothing to commit" must not abort tagging and publishing.
+  await $`git commit -am "release: ${tag}"`.nothrow()
   await $`git tag -d ${tag}`.nothrow()
   await $`git tag ${tag}`
   await $`git push origin refs/tags/${tag} --force-with-lease --no-verify`
@@ -70,7 +73,7 @@ if (Script.release && !Script.preview) {
   await $`git fetch origin`
   await $`git checkout -B main origin/main`
   await prepareReleaseFiles()
-  await $`git commit -am "sync release versions for ${tag}"`
+  await $`git commit -am "sync release versions for ${tag}"`.nothrow()
   await $`git push origin HEAD:main --no-verify`
 }
 

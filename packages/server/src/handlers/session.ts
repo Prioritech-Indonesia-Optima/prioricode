@@ -5,6 +5,7 @@ import { Api } from "../api"
 import { SessionsCursor } from "@prioricode/protocol/groups/session"
 import {
   ConflictError,
+  SessionBusyError,
   InvalidCursorError,
   MessageNotFoundError,
   ServiceUnavailableError,
@@ -121,6 +122,22 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
         }),
       )
       .handle(
+        "session.setGoal",
+        Effect.fn(function* (ctx) {
+          yield* session.setGoal({ sessionID: ctx.params.sessionID, goal: ctx.payload.goal }).pipe(
+            Effect.catchTag("Session.NotFoundError", (error) =>
+              Effect.fail(
+                new SessionNotFoundError({
+                  sessionID: error.sessionID,
+                  message: `Session not found: ${error.sessionID}`,
+                }),
+              ),
+            ),
+          )
+          return HttpApiSchema.NoContent.make()
+        }),
+      )
+      .handle(
         "session.switchModel",
         Effect.fn(function* (ctx) {
           yield* session.switchModel({ sessionID: ctx.params.sessionID, model: ctx.payload.model }).pipe(
@@ -172,24 +189,62 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
       .handle(
         "session.compact",
         Effect.fn(function* (ctx) {
-          yield* session.compact({ sessionID: ctx.params.sessionID }).pipe(
-            Effect.catchTag("Session.NotFoundError", (error) =>
-              Effect.fail(
-                new SessionNotFoundError({
-                  sessionID: error.sessionID,
-                  message: `Session not found: ${error.sessionID}`,
-                }),
+          yield* session
+            .compact({
+              sessionID: ctx.params.sessionID,
+              anchor: ctx.payload.anchor,
+              instructions: ctx.payload.instructions,
+            })
+            .pipe(
+              Effect.catchTag("Session.NotFoundError", (error) =>
+                Effect.fail(
+                  new SessionNotFoundError({
+                    sessionID: error.sessionID,
+                    message: `Session not found: ${error.sessionID}`,
+                  }),
+                ),
               ),
-            ),
-            Effect.catchTag("Session.OperationUnavailableError", (error) =>
-              Effect.fail(
-                new ServiceUnavailableError({
-                  message: `Session ${error.operation} is not available yet`,
-                  service: `session.${error.operation}`,
-                }),
+              Effect.catchTag("Session.BusyError", (error) =>
+                Effect.fail(
+                  new SessionBusyError({
+                    sessionID: error.sessionID,
+                    message: `Session is currently running an agent turn: ${error.sessionID}`,
+                  }),
+                ),
               ),
-            ),
-          )
+              Effect.catchTag("Session.MessageNotFoundError", (error) =>
+                Effect.fail(
+                  new MessageNotFoundError({
+                    sessionID: error.sessionID,
+                    messageID: error.messageID,
+                    message: `Message not found in session: ${error.messageID}`,
+                  }),
+                ),
+              ),
+              Effect.catch(
+                (
+                  error,
+                ): Effect.Effect<
+                  never,
+                  SessionNotFoundError | SessionBusyError | MessageNotFoundError | UnknownError
+                > => {
+                  if (
+                    error instanceof SessionNotFoundError ||
+                    error instanceof SessionBusyError ||
+                    error instanceof MessageNotFoundError
+                  )
+                    return Effect.fail(error)
+                  const ref = `err_${crypto.randomUUID().slice(0, 8)}`
+                  return Effect.logError("failed to compact session", { ref, error }).pipe(
+                    Effect.andThen(
+                      Effect.fail(
+                        new UnknownError({ message: "Unexpected server error. Check server logs for details.", ref }),
+                      ),
+                    ),
+                  )
+                },
+              ),
+            )
           return HttpApiSchema.NoContent.make()
         }),
       )
@@ -197,6 +252,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
         "session.wait",
         Effect.fn(function* (ctx) {
           yield* session.wait(ctx.params.sessionID).pipe(
+            Effect.catchTag("Session.BusyError", (error) =>
+              Effect.fail(
+                new ConflictError({
+                  message: `Session is currently running an agent turn: ${error.sessionID}`,
+                  resource: error.sessionID,
+                }),
+              ),
+            ),
             Effect.catchTag("Session.NotFoundError", (error) =>
               Effect.fail(
                 new SessionNotFoundError({
@@ -228,6 +291,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                   new SessionNotFoundError({
                     sessionID: error.sessionID,
                     message: `Session not found: ${error.sessionID}`,
+                  }),
+              ),
+              Effect.catchTag(
+                "Session.BusyError",
+                (error) =>
+                  new SessionBusyError({
+                    sessionID: error.sessionID,
+                    message: `Session is currently running an agent turn: ${error.sessionID}`,
                   }),
               ),
               Effect.catchTag(
@@ -268,6 +339,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                   message: `Session not found: ${error.sessionID}`,
                 }),
             ),
+            Effect.catchTag(
+              "Session.BusyError",
+              (error) =>
+                new SessionBusyError({
+                  sessionID: error.sessionID,
+                  message: `Session is currently running an agent turn: ${error.sessionID}`,
+                }),
+            ),
             Effect.catchTag("Snapshot.Error", (error) => {
               const ref = `err_${crypto.randomUUID().slice(0, 8)}`
               return Effect.logError("failed to clear session revert", { cause: error }).pipe(
@@ -295,6 +374,14 @@ export const SessionHandler = HttpApiBuilder.group(Api, "server.session", (handl
                 new SessionNotFoundError({
                   sessionID: error.sessionID,
                   message: `Session not found: ${error.sessionID}`,
+                }),
+            ),
+            Effect.catchTag(
+              "Session.BusyError",
+              (error) =>
+                new SessionBusyError({
+                  sessionID: error.sessionID,
+                  message: `Session is currently running an agent turn: ${error.sessionID}`,
                 }),
             ),
           )

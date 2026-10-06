@@ -23,6 +23,12 @@ export interface Interface {
     readonly sessionID: SessionSchema.ID
     readonly force: boolean
   }) => Effect.Effect<void, RunError>
+  /** One manual, idle-only compaction of durable history; re-baselines at the next provider turn. */
+  readonly compact: (input: {
+    readonly sessionID: SessionSchema.ID
+    readonly headCutSeq?: number
+    readonly instructions?: string
+  }) => Effect.Effect<boolean, RunError>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/SessionRunner") {}

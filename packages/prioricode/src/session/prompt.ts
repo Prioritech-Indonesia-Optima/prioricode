@@ -60,12 +60,30 @@ import { SessionTools } from "./tools"
 import { LLMEvent } from "@prioricode/llm"
 import { triggerPoint } from "./overflow"
 import { Token } from "@/util/token"
+import { SessionRetry } from "./retry"
+import { isMedia } from "@/util/media"
 
 // @ts-ignore
 globalThis.AI_SDK_LOG_WARNINGS = false
 
 const decodeMessageInfo = Schema.decodeUnknownExit(SessionV1.Info)
 const decodeMessagePart = Schema.decodeUnknownExit(SessionV1.Part)
+
+// Sessions whose provider endpoint has rejected a request because of its
+// image/PDF payloads (e.g. gateways failing with "Download multimodal file
+// timed out"). Media is stripped from every later request in these sessions
+// so history containing the rejected attachment cannot wedge the session.
+// Process-local by design: a restart re-attempts media once.
+const mediaRejectedSessions = new Set<string>()
+
+const historyHasMedia = (msgs: SessionV1.WithParts[]) =>
+  msgs.some((message) =>
+    message.parts.some((part) => {
+      if (part.type === "file") return isMedia(part.mime)
+      if (part.type !== "tool") return false
+      return part.state.status === "completed" && (part.state.attachments ?? []).some((a) => isMedia(a.mime))
+    }),
+  )
 const MAX_MCP_RESOURCE_BLOB_BYTES = 10 * 1024 * 1024
 const SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES = new Set([
   "application/pdf",
@@ -268,6 +286,7 @@ const layer = Layer.effect(
     }) {
       const { task, model, lastUser, sessionID, session, msgs } = input
       const ctx = yield* InstanceState.context
+      const permissionMode = yield* sessions.effectivePermissionMode(sessionID)
       const promptOps = yield* ops()
       const { task: taskTool } = yield* registry.named()
       const taskModel = task.model ? yield* getModel(task.model.providerID, task.model.modelID, sessionID) : model
@@ -350,7 +369,7 @@ const layer = Layer.effect(
                 ...req,
                 sessionID,
                 ruleset: Permission.merge(taskAgent.permission, session.permission ?? []),
-                mode: session.permissionMode,
+                mode: permissionMode,
               })
               .pipe(Effect.orDie),
         })
@@ -1085,6 +1104,43 @@ const layer = Layer.effect(
       throw new Error("Impossible")
     })
 
+    // A tool part still pending/running in persisted history when a drain
+    // (re)starts has no live execution behind it: processor.cleanup settles
+    // graceful interrupts itself, so leftovers mean the process died
+    // mid-request or a lost background job never settled. Persist those
+    // orphans as interrupted errors (the same shape processor.cleanup
+    // writes) so durable transcripts — subagent tabs, compaction summaries,
+    // task_id resumes — match the paired interrupted tool_result that
+    // provider replay already synthesizes. Provider-executed calls are
+    // skipped: their results belong to the provider-native round trip.
+    const settleOrphanedToolParts = Effect.fnUntraced(function* (msgs: SessionV1.WithParts[]) {
+      const stale = msgs.flatMap((msg) =>
+        msg.info.role === "assistant"
+          ? msg.parts.filter(
+              (part): part is SessionV1.ToolPart =>
+                part.type === "tool" &&
+                !part.metadata?.providerExecuted &&
+                (part.state.status === "pending" || part.state.status === "running"),
+            )
+          : [],
+      )
+      for (const part of stale) {
+        const now = Date.now()
+        const meta = "metadata" in part.state ? (part.state.metadata ?? {}) : {}
+        yield* sessions.updatePart({
+          ...part,
+          state: {
+            status: "error",
+            error: "Tool execution aborted",
+            input: part.state.input,
+            time: { start: part.state.status === "running" ? part.state.time.start : now, end: now },
+            metadata: { ...meta, interrupted: true },
+          },
+        } satisfies SessionV1.ToolPart)
+      }
+      return stale.length
+    })
+
     const runLoop: (sessionID: SessionID) => Effect.Effect<SessionV1.WithParts> = Effect.fn("SessionPrompt.run")(
       function* (sessionID: SessionID) {
         const ctx = yield* InstanceState.context
@@ -1100,6 +1156,10 @@ const layer = Layer.effect(
           let msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
             Effect.provideService(Database.Service, database),
           )
+          if ((yield* settleOrphanedToolParts(msgs)) > 0)
+            msgs = yield* MessageV2.filterCompactedEffect(sessionID).pipe(
+              Effect.provideService(Database.Service, database),
+            )
 
           const { user: lastUser, assistant: lastAssistant, finished: lastFinished, tasks } = MessageV2.latest(msgs)
 
@@ -1257,6 +1317,7 @@ const layer = Layer.effect(
               Effect.provideService(Truncate.Service, truncate),
               Effect.provideService(RuntimeFlags.Service, flags),
               Effect.provideService(Hook.Service, hooks),
+              Effect.provideService(Session.Service, sessions),
             )
 
             if (lastUser.format?.type === "json_schema") {
@@ -1278,7 +1339,11 @@ const layer = Layer.effect(
               sys.environment(model),
               instruction.system().pipe(Effect.orDie),
               sys.mcp(agent, session.permission),
-              MessageV2.toModelMessagesEffect(msgs, model),
+              MessageV2.toModelMessagesEffect(
+                msgs,
+                model,
+                mediaRejectedSessions.has(sessionID) ? { stripMedia: true } : undefined,
+              ),
             ])
             // Surface coordination notes from peer sessions once, at the step boundary. The
             // atomic claim marks them read (injected) and stamps this step's assistant
@@ -1397,6 +1462,20 @@ const layer = Layer.effect(
                 yield* sessions.updateMessage(handle.message)
                 return "break" as const
               }
+            }
+
+            if (
+              handle.message.error &&
+              !mediaRejectedSessions.has(sessionID) &&
+              SessionRetry.isMediaRejection(handle.message.error) &&
+              historyHasMedia(msgs)
+            ) {
+              mediaRejectedSessions.add(sessionID)
+              yield* Effect.logWarning("provider rejected request media; retrying step without image/pdf attachments", {
+                "session.id": sessionID,
+                messageID: handle.message.id,
+              })
+              return "continue" as const
             }
 
             if (result === "stop") return "break" as const

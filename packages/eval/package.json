@@ -1,0 +1,22 @@
+{
+  "name": "@prioricode/eval",
+  "module": "src/run.ts",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "eval": "bun run src/run.ts",
+    "test": "bun test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "devDependencies": {
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "typescript": "catalog:"
+  },
+  "dependencies": {
+    "@prioricode/core": "workspace:*",
+    "@prioricode/llm": "workspace:*",
+    "effect": "catalog:"
+  }
+}

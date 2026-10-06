@@ -22,3 +22,16 @@ export class ContextSnapshotDecodeError extends Schema.TaggedErrorClass<ContextS
     return `Failed to decode context snapshot for session ${this.sessionID}: ${this.details}`
   }
 }
+
+export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Session.NotFoundError", {
+  sessionID: SessionSchema.ID,
+}) {}
+
+export class PromptConflictError extends Schema.TaggedErrorClass<PromptConflictError>()("Session.PromptConflictError", {
+  sessionID: SessionSchema.ID,
+  messageID: SessionMessage.ID,
+}) {}
+
+export class BusyError extends Schema.TaggedErrorClass<BusyError>()("Session.BusyError", {
+  sessionID: SessionSchema.ID,
+}) {}

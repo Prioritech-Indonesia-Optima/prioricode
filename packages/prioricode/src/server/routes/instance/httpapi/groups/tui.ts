@@ -14,6 +14,10 @@ const EventTuiPromptAppend = Schema.Struct({
   type: Schema.Literal(TuiEvent.PromptAppend.type),
   properties: TuiEvent.PromptAppend.data,
 }).annotate({ identifier: "EventTuiPromptAppend" })
+const EventTuiPromptAttach = Schema.Struct({
+  type: Schema.Literal(TuiEvent.PromptAttach.type),
+  properties: TuiEvent.PromptAttach.data,
+}).annotate({ identifier: "EventTuiPromptAttach" })
 const EventTuiCommandExecute = Schema.Struct({
   type: Schema.Literal(TuiEvent.CommandExecute.type),
   properties: TuiEvent.CommandExecute.data,
@@ -28,6 +32,7 @@ const EventTuiSessionSelect = Schema.Struct({
 }).annotate({ identifier: "EventTuiSessionSelect" })
 export const TuiPublishPayload = Schema.Union([
   EventTuiPromptAppend,
+  EventTuiPromptAttach,
   EventTuiCommandExecute,
   EventTuiToastShow,
   EventTuiSessionSelect,
@@ -35,6 +40,7 @@ export const TuiPublishPayload = Schema.Union([
 
 export const TuiPaths = {
   appendPrompt: `${root}/append-prompt`,
+  attachPrompt: `${root}/attach`,
   openHelp: `${root}/open-help`,
   openSessions: `${root}/open-sessions`,
   openThemes: `${root}/open-themes`,
@@ -63,6 +69,18 @@ export const TuiApi = HttpApi.make("tui")
             identifier: "tui.appendPrompt",
             summary: "Append TUI prompt",
             description: "Append prompt to the TUI.",
+          }),
+        ),
+        HttpApiEndpoint.post("attachPrompt", TuiPaths.attachPrompt, {
+          query: WorkspaceRoutingQuery,
+          payload: TuiEvent.PromptAttach.data,
+          success: described(Schema.Boolean, "Attachment queued successfully"),
+          error: HttpApiError.BadRequest,
+        }).annotateMerge(
+          OpenApi.annotations({
+            identifier: "tui.attachPrompt",
+            summary: "Attach clipboard file to TUI prompt",
+            description: "Attach a base64 file (image or PDF clipboard payload) to the TUI prompt.",
           }),
         ),
         HttpApiEndpoint.post("openHelp", TuiPaths.openHelp, {

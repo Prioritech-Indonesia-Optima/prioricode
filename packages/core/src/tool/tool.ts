@@ -41,7 +41,7 @@ export const failure = (message: string, error?: unknown) =>
   })
 
 function causeText(error: unknown) {
-  if (error instanceof Error) return error.message || error.name || String(error)
+  if (error instanceof Error) return error.message || errorPayloadText(error) || error.name || String(error)
   if (typeof error === "string") return error || "unknown error"
   if (typeof error === "object" && error !== null) {
     const message = (error as { message?: unknown }).message
@@ -53,6 +53,19 @@ function causeText(error: unknown) {
     }
   }
   return String(error)
+}
+
+// Message-less typed errors (Schema.TaggedErrorClass) carry their payload as
+// own enumerable fields; serializing them keeps that payload model-visible
+// instead of the bare tag name.
+function errorPayloadText(error: Error) {
+  const payload = Object.fromEntries(Object.entries(error).filter(([key]) => key !== "_tag"))
+  if (Object.keys(payload).length === 0) return ""
+  try {
+    return JSON.stringify(payload)
+  } catch {
+    return ""
+  }
 }
 
 export class RegistrationError extends Schema.TaggedErrorClass<RegistrationError>()("Tool.RegistrationError", {
@@ -72,6 +85,12 @@ type Config<
   readonly description: string
   readonly input: Input
   readonly output: Output
+  /**
+   * Raw upstream JSON Schema replacing the derived input definition (MCP and
+   * plugin tools whose schema is not known at compile time). Pair it with
+   * `Schema.Unknown` input and output codecs, which pass values through.
+   */
+  readonly jsonSchema?: JsonSchema.JsonSchema
   readonly structured?: Structured
   readonly toStructuredOutput?: (input: {
     readonly input: Schema.Schema.Type<Input>
@@ -109,8 +128,8 @@ export function make<
       const definition = new ToolDefinition({
         name,
         description: config.description,
-        inputSchema: toJsonSchema(config.input),
-        outputSchema: toJsonSchema(config.structured ?? config.output),
+        inputSchema: config.jsonSchema ?? toJsonSchema(config.input),
+        outputSchema: config.jsonSchema === undefined ? toJsonSchema(config.structured ?? config.output) : undefined,
       })
       definitions.set(name, definition)
       return definition
