@@ -59,4 +59,7 @@ test("shows the brand hero on the home and starts a session from the primary act
   await expectAppVisible(newSession)
   await newSession.click()
   await expectAppVisible(page.locator('[data-component="prompt-input-v2"]'))
+
+  const newView = page.locator('[data-component="session-new-design"]')
+  await expectAppVisible(newView)
 })
