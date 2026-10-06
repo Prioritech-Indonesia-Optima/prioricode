@@ -697,6 +697,9 @@ export const dict = {
   "home.sessions.group.today": "Hari ini",
   "home.sessions.group.yesterday": "Semalam",
   "home.sessions.group.older": "Lama",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Sambung ke lebih 75 penyedia untuk menggunakan model lain, termasuk Claude, GPT, Gemini dan lain-lain",
   "session.tab.session": "Sesi",
@@ -752,6 +755,7 @@ export const dict = {
   "session.revertDock.collapse": "Runtuhkan mesej dipulangkan semula",
   "session.revertDock.expand": "Kembangkan mesej dipulangkan semula",
   "session.revertDock.restore": "Pulihkan mesej",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Bina apa sahaja",
   "session.new.project.new": "Projek baharu",
   "session.new.project.search": "Cari projek",

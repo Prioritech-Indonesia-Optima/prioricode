@@ -705,6 +705,9 @@ export const dict = {
   "home.sessions.group.today": "Šiandien",
   "home.sessions.group.yesterday": "vakar",
   "home.sessions.group.older": "Vyresni",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Prisijunkite prie 75 ir daugiau tiekėjų, kad galėtumėte naudoti kitus modelius, įskaitant Claude, GPT, Gemini ir kt.",
   "session.tab.session": "Seansas",
@@ -767,6 +770,7 @@ export const dict = {
   "session.revertDock.collapse": "Sutraukti atšauktus pranešimus",
   "session.revertDock.expand": "Išplėskite atšauktus pranešimus",
   "session.revertDock.restore": "Atkurti pranešimą",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Statyti bet ką",
   "session.new.project.new": "Naujas projektas",
   "session.new.project.search": "Ieškoti projektų",

@@ -710,6 +710,9 @@ export const dict = {
   "home.sessions.group.today": "މިއަދު",
   "home.sessions.group.yesterday": "އިއްޔެ",
   "home.sessions.group.older": "އުމުރުން ދުވަސްވީއެވެ",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "75+ ޕްރޮވައިޑަރުންނާ ގުޅިގެން އެހެން މޮޑެލްތައް ބޭނުންކުރުން، އޭގެ ތެރޭގައި Claude، GPT، Gemini ފަދަ މޮޑެލްތައް ހިމެނެއެވެ",
   "session.tab.session": "ސެޝަން",
@@ -766,6 +769,7 @@ export const dict = {
   "session.revertDock.collapse": "ކޮލަޕްސް ރޯލް ބެކް މެސެޖުތަކެވެ",
   "session.revertDock.expand": "ރޯލް ބެކް މެސެޖުތައް ފުޅާކުރުން",
   "session.revertDock.restore": "މެސެޖު ރިސްޓޯރ ކުރާށެވެ",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "ކޮންމެ އެއްޗެއް ބިނާކުރާށެވެ",
   "session.new.project.new": "އާ މަޝްރޫއެއް",
   "session.new.project.search": "ޕްރޮޖެކްޓްތައް ހޯދުން",

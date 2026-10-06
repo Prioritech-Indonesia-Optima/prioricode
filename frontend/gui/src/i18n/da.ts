@@ -624,6 +624,9 @@ export const dict = {
   "home.sessions.group.today": "I dag",
   "home.sessions.group.yesterday": "I går",
   "home.sessions.group.older": "Ældre",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Opret forbindelse til mere end 75 udbydere for at bruge andre modeller, herunder Claude, GPT, Gemini og flere",
 
@@ -677,6 +680,7 @@ export const dict = {
   "session.revertDock.expand": "Udvid tilbagerullede beskeder",
   "session.revertDock.restore": "Gendan besked",
 
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Byg hvad som helst",
   "session.new.project.new": "Nyt projekt",
   "session.new.project.search": "Søg efter projekter",

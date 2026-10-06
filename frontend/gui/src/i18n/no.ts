@@ -673,6 +673,7 @@ export const dict = {
   "session.revertDock.expand": "Utvid tilbakestilte meldinger",
   "session.revertDock.restore": "Gjenopprett melding",
 
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Bygg hva som helst",
   "session.new.worktree.main": "Hovedgren",
   "session.new.worktree.mainWithBranch": "Hovedgren ({{branch}})",
@@ -1204,6 +1205,9 @@ export const dict = {
   "home.sessions.group.today": "I dag",
   "home.sessions.group.yesterday": "I går",
   "home.sessions.group.older": "Eldre",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Koble til over 75 leverandører for å bruke andre modeller, inkludert Claude, GPT, Gemini og flere",
 

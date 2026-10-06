@@ -706,6 +706,9 @@ export const dict = {
   "home.sessions.group.today": "Danas",
   "home.sessions.group.yesterday": "Jučer",
   "home.sessions.group.older": "Starije",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Povežite se s više od 75 pružatelja usluga za korištenje drugih modela, uključujući Claude, GPT, Gemini itd.",
   "session.tab.session": "Sesija",
@@ -764,6 +767,7 @@ export const dict = {
   "session.revertDock.collapse": "Sažmi vraćene poruke",
   "session.revertDock.expand": "Proširi vraćene poruke",
   "session.revertDock.restore": "Vrati poruku",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Gradite bilo što",
   "session.new.project.new": "Novi projekt",
   "session.new.project.search": "Pretražite projekte",

@@ -703,6 +703,9 @@ export const dict = {
   "home.sessions.group.today": "Այսօր",
   "home.sessions.group.yesterday": "Երեկ",
   "home.sessions.group.older": "Հին",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Միացեք 75+ մատակարարների՝ այլ մոդելներ օգտագործելու համար, այդ թվում՝ Claude, GPT, Gemini և այլն",
   "session.tab.session": "Նիստ",
@@ -759,6 +762,7 @@ export const dict = {
   "session.revertDock.collapse": "Ծալել վերադարձված հաղորդագրությունները",
   "session.revertDock.expand": "Ընդլայնել վերադարձված հաղորդագրությունները",
   "session.revertDock.restore": "Վերականգնել հաղորդագրությունը",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Կառուցել որեւէ բան",
   "session.new.project.new": "Նոր նախագիծ",
   "session.new.project.search": "Որոնել նախագծեր",

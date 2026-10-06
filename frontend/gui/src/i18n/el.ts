@@ -705,6 +705,9 @@ export const dict = {
   "home.sessions.group.today": "Σήμερα",
   "home.sessions.group.yesterday": "Χθες",
   "home.sessions.group.older": "Παλαιότερο",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Συνδεθείτε σε 75+ παρόχους για να χρησιμοποιήσετε άλλα μοντέλα, συμπεριλαμβανομένων των Claude, GPT, Gemini, κ.λπ.",
   "session.tab.session": "Συνεδρία",
@@ -762,6 +765,7 @@ export const dict = {
   "session.revertDock.collapse": "Σύμπτυξη επαναλαμβανόμενων μηνυμάτων",
   "session.revertDock.expand": "Ανάπτυξη επαναλαμβανόμενων μηνυμάτων",
   "session.revertDock.restore": "Επαναφορά μηνύματος",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Δημιουργία οτιδήποτε",
   "session.new.project.new": "Νέο έργο",
   "session.new.project.search": "Αναζήτηση έργων",

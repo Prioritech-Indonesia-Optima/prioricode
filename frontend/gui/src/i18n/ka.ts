@@ -699,6 +699,9 @@ export const dict = {
   "home.sessions.group.today": "დღეს",
   "home.sessions.group.yesterday": "გუშინ",
   "home.sessions.group.older": "ძველი",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "დაკავშირება 75+ პროვაიდერთან სხვა მოდელების გამოსაყენებლად, მათ შორის, Claude, GPT, Gemini და ა.შ.",
   "session.tab.session": "სესია",
@@ -754,6 +757,7 @@ export const dict = {
   "session.revertDock.collapse": "გაბრუნებული შეტყობინებების ჩაკეცვა",
   "session.revertDock.expand": "გაფართოვებული შეტყობინებების გაფართოება",
   "session.revertDock.restore": "წერილის აღდგენა",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "აშენეთ რამე",
   "session.new.project.new": "ახალი პროექტი",
   "session.new.project.search": "პროექტების ძიება",

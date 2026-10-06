@@ -704,6 +704,9 @@ export const dict = {
   "home.sessions.group.today": "Өнөөдөр",
   "home.sessions.group.yesterday": "Өчигдөр",
   "home.sessions.group.older": "Хуучин",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Claude, GPT, Gemini гэх мэт бусад загваруудыг ашиглахын тулд 75+ үйлчилгээ үзүүлэгчтэй холбогдоно уу.",
   "session.tab.session": "Сесс",
@@ -760,6 +763,7 @@ export const dict = {
   "session.revertDock.collapse": "Буцаасан мессежүүдийг буулгах",
   "session.revertDock.expand": "Буцаасан мессежүүдийг дэлгэх",
   "session.revertDock.restore": "Зурвасыг сэргээх",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Юу ч барина",
   "session.new.project.new": "Шинэ төсөл",
   "session.new.project.search": "Төсөл хайх",

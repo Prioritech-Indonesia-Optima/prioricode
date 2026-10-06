@@ -704,6 +704,9 @@ export const dict = {
   "home.sessions.group.today": "Ma",
   "home.sessions.group.yesterday": "Tegnap",
   "home.sessions.group.older": "Régebbi",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Csatlakozzon 75+ szolgáltatóhoz más modellek használatához, beleértve a Claude, GPT, Gemini stb.",
   "session.tab.session": "Munkamenet",
@@ -761,6 +764,7 @@ export const dict = {
   "session.revertDock.collapse": "A visszagörgetett üzenetek összecsukása",
   "session.revertDock.expand": "A visszagörgetett üzenetek kibontása",
   "session.revertDock.restore": "Üzenet visszaállítása",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Építsen bármit",
   "session.new.project.new": "Új projekt",
   "session.new.project.search": "Projektek keresése",

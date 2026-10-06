@@ -699,6 +699,9 @@ export const dict = {
   "home.sessions.group.today": "Astăzi",
   "home.sessions.group.yesterday": "Ieri",
   "home.sessions.group.older": "Mai vechi",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Conectează-te la peste 75 de furnizori pentru a folosi alte modele, inclusiv Claude, GPT, Gemini etc.",
   "session.tab.session": "Sesiune",
@@ -759,6 +762,7 @@ export const dict = {
   "session.revertDock.collapse": "Restrânge mesajele anulate",
   "session.revertDock.expand": "Extinde mesajele anulate",
   "session.revertDock.restore": "Restaurează mesajul",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Construiește orice",
   "session.new.project.new": "Proiect nou",
   "session.new.project.search": "Caută proiecte",

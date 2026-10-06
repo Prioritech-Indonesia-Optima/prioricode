@@ -706,6 +706,9 @@ export const dict = {
   "home.sessions.group.today": "ယနေ့",
   "home.sessions.group.yesterday": "မနေ့က",
   "home.sessions.group.older": "အသက်ကြီးသည်။",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Claude၊ GPT၊ Gemini စသည်တို့အပါအဝင် အခြားမော်ဒယ်များကို အသုံးပြုရန် 75+ ဝန်ဆောင်မှုပေးသူများထံ ချိတ်ဆက်ပါ။",
   "session.tab.session": "အပိုင်း",
@@ -762,6 +765,7 @@ export const dict = {
   "session.revertDock.collapse": "ပြန်လှန်ထားသော စာတိုများကို ခေါက်သိမ်းပါ။",
   "session.revertDock.expand": "ပြန်လှန်ထားသော စာတိုများကို ချဲ့ပါ။",
   "session.revertDock.restore": "မက်ဆေ့ဂျ်ကို ပြန်ယူပါ။",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "မည်သည့်အရာကိုမဆို တည်ဆောက်ပါ။",
   "session.new.project.new": "ပရောဂျက်အသစ်",
   "session.new.project.search": "ရှာဖွေရေး ပရောဂျက်များ",

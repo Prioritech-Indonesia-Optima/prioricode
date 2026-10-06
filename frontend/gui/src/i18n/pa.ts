@@ -708,6 +708,9 @@ export const dict = {
   "home.sessions.group.today": "آج",
   "home.sessions.group.yesterday": "کل",
   "home.sessions.group.older": "پرانا",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "دوجے ماڈل استعمال کرن لئی 75+ فراہم کرن آلیاں نال جڑو، جنہاں چ Claude، GPT، Gemini، وغیرہ شامل نیں",
   "session.tab.session": "سیشن",
@@ -763,6 +766,7 @@ export const dict = {
   "session.revertDock.collapse": "واپس موڑے سنیہے سمیٹو",
   "session.revertDock.expand": "رول بیک پیغامات نو ودھاؤ",
   "session.revertDock.restore": "سنیہا بحال کرو",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "کجھ وی بناؤ",
   "session.new.project.new": "نواں منصوبہ",
   "session.new.project.search": "منصوبیاں دی تلاش کرو",

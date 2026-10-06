@@ -702,6 +702,9 @@ export const dict = {
   "home.sessions.group.today": "Bugun",
   "home.sessions.group.yesterday": "Kecha",
   "home.sessions.group.older": "Kattaroq",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Claude, GPT, Gemini va boshqalar kabi boshqa modellardan foydalanish uchun 75 dan ortiq provayderlarga ulaning.",
   "session.tab.session": "Sessiya",
@@ -759,6 +762,7 @@ export const dict = {
   "session.revertDock.collapse": "Orqaga qaytarilgan xabarlarni yig'ish",
   "session.revertDock.expand": "Orqaga qaytarilgan xabarlarni yoyish",
   "session.revertDock.restore": "Xabarni tiklash",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Har qanday narsani qurish",
   "session.new.project.new": "Yangi loyiha",
   "session.new.project.search": "Loyihalarni qidirish",

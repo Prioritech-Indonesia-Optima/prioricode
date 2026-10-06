@@ -699,6 +699,9 @@ export const dict = {
   "home.sessions.group.today": "Í dag",
   "home.sessions.group.yesterday": "Í gjár",
   "home.sessions.group.older": "Eldri",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Set teg í samband við 75+ veitarar fyri at brúka onnur modell, eitt nú Claude, GPT, Gemini, osfr.",
   "session.tab.session": "Seta",
@@ -754,6 +757,7 @@ export const dict = {
   "session.revertDock.collapse": "Kollaps afturrullað boð",
   "session.revertDock.expand": "Víðka afturrullað boð",
   "session.revertDock.restore": "Endurnýggja boð",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Bygg alt",
   "session.new.project.new": "Nýggj verkætlan",
   "session.new.project.search": "Leita verkætlanir",

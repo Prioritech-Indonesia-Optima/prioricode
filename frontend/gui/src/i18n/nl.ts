@@ -707,6 +707,9 @@ export const dict = {
   "home.sessions.group.today": "Vandaag",
   "home.sessions.group.yesterday": "Gisteren",
   "home.sessions.group.older": "Ouder",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Maak verbinding met meer dan 75 providers om andere modellen te gebruiken, waaronder Claude, GPT, Gemini, enz.",
   "session.tab.session": "Sessie",
@@ -763,6 +766,7 @@ export const dict = {
   "session.revertDock.collapse": "Teruggedraaide berichten samenvouwen",
   "session.revertDock.expand": "Teruggedraaide berichten uitvouwen",
   "session.revertDock.restore": "Bericht herstellen",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Bouw wat je wilt",
   "session.new.project.new": "Nieuw project",
   "session.new.project.search": "Zoek projecten",

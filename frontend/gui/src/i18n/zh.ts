@@ -739,6 +739,9 @@ export const dict = {
   "home.sessions.group.today": "今天",
   "home.sessions.group.yesterday": "昨天",
   "home.sessions.group.older": "更早",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip": "连接 75 个以上的提供商，使用包括 Claude、GPT、Gemini 在内的更多模型",
 
   "session.tab.session": "会话",
@@ -788,6 +791,7 @@ export const dict = {
   "session.revertDock.collapse": "折叠已回滚消息",
   "session.revertDock.expand": "展开已回滚消息",
   "session.revertDock.restore": "恢复消息",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "构建任何内容",
   "session.new.project.new": "新建项目",
   "session.new.project.search": "搜索项目",

@@ -749,6 +749,9 @@ export const dict = {
   "home.sessions.group.today": "Bugün",
   "home.sessions.group.yesterday": "Dün",
   "home.sessions.group.older": "Daha eski",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip": "Claude, GPT, Gemini ve diğer modelleri kullanmak için 75'ten fazla sağlayıcıya bağlanın",
 
   "session.tab.session": "Oturum",
@@ -803,6 +806,7 @@ export const dict = {
   "session.revertDock.expand": "Geri alınan mesajları genişlet",
   "session.revertDock.restore": "Mesajı geri yükle",
 
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Her şeyi geliştirin",
   "session.new.project.new": "Yeni proje",
   "session.new.project.search": "Proje ara",

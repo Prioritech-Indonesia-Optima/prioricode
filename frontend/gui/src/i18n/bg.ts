@@ -704,6 +704,9 @@ export const dict = {
   "home.sessions.group.today": "Днес",
   "home.sessions.group.yesterday": "Вчера",
   "home.sessions.group.older": "По-стари",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Свържете се с над 75 доставчици, за да използвате други модели, включително Claude, GPT, Gemini и т.н.",
   "session.tab.session": "Сесия",
@@ -760,6 +763,7 @@ export const dict = {
   "session.revertDock.collapse": "Свиване на върнатите съобщения",
   "session.revertDock.expand": "Разгъване на върнатите съобщения",
   "session.revertDock.restore": "Възстановяване на съобщението",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Изградете каквото и да било",
   "session.new.project.new": "Нов проект",
   "session.new.project.search": "Търсене на проекти",

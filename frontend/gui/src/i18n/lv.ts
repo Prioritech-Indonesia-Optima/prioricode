@@ -700,6 +700,9 @@ export const dict = {
   "home.sessions.group.today": "Šodien",
   "home.sessions.group.yesterday": "Vakar",
   "home.sessions.group.older": "Vecākas",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Pievienojiet vairāk nekā 75 pakalpojumu sniedzējus, lai izmantotu citus modeļus, tostarp Claude, GPT, Gemini u.c.",
   "session.tab.session": "Sesija",
@@ -759,6 +762,7 @@ export const dict = {
   "session.revertDock.collapse": "Sakļaut atsauktās ziņas",
   "session.revertDock.expand": "Izvērst atsauktās ziņas",
   "session.revertDock.restore": "Atjaunot ziņu",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Izveido jebko",
   "session.new.project.new": "Jauns projekts",
   "session.new.project.search": "Meklēt projektus",

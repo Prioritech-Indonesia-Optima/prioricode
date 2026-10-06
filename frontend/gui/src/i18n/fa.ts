@@ -698,6 +698,9 @@ export const dict = {
   "home.sessions.group.today": "امروز",
   "home.sessions.group.yesterday": "دیروز",
   "home.sessions.group.older": "قدیمی تر",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "برای استفاده از مدل‌های دیگر، از جمله Claude، GPT، Gemini و غیره به بیش از 75 ارائه‌دهنده متصل شوید.",
   "session.tab.session": "جلسه",
@@ -753,6 +756,7 @@ export const dict = {
   "session.revertDock.collapse": "کوچک کردن پیام‌های برگشتی",
   "session.revertDock.expand": "گسترش پیام‌های برگشتی",
   "session.revertDock.restore": "بازیابی پیام",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "هر چیزی بساز",
   "session.new.project.new": "پروژه جدید",
   "session.new.project.search": "جستجوی پروژه ها",

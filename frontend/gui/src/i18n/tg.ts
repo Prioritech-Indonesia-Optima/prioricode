@@ -701,6 +701,9 @@ export const dict = {
   "home.sessions.group.today": "Имруз",
   "home.sessions.group.yesterday": "Дируз",
   "home.sessions.group.older": "калонсолтар",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Барои истифодаи моделҳои дигар, аз ҷумла Claude, GPT, Gemini ва ғайра ба 75+ провайдерҳо пайваст шавед",
   "session.tab.session": "Сессия",
@@ -757,6 +760,7 @@ export const dict = {
   "session.revertDock.collapse": "Паёмҳои баргардонидашуда",
   "session.revertDock.expand": "Паёмҳои баргардонидашударо васеъ кунед",
   "session.revertDock.restore": "Барқарор кардани паём",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Ҳар чизеро созед",
   "session.new.project.new": "Лоиҳаи нав",
   "session.new.project.search": "Ҷустуҷӯи лоиҳаҳо",

@@ -584,6 +584,9 @@ export const dict = {
   "home.sessions.group.today": "Heute",
   "home.sessions.group.yesterday": "Gestern",
   "home.sessions.group.older": "Älter",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "PrioriCode mit über 75 Anbietern verbinden, um weitere Modelle wie Claude, GPT, Gemini und andere zu nutzen",
   "session.tab.session": "Sitzung",
@@ -635,6 +638,7 @@ export const dict = {
   "session.revertDock.collapse": "Zurückgesetzte Nachrichten einklappen",
   "session.revertDock.expand": "Zurückgesetzte Nachrichten ausklappen",
   "session.revertDock.restore": "Nachricht wiederherstellen",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Alles entwickeln",
   "session.new.project.new": "Neues Projekt",
   "session.new.project.search": "Projekte durchsuchen",

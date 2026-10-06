@@ -733,6 +733,9 @@ export const dict = {
   "home.sessions.group.today": "今天",
   "home.sessions.group.yesterday": "昨天",
   "home.sessions.group.older": "更早",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip": "連線 75 個以上的提供者，使用 Claude、GPT、Gemini 等其他模型",
 
   "session.tab.session": "工作階段",
@@ -784,6 +787,7 @@ export const dict = {
   "session.revertDock.expand": "展開已還原的訊息",
   "session.revertDock.restore": "還原訊息",
 
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "實現任何想法",
   "session.new.project.new": "新專案",
   "session.new.project.search": "搜尋專案",

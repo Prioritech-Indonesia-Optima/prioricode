@@ -767,6 +767,9 @@ export const dict = {
   "home.sessions.group.today": "Сьогодні",
   "home.sessions.group.yesterday": "Учора",
   "home.sessions.group.older": "Раніше",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Підключіться до понад 75 провайдерів, щоб використовувати інші моделі, зокрема Claude, GPT, Gemini та інші",
 
@@ -833,6 +836,7 @@ export const dict = {
   "session.revertDock.expand": "Розгорнути скасовані повідомлення",
   "session.revertDock.restore": "Відновити повідомлення",
 
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Створити що завгодно",
   "session.new.project.new": "Новий проєкт",
   "session.new.project.search": "Пошук проєктів",

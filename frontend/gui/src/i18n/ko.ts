@@ -510,6 +510,7 @@ export const dict = {
   "session.revertDock.collapse": "롤백된 메시지 접기",
   "session.revertDock.expand": "롤백된 메시지 펼치기",
   "session.revertDock.restore": "메시지 복원",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "무엇이든 만들기",
   "session.new.worktree.main": "메인 브랜치",
   "session.new.worktree.mainWithBranch": "메인 브랜치 ({{branch}})",
@@ -993,6 +994,9 @@ export const dict = {
   "home.sessions.group.today": "오늘",
   "home.sessions.group.yesterday": "어제",
   "home.sessions.group.older": "이전",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip": "75개 이상의 공급자에 연결하여 Claude, GPT, Gemini 등의 다른 모델을 사용하세요",
 
   "session.tab.unknown": "알 수 없는 세션",

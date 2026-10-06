@@ -697,6 +697,9 @@ export const dict = {
   "home.sessions.group.today": "Dnes",
   "home.sessions.group.yesterday": "Včera",
   "home.sessions.group.older": "Staršie",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Pripojte sa k viac ako 75 poskytovateľom a používajte ďalšie modely, vrátane Claude, GPT, Gemini a ďalších",
   "session.tab.session": "Relácia",
@@ -758,6 +761,7 @@ export const dict = {
   "session.revertDock.collapse": "Zbaliť vrátené správy",
   "session.revertDock.expand": "Rozbaliť vrátené správy",
   "session.revertDock.restore": "Obnoviť správu",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Vytvorte čokoľvek",
   "session.new.project.new": "Nový projekt",
   "session.new.project.search": "Hľadať projekty",

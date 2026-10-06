@@ -737,6 +737,9 @@ export const dict = {
   "home.sessions.group.today": "วันนี้",
   "home.sessions.group.yesterday": "เมื่อวาน",
   "home.sessions.group.older": "ก่อนหน้านี้",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip": "เชื่อมต่อกับผู้ให้บริการกว่า 75 รายเพื่อใช้โมเดลอื่น ๆ รวมถึง Claude, GPT, Gemini และอีกมากมาย",
 
   "session.tab.session": "เซสชัน",
@@ -790,6 +793,7 @@ export const dict = {
   "session.revertDock.expand": "ขยายข้อความที่ถูกย้อนกลับ",
   "session.revertDock.restore": "กู้คืนข้อความ",
 
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "สร้างอะไรก็ได้",
   "session.new.project.new": "โปรเจกต์ใหม่",
   "session.new.project.search": "ค้นหาโปรเจกต์",

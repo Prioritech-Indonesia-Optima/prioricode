@@ -692,6 +692,9 @@ export const dict = {
   "home.sessions.group.today": "Hoje",
   "home.sessions.group.yesterday": "Ontem",
   "home.sessions.group.older": "Mais antigas",
+  "home.hero.eyebrow": "PrioriCode",
+  "home.hero.title": "Engineering that endures.",
+  "home.hero.subtitle": "Start a session and ship something real.",
   "home.providerTip":
     "Conecte-se a mais de 75 provedores para usar outros modelos, incluindo Claude, GPT, Gemini e muito mais",
   "session.tab.session": "Sessão",
@@ -745,6 +748,7 @@ export const dict = {
   "session.revertDock.collapse": "Recolher mensagens revertidas",
   "session.revertDock.expand": "Expandir mensagens revertidas",
   "session.revertDock.restore": "Restaurar mensagem",
+  "session.new.eyebrow": "PrioriCode",
   "session.new.title": "Crie qualquer coisa",
   "session.new.project.new": "Novo projeto",
   "session.new.project.search": "Buscar projetos",
