@@ -54,9 +54,6 @@ export const Flag = {
   get PRIORICODE_DISABLE_PROJECT_CONFIG() {
     return truthy("PRIORICODE_DISABLE_PROJECT_CONFIG")
   },
-  get PRIORICODE_EXPERIMENTAL_REFERENCES() {
-    return enabledByExperimental("PRIORICODE_EXPERIMENTAL_REFERENCES")
-  },
   get PRIORICODE_TUI_CONFIG() {
     return process.env["PRIORICODE_TUI_CONFIG"]
   },
