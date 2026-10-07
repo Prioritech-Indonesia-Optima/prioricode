@@ -154,15 +154,16 @@ test.describe("session timeline projection", () => {
     })
     await setupTimeline(page, {
       messages: [user, assistantMessage(), nextUser, nextAssistant],
-      settings: { newLayoutDesigns: false },
+      settings: { newLayoutDesigns: true },
     })
     const scroller = page.locator(".scroll-view__viewport", { has: page.locator("[data-timeline-row]") })
     await scroller.evaluate((element) => (element.scrollTop = 0))
 
-    await expect(page.locator('[data-timeline-row="CommentStrip"]')).toBeVisible()
+    // New layout renders comments inline in the user message (no separate CommentStrip row).
     await expect(page.getByText("Keep this stable", { exact: true })).toBeVisible()
+    await expect(page.getByText("a.ts:4-8")).toBeVisible()
     await expect(page.locator('[data-timeline-row="DiffSummary"]')).toBeVisible()
-    await expect(page.getByText(/show all/i)).toBeVisible()
+    await expect(page.getByText(/\+1 more files/i)).toBeVisible()
   })
 
   test("renders interruption independently when the turn is not compacted", async ({ page }) => {

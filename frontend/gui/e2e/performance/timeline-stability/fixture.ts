@@ -134,6 +134,7 @@ export async function setupTimeline(
           shellToolPartsExpanded: false,
           showReasoningSummaries: false,
           showSessionProgressBar: true,
+          shouldDisplayTabsToast: false,
           ...settings,
         },
       }),

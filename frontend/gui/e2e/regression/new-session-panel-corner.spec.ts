@@ -28,7 +28,10 @@ test("matches the rounded panel corners to the dark new-session background", asy
   })
   await page.addInitScript(
     ({ directory, draftID, server }) => {
-      localStorage.setItem("settings.v3", JSON.stringify({ general: { newLayoutDesigns: true } }))
+      localStorage.setItem(
+        "settings.v3",
+        JSON.stringify({ general: { newLayoutDesigns: true, shouldDisplayTabsToast: false } }),
+      )
       localStorage.setItem("prioricode-theme-id", "prioricode")
       localStorage.setItem("prioricode-color-scheme", "dark")
       localStorage.setItem(
@@ -49,7 +52,7 @@ test("matches the rounded panel corners to the dark new-session background", asy
   await page.goto(`/new-session?draftId=${draftID}`)
   await expectAppVisible(page.locator('[data-component="prompt-input"]'))
   await expect(page.locator("html")).toHaveAttribute("data-color-scheme", "dark")
-  const panel = page.locator('main div[class*="rounded-[10px]"][class*="overflow-hidden"]')
+  const panel = page.locator('main div[class*="rounded-[12px]"][class*="overflow-hidden"]')
   await expect(panel).toHaveCount(1)
   const box = await panel.boundingBox()
   if (!box) throw new Error("New-session panel bounds are unavailable")
@@ -79,5 +82,7 @@ test("matches the rounded panel corners to the dark new-session background", asy
     },
   )
 
-  expect(corners.every(([red, green, blue, alpha]) => red <= 8 && green <= 8 && blue <= 8 && alpha === 255)).toBe(true)
+  // The dark theme's panel background is a warm grey (#232220), not near-black.
+  // The corners must blend into that dark background (no light halo at the rounded edge).
+  expect(corners.every(([red, green, blue, alpha]) => red <= 60 && green <= 60 && blue <= 60 && alpha === 255)).toBe(true)
 })
