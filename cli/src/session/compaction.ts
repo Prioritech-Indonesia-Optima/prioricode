@@ -14,7 +14,7 @@ import { NotFoundError } from "@/storage/storage"
 
 import { Effect, Layer, Context } from "effect"
 import { InstanceState } from "@/effect/instance-state"
-import { isOverflow as overflow, usable } from "./overflow"
+import { isOverflow as overflow, usable, effectiveContext } from "./overflow"
 import { serviceUse } from "@prioricode/core/effect/service-use"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { EventV2Bridge } from "@/event-v2-bridge"
@@ -31,6 +31,9 @@ const TOOL_OUTPUT_MAX_CHARS = 2_000
 const PRUNE_PROTECTED_TOOLS = ["skill"]
 const MIN_PRESERVE_RECENT_TOKENS = 2_000
 const MAX_PRESERVE_RECENT_TOKENS = 15_000
+// Reserved inside the summary-request budget for the generated summary.
+const SUMMARY_OUTPUT_TOKENS = 4_096
+const TRUNCATION_MARKER = "[truncated to fit the model window]"
 type Turn = {
   start: number
   end: number
@@ -272,6 +275,50 @@ const layer = Layer.effect(
       }
     })
 
+    // A session whose context already exceeds the model window would otherwise
+    // stall: the summary prompt itself does not fit, so the provider overflows
+    // and every subsequent prompt repeats the failure. Shrink the head locally
+    // (drop oldest turns, then hard-truncate) so the summary request fits.
+    const shrinkHeadToFit = Effect.fn("SessionCompaction.shrinkHeadToFit")(function* (input: {
+      head: SessionV1.WithParts[]
+      cfg: ConfigV1.Info
+      model: Provider.Model
+      previousSummary: string | undefined
+    }) {
+      const render = (head: SessionV1.WithParts[]) => head.map(serialize).filter(Boolean).join("\n\n")
+      const promptSize = (head: SessionV1.WithParts[]) =>
+        Token.estimate(buildPrompt({ previousSummary: input.previousSummary, context: [render(head)] }))
+      const budget = effectiveContext(input.cfg, input.model) - SUMMARY_OUTPUT_TOKENS
+      if (budget <= 0) return { conversation: render(input.head), droppedTokens: 0, truncated: false }
+      let head = [...input.head]
+      let droppedTokens = 0
+      for (;;) {
+        if (promptSize(head) <= budget) return { conversation: render(head), droppedTokens, truncated: false }
+        const turnStart = head.findIndex((m) => m.info.role === "user" && !m.parts.some((p) => p.type === "compaction"))
+        if (turnStart === -1) break
+        let turnEnd = head.length
+        for (let i = turnStart + 1; i < head.length; i++) {
+          if (head[i].info.role === "user" && !head[i].parts.some((p) => p.type === "compaction")) {
+            turnEnd = i
+            break
+          }
+        }
+        droppedTokens += head.slice(turnStart, turnEnd).reduce((sum, m) => sum + Token.estimate(serialize(m)), 0)
+        head = head.slice(turnEnd)
+        if (head.length === 0) break
+      }
+      const conversation = render(head)
+      const overflow = promptSize(head) - budget
+      if (overflow <= 0) return { conversation, droppedTokens, truncated: false }
+      const keepChars = Math.max(0, conversation.length - overflow * 4 - 64)
+      const truncated = `${TRUNCATION_MARKER}\n${conversation.slice(-keepChars)}`
+      yield* Effect.logInfo("compaction head shrunk to fit the model window", {
+        droppedTokens,
+        truncatedChars: conversation.length - keepChars,
+      })
+      return { conversation: truncated, droppedTokens, truncated: true }
+    })
+
     // goes backwards through parts until there are PRUNE_PROTECT tokens worth of tool
     // calls, then erases output of older tool calls to free context space
     const prune = Effect.fn("SessionCompaction.prune")(function* (input: { sessionID: SessionID }) {
@@ -381,7 +428,8 @@ const layer = Layer.effect(
       )
       const msgs = structuredClone(selected.head)
       yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
-      const conversation = msgs.map(serialize).filter(Boolean).join("\n\n")
+      const shrunk = yield* shrinkHeadToFit({ head: msgs, cfg, model, previousSummary })
+      const conversation = shrunk.conversation
       const nextPrompt =
         compacting.prompt ??
         [

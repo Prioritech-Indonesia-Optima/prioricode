@@ -1429,6 +1429,66 @@ describe("session.compaction.process", () => {
   )
 
   itCompaction.instance(
+    "shrinks an oversized head so the summary request fits the model window",
+    () => {
+      const stub = llm()
+      let promptText = ""
+      stub.push(
+        reply("summary", (input) => {
+          const first = input.messages[0]
+          if (first && first.role === "user") {
+            const content = first.content
+            promptText =
+              typeof content === "string"
+                ? content
+                : Array.isArray(content)
+                  ? content
+                      .map((part) =>
+                        typeof part === "string" || !("text" in part) || typeof part.text !== "string"
+                          ? ""
+                          : part.text,
+                      )
+                      .join("")
+                  : ""
+          }
+        }),
+      )
+
+      return Effect.gen(function* () {
+        const ssn = yield* SessionNs.Service
+        const session = yield* ssn.create({})
+        const pad = "x".repeat(800)
+        for (let i = 0; i < 30; i++) {
+          yield* createUserMessage(session.id, `TURN-${String(i).padStart(2, "0")}-${pad}`)
+        }
+        yield* createCompactionMarker(session.id)
+
+        const msgs = yield* ssn.messages({ sessionID: session.id })
+        const parent = msgs.at(-1)?.info.id
+        expect(parent).toBeTruthy()
+        yield* SessionCompaction.use.process({
+          parentID: parent!,
+          messages: msgs,
+          sessionID: session.id,
+          auto: false,
+        })
+
+        const budget = 8_000 - 4_096
+        expect(promptText).toContain("TURN-29")
+        expect(promptText).not.toContain("TURN-00")
+        expect(Token.estimate(promptText)).toBeLessThanOrEqual(budget)
+      }).pipe(
+        withCompaction({
+          llm: stub.llmLayer,
+          provider: ProviderTest.fake({ model: createModel({ context: 8_000, output: 4_096 }) }),
+          config: cfg({ tail_turns: 0 }),
+        }),
+      )
+    },
+    { git: true },
+  )
+
+  itCompaction.instance(
     "anchors repeated compactions with the previous summary",
     () => {
       const stub = llm()

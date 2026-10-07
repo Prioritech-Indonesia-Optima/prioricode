@@ -8,7 +8,7 @@ import type { MessageV2 } from "./message-v2"
 const COMPACTION_BUFFER = 20_000
 const DEFAULT_CONTEXT_WINDOW = 128_000
 
-function effectiveContext(cfg: ConfigV1.Info, model: Provider.Model): number {
+export function effectiveContext(cfg: ConfigV1.Info, model: Provider.Model): number {
   if (model.limit.context > 0) return model.limit.context
   const fallback = cfg.compaction?.default_context
   if (fallback === 0) return 0
