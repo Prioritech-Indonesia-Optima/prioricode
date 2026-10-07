@@ -31,7 +31,10 @@ jobs:
   gate:
     name: gate
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Runs on both push and manual dispatch to main. On a workflow_dispatch
+    # (minor/major bump) the gate must still evaluate, otherwise `version`
+    # (which needs gate) is skipped and the whole release is a no-op.
+    if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3.6.0
         with:
