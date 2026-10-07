@@ -118,6 +118,8 @@ Compaction keeps the full transcript durable while replacing its active model re
 
 Repeated compactions update the previous structured summary with newly compacted messages. The runner then reloads projected history and executes the original pending turn.
 
+The summary request itself must fit the window, so the plan is pure and terminating. It keeps a guaranteed verbatim tail — capped to the window, with the oldest tail items reduced to a marker before the newest is truncated — then shrinks the head in priority order: drop the oldest complete turn, truncate the prior recent context by a quarter per step, then hard-truncate the prior summary. It stops as soon as the prompt fits or reports an explainable `window-too-small`. Automatic compaction is bounded per drain so a pathological session cannot loop, and each attempt records an explainable decision (trigger, window source, estimated size, limit, fallback) and outcome on the durable compaction events.
+
 When a provider rejects a request as context overflow before durable assistant output or tool execution, the runner attempts one overflow-triggered compaction even when the local estimate did not predict pressure. A completed checkpoint rebuilds the same logical provider turn with one remaining physical attempt. A second overflow, unavailable compaction, or overflow after durable output becomes the ordinary terminal failure; recovery never loops or replays partial side effects. Deterministic old tool-result pruning remains a separate follow-up.
 
 ## V1 Runtime Context Parity

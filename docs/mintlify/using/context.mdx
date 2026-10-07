@@ -57,7 +57,7 @@ The other half of context is *not* letting it rot:
 
 - **File snapshots.** On by default (`snapshot: true`). PrioriCode tracks workspace changes so [undo/redo](/using/sessions) can rewind code and conversation together, and diffs stay honest after the fact.
 - **Tool output truncation.** Long command output is capped (2,000 lines / 50 KB by default) — but never *lost*: the full text spills to a file in the tool-output directory, with the path printed. Tweak `tool_output.max_lines` / `max_bytes`.
-- **Compaction.** The `compaction` block decides what happens when the window fills: automatic summary of old turns (`auto`, on by default), what stays verbatim (`tail_turns`, `preserve_recent_tokens`), a `reserved` safety buffer, and `prune` (drop old tool output — off by default). Manual trigger: `/compact`. Kill switches: `PRIORICODE_DISABLE_AUTOCOMPACT` / `PRIORICODE_DISABLE_PRUNE`.
+- **Compaction.** The `compaction` block decides what happens when the window fills: automatic summary of old turns (`auto`, on by default), what stays verbatim (`keep.tokens` / `keep.turns`), and a `buffer` reserved for the summary. If even the summary request would overflow the window, the oldest turns are dropped and — if still too large — the tail is hard-truncated, so an oversized session compacts instead of stalling. Stale tool output is elided separately by the top-level `prune` block (pressure-gated). Manual trigger: `/compact`. Kill switch: `PRIORICODE_DISABLE_AUTOCOMPACT`.
 - **Images.** Pasted/attached images are auto-resized before sending (`attachment.image` — max 2000×2000 and a 5 MB base64 cap by default). Turn it off if your model likes pixels rude.
 
 <Tip>

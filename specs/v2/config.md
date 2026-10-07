@@ -351,17 +351,17 @@ Behavior affecting long-running conversations and context management.
 
 | Field        | Current Purpose                                             | Status   | Notes                                                                                 |
 | ------------ | ----------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------- |
-| `compaction` | Automatic compaction, pruning, and context reserve settings | redesign | Group retained verbatim history under `keep` and rename context headroom to `buffer`. |
+| `compaction` | Automatic compaction, pruning, and context reserve settings | redesign | Group retained verbatim history under `keep` (`tokens`, `turns`), rename context headroom to `buffer`, and move pruning to a top-level `prune` group. |
 
-Retain the compaction capability but redesign the less clear limits. `keep.tokens` is the token budget for recent history serialized into the textual compaction checkpoint. `buffer` is the token headroom reserved so automatic compaction triggers before the input window is exhausted.
+Retain the compaction capability but redesign the less clear limits. `keep.tokens` is the token budget for recent history serialized into the textual compaction checkpoint; `keep.turns` caps that tail by turn count. `buffer` is the token headroom reserved so automatic compaction triggers before the input window is exhausted. Pruning of stale tool output is a separate top-level `prune` group, not part of compaction.
 
 ```jsonc
 {
   "compaction": {
     "auto": true,
-    "prune": true,
     "keep": {
       "tokens": 2000,
+      "turns": 4,
     },
     "buffer": 10000,
   },

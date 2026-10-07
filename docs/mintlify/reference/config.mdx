@@ -97,7 +97,7 @@ Full behavior on the [MCP page](/extending/mcp).
 
 `bool` or `{ "<id>": { disabled?, command[], environment?, extensions? (required for custom), initialization? } }` ([formatters](/extending/formatters), [LSP](/extending/lsp)).
 
-### `attachment` / `tool_output` / `compaction`
+### `attachment` / `tool_output` / `compaction` / `prune`
 
 | Key | Default | Notes |
 | --- | --- | --- |
@@ -107,10 +107,14 @@ Full behavior on the [MCP page](/extending/mcp).
 | `tool_output.max_lines` | `2000` | truncation ([tools](/reference/tools)) |
 | `tool_output.max_bytes` | `51200` | 50 KB |
 | `compaction.auto` | `true` | summarize near context limit |
-| `compaction.prune` | `false` | drop stale tool output |
-| `compaction.threshold` | — | percent trigger 1–100 |
-| `compaction.default_context` | `128000` | fallback window |
-| `compaction.tail_turns` / `preserve_recent_tokens` / `reserved` | — | how much survives verbatim |
+| `compaction.keep.tokens` | `8000` | verbatim tail budget in tokens (legacy `preserve_recent_tokens`) |
+| `compaction.keep.turns` | — | verbatim tail budget in turns (legacy `tail_turns`) |
+| `compaction.buffer` | `20000` | reserved for output + summary (legacy `reserved`) |
+| `compaction.threshold` | — | percent trigger 1–100; overrides the buffer math |
+| `compaction.default_context` | `128000` | fallback window for models without a declared limit; `0` disables compaction for them |
+| `prune.pressure_percent` | `70` | start eliding stale tool output at this % of the window |
+| `prune.keep_recent_steps` | `15` | trailing steps whose tool output is never elided |
+| `prune.min_bytes` | `8000` | tool results below this are never elided |
 
 ### `experimental`
 

@@ -1,8 +1,8 @@
 # Locale Glossaries
 
-Use this folder for locale-specific translation guidance that supplements `.prioricode/agent/translator.md`.
+Use this folder for locale-specific translation guidance.
 
-The global glossary in `translator.md` remains the source of truth for shared do-not-translate terms (commands, code, paths, product names, etc.). These locale files capture community learnings about phrasing and terminology preferences.
+Shared do-not-translate terms (commands, code, paths, product names, etc.) stay as-is across locales. These locale files capture community learnings about phrasing and terminology preferences.
 
 ## File Naming
 
