@@ -219,9 +219,9 @@ jobs:
           signing-account-name: ${{ env.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
           certificate-profile-name: ${{ env.AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE }}
           files: |
-            ${{ github.workspace }}\packages\prioricode\dist\prioricode-windows-arm64\bin\prioricode.exe
-            ${{ github.workspace }}\packages\prioricode\dist\prioricode-windows-x64\bin\prioricode.exe
-            ${{ github.workspace }}\packages\prioricode\dist\prioricode-windows-x64-baseline\bin\prioricode.exe
+            ${{ github.workspace }}\cli\dist\prioricode-windows-arm64\bin\prioricode.exe
+            ${{ github.workspace }}\cli\dist\prioricode-windows-x64\bin\prioricode.exe
+            ${{ github.workspace }}\cli\dist\prioricode-windows-x64-baseline\bin\prioricode.exe
           exclude-environment-credential: true
           exclude-workload-identity-credential: true
           exclude-managed-identity-credential: true
@@ -237,9 +237,9 @@ jobs:
         shell: pwsh
         run: |
           $files = @(
-            "${{ github.workspace }}\packages\prioricode\dist\prioricode-windows-arm64\bin\prioricode.exe",
-            "${{ github.workspace }}\packages\prioricode\dist\prioricode-windows-x64\bin\prioricode.exe",
-            "${{ github.workspace }}\packages\prioricode\dist\prioricode-windows-x64-baseline\bin\prioricode.exe"
+            "${{ github.workspace }}\cli\dist\prioricode-windows-arm64\bin\prioricode.exe",
+            "${{ github.workspace }}\cli\dist\prioricode-windows-x64\bin\prioricode.exe",
+            "${{ github.workspace }}\cli\dist\prioricode-windows-x64-baseline\bin\prioricode.exe"
           )
 
           foreach ($file in $files) {
@@ -264,9 +264,9 @@ jobs:
           GH_TOKEN: ${{ steps.committer.outputs.token }}
         run: |
           gh release upload "v${{ needs.version.outputs.version }}" `
-            "${{ github.workspace }}\packages\prioricode\dist\prioricode-windows-arm64.zip" `
-            "${{ github.workspace }}\packages\prioricode\dist\prioricode-windows-x64.zip" `
-            "${{ github.workspace }}\packages\prioricode\dist\prioricode-windows-x64-baseline.zip" `
+            "${{ github.workspace }}\cli\dist\prioricode-windows-arm64.zip" `
+            "${{ github.workspace }}\cli\dist\prioricode-windows-x64.zip" `
+            "${{ github.workspace }}\cli\dist\prioricode-windows-x64-baseline.zip" `
             --clobber `
             --repo "${{ needs.version.outputs.repo }}"
 
@@ -440,9 +440,9 @@ jobs:
         shell: pwsh
         run: |
           $files = @()
-          $files += Get-ChildItem "${{ github.workspace }}\packages\desktop\dist\*.exe" | Select-Object -ExpandProperty FullName
-          $files += Get-ChildItem "${{ github.workspace }}\packages\desktop\dist\*unpacked\*.exe" | Select-Object -ExpandProperty FullName
-          $files += Get-ChildItem "${{ github.workspace }}\packages\desktop\dist\*unpacked\resources\prioricode-cli.exe" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
+          $files += Get-ChildItem "${{ github.workspace }}\frontend\desktop\dist\*.exe" | Select-Object -ExpandProperty FullName
+          $files += Get-ChildItem "${{ github.workspace }}\frontend\desktop\dist\*unpacked\*.exe" | Select-Object -ExpandProperty FullName
+          $files += Get-ChildItem "${{ github.workspace }}\frontend\desktop\dist\*unpacked\resources\prioricode-cli.exe" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty FullName
 
           foreach ($file in $files | Select-Object -Unique) {
             $sig = Get-AuthenticodeSignature $file

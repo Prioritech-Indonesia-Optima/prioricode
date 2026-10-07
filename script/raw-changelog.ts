@@ -120,7 +120,7 @@ async function commits(from: string, to: string) {
   }
 
   const log =
-    await $`git log ${base}..${head} --format=%H -- cli backend/sdk backend/plugin frontend/desktop frontend/gui integrations/vscode packages/extensions integrations/github`.text()
+    await $`git log ${base}..${head} --format=%H -- cli backend/sdk backend/plugin frontend/desktop frontend/gui integrations/vscode integrations/github`.text()
 
   const list: Commit[] = []
   for (const hash of log.split("\n").filter(Boolean)) {

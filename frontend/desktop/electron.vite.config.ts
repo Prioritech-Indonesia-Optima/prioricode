@@ -3,7 +3,7 @@ import { defineConfig } from "electron-vite"
 import appPlugin from "@prioricode/app/vite"
 import * as fs from "node:fs/promises"
 
-const PRIORICODE_SERVER_DIST = "../prioricode/dist/node"
+const PRIORICODE_SERVER_DIST = "../../cli/dist/node"
 
 const channel = (() => {
   const raw = process.env.PRIORICODE_CHANNEL

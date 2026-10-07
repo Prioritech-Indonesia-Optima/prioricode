@@ -4,7 +4,7 @@ import { pathToFileURL } from "bun"
 const server = await createPrioricodeServer()
 const client = createPrioricodeClient({ baseUrl: server.url })
 
-const input = await Array.fromAsync(new Bun.Glob("packages/core/*.ts").scan())
+const input = await Array.fromAsync(new Bun.Glob("backend/core/*.ts").scan())
 
 const tasks: Promise<void>[] = []
 for await (const file of input) {

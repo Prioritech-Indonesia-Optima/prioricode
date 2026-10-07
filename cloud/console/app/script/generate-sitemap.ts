@@ -8,7 +8,7 @@ import { LOCALES, route } from "../src/lib/language.js"
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const BASE_URL = config.baseUrl
 const PUBLIC_DIR = join(__dirname, "../public")
-const DOCS_DIR = join(__dirname, "../../../web/src/content/docs")
+const DOCS_DIR = join(__dirname, "../../../../docs/web/src/content/docs")
 
 interface SitemapEntry {
   url: string
