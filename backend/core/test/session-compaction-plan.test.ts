@@ -115,7 +115,14 @@ describe("SessionCompaction.plan", () => {
       user(7, "u4"),
       assistant(8, "a4"),
     ]
-    const planned = SessionCompaction.plan(entries, makeSettings({ turns: 2, tokens: 100_000 }), undefined, "", 128_000, 4_096)
+    const planned = SessionCompaction.plan(
+      entries,
+      makeSettings({ turns: 2, tokens: 100_000 }),
+      undefined,
+      "",
+      128_000,
+      4_096,
+    )
     if (planned === undefined || planned.fallback === "window-too-small") throw new Error("unexpected plan")
     expect(planned.recent).toContain("u3")
     expect(planned.recent).toContain("u4")
@@ -191,7 +198,14 @@ describe("SessionCompaction.plan", () => {
 
   it("terminates on pathological input", () => {
     const entries = Array.from({ length: 50 }, (_, i) => user(i + 1, "z".repeat(100_000)))
-    const planned = SessionCompaction.plan(entries, makeSettings(), "s".repeat(100_000), "p".repeat(100_000), 20_000, 4_096)
+    const planned = SessionCompaction.plan(
+      entries,
+      makeSettings(),
+      "s".repeat(100_000),
+      "p".repeat(100_000),
+      20_000,
+      4_096,
+    )
     expect(planned).toBeDefined()
     if (planned !== undefined && planned.fallback !== "window-too-small") {
       expect(planned.fallback).toBe("hard-truncation")

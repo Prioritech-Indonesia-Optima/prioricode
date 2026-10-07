@@ -3,7 +3,7 @@ title: "Plugins"
 description: "TypeScript plugins for prioricode — v1 Hooks API and v2 define(), custom tools, auth and provider extensions, TUI plugins, install and config."
 ---
 
-A plugin is TypeScript running *inside* the agent — not beside it. It can add tools, register auth flows, rewrite prompts, decorate the TUI, or watch every event. When hooks are too far from the process and forks are too far from upstream, this is the layer.
+A plugin is TypeScript running _inside_ the agent — not beside it. It can add tools, register auth flows, rewrite prompts, decorate the TUI, or watch every event. When hooks are too far from the process and forks are too far from upstream, this is the layer.
 
 ## Install a plugin
 
@@ -21,8 +21,8 @@ Or declare it yourself — `plugin` takes npm specs (with options), local paths,
   "plugin": [
     "@acme/prioricode-tokens",
     ["@acme/audit", { "endpoint": "https://audit.acme.dev" }],
-    "file:./plugins/my-local-experiment.ts"
-  ]
+    "file:./plugins/my-local-experiment.ts",
+  ],
 }
 ```
 
@@ -85,7 +85,7 @@ export default define({
       description: "triage the backlog",
       template: "List open issues touching $ARGUMENTS and rank by blast radius.",
     })
-    context.agent.register({ name: "auditor", mode: "subagent", /* … */ })
+    context.agent.register({ name: "auditor", mode: "subagent" /* … */ })
     // domains: agent, aisdk, catalog, command, integration, plugin, reference, skill
   },
 })
@@ -102,7 +102,9 @@ Plugins can ship a `./tui` export that renders into the terminal interface: new 
 The binary carries its own plugins for provider auth (OpenAI/Codex OAuth, Copilot, xAI, Azure, Cloudflare, DigitalOcean, Snowflake, Modal, GitLab, Cerebras, the hosted PrioriCode provider and more). Two switches, for completeness: `PRIORICODE_DISABLE_DEFAULT_PLUGINS=1` unregisters the built-in auth plugins; `PRIORICODE_PURE=1` / `--pure` skips everything external.
 
 <Note>
-  The `@prioricode/plugin` package is auto-installed into `.prioricode/` so local file plugins can `import type` from it without you managing node_modules. Its types are the API contract — when in doubt, read them; they're the shortest path to "what's actually available".
+  The `@prioricode/plugin` package is auto-installed into `.prioricode/` so local file plugins can `import type` from it
+  without you managing node_modules. Its types are the API contract — when in doubt, read them; they're the shortest
+  path to "what's actually available".
 </Note>
 
 ## Related

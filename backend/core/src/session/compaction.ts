@@ -189,7 +189,14 @@ const settings = (documents: readonly Config.Entry[]) => {
       threshold: current.threshold ?? result.threshold,
       defaultContext: current.default_context ?? result.defaultContext,
     }),
-    { auto: true, buffer: DEFAULT_BUFFER, tokens: DEFAULT_KEEP_TOKENS, turns: undefined, threshold: undefined, defaultContext: 128_000 },
+    {
+      auto: true,
+      buffer: DEFAULT_BUFFER,
+      tokens: DEFAULT_KEEP_TOKENS,
+      turns: undefined,
+      threshold: undefined,
+      defaultContext: 128_000,
+    },
   )
 }
 
@@ -356,7 +363,12 @@ export const buildPrompt = (input: {
 
 export const make = (dependencies: Dependencies) => {
   const config = settings(dependencies.config)
-  const decide = (input: Input, resolution: ContextResolution, planned: PlanResult, output: number): CompactionDecision => {
+  const decide = (
+    input: Input,
+    resolution: ContextResolution,
+    planned: PlanResult,
+    output: number,
+  ): CompactionDecision => {
     const trigger =
       input.reason === "manual"
         ? "manual"

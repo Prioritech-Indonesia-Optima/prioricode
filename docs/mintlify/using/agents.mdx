@@ -3,19 +3,19 @@ title: "Agents & modes"
 description: "Built-in build/plan/auto agents, subagents like explore and general, custom agents in markdown, and per-agent models and permissions."
 ---
 
-An **agent** is PrioriCode's job description: a system prompt, a model, and a permission profile — bundled with a personality. Switching agents changes what the assistant is allowed to do *and* how it approaches the work.
+An **agent** is PrioriCode's job description: a system prompt, a model, and a permission profile — bundled with a personality. Switching agents changes what the assistant is allowed to do _and_ how it approaches the work.
 
 ## The built-ins
 
 Press `tab` to cycle primaries (or `/agents`, or `--agent name` on the CLI):
 
-| Agent | Mode | What it's for |
-| --- | --- | --- |
-| `build` | primary | The default. Executes tools based on your configured permissions. This is the "do the work" agent. |
-| `plan` | primary | Read-only. All edit tools are denied — except one: its plan file. Reads, greps, explores, and writes a plan; then asks to switch back. |
-| `auto` | primary | Automation mode. Explores, plans, and executes without user interaction, auto-committing each verified phase. For unattended runs. |
-| `general` | subagent | Complex search and multistep tasks. Lives as a child session; can't touch your todos. |
-| `explore` | subagent | Read-only scout: grep, glob, read, bash (careful), web. Great for "find everything that touches X". |
+| Agent     | Mode     | What it's for                                                                                                                          |
+| --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `build`   | primary  | The default. Executes tools based on your configured permissions. This is the "do the work" agent.                                     |
+| `plan`    | primary  | Read-only. All edit tools are denied — except one: its plan file. Reads, greps, explores, and writes a plan; then asks to switch back. |
+| `auto`    | primary  | Automation mode. Explores, plans, and executes without user interaction, auto-committing each verified phase. For unattended runs.     |
+| `general` | subagent | Complex search and multistep tasks. Lives as a child session; can't touch your todos.                                                  |
+| `explore` | subagent | Read-only scout: grep, glob, read, bash (careful), web. Great for "find everything that touches X".                                    |
 
 A few hidden workers run the machinery for you — `title` (names your sessions), `summary`, `compaction`, and the coordination `responder`. You'll see them in transcripts; you don't switch to them.
 
@@ -28,10 +28,11 @@ A few hidden workers run the machinery for you — `title` (names your sessions)
 <data dir>/plans/…                                                  # outside one
 ```
 
-The model can also *propose* mode changes: from `build`, `plan_enter` asks to switch into planning; from `plan`, `plan_exit` asks to switch to `build` and start implementing — accepting it injects an "approved, go build it" message with your answer. Say no, and planning continues. That handshake is the feature: the plan gets read before the code gets written.
+The model can also _propose_ mode changes: from `build`, `plan_enter` asks to switch into planning; from `plan`, `plan_exit` asks to switch to `build` and start implementing — accepting it injects an "approved, go build it" message with your answer. Say no, and planning continues. That handshake is the feature: the plan gets read before the code gets written.
 
 <Tip>
-  Start a fresh session with `prioricode --agent plan`, let it write the plan, review the `.md` like any other file, then approve the switch. You'll ship fewer "wait, why did you rewrite that?" moments.
+  Start a fresh session with `prioricode --agent plan`, let it write the plan, review the `.md` like any other file,
+  then approve the switch. You'll ship fewer "wait, why did you rewrite that?" moments.
 </Tip>
 
 ## Subagents

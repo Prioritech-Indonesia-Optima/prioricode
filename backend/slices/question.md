@@ -9,12 +9,14 @@ Location, so a reply can never settle another Location's deferred request.
 ## Files by package
 
 ### `schema`
+
 - `schema/src/question.ts` — current contract: `ID`, `Option`, `Info`, `Prompt`, `Tool`,
   `Request`, `Answer`, `Reply`, and `Event` (`Asked` / `Replied` / `Rejected`).
 - `schema/src/question-v1.ts` — bridge (`export * from "./v1/question"`).
 - `schema/src/v1/question.ts` — legacy `QuestionV1` contract (retained for migration).
 
 ### `protocol`
+
 - `protocol/src/groups/question.ts` — `makeQuestionGroup`, 4 endpoints:
   - `question.request.list` → `GET /api/question/request`
   - `session.question.list` → `GET /api/session/:sessionID/question`
@@ -22,6 +24,7 @@ Location, so a reply can never settle another Location's deferred request.
   - `session.question.reject` → `POST /api/session/:sessionID/question/:requestID/reject`
 
 ### `core`
+
 - `core/src/question.ts` — `QuestionV2` Effect service (`ask` / `reply` / `reject` /
   `list`), a Location-owned layer exposed as `node` via `makeLocationNode`.
 - `core/src/tool/question.ts` — `QuestionTool`: the **tool slice's** consumer of this
@@ -29,11 +32,13 @@ Location, so a reply can never settle another Location's deferred request.
   primary in-package consumer; it lives in the tool slice's territory.
 
 ### `server`
+
 - `server/src/handlers/question.ts` — `QuestionHandler`, binds the 4 protocol endpoints to
   the `QuestionV2` service, with an ownership guard (`withOwnedQuestion`) so a session can
   only reply to / reject its own requests.
 
 ### `client` (generated)
+
 - `client/src/generated/types.ts` — `QuestionNotFoundError`, `QuestionsListRequests*`,
   `QuestionsList*`, `QuestionsReply*`, `QuestionsReject*`.
 - `client/src/generated/client.ts` — the 4 client methods.

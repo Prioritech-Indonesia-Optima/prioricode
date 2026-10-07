@@ -528,7 +528,13 @@ function HomeSessionsEmpty(props: { onNewSession?: () => void; language: ReturnT
       </p>
       <Show when={props.onNewSession}>
         {(onNewSession) => (
-          <ButtonV2 data-action="home-new-session" variant="contrast" size="normal" icon="edit" onClick={onNewSession()}>
+          <ButtonV2
+            data-action="home-new-session"
+            variant="contrast"
+            size="normal"
+            icon="edit"
+            onClick={onNewSession()}
+          >
             {props.language.t("command.session.new")}
           </ButtonV2>
         )}

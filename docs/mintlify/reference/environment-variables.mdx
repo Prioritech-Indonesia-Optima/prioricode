@@ -7,144 +7,145 @@ Truthiness for on/off vars: `1` or `true` (case-insensitive). Grouped by what th
 
 ## Paths & data
 
-| Variable | Effect | Default |
-| --- | --- | --- |
-| `PRIORICODE_DB` | DB file override — absolute, relative to data dir, or `:memory:` | channel-routed file |
-| `PRIORICODE_DISABLE_CHANNEL_DB` | force the shared `prioricode.db` regardless of channel | off |
-| `PRIORICODE_CONFIG_DIR` | relocate/append the global config directory | XDG config |
-| `PRIORICODE_CONFIG` | one extra config file, merged | — |
-| `PRIORICODE_CONFIG_CONTENT` | inline config JSON(C), merged as local layer | — |
-| `PRIORICODE_DISABLE_PROJECT_CONFIG` | skip `.prioricode` project discovery | off |
-| `PRIORICODE_TUI_CONFIG` | extra `tui.json` file | — |
-| `PRIORICODE_INSTALL_DIR` / `XDG_BIN_DIR` | installer target directory ([install](/getting-started/install)) | |
-| `PRIORICODE_BIN_PATH` | binary used by the npm launcher | autodetect |
-| `PRIORICODE_AUTH_CONTENT` | inline auth JSON replacing `auth.json` contents | — |
+| Variable                                 | Effect                                                           | Default             |
+| ---------------------------------------- | ---------------------------------------------------------------- | ------------------- |
+| `PRIORICODE_DB`                          | DB file override — absolute, relative to data dir, or `:memory:` | channel-routed file |
+| `PRIORICODE_DISABLE_CHANNEL_DB`          | force the shared `prioricode.db` regardless of channel           | off                 |
+| `PRIORICODE_CONFIG_DIR`                  | relocate/append the global config directory                      | XDG config          |
+| `PRIORICODE_CONFIG`                      | one extra config file, merged                                    | —                   |
+| `PRIORICODE_CONFIG_CONTENT`              | inline config JSON(C), merged as local layer                     | —                   |
+| `PRIORICODE_DISABLE_PROJECT_CONFIG`      | skip `.prioricode` project discovery                             | off                 |
+| `PRIORICODE_TUI_CONFIG`                  | extra `tui.json` file                                            | —                   |
+| `PRIORICODE_INSTALL_DIR` / `XDG_BIN_DIR` | installer target directory ([install](/getting-started/install)) |                     |
+| `PRIORICODE_BIN_PATH`                    | binary used by the npm launcher                                  | autodetect          |
+| `PRIORICODE_AUTH_CONTENT`                | inline auth JSON replacing `auth.json` contents                  | —                   |
 
 ## Runtime behavior
 
-| Variable | Effect | Default |
-| --- | --- | --- |
-| `PRIORICODE_PRINT_LOGS` | stderr logging (flag `--print-logs`) | off |
-| `PRIORICODE_LOG_LEVEL` | `DEBUG`\|`INFO`\|`WARN`\|`ERROR` | `INFO` |
-| `PRIORICODE_PURE` | skip external plugins (flag `--pure`) | off |
-| `PRIORICODE_CLIENT` | client label sent to the API (`cli`, `acp`, …) | `cli` |
-| `PRIORICODE_PERMISSION` | JSON permission rules merged over config | — |
-| `PRIORICODE_DISABLE_MOUSE` | ignore mouse events in the TUI | off |
-| `PRIORICODE_DISABLE_TERMINAL_TITLE` | don't write terminal titles | off |
-| `PRIORICODE_DISABLE_FFF` | disable the fff file indexer (default-disabled on Windows) | per-OS |
-| `PRIORICODE_SHOW_TTFD` | show time-to-first-delta metrics | off |
-| `PRIORICODE_AUTO_HEAP_SNAPSHOT` | heap snapshot on OOM-ish failures | off |
-| `PRIORICODE_HOOK_DEPTH` | internal hook-recursion guard | set by runtime |
-| `PRIORICODE_GIT_BASH_PATH` | Windows: which bash to use | autodetect |
-| `PRIORICODE_FAKE_VCS` | treat non-git dirs as VCS (testing) | off |
-| `PRIORICODE_NO_CLIPBOARD` | skip clipboard helper install | off |
+| Variable                            | Effect                                                     | Default        |
+| ----------------------------------- | ---------------------------------------------------------- | -------------- |
+| `PRIORICODE_PRINT_LOGS`             | stderr logging (flag `--print-logs`)                       | off            |
+| `PRIORICODE_LOG_LEVEL`              | `DEBUG`\|`INFO`\|`WARN`\|`ERROR`                           | `INFO`         |
+| `PRIORICODE_PURE`                   | skip external plugins (flag `--pure`)                      | off            |
+| `PRIORICODE_CLIENT`                 | client label sent to the API (`cli`, `acp`, …)             | `cli`          |
+| `PRIORICODE_PERMISSION`             | JSON permission rules merged over config                   | —              |
+| `PRIORICODE_DISABLE_MOUSE`          | ignore mouse events in the TUI                             | off            |
+| `PRIORICODE_DISABLE_TERMINAL_TITLE` | don't write terminal titles                                | off            |
+| `PRIORICODE_DISABLE_FFF`            | disable the fff file indexer (default-disabled on Windows) | per-OS         |
+| `PRIORICODE_SHOW_TTFD`              | show time-to-first-delta metrics                           | off            |
+| `PRIORICODE_AUTO_HEAP_SNAPSHOT`     | heap snapshot on OOM-ish failures                          | off            |
+| `PRIORICODE_HOOK_DEPTH`             | internal hook-recursion guard                              | set by runtime |
+| `PRIORICODE_GIT_BASH_PATH`          | Windows: which bash to use                                 | autodetect     |
+| `PRIORICODE_FAKE_VCS`               | treat non-git dirs as VCS (testing)                        | off            |
+| `PRIORICODE_NO_CLIPBOARD`           | skip clipboard helper install                              | off            |
 
 ## Server & remote
 
-| Variable | Effect | Default |
-| --- | --- | --- |
-| `PRIORICODE_SERVER_PASSWORD` | HTTP Basic auth for serve/web/attach/run `--attach`; unset ⇒ "unsecured" warning | none |
-| `PRIORICODE_SERVER_USERNAME` | basic-auth username | `prioricode` |
+| Variable                     | Effect                                                                           | Default      |
+| ---------------------------- | -------------------------------------------------------------------------------- | ------------ |
+| `PRIORICODE_SERVER_PASSWORD` | HTTP Basic auth for serve/web/attach/run `--attach`; unset ⇒ "unsecured" warning | none         |
+| `PRIORICODE_SERVER_USERNAME` | basic-auth username                                                              | `prioricode` |
 
 ## Sharing
 
-| Variable | Effect | Default |
-| --- | --- | --- |
-| `PRIORICODE_AUTO_SHARE` | auto-share sessions (= `share: "auto"`) | off |
-| `PRIORICODE_DISABLE_SHARE` | kill sharing entirely (= `share: "disabled"`) | off |
+| Variable                   | Effect                                        | Default |
+| -------------------------- | --------------------------------------------- | ------- |
+| `PRIORICODE_AUTO_SHARE`    | auto-share sessions (= `share: "auto"`)       | off     |
+| `PRIORICODE_DISABLE_SHARE` | kill sharing entirely (= `share: "disabled"`) | off     |
 
 ## Updates
 
-| Variable | Effect | Default |
-| --- | --- | --- |
-| `PRIORICODE_DISABLE_AUTOUPDATE` | never check/apply updates | off |
-| `PRIORICODE_ALWAYS_NOTIFY_UPDATE` | notify-only mode for the updater | off |
-| `VERSION` | pin installer version (`install`, `upgrade`) | latest |
+| Variable                          | Effect                                       | Default |
+| --------------------------------- | -------------------------------------------- | ------- |
+| `PRIORICODE_DISABLE_AUTOUPDATE`   | never check/apply updates                    | off     |
+| `PRIORICODE_ALWAYS_NOTIFY_UPDATE` | notify-only mode for the updater             | off     |
+| `VERSION`                         | pin installer version (`install`, `upgrade`) | latest  |
 
 ## Model catalog
 
-| Variable | Effect | Default |
-| --- | --- | --- |
-| `PRIORICODE_MODELS_URL` | catalog service base | hosted default (built-in) |
-| `PRIORICODE_MODELS_PATH` | local JSON catalog file | disk cache |
-| `PRIORICODE_DISABLE_MODELS_FETCH` | never fetch; local only | off |
-| `PRIORICODE_ENABLE_EXPERIMENTAL_MODELS` | include experimental catalog entries | off |
+| Variable                                | Effect                               | Default                   |
+| --------------------------------------- | ------------------------------------ | ------------------------- |
+| `PRIORICODE_MODELS_URL`                 | catalog service base                 | hosted default (built-in) |
+| `PRIORICODE_MODELS_PATH`                | local JSON catalog file              | disk cache                |
+| `PRIORICODE_DISABLE_MODELS_FETCH`       | never fetch; local only              | off                       |
+| `PRIORICODE_ENABLE_EXPERIMENTAL_MODELS` | include experimental catalog entries | off                       |
 
 ## Compaction & tools
 
-| Variable | Effect | Default |
-| --- | --- | --- |
-| `PRIORICODE_DISABLE_AUTOCOMPACT` | force `compaction.auto: false` | off |
-| `PRIORICODE_DISABLE_PRUNE` | force `compaction.prune: false` (V1-CLI only) | off |
-| `PRIORICODE_WEBSEARCH_PROVIDER` | `exa` or `parallel` for web search | deterministic split per session |
-| `PRIORICODE_ENABLE_EXA` / `PRIORICODE_ENABLE_PARALLEL` | enable that search provider | off |
-| `EXA_API_KEY` / `PARALLEL_API_KEY` | bring-your-own search keys | via hosted default route |
+| Variable                                               | Effect                                        | Default                         |
+| ------------------------------------------------------ | --------------------------------------------- | ------------------------------- |
+| `PRIORICODE_DISABLE_AUTOCOMPACT`                       | force `compaction.auto: false`                | off                             |
+| `PRIORICODE_DISABLE_PRUNE`                             | force `compaction.prune: false` (V1-CLI only) | off                             |
+| `PRIORICODE_WEBSEARCH_PROVIDER`                        | `exa` or `parallel` for web search            | deterministic split per session |
+| `PRIORICODE_ENABLE_EXA` / `PRIORICODE_ENABLE_PARALLEL` | enable that search provider                   | off                             |
+| `EXA_API_KEY` / `PARALLEL_API_KEY`                     | bring-your-own search keys                    | via hosted default route        |
 
 ## Cross-session coordination
 
-| Variable | Effect | Default |
-| --- | --- | --- |
-| `PRIORICODE_DISABLE_COORDINATION_RESPONDER` | no responder children; requests escalate to humans | off |
-| `PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE` | per-sender send budget | `10` |
-| `PRIORICODE_COORDINATION_DEDUPE_WINDOW_MS` | identical-repeat suppression window | `300000` |
-| `PRIORICODE_COORDINATION_INBOX_CAP` | max unread inbox rows | `50` |
-| `PRIORICODE_COORDINATION_ESCALATION_MS` | unanswered-request escalation deadline | `900000` (15 min) |
-| `PRIORICODE_COORDINATION_EXPIRY_GRACE_MS` | grace after escalation before expiry | `900000` |
+| Variable                                        | Effect                                             | Default           |
+| ----------------------------------------------- | -------------------------------------------------- | ----------------- |
+| `PRIORICODE_DISABLE_COORDINATION_RESPONDER`     | no responder children; requests escalate to humans | off               |
+| `PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE` | per-sender send budget                             | `10`              |
+| `PRIORICODE_COORDINATION_DEDUPE_WINDOW_MS`      | identical-repeat suppression window                | `300000`          |
+| `PRIORICODE_COORDINATION_INBOX_CAP`             | max unread inbox rows                              | `50`              |
+| `PRIORICODE_COORDINATION_ESCALATION_MS`         | unanswered-request escalation deadline             | `900000` (15 min) |
+| `PRIORICODE_COORDINATION_EXPIRY_GRACE_MS`       | grace after escalation before expiry               | `900000`          |
 
 ## Experimental (flag-gated features)
 
 <Warning>
-  These switch on in-flux surfaces. Names, behavior, and existence can change between releases — don't build CI on them without pinning a version.
+  These switch on in-flux surfaces. Names, behavior, and existence can change between releases — don't build CI on them
+  without pinning a version.
 </Warning>
 
-| Variable | Enables |
-| --- | --- |
-| `PRIORICODE_EXPERIMENTAL` | umbrella: turns on most of the below where implemented |
-| `PRIORICODE_EXPERIMENTAL_WORKSPACES` (+ `PRIORICODE_WORKSPACE_ID`) | `/workspaces`, `/warp` |
-| `PRIORICODE_EXPERIMENTAL_REFERENCES` | references surface |
-| `PRIORICODE_EXPERIMENTAL_FILEWATCHER` / `_DISABLE_FILEWATCHER` | watcher mode |
-| `PRIORICODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT` | terminal copy behavior (default-on Windows) |
-| `PRIORICODE_EXPERIMENTAL_CODE_MODE` | the `execute` code-mode tool ([MCP page](/extending/mcp)) |
-| `PRIORICODE_EXPERIMENTAL_LSP_TOOL` | the `lsp` tool ([LSP page](/extending/lsp)) |
-| `PRIORICODE_EXPERIMENTAL_LSP_TY` | python: ty instead of pyright |
-| `PRIORICODE_EXPERIMENTAL_OXFMT` | oxfmt formatter |
-| `PRIORICODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS` | `ctrl+b` backgrounding + task `background` |
-| `PRIORICODE_EXPERIMENTAL_PLAN_MODE` | plan-mode surface |
-| `PRIORICODE_EXPERIMENTAL_EVENT_SYSTEM` / `_WEBSOCKETS` | v2 event transport |
-| `PRIORICODE_EXPERIMENTAL_NATIVE_LLM` | native LLM client path |
-| `PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY` | icon discovery |
-| `PRIORICODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX` | output-token ceiling experiment |
-| `PRIORICODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS` | override the 2-minute bash default |
-| `PRIORICODE_ENABLE_QUESTION_TOOL` | question tool for non-standard clients |
-| `PRIORICODE_ENABLE_EXA`/`PRIORICODE_EXPERIMENTAL_EXA`, `PRIORICODE_ENABLE_PARALLEL`/`…_EXPERIMENTAL_PARALLEL` | websearch providers |
+| Variable                                                                                                      | Enables                                                   |
+| ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| `PRIORICODE_EXPERIMENTAL`                                                                                     | umbrella: turns on most of the below where implemented    |
+| `PRIORICODE_EXPERIMENTAL_WORKSPACES` (+ `PRIORICODE_WORKSPACE_ID`)                                            | `/workspaces`, `/warp`                                    |
+| `PRIORICODE_EXPERIMENTAL_REFERENCES`                                                                          | references surface                                        |
+| `PRIORICODE_EXPERIMENTAL_FILEWATCHER` / `_DISABLE_FILEWATCHER`                                                | watcher mode                                              |
+| `PRIORICODE_EXPERIMENTAL_DISABLE_COPY_ON_SELECT`                                                              | terminal copy behavior (default-on Windows)               |
+| `PRIORICODE_EXPERIMENTAL_CODE_MODE`                                                                           | the `execute` code-mode tool ([MCP page](/extending/mcp)) |
+| `PRIORICODE_EXPERIMENTAL_LSP_TOOL`                                                                            | the `lsp` tool ([LSP page](/extending/lsp))               |
+| `PRIORICODE_EXPERIMENTAL_LSP_TY`                                                                              | python: ty instead of pyright                             |
+| `PRIORICODE_EXPERIMENTAL_OXFMT`                                                                               | oxfmt formatter                                           |
+| `PRIORICODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS`                                                                | `ctrl+b` backgrounding + task `background`                |
+| `PRIORICODE_EXPERIMENTAL_PLAN_MODE`                                                                           | plan-mode surface                                         |
+| `PRIORICODE_EXPERIMENTAL_EVENT_SYSTEM` / `_WEBSOCKETS`                                                        | v2 event transport                                        |
+| `PRIORICODE_EXPERIMENTAL_NATIVE_LLM`                                                                          | native LLM client path                                    |
+| `PRIORICODE_EXPERIMENTAL_ICON_DISCOVERY`                                                                      | icon discovery                                            |
+| `PRIORICODE_EXPERIMENTAL_OUTPUT_TOKEN_MAX`                                                                    | output-token ceiling experiment                           |
+| `PRIORICODE_EXPERIMENTAL_BASH_DEFAULT_TIMEOUT_MS`                                                             | override the 2-minute bash default                        |
+| `PRIORICODE_ENABLE_QUESTION_TOOL`                                                                             | question tool for non-standard clients                    |
+| `PRIORICODE_ENABLE_EXA`/`PRIORICODE_EXPERIMENTAL_EXA`, `PRIORICODE_ENABLE_PARALLEL`/`…_EXPERIMENTAL_PARALLEL` | websearch providers                                       |
 
 ## Claude-code & plugin compat
 
-| Variable | Effect | Default |
-| --- | --- | --- |
-| `PRIORICODE_DISABLE_EXTERNAL_SKILLS` | skip `~/.claude/skills`, `~/.agents/skills` scans | off |
-| `PRIORICODE_DISABLE_CLAUDE_CODE` / `_PROMPT` / `_SKILLS` | skip Claude-compatible CLAUDE.md prompt / skills | off |
-| `PRIORICODE_DISABLE_DEFAULT_PLUGINS` | unregister built-in auth plugins | off |
-| `PRIORICODE_DISABLE_LSP_DOWNLOAD` | no language-server provisioning | off |
-| `PRIORICODE_DISABLE_EMBEDDED_WEB_UI` | server stops serving the bundled UI (desktop uses this) | off |
-| `PRIORICODE_PLUGIN_META_FILE` | plugin metadata cache location | data dir |
+| Variable                                                 | Effect                                                  | Default  |
+| -------------------------------------------------------- | ------------------------------------------------------- | -------- |
+| `PRIORICODE_DISABLE_EXTERNAL_SKILLS`                     | skip `~/.claude/skills`, `~/.agents/skills` scans       | off      |
+| `PRIORICODE_DISABLE_CLAUDE_CODE` / `_PROMPT` / `_SKILLS` | skip Claude-compatible CLAUDE.md prompt / skills        | off      |
+| `PRIORICODE_DISABLE_DEFAULT_PLUGINS`                     | unregister built-in auth plugins                        | off      |
+| `PRIORICODE_DISABLE_LSP_DOWNLOAD`                        | no language-server provisioning                         | off      |
+| `PRIORICODE_DISABLE_EMBEDDED_WEB_UI`                     | server stops serving the bundled UI (desktop uses this) | off      |
+| `PRIORICODE_PLUGIN_META_FILE`                            | plugin metadata cache location                          | data dir |
 
 ## Third-party variables honored
 
-| Variable | Used for |
-| --- | --- |
-| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, … | provider env auth (full per-provider list from the catalog; `providers list` shows what's set) |
-| `PRIORICODE_API_KEY` | hosted PrioriCode provider key |
-| `AWS_PROFILE`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_BEARER_TOKEN_BEDROCK`, `AWS_WEB_IDENTITY_TOKEN_FILE`, `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`/`_FULL_URI` | Amazon Bedrock chain |
-| `AZURE_RESOURCE_NAME`, `AZURE_COGNITIVE_SERVICES_RESOURCE_NAME` | Azure endpoints |
-| `CLOUDFLARE_GATEWAY_ID`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Cloudflare AI Gateway |
-| `EXA_API_KEY`, `PARALLEL_API_KEY` | web search ([tools](/reference/tools)) |
-| `EDITOR`, `VISUAL` | `/editor`, `/export`, command editing |
-| `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_RESOURCE_ATTRIBUTES` | OpenTelemetry export when `experimental.openTelemetry` |
-| `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME` | base for all data dirs |
-| `SHELL`, `TERM`, `TERM_PROGRAM`, `TERM_PROGRAM_VERSION` | shell choice, IDE/terminal detection |
-| `PRIORICODE_CALLER` (`vscode`/`vscode-insiders`), `ZED_TERM` | editor integration detection |
-| `HOME`, `TMPDIR`, `USER`, `PATH` | standard |
+| Variable                                                                                                                                                          | Used for                                                                                       |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, …                                                                                          | provider env auth (full per-provider list from the catalog; `providers list` shows what's set) |
+| `PRIORICODE_API_KEY`                                                                                                                                              | hosted PrioriCode provider key                                                                 |
+| `AWS_PROFILE`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_BEARER_TOKEN_BEDROCK`, `AWS_WEB_IDENTITY_TOKEN_FILE`, `AWS_CONTAINER_CREDENTIALS_RELATIVE_URI`/`_FULL_URI` | Amazon Bedrock chain                                                                           |
+| `AZURE_RESOURCE_NAME`, `AZURE_COGNITIVE_SERVICES_RESOURCE_NAME`                                                                                                   | Azure endpoints                                                                                |
+| `CLOUDFLARE_GATEWAY_ID`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`                                                                                          | Cloudflare AI Gateway                                                                          |
+| `EXA_API_KEY`, `PARALLEL_API_KEY`                                                                                                                                 | web search ([tools](/reference/tools))                                                         |
+| `EDITOR`, `VISUAL`                                                                                                                                                | `/editor`, `/export`, command editing                                                          |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_RESOURCE_ATTRIBUTES`                                                                           | OpenTelemetry export when `experimental.openTelemetry`                                         |
+| `XDG_DATA_HOME`, `XDG_CONFIG_HOME`, `XDG_CACHE_HOME`, `XDG_STATE_HOME`                                                                                            | base for all data dirs                                                                         |
+| `SHELL`, `TERM`, `TERM_PROGRAM`, `TERM_PROGRAM_VERSION`                                                                                                           | shell choice, IDE/terminal detection                                                           |
+| `PRIORICODE_CALLER` (`vscode`/`vscode-insiders`), `ZED_TERM`                                                                                                      | editor integration detection                                                                   |
+| `HOME`, `TMPDIR`, `USER`, `PATH`                                                                                                                                  | standard                                                                                       |
 
 ## Related
 

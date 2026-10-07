@@ -21,13 +21,13 @@ The input is a text editor in disguise. Standard bindings (`ctrl+a`/`ctrl+e`, wo
 
 Type `@` to attach context, fuzzy-searched and ranked by how often you touch the files:
 
-| Syntax | Attaches |
-| --- | --- |
-| `@src/api.ts` | a file (or `@src/routes/` a directory) |
-| `@src/api.ts#10-20` | just lines 10–20 |
-| `@general` | a subagent — routes the message through it |
-| `@<name>` | a project reference (configured `references`) |
-| MCP resources | when a connected server exposes them |
+| Syntax              | Attaches                                      |
+| ------------------- | --------------------------------------------- |
+| `@src/api.ts`       | a file (or `@src/routes/` a directory)        |
+| `@src/api.ts#10-20` | just lines 10–20                              |
+| `@general`          | a subagent — routes the message through it    |
+| `@<name>`           | a project reference (configured `references`) |
+| MCP resources       | when a connected server exposes them          |
 
 Slash commands complete from `/` at the start of a line — the full list is on the [slash-commands reference](/reference/slash-commands).
 
@@ -53,22 +53,20 @@ Keep typing — the input never blocks. New messages queue (you'll see a **QUEUE
 
 `ctrl+p` opens the command palette: every command, searchable, no memorization required. The big-ticket defaults:
 
-| Keys | Command |
-| --- | --- |
-| `ctrl+x` | the leader key — prefix for most chords below (2 s window) |
-| `tab` / `shift+tab` | next / previous agent |
-| `<leader>m`, `f2` | model list / cycle recent models |
-| `<leader>c` | compact the session |
-| `<leader>u` / `<leader>r` | undo / redo the last message |
-| `<leader>b` | hide the sidebar when you want the conversation full-bleed |
-| `<leader>e` | compose in `$EDITOR` |
-| `/help` | keybinding cheatsheet in-app |
+| Keys                      | Command                                                    |
+| ------------------------- | ---------------------------------------------------------- |
+| `ctrl+x`                  | the leader key — prefix for most chords below (2 s window) |
+| `tab` / `shift+tab`       | next / previous agent                                      |
+| `<leader>m`, `f2`         | model list / cycle recent models                           |
+| `<leader>c`               | compact the session                                        |
+| `<leader>u` / `<leader>r` | undo / redo the last message                               |
+| `<leader>b`               | hide the sidebar when you want the conversation full-bleed |
+| `<leader>e`               | compose in `$EDITOR`                                       |
+| `/help`                   | keybinding cheatsheet in-app                               |
 
 The complete table lives in the [keybinds reference](/reference/keybinds), and all of it is rebindable in `tui.json` — see [themes & keybindings](/configure/tui).
 
-<Tip>
-  Forgot a chord? `ctrl+alt+k` toggles the which-key panel: a live overlay of what you can press next.
-</Tip>
+<Tip>Forgot a chord? `ctrl+alt+k` toggles the which-key panel: a live overlay of what you can press next.</Tip>
 
 ## Sidebar & reading the screen
 

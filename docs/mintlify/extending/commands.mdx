@@ -28,11 +28,11 @@ Cover: features added, risks, and anything that looks accidentally included.
 
 ## Arguments
 
-| Pattern | Behavior |
-| --- | --- |
-| `$1`, `$2`, … | Positional arguments, split on whitespace (quote with `"…"`/`'…'` to group). The **highest-numbered** placeholder swallows the rest — `$3` in a two-`$` template gets everything after arg 2. |
-| `$ARGUMENTS` | The raw argument string, verbatim. |
-| *(neither present)* | Your arguments are appended after the template, separated by a blank line. |
+| Pattern             | Behavior                                                                                                                                                                                      |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `$1`, `$2`, …       | Positional arguments, split on whitespace (quote with `"…"`/`'…'` to group). The **highest-numbered** placeholder swallows the rest — `$3` in a two-`$` template gets everything after arg 2. |
+| `$ARGUMENTS`        | The raw argument string, verbatim.                                                                                                                                                            |
+| _(neither present)_ | Your arguments are appended after the template, separated by a blank line.                                                                                                                    |
 
 The palette shows the placeholders each command expects (they're harvested from the template), so `/deploy` tells you it wants `$1 $2` before you guess.
 
@@ -44,6 +44,7 @@ Backtick expressions of the form ``!`command` `` run **before** the prompt is se
 ---
 description: Triage the latest failing tests
 ---
+
 Here's what broke:
 !`bun test 2>&1 | tail -50`
 
@@ -54,13 +55,13 @@ Shell commands run in your config `shell` (or `$SHELL`). This is prompt-time exe
 
 ## Frontmatter fields
 
-| Key | Effect |
-| --- | --- |
-| `description` | Shown in autocomplete |
-| `agent` | Run as this agent (its model/permissions apply) |
-| `model` | Override model for this command, `provider/model` |
-| `variant` | Model variant (reasoning effort) |
-| `subtask` | `true` → dispatch as a subagent task instead of steering the session |
+| Key           | Effect                                                               |
+| ------------- | -------------------------------------------------------------------- |
+| `description` | Shown in autocomplete                                                |
+| `agent`       | Run as this agent (its model/permissions apply)                      |
+| `model`       | Override model for this command, `provider/model`                    |
+| `variant`     | Model variant (reasoning effort)                                     |
+| `subtask`     | `true` → dispatch as a subagent task instead of steering the session |
 
 ## From the CLI
 

@@ -24,12 +24,7 @@
             "groups": [
               {
                 "group": "Getting started",
-                "pages": [
-                  "index",
-                  "quickstart",
-                  "getting-started/install",
-                  "getting-started/providers"
-                ]
+                "pages": ["index", "quickstart", "getting-started/install", "getting-started/providers"]
               },
               {
                 "group": "Using PrioriCode",
@@ -60,26 +55,15 @@
               },
               {
                 "group": "Configure",
-                "pages": [
-                  "configure/files",
-                  "configure/tui"
-                ]
+                "pages": ["configure/files", "configure/tui"]
               },
               {
                 "group": "Platforms",
-                "pages": [
-                  "platforms/server",
-                  "platforms/desktop",
-                  "platforms/github",
-                  "platforms/enterprise"
-                ]
+                "pages": ["platforms/server", "platforms/desktop", "platforms/github", "platforms/enterprise"]
               },
               {
                 "group": "Support",
-                "pages": [
-                  "support/troubleshooting",
-                  "support/versions"
-                ]
+                "pages": ["support/troubleshooting", "support/versions"]
               }
             ]
           },
@@ -106,9 +90,7 @@
             "groups": [
               {
                 "group": "Getting started",
-                "pages": [
-                  "sdk"
-                ],
+                "pages": ["sdk"],
                 "openapi": "/openapi.json"
               }
             ]
@@ -135,16 +117,7 @@
     }
   },
   "contextual": {
-    "options": [
-      "copy",
-      "view",
-      "chatgpt",
-      "claude",
-      "perplexity",
-      "mcp",
-      "cursor",
-      "vscode"
-    ]
+    "options": ["copy", "view", "chatgpt", "claude", "perplexity", "mcp", "cursor", "vscode"]
   },
   "footer": {
     "socials": {

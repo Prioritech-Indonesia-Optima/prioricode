@@ -9,18 +9,12 @@ Every conversation PrioriCode has with you is a **session**: a stream of message
 
 <Tabs>
   <Tab title="In the TUI">
-    ```bash
-    prioricode                    # new session in the current project
-    prioricode --continue         # jump back into the latest session
-    prioricode --session ses_…    # resume a specific one
-    ```
+    ```bash prioricode # new session in the current project prioricode --continue # jump back into the latest session
+    prioricode --session ses_… # resume a specific one ```
   </Tab>
   <Tab title="From the CLI">
-    ```bash
-    prioricode session list               # recent sessions, paginated
-    prioricode session list --format json # machine-readable
-    prioricode session delete ses_…
-    ```
+    ```bash prioricode session list # recent sessions, paginated prioricode session list --format json #
+    machine-readable prioricode session delete ses_… ```
   </Tab>
 </Tabs>
 
@@ -38,7 +32,8 @@ The agent went down a rabbit hole? Time-travel instead of apologizing:
 - `--fork` on the CLI does the same from the latest (or `--session`) state.
 
 <Note>
-  Revert state is transient: send a new message and the undo chain is cleaned up. Undo, then undo again, then act — don't undo after the fact.
+  Revert state is transient: send a new message and the undo chain is cleaned up. Undo, then undo again, then act —
+  don't undo after the fact.
 </Note>
 
 ## Compaction
@@ -81,7 +76,8 @@ prioricode db "select id,title from session order by time_updated desc limit 10"
 Different release channels use different DB files, and `PRIORICODE_DB` overrides the whole thing — the routing rules are on the [config files page](/configure/files).
 
 <Warning>
-  The database contains your prompts, file contents, and diffs. It's local — but local files are still files. Back it up or wipe it like you would an SSH keychain.
+  The database contains your prompts, file contents, and diffs. It's local — but local files are still files. Back it up
+  or wipe it like you would an SSH keychain.
 </Warning>
 
 ## Related

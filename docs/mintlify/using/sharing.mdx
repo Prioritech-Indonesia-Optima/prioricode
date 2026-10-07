@@ -17,7 +17,9 @@ The first time you share in a session group, PrioriCode shows a consent prompt e
 A share is a **read-only transcript page**: messages, tool calls, diffs, rendered by the hosted share service. The default backend is `https://opncd.ai`; point it at your own deployment with the `enterprise.url` config (self-hostable — see [enterprise](/platforms/enterprise)). Share URLs look like `https://<host>/share/<slug>`.
 
 <Warning>
-  Assume every share is public and permanent-until-deleted. Transcripts contain your prompts and file contents the agent read. If secrets were in context, they're in the page. `/unshare` is the undo; `PRIORICODE_DISABLE_SHARE=1` is the insurance policy; `"share": "disabled"` in config removes `/share` from the TUI entirely.
+  Assume every share is public and permanent-until-deleted. Transcripts contain your prompts and file contents the agent
+  read. If secrets were in context, they're in the page. `/unshare` is the undo; `PRIORICODE_DISABLE_SHARE=1` is the
+  insurance policy; `"share": "disabled"` in config removes `/share` from the TUI entirely.
 </Warning>
 
 ## Automatic sharing
@@ -27,11 +29,11 @@ A share is a **read-only transcript page**: messages, tool calls, diffs, rendere
 { "share": "auto" }
 ```
 
-| Value | Behavior |
-| --- | --- |
-| `"manual"` (default) | Links exist only when you `/share`. |
-| `"auto"` | Every session gets shared as it runs — for teams who review sessions openly. |
-| `"disabled"` | No sharing anywhere: TUI entry hidden, server routes off. |
+| Value                | Behavior                                                                     |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `"manual"` (default) | Links exist only when you `/share`.                                          |
+| `"auto"`             | Every session gets shared as it runs — for teams who review sessions openly. |
+| `"disabled"`         | No sharing anywhere: TUI entry hidden, server routes off.                    |
 
 Equivalent one-offs: the `PRIORICODE_AUTO_SHARE=1` env, `autoshare: true` (legacy spelling of `share: auto`), and `prioricode run --share`.
 

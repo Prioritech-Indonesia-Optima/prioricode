@@ -7,10 +7,10 @@ The TUI is a client. Underneath, PrioriCode is a session server with a nice face
 
 ## Three commands, one server
 
-| Command | What it does |
-| --- | --- |
-| `prioricode serve` | Headless HTTP server. No UI, just the API. |
-| `prioricode web` | Server **plus** the embedded browser UI; prints the URL and opens your browser. |
+| Command                   | What it does                                                                     |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `prioricode serve`        | Headless HTTP server. No UI, just the API.                                       |
+| `prioricode web`          | Server **plus** the embedded browser UI; prints the URL and opens your browser.  |
 | `prioricode attach <url>` | Point a local TUI at an already-running server. Rendering here, execution there. |
 
 `serve` and `web` share the same network options (and the `server` block in `prioricode.json`):
@@ -21,13 +21,13 @@ prioricode web --port 4096 --hostname 0.0.0.0 \
   --cors https://myapp.example
 ```
 
-| Flag | Default | Notes |
-| --- | --- | --- |
-| `--port` | `0` (random) | Pin it for firewall/SSH plans; the TUI picks its own port automatically. |
-| `--hostname` | `127.0.0.1` | Loopback by default. `0.0.0.0` to expose — with intent, not by accident. |
-| `--mdns` | `false` | Advertises the server on the local network (forces `0.0.0.0`). |
-| `--mdns-domain` | `prioricode.local` | The name peers discover you under. |
-| `--cors` | none | Extra origins allowed to hit the API from browsers. |
+| Flag            | Default            | Notes                                                                    |
+| --------------- | ------------------ | ------------------------------------------------------------------------ |
+| `--port`        | `0` (random)       | Pin it for firewall/SSH plans; the TUI picks its own port automatically. |
+| `--hostname`    | `127.0.0.1`        | Loopback by default. `0.0.0.0` to expose — with intent, not by accident. |
+| `--mdns`        | `false`            | Advertises the server on the local network (forces `0.0.0.0`).           |
+| `--mdns-domain` | `prioricode.local` | The name peers discover you under.                                       |
+| `--cors`        | none               | Extra origins allowed to hit the API from browsers.                      |
 
 ## The web interface
 
@@ -38,7 +38,9 @@ If the embedded UI is disabled (`PRIORICODE_DISABLE_EMBEDDED_WEB_UI=1` — what 
 ## Authenticating (don't skip this)
 
 <Warning>
-  A server with no password is a server with no login. `serve`/`web` say it out loud at startup: *"PRIORICODE_SERVER_PASSWORD is not set; server is unsecured."* On loopback that's defensible; on `0.0.0.0` it is a data leak with a friendly face.
+  A server with no password is a server with no login. `serve`/`web` say it out loud at startup:
+  *"PRIORICODE_SERVER_PASSWORD is not set; server is unsecured."* On loopback that's defensible; on `0.0.0.0` it is a
+  data leak with a friendly face.
 </Warning>
 
 ```bash
@@ -74,7 +76,8 @@ Permissions and questions that surface on the server reply through `POST /permis
 `integrations/slack` ships a small bot ([@prioricode/slack](https://github.com/Prioritech-Indonesia-Optima/prioricode/tree/main/integrations/slack)): mention it in a channel, and it boots an in-process PrioriCode server, keeps one session per thread, and posts tool activity back into the conversation. Setup is classic Slack-app: create an app with Socket Mode, scopes `chat:write`, `app_mentions:read`, `channels:history`, `groups:history`; then run it with `SLACK_BOT_TOKEN`, `SLACK_SIGNING_SECRET`, `SLACK_APP_TOKEN` set. It's a package in the repo rather than a hosted integration — bring your own runner.
 
 <Note>
-  The Slack bot is a thin example of what the API enables, not a supported product surface. Treat it as reference code you deploy — review it before pointing it at production channels.
+  The Slack bot is a thin example of what the API enables, not a supported product surface. Treat it as reference code
+  you deploy — review it before pointing it at production channels.
 </Note>
 
 ## Related

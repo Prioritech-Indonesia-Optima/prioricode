@@ -19428,7 +19428,10 @@
                       },
                       "reason": {
                         "type": "string",
-                        "enum": ["auto", "manual"]
+                        "enum": ["auto", "manual", "overflow"]
+                      },
+                      "decision": {
+                        "$ref": "#/components/schemas/SessionNextCompactionDecision"
                       }
                     },
                     "required": ["timestamp", "sessionID", "messageID", "reason"],
@@ -19501,13 +19504,21 @@
                       },
                       "reason": {
                         "type": "string",
-                        "enum": ["auto", "manual"]
+                        "enum": ["auto", "manual", "overflow"]
                       },
                       "text": {
                         "type": "string"
                       },
                       "recent": {
                         "type": "string"
+                      },
+                      "outcome": {
+                        "type": "string",
+                        "enum": ["summarized", "hard-truncated"]
+                      },
+                      "dropped_tokens": {
+                        "type": "integer",
+                        "minimum": 0
                       }
                     },
                     "required": ["timestamp", "sessionID", "messageID", "reason", "text", "recent"],
@@ -25609,6 +25620,37 @@
         "required": ["message", "isRetryable"],
         "additionalProperties": false
       },
+      "SessionNextCompactionDecision": {
+        "type": "object",
+        "properties": {
+          "trigger": {
+            "type": "string",
+            "enum": ["threshold", "budget", "overflow", "manual"]
+          },
+          "context": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "context_source": {
+            "type": "string",
+            "enum": ["model", "default"]
+          },
+          "estimated": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "fallback": {
+            "type": "string",
+            "enum": ["none", "progressive", "hard-truncation", "window-too-small"]
+          }
+        },
+        "required": ["trigger", "context", "context_source", "fallback"],
+        "additionalProperties": false
+      },
       "FileDiff": {
         "type": "object",
         "properties": {
@@ -27684,7 +27726,10 @@
                   },
                   "reason": {
                     "type": "string",
-                    "enum": ["auto", "manual"]
+                    "enum": ["auto", "manual", "overflow"]
+                  },
+                  "decision": {
+                    "$ref": "#/components/schemas/SessionNextCompactionDecision"
                   }
                 },
                 "required": ["timestamp", "sessionID", "messageID", "reason"],
@@ -27742,13 +27787,21 @@
                   },
                   "reason": {
                     "type": "string",
-                    "enum": ["auto", "manual"]
+                    "enum": ["auto", "manual", "overflow"]
                   },
                   "text": {
                     "type": "string"
                   },
                   "recent": {
                     "type": "string"
+                  },
+                  "outcome": {
+                    "type": "string",
+                    "enum": ["summarized", "hard-truncated"]
+                  },
+                  "dropped_tokens": {
+                    "type": "integer",
+                    "minimum": 0
                   }
                 },
                 "required": ["timestamp", "sessionID", "messageID", "reason", "text", "recent"],
@@ -28917,7 +28970,7 @@
           },
           "reason": {
             "type": "string",
-            "enum": ["auto", "manual"]
+            "enum": ["auto", "manual", "overflow"]
           },
           "summary": {
             "type": "string"
@@ -30507,7 +30560,10 @@
               },
               "reason": {
                 "type": "string",
-                "enum": ["auto", "manual"]
+                "enum": ["auto", "manual", "overflow"]
+              },
+              "decision": {
+                "$ref": "#/components/schemas/SessionNextCompactionDecision"
               }
             },
             "required": ["timestamp", "sessionID", "messageID", "reason"],
@@ -30566,13 +30622,21 @@
               },
               "reason": {
                 "type": "string",
-                "enum": ["auto", "manual"]
+                "enum": ["auto", "manual", "overflow"]
               },
               "text": {
                 "type": "string"
               },
               "recent": {
                 "type": "string"
+              },
+              "outcome": {
+                "type": "string",
+                "enum": ["summarized", "hard-truncated"]
+              },
+              "dropped_tokens": {
+                "type": "integer",
+                "minimum": 0
               }
             },
             "required": ["timestamp", "sessionID", "messageID", "reason", "text", "recent"],
@@ -36457,7 +36521,10 @@
               },
               "reason": {
                 "type": "string",
-                "enum": ["auto", "manual"]
+                "enum": ["auto", "manual", "overflow"]
+              },
+              "decision": {
+                "$ref": "#/components/schemas/SessionNextCompactionDecision"
               }
             },
             "required": ["timestamp", "sessionID", "messageID", "reason"],
@@ -36530,13 +36597,21 @@
               },
               "reason": {
                 "type": "string",
-                "enum": ["auto", "manual"]
+                "enum": ["auto", "manual", "overflow"]
               },
               "text": {
                 "type": "string"
               },
               "recent": {
                 "type": "string"
+              },
+              "outcome": {
+                "type": "string",
+                "enum": ["summarized", "hard-truncated"]
+              },
+              "dropped_tokens": {
+                "type": "integer",
+                "minimum": 0
               }
             },
             "required": ["timestamp", "sessionID", "messageID", "reason", "text", "recent"],

@@ -572,29 +572,36 @@ const layer = Layer.effect(
     })
 
     const runTurn: RunTurn = Effect.fnUntraced(function* (sessionID, promotion, step, policy, budget, attempt = 1) {
-      return yield* runTurnAttempt(sessionID, promotion, step, policy, budget, attempt, compaction.compactAfterOverflow)
-        .pipe(
-          Effect.catchDefect(
-            Effect.fnUntraced(function* (defect) {
-              if (!(defect instanceof TurnTransitionError)) return yield* Effect.die(defect)
-              yield* Effect.yieldNow
-              if (defect.transition._tag === "RetryProviderTurn") {
-                yield* Effect.sleep(Duration.millis(defect.transition.delayMs))
-                return yield* runTurn(
-                  sessionID,
-                  undefined,
-                  defect.transition.step,
-                  policy,
-                  budget,
-                  defect.transition.attempt,
-                )
-              }
-              if (defect.transition._tag === "ContinueAfterOverflowCompaction")
-                return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step, policy, budget)
-              return yield* runTurn(sessionID, undefined, defect.transition.step, policy, budget)
-            }),
-          ),
-        )
+      return yield* runTurnAttempt(
+        sessionID,
+        promotion,
+        step,
+        policy,
+        budget,
+        attempt,
+        compaction.compactAfterOverflow,
+      ).pipe(
+        Effect.catchDefect(
+          Effect.fnUntraced(function* (defect) {
+            if (!(defect instanceof TurnTransitionError)) return yield* Effect.die(defect)
+            yield* Effect.yieldNow
+            if (defect.transition._tag === "RetryProviderTurn") {
+              yield* Effect.sleep(Duration.millis(defect.transition.delayMs))
+              return yield* runTurn(
+                sessionID,
+                undefined,
+                defect.transition.step,
+                policy,
+                budget,
+                defect.transition.attempt,
+              )
+            }
+            if (defect.transition._tag === "ContinueAfterOverflowCompaction")
+              return yield* runAfterOverflowCompaction(sessionID, undefined, defect.transition.step, policy, budget)
+            return yield* runTurn(sessionID, undefined, defect.transition.step, policy, budget)
+          }),
+        ),
+      )
     })
 
     const sessionStartFired = new Set<string>()

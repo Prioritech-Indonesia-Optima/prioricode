@@ -11,7 +11,7 @@ The file every agent reads first. Search order, from the session directory **up 
 
 1. `AGENTS.md`
 2. `CLAUDE.md`
-3. `CONTEXT.md` *(deprecated — prefer AGENTS.md)*
+3. `CONTEXT.md` _(deprecated — prefer AGENTS.md)_
 
 Plus a global file: `<config dir>/AGENTS.md` (`~/.config/prioricode/AGENTS.md` on Linux) is always in context, and if it's missing, `~/.claude/CLAUDE.md` is picked up instead (disable with `PRIORICODE_DISABLE_CLAUDE_CODE=1`).
 
@@ -29,7 +29,8 @@ Contents are injected with a header (`Instructions from: <path>`), so the model 
 Good AGENTS.md content: commands that must pass, files that are sacred, conventions the linter can't catch, "never do X" rules. Bad content: the README, a tutorial, your feelings about tabs. (And yes — the reason this repo's own AGENTS.md tells you how releases work is exactly this feature at work.)
 
 <Note>
-  Only the file at the match is loaded — there's no stacking of every ancestor AGENTS.md. If your monorepo has per-package notes, add them with `instructions` below.
+  Only the file at the match is loaded — there's no stacking of every ancestor AGENTS.md. If your monorepo has
+  per-package notes, add them with `instructions` below.
 </Note>
 
 ## instructions — more files, URLs, globs
@@ -37,11 +38,11 @@ Good AGENTS.md content: commands that must pass, files that are sacred, conventi
 ```jsonc
 {
   "instructions": [
-    "docs/conventions.md",              // relative, walked up to worktree
-    "packages/*/AGENTS.md",             // globs work
-    "~/company-styleguide.md",          // absolute + ~ fine
-    "https://intranet.example.com/rules.md"  // fetched at session start
-  ]
+    "docs/conventions.md", // relative, walked up to worktree
+    "packages/*/AGENTS.md", // globs work
+    "~/company-styleguide.md", // absolute + ~ fine
+    "https://intranet.example.com/rules.md", // fetched at session start
+  ],
 }
 ```
 
@@ -53,27 +54,29 @@ URLs are fetched with a 5-second timeout and injected like any file.
 
 ## Keeping the lights on: snapshots, truncation, compaction
 
-The other half of context is *not* letting it rot:
+The other half of context is _not_ letting it rot:
 
 - **File snapshots.** On by default (`snapshot: true`). PrioriCode tracks workspace changes so [undo/redo](/using/sessions) can rewind code and conversation together, and diffs stay honest after the fact.
-- **Tool output truncation.** Long command output is capped (2,000 lines / 50 KB by default) — but never *lost*: the full text spills to a file in the tool-output directory, with the path printed. Tweak `tool_output.max_lines` / `max_bytes`.
+- **Tool output truncation.** Long command output is capped (2,000 lines / 50 KB by default) — but never _lost_: the full text spills to a file in the tool-output directory, with the path printed. Tweak `tool_output.max_lines` / `max_bytes`.
 - **Compaction.** The `compaction` block decides what happens when the window fills: automatic summary of old turns (`auto`, on by default), what stays verbatim (`keep.tokens` / `keep.turns`), and a `buffer` reserved for the summary. If even the summary request would overflow the window, the oldest turns are dropped and — if still too large — the tail is hard-truncated, so an oversized session compacts instead of stalling. Stale tool output is elided separately by the top-level `prune` block (pressure-gated). Manual trigger: `/compact`. Kill switch: `PRIORICODE_DISABLE_AUTOCOMPACT`.
 - **Images.** Pasted/attached images are auto-resized before sending (`attachment.image` — max 2000×2000 and a 5 MB base64 cap by default). Turn it off if your model likes pixels rude.
 
 <Tip>
-  A session that keeps forgetting is a session that got compacted. Check the sidebar's context meter (`used %` and spend), and `/compact` at a natural seam — after a phase, not mid-thought — so the summary falls on the boring part of history.
+  A session that keeps forgetting is a session that got compacted. Check the sidebar's context meter (`used %` and
+  spend), and `/compact` at a natural seam — after a phase, not mid-thought — so the summary falls on the boring part of
+  history.
 </Tip>
 
 ## Rules, in one table
 
-| Want | Use |
-| --- | --- |
-| "Always use bun, never npm" | `AGENTS.md` |
-| Per-package conventions | `instructions` globs |
+| Want                        | Use                                                                |
+| --------------------------- | ------------------------------------------------------------------ |
+| "Always use bun, never npm" | `AGENTS.md`                                                        |
+| Per-package conventions     | `instructions` globs                                               |
 | Keep secrets out of context | `read` permission `*.env: ask` ([permissions](/using/permissions)) |
-| Another repo in view | `references` |
-| Reusable procedures | [skills](/extending/skills) |
-| Project-specific commands | [custom commands](/extending/commands) |
+| Another repo in view        | `references`                                                       |
+| Reusable procedures         | [skills](/extending/skills)                                        |
+| Project-specific commands   | [custom commands](/extending/commands)                             |
 
 ## Related
 

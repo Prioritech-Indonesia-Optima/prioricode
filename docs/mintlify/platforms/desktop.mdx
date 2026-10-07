@@ -6,24 +6,27 @@ description: "The PrioriCode desktop app — an Electron shell around the full a
 The desktop app puts the same engine behind window chrome: the web interface rendered in Electron, with a PrioriCode server process living next door. It's the phone-in-your-pocket of PrioriCode surfaces — one install, sessions everywhere.
 
 <Note>
-  Availability first: desktop builds are wired into the release pipeline but, as of this writing, release pages ship CLI binaries — the desktop app is marked *coming soon* in the project README. Check the [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) for `prioricode-desktop-…` artifacts; when they appear, this is what you're installing.
+  Availability first: desktop builds are wired into the release pipeline but, as of this writing, release pages ship CLI
+  binaries — the desktop app is marked *coming soon* in the project README. Check the [releases
+  page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) for `prioricode-desktop-…` artifacts; when
+  they appear, this is what you're installing.
 </Note>
 
 ## What it actually is
 
 - **Electron** shell rendering the same SolidJS app UI as `prioricode web` — sessions, prompts, settings — with native niceties: custom title bar (traffic lights on macOS, frameless-with-overlay on Windows), context menus, first-run onboarding, and a localized interface.
-- **Sidecar server**: a real `prioricode` server process launched per window-session, with the embedded web UI disabled (the Electron renderer *is* the UI). Tools run locally, exactly as the CLI would.
+- **Sidecar server**: a real `prioricode` server process launched per window-session, with the embedded web UI disabled (the Electron renderer _is_ the UI). Tools run locally, exactly as the CLI would.
 - **Deep link**: `prioricode://` URLs can hand work to the app.
 
 ## Channels: dev, beta, prod
 
 Three identities side-by-side on one machine:
 
-| Channel | App name | Bundle id | Database |
-| --- | --- | --- | --- |
-| prod | PrioriCode | `ai.prioricode.desktop` | shared `prioricode.db` |
-| beta | PrioriCode Beta | `ai.prioricode.desktop.beta` | shared `prioricode.db` |
-| dev | PrioriCode Dev | `ai.prioricode.desktop.dev` | separate `prioricode-dev.db` |
+| Channel | App name        | Bundle id                    | Database                     |
+| ------- | --------------- | ---------------------------- | ---------------------------- |
+| prod    | PrioriCode      | `ai.prioricode.desktop`      | shared `prioricode.db`       |
+| beta    | PrioriCode Beta | `ai.prioricode.desktop.beta` | shared `prioricode.db`       |
+| dev     | PrioriCode Dev  | `ai.prioricode.desktop.dev`  | separate `prioricode-dev.db` |
 
 That last row is the interesting one: production and beta desktop builds share the CLI's database — sessions, projects, and coordination state carry between surfaces — while the dev channel is sandboxed to its own DB by design (see [config files](/configure/files) for the routing table).
 

@@ -24,7 +24,8 @@ prioricode --version
 
 <Note>
   Remove PrioriCode versions older than `0.1.x` before installing. The script respects `PRIORICODE_INSTALL_DIR`, then
-  `$XDG_BIN_DIR`, then `$HOME/bin`. Nix, Docker, and manual options are on the [installation page](/getting-started/install).
+  `$XDG_BIN_DIR`, then `$HOME/bin`. Nix, Docker, and manual options are on the [installation
+  page](/getting-started/install).
 </Note>
 
 ## 2. Connect a provider
@@ -50,15 +51,15 @@ The first time it wants to edit a file you'll see a permission panel with the di
 
 That's enough to be productive. Everything below is optional, but it's where PrioriCode stops being a chatbot and starts being a coworker:
 
-| Move | Keys | What it does |
-| --- | --- | --- |
-| Switch agent | `tab` / `shift+tab`, or `/agents` | Cycle between `build` (full access), `plan` (read-only), and `auto` (unattended). |
-| Change model | `<leader>m` (leader is `ctrl+x`), `f2` | Pick a model, or cycle your recently used ones. |
-| Everything else | `ctrl+p`, `/help` | The command palette lists every command; `/help` shows keybindings. |
+| Move            | Keys                                   | What it does                                                                      |
+| --------------- | -------------------------------------- | --------------------------------------------------------------------------------- |
+| Switch agent    | `tab` / `shift+tab`, or `/agents`      | Cycle between `build` (full access), `plan` (read-only), and `auto` (unattended). |
+| Change model    | `<leader>m` (leader is `ctrl+x`), `f2` | Pick a model, or cycle your recently used ones.                                   |
+| Everything else | `ctrl+p`, `/help`                      | The command palette lists every command; `/help` shows keybindings.               |
 
 <Tip>
-  Type `@` in the prompt to attach files from your project (with line ranges: `@src/api.ts#10-42`), and start an
-  empty prompt with `!` to run a plain shell command without involving the model.
+  Type `@` in the prompt to attach files from your project (with line ranges: `@src/api.ts#10-42`), and start an empty
+  prompt with `!` to run a plain shell command without involving the model.
 </Tip>
 
 ## Keep going

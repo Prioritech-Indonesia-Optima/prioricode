@@ -100,9 +100,7 @@ async function drizzle(temporary: string, output: string, name?: string) {
 export default { ...config, out: ${JSON.stringify(output)} }
 `,
   )
-  await $`bun drizzle-kit generate --config ${config} ${name ? ["--name", name] : []}`.cwd(
-    coreDir,
-  )
+  await $`bun drizzle-kit generate --config ${config} ${name ? ["--name", name] : []}`.cwd(coreDir)
 }
 
 async function generatedMigrations(directory: string) {

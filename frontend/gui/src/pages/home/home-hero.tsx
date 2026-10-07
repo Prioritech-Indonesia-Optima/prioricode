@@ -16,9 +16,7 @@ export function HomeHero(props: { language: ReturnType<typeof useLanguage> }) {
       <h1 class="mt-3 text-[28px] font-semibold leading-[1.08] tracking-[-0.02em] text-pc-text-base">
         {props.language.t("home.hero.title")}
       </h1>
-      <p class="mt-2 max-w-[52ch] text-[14px] leading-5 text-pc-text-muted">
-        {props.language.t("home.hero.subtitle")}
-      </p>
+      <p class="mt-2 max-w-[52ch] text-[14px] leading-5 text-pc-text-muted">{props.language.t("home.hero.subtitle")}</p>
     </header>
   )
 }

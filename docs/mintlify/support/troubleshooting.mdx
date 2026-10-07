@@ -41,24 +41,24 @@ prioricode --print-logs --log-level DEBUG
 
 ## Common failures, decoded
 
-| Symptom | Likely cause | Fix |
-| --- | --- | --- |
-| "No model selected" / nothing responds | No provider connected | `prioricode providers login` or export an API key; check `/status` |
-| `providers login` lists few providers | Catalog couldn't be fetched | `prioricode models --refresh`; offline, config-declared providers still work |
-| Model works but costs/context look wrong | Model not in catalog / missing `limit` | Declare the model under `provider.<id>.models` with real `limit.context` |
-| `warning: PRIORICODE_SERVER_PASSWORD is not set; server is unsecured` | Server started without auth | Set the env var before `serve`/`web`; loopback-only if you don't need remote |
-| 401 on `attach`/SDK calls | Password/username mismatch | Basic auth defaults to user `prioricode`; pass `-u/-p` explicitly |
-| MCP server "needs\_auth" | Remote server wants OAuth | `prioricode mcp auth <name>`; `prioricode mcp debug <name>` probes discovery |
-| MCP server "failed" | Command not on PATH / wrong args | `prioricode mcp list` shows status; test the `command` array in a bare shell first |
-| Edits fail with "oldString not found" repeatedly | File changed since read | Have the agent re-read before editing; check a formatter isn't rewriting on save (`formatter: false` to bisect) |
-| Bash exits nonzero with "may be sandbox denials" | `bashSandbox` blocked it | Add to `bashSandbox.writablePaths` or set `network: "allow"` — don't disable the sandbox reflexively |
-| Tool output cut off | Truncation (by design) | Full output path is printed; tune `tool_output.max_lines`/`max_bytes` |
-| "Permission required" storms on every step | `ask-first` mode or deny-heavy rules | `/permission` to check session mode; review `permission` rules — last match wins |
-| Escape doesn't interrupt | First Escape only arms it | Press twice within 5 s (the footer tells you) |
-| Sessions don't coordinate across instances | Different DB files | `prioricode db path` in each process must match; check channel/`PRIORICODE_DB` ([versioning page](/support/versions) has the routing table) |
-| Undo/revert won't restore files | Snapshots off | `snapshot: true` (default) — someone set it false |
-| Clipboard paste does nothing on Linux | No clipboard helper | Re-run the installer (it installs one), or `PRIORICODE_NO_CLIPBOARD=1` and attach files manually |
-| `!` shell commands find different tools than your terminal | Shell resolution | PrioriCode uses config `shell` else `$SHELL`; Windows also honors `PRIORICODE_GIT_BASH_PATH` |
+| Symptom                                                               | Likely cause                           | Fix                                                                                                                                         |
+| --------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| "No model selected" / nothing responds                                | No provider connected                  | `prioricode providers login` or export an API key; check `/status`                                                                          |
+| `providers login` lists few providers                                 | Catalog couldn't be fetched            | `prioricode models --refresh`; offline, config-declared providers still work                                                                |
+| Model works but costs/context look wrong                              | Model not in catalog / missing `limit` | Declare the model under `provider.<id>.models` with real `limit.context`                                                                    |
+| `warning: PRIORICODE_SERVER_PASSWORD is not set; server is unsecured` | Server started without auth            | Set the env var before `serve`/`web`; loopback-only if you don't need remote                                                                |
+| 401 on `attach`/SDK calls                                             | Password/username mismatch             | Basic auth defaults to user `prioricode`; pass `-u/-p` explicitly                                                                           |
+| MCP server "needs_auth"                                               | Remote server wants OAuth              | `prioricode mcp auth <name>`; `prioricode mcp debug <name>` probes discovery                                                                |
+| MCP server "failed"                                                   | Command not on PATH / wrong args       | `prioricode mcp list` shows status; test the `command` array in a bare shell first                                                          |
+| Edits fail with "oldString not found" repeatedly                      | File changed since read                | Have the agent re-read before editing; check a formatter isn't rewriting on save (`formatter: false` to bisect)                             |
+| Bash exits nonzero with "may be sandbox denials"                      | `bashSandbox` blocked it               | Add to `bashSandbox.writablePaths` or set `network: "allow"` — don't disable the sandbox reflexively                                        |
+| Tool output cut off                                                   | Truncation (by design)                 | Full output path is printed; tune `tool_output.max_lines`/`max_bytes`                                                                       |
+| "Permission required" storms on every step                            | `ask-first` mode or deny-heavy rules   | `/permission` to check session mode; review `permission` rules — last match wins                                                            |
+| Escape doesn't interrupt                                              | First Escape only arms it              | Press twice within 5 s (the footer tells you)                                                                                               |
+| Sessions don't coordinate across instances                            | Different DB files                     | `prioricode db path` in each process must match; check channel/`PRIORICODE_DB` ([versioning page](/support/versions) has the routing table) |
+| Undo/revert won't restore files                                       | Snapshots off                          | `snapshot: true` (default) — someone set it false                                                                                           |
+| Clipboard paste does nothing on Linux                                 | No clipboard helper                    | Re-run the installer (it installs one), or `PRIORICODE_NO_CLIPBOARD=1` and attach files manually                                            |
+| `!` shell commands find different tools than your terminal            | Shell resolution                       | PrioriCode uses config `shell` else `$SHELL`; Windows also honors `PRIORICODE_GIT_BASH_PATH`                                                |
 
 ## The database, when you must look
 
@@ -72,7 +72,7 @@ Read-only spelunking is safe; **editing** session rows while a process is runnin
 
 ## Privacy & security posture
 
-- Your code stays local: processing happens on your machine or through direct calls to your chosen AI provider. PrioriCode collects no default telemetry — [SECURITY.md](https://github.com/Prioritech-Indonesia-Optima/prioricode/blob/main/SECURITY.md) is the threat model, and the OpenTelemetry integration (`experimental.openTelemetry`, `OTEL_EXPORTER_OTLP_*` env) is opt-in plumbing for *your* observability stack.
+- Your code stays local: processing happens on your machine or through direct calls to your chosen AI provider. PrioriCode collects no default telemetry — [SECURITY.md](https://github.com/Prioritech-Indonesia-Optima/prioricode/blob/main/SECURITY.md) is the threat model, and the OpenTelemetry integration (`experimental.openTelemetry`, `OTEL_EXPORTER_OTLP_*` env) is opt-in plumbing for _your_ observability stack.
 - Exceptions to "stays local": sharing (`/share`, `"share": "disabled"` to remove it) and whatever your MCP servers/provider APIs do — you choose those, so choose knowing.
 - The permission system is UX, not a jail. Need real isolation: container or VM. The page for that posture is [permissions](/using/permissions).
 

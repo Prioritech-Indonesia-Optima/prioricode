@@ -7,14 +7,14 @@ PrioriCode reads your config the way git reads dotfiles: look everywhere in a de
 
 ## The files
 
-| File | What it's for |
-| --- | --- |
-| `prioricode.json` / `prioricode.jsonc` | Product configuration (comments supported in `.jsonc`) |
-| `tui.json` / `tui.jsonc` | Interface configuration — themes & keybinds ([next page](/configure/tui)) |
-| `AGENTS.md` (+ `CLAUDE.md`, `CONTEXT.md`) | Project instructions ([context](/using/context)) |
-| `.prioricode/{agents,commands,skills,tools,plugin,themes}/` | The extension folders ([extending](/extending/skills)) |
-| `<data>/auth.json` | Stored provider credentials, mode `0600` |
-| `<data>/prioricode*.db` | Sessions and state (SQLite) |
+| File                                                        | What it's for                                                             |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------- |
+| `prioricode.json` / `prioricode.jsonc`                      | Product configuration (comments supported in `.jsonc`)                    |
+| `tui.json` / `tui.jsonc`                                    | Interface configuration — themes & keybinds ([next page](/configure/tui)) |
+| `AGENTS.md` (+ `CLAUDE.md`, `CONTEXT.md`)                   | Project instructions ([context](/using/context))                          |
+| `.prioricode/{agents,commands,skills,tools,plugin,themes}/` | The extension folders ([extending](/extending/skills))                    |
+| `<data>/auth.json`                                          | Stored provider credentials, mode `0600`                                  |
+| `<data>/prioricode*.db`                                     | Sessions and state (SQLite)                                               |
 
 New config files are seeded with `"$schema": "https://prioricode.ai/config.json"` — that URL lights up autocomplete and validation in editors that support JSON Schema.
 
@@ -44,8 +44,8 @@ Any config text supports two templates:
 {
   "model": "{env:PRIORICODE_MODEL}",
   "provider": {
-    "acme": { "options": { "apiKey": "{file:./secrets/acme.key}" } }
-  }
+    "acme": { "options": { "apiKey": "{file:./secrets/acme.key}" } },
+  },
 }
 ```
 
@@ -55,27 +55,29 @@ Any config text supports two templates:
 
 All XDG-standard, all overridable via the usual `XDG_*` env vars:
 
-| Path | Contents |
-| --- | --- |
-| `~/.local/share/prioricode` (data) | `prioricode.db`, `auth.json`, `mcp-auth.json`, `log/`, `plans/`, `tool-output/`, `repos/`, `snapshot/` |
-| `~/.config/prioricode` (config) | global config dir (see above) |
-| `~/.cache/prioricode` (cache) | cached model catalog, skill packs, `bin/` |
-| `~/.local/state/prioricode` (state) | recently-used models, misc state |
-| `$TMPDIR/prioricode` (tmp) | scratch |
+| Path                                | Contents                                                                                               |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `~/.local/share/prioricode` (data)  | `prioricode.db`, `auth.json`, `mcp-auth.json`, `log/`, `plans/`, `tool-output/`, `repos/`, `snapshot/` |
+| `~/.config/prioricode` (config)     | global config dir (see above)                                                                          |
+| `~/.cache/prioricode` (cache)       | cached model catalog, skill packs, `bin/`                                                              |
+| `~/.local/state/prioricode` (state) | recently-used models, misc state                                                                       |
+| `$TMPDIR/prioricode` (tmp)          | scratch                                                                                                |
 
 Print the truth for your machine with `prioricode debug paths`, and `prioricode db path` for the database specifically.
 
 ### Which database, exactly
 
-| Your build's channel | DB file (under data dir) |
-| --- | --- |
+| Your build's channel                                       | DB file (under data dir)                                                 |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------ |
 | `latest`, `beta`, `prod`, or running from source (`local`) | `prioricode.db` — shared, so sessions/projects/coordination carry across |
-| any other channel (e.g. a desktop `dev` build) | `prioricode-<channel>.db` — deliberately isolated |
-| `PRIORICODE_DISABLE_CHANNEL_DB=1` | forces `prioricode.db` |
-| `PRIORICODE_DB=/some/path` | that path, full stop (`:memory:` works too) |
+| any other channel (e.g. a desktop `dev` build)             | `prioricode-<channel>.db` — deliberately isolated                        |
+| `PRIORICODE_DISABLE_CHANNEL_DB=1`                          | forces `prioricode.db`                                                   |
+| `PRIORICODE_DB=/some/path`                                 | that path, full stop (`:memory:` works too)                              |
 
 <Warning>
-  Two processes with *different* DB files will cheerfully not coordinate — that's the #1 "why don't my sessions see each other?" cause. Run `prioricode db path` in each process when [coordination](/using/coordination) looks deaf. And `PRIORICODE_DB` is a sledgehammer: it relocates *all* state, including credentials' neighborhood.
+  Two processes with *different* DB files will cheerfully not coordinate — that's the #1 "why don't my sessions see each
+  other?" cause. Run `prioricode db path` in each process when [coordination](/using/coordination) looks deaf. And
+  `PRIORICODE_DB` is a sledgehammer: it relocates *all* state, including credentials' neighborhood.
 </Warning>
 
 ## Effective-config debugging

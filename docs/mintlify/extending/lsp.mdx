@@ -26,11 +26,11 @@ Config is three-way:
     "typescript": { "disabled": true },
     "my-linter": {
       "command": ["my-lsp", "--stdio"],
-      "extensions": [".tl"],          // required for custom servers
+      "extensions": [".tl"], // required for custom servers
       "env": { "MODE": "check" },
-      "initialization": { "settings": { "strict": true } }
-    }
-  }
+      "initialization": { "settings": { "strict": true } },
+    },
+  },
 }
 ```
 
@@ -48,11 +48,11 @@ Off by default. With `PRIORICODE_EXPERIMENTAL_LSP_TOOL=1`, the model gets a navi
 
 ## Turning pieces off
 
-| Want | Switch |
-| --- | --- |
-| No language servers at all | `"lsp": false` |
+| Want                                   | Switch                                                                      |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| No language servers at all             | `"lsp": false`                                                              |
 | No downloads (CI, airgapped, paranoia) | `PRIORICODE_DISABLE_LSP_DOWNLOAD=1` (servers still work if already present) |
-| One noisy server gone | `"lsp": { "<id>": { "disabled": true } }` |
+| One noisy server gone                  | `"lsp": { "<id>": { "disabled": true } }`                                   |
 
 ## Related
 

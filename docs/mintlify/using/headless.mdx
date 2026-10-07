@@ -26,23 +26,23 @@ prioricode run --command review "the auth module"
 
 ## Options that matter
 
-| Flag | What it does |
-| --- | --- |
-| `-m, --model provider/model` | override the configured model |
-| `--agent <name>` | run as that agent (`plan`, `auto`, yours) |
-| `--variant` | model variant / reasoning effort, e.g. `high` |
-| `--thinking` | show model reasoning — on by default in interactive mini mode, off in `run` |
-| `-c, --continue` / `-s, --session <id>` | keep talking in an existing session |
-| `--fork` | branch instead of continuing (needs `--continue` or `--session`) |
-| `-f, --file <path>` | attach files (repeatable; ≤10 MiB each) |
-| `--title <name>` | name the session; empty means "first 50 chars of the prompt" |
-| `--share` | auto-share the session when it's done |
-| `--command` | run a registered command with the message as args |
-| `--format default\|json` | raw JSONL events instead of prose |
-| `--dir` | run in another project directory |
-| `--auto` | approve anything that would ask (see below) |
-| `--attach <url>` | drive a remote server instead of running locally |
-| `--username/-u`, `--password/-p` | basic auth for `--attach` (env: `PRIORICODE_SERVER_USERNAME`/`PASSWORD`) |
+| Flag                                    | What it does                                                                |
+| --------------------------------------- | --------------------------------------------------------------------------- |
+| `-m, --model provider/model`            | override the configured model                                               |
+| `--agent <name>`                        | run as that agent (`plan`, `auto`, yours)                                   |
+| `--variant`                             | model variant / reasoning effort, e.g. `high`                               |
+| `--thinking`                            | show model reasoning — on by default in interactive mini mode, off in `run` |
+| `-c, --continue` / `-s, --session <id>` | keep talking in an existing session                                         |
+| `--fork`                                | branch instead of continuing (needs `--continue` or `--session`)            |
+| `-f, --file <path>`                     | attach files (repeatable; ≤10 MiB each)                                     |
+| `--title <name>`                        | name the session; empty means "first 50 chars of the prompt"                |
+| `--share`                               | auto-share the session when it's done                                       |
+| `--command`                             | run a registered command with the message as args                           |
+| `--format default\|json`                | raw JSONL events instead of prose                                           |
+| `--dir`                                 | run in another project directory                                            |
+| `--auto`                                | approve anything that would ask (see below)                                 |
+| `--attach <url>`                        | drive a remote server instead of running locally                            |
+| `--username/-u`, `--password/-p`        | basic auth for `--attach` (env: `PRIORICODE_SERVER_USERNAME`/`PASSWORD`)    |
 
 ## JSON output for pipelines
 

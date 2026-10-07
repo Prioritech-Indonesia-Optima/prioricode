@@ -3,18 +3,18 @@ title: "CLI reference"
 description: "Every prioricode command, subcommand, flag, and default — TUI, run, serve, web, attach, acp, providers, mcp, agent, plugin, upgrade, uninstall, models, stats, export, import, session, db, github, pr."
 ---
 
-Global behavior first, then commands alphabetically-ish (grouped by intent). Flags marked *(hidden)* exist in source but don't appear in `--help`. Everything after `--` on any command is passthrough.
+Global behavior first, then commands alphabetically-ish (grouped by intent). Flags marked _(hidden)_ exist in source but don't appear in `--help`. Everything after `--` on any command is passthrough.
 
 ## Global flags
 
-| Flag | Effect |
-| --- | --- |
-| `-h, --help` | Help (logo-prefixed, hand-rolled renderer) |
-| `-v, --version` | Print the installed version |
-| `--print-logs` | Mirror logs to stderr (= `PRIORICODE_PRINT_LOGS=1`) |
-| `--log-level DEBUG\|INFO\|WARN\|ERROR` | Log verbosity (= `PRIORICODE_LOG_LEVEL`) |
-| `--pure` | Run without external plugins (= `PRIORICODE_PURE=1`) |
-| `prioricode completion` | Print a shell completion script |
+| Flag                                   | Effect                                               |
+| -------------------------------------- | ---------------------------------------------------- |
+| `-h, --help`                           | Help (logo-prefixed, hand-rolled renderer)           |
+| `-v, --version`                        | Print the installed version                          |
+| `--print-logs`                         | Mirror logs to stderr (= `PRIORICODE_PRINT_LOGS=1`)  |
+| `--log-level DEBUG\|INFO\|WARN\|ERROR` | Log verbosity (= `PRIORICODE_LOG_LEVEL`)             |
+| `--pure`                               | Run without external plugins (= `PRIORICODE_PURE=1`) |
+| `prioricode completion`                | Print a shell completion script                      |
 
 Every run also exports `AGENT=1`, `PRIORICODE=1`, `PRIORICODE_PID` into its process environment — child scripts can detect they're agent-spawned.
 
@@ -22,20 +22,20 @@ Every run also exports `AGENT=1`, `PRIORICODE=1`, `PRIORICODE_PID` into its proc
 
 `prioricode [project-path]` · start interactive sessions.
 
-| Flag | Default | Notes |
-| --- | --- | --- |
-| positional `project` | `$PWD` | start in this directory |
-| `-m, --model <provider/model>` | resolution order | see [providers](/getting-started/providers) |
-| `-c, --continue` | off | resume the most recent session |
-| `-s, --session <id>` | — | resume a specific session |
-| `--fork` | off | branch on resume (requires `-c` or `-s`) |
-| `--prompt <text>` | — | first message; piped stdin is prepended |
-| `--agent <name>` | `default_agent`/`build` | starting agent |
-| `--auto` | off | auto-approve asks not explicitly denied (dangerous) |
-| `--yolo`, `--dangerously-skip-permissions` *(hidden)* | off | aliases feeding `--auto` |
-| `--mini` | off | minimal interactive interface (split footer) |
-| `--no-replay`, `--replay-limit <n>` *(hidden)* | — | require `--mini`; transcript rendering in mini |
-| `--demo` *(hidden)* | off | require `--mini` |
+| Flag                                                        | Default                                         | Notes                                                        |
+| ----------------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------------ |
+| positional `project`                                        | `$PWD`                                          | start in this directory                                      |
+| `-m, --model <provider/model>`                              | resolution order                                | see [providers](/getting-started/providers)                  |
+| `-c, --continue`                                            | off                                             | resume the most recent session                               |
+| `-s, --session <id>`                                        | —                                               | resume a specific session                                    |
+| `--fork`                                                    | off                                             | branch on resume (requires `-c` or `-s`)                     |
+| `--prompt <text>`                                           | —                                               | first message; piped stdin is prepended                      |
+| `--agent <name>`                                            | `default_agent`/`build`                         | starting agent                                               |
+| `--auto`                                                    | off                                             | auto-approve asks not explicitly denied (dangerous)          |
+| `--yolo`, `--dangerously-skip-permissions` _(hidden)_       | off                                             | aliases feeding `--auto`                                     |
+| `--mini`                                                    | off                                             | minimal interactive interface (split footer)                 |
+| `--no-replay`, `--replay-limit <n>` _(hidden)_              | —                                               | require `--mini`; transcript rendering in mini               |
+| `--demo` _(hidden)_                                         | off                                             | require `--mini`                                             |
 | `--port`, `--hostname`, `--mdns`, `--mdns-domain`, `--cors` | `0`, `127.0.0.1`, off, `prioricode.local`, none | network options; also serve the instance's API (see `serve`) |
 
 Incompatibilities: `--mini` refuses the network flags; replay knobs refuse a non-mini run.
@@ -44,57 +44,57 @@ Incompatibilities: `--mini` refuses the network flags; replay knobs refuse a non
 
 Non-interactive by default: prompt → stream → exit on idle. (Full guide: [headless](/using/headless).)
 
-| Flag | Default | Notes |
-| --- | --- | --- |
-| `message…` / `--` passthrough | empty | the prompt; piped stdin appended |
-| `--command <name>` | — | run a registered slash command; message becomes its args |
-| `-c, --continue` / `-s, --session` / `--fork` | — | as in TUI; `--fork` needs `-c`/`-s` |
-| `-m, --model`, `--agent`, `--variant`, `--thinking` | per config | `--thinking` default: true only when interactive |
-| `--format default\|json` | `default` | JSONL events: `tool_use`, `step_start`, `step_finish`, `text`, `reasoning`, `error` |
-| `-f, --file <path>` *(repeatable)* | — | attach ≤10 MiB/file |
-| `--title <t>` | auto | empty value ⇒ first 50 chars of prompt |
-| `--share` | off | share the finished session |
-| `--attach <url>` + `-u/--username`, `-p/--password` | — | drive a remote server (env defaults: `PRIORICODE_SERVER_USERNAME`=`prioricode`, `…_PASSWORD`) |
-| `--dir <path>` | cwd | project directory |
-| `--port <n>` | random | local server port when not attaching |
-| `--auto` (+ hidden `--yolo`, `--dangerously-skip-permissions`) | off | approve-all mode |
-| `--interactive, -i` | off | declared; interactivity is derived from `--mini`, not this |
-| `--mini` *(hidden)* | off | present but rejected — use `prioricode --mini` |
-| `--replay`, `--replay-limit`, `--demo` *(hidden)* | — | mini knobs |
+| Flag                                                           | Default    | Notes                                                                                         |
+| -------------------------------------------------------------- | ---------- | --------------------------------------------------------------------------------------------- |
+| `message…` / `--` passthrough                                  | empty      | the prompt; piped stdin appended                                                              |
+| `--command <name>`                                             | —          | run a registered slash command; message becomes its args                                      |
+| `-c, --continue` / `-s, --session` / `--fork`                  | —          | as in TUI; `--fork` needs `-c`/`-s`                                                           |
+| `-m, --model`, `--agent`, `--variant`, `--thinking`            | per config | `--thinking` default: true only when interactive                                              |
+| `--format default\|json`                                       | `default`  | JSONL events: `tool_use`, `step_start`, `step_finish`, `text`, `reasoning`, `error`           |
+| `-f, --file <path>` _(repeatable)_                             | —          | attach ≤10 MiB/file                                                                           |
+| `--title <t>`                                                  | auto       | empty value ⇒ first 50 chars of prompt                                                        |
+| `--share`                                                      | off        | share the finished session                                                                    |
+| `--attach <url>` + `-u/--username`, `-p/--password`            | —          | drive a remote server (env defaults: `PRIORICODE_SERVER_USERNAME`=`prioricode`, `…_PASSWORD`) |
+| `--dir <path>`                                                 | cwd        | project directory                                                                             |
+| `--port <n>`                                                   | random     | local server port when not attaching                                                          |
+| `--auto` (+ hidden `--yolo`, `--dangerously-skip-permissions`) | off        | approve-all mode                                                                              |
+| `--interactive, -i`                                            | off        | declared; interactivity is derived from `--mini`, not this                                    |
+| `--mini` _(hidden)_                                            | off        | present but rejected — use `prioricode --mini`                                                |
+| `--replay`, `--replay-limit`, `--demo` _(hidden)_              | —          | mini knobs                                                                                    |
 
 ## `prioricode serve` · `web` · `acp` · `attach`
 
-| Command | Shape |
-| --- | --- |
-| `serve` | Headless server. Network flags only. Warns when `PRIORICODE_SERVER_PASSWORD` unset. |
-| `web` | Server + opens the embedded app UI; prints local/mDNS URLs. |
-| `acp` | Agent Client Protocol server over stdio. Network flags + `--cwd <path>`. Sets `PRIORICODE_CLIENT=acp`. |
-| `attach <url>` | TUI against a remote server: `--dir`, `-c/-s/--fork`, `-u/-p`, `--mini`, replay knobs. |
+| Command        | Shape                                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| `serve`        | Headless server. Network flags only. Warns when `PRIORICODE_SERVER_PASSWORD` unset.                    |
+| `web`          | Server + opens the embedded app UI; prints local/mDNS URLs.                                            |
+| `acp`          | Agent Client Protocol server over stdio. Network flags + `--cwd <path>`. Sets `PRIORICODE_CLIENT=acp`. |
+| `attach <url>` | TUI against a remote server: `--dir`, `-c/-s/--fork`, `-u/-p`, `--mini`, replay knobs.                 |
 
 ## `prioricode providers` (alias `auth`)
 
-| Sub | Flags | Notes |
-| --- | --- | --- |
-| `list` (`ls`) | — | stored credentials (`<data>/auth.json`) + detected env-var providers |
-| `login [url]` | `-p/--provider <id-or-name>`, `-m/--method <label>` | `[url]` = well-known enterprise flow (`.well-known/prioricode`) |
-| `logout [provider]` | — | forget one or all |
+| Sub                 | Flags                                               | Notes                                                                |
+| ------------------- | --------------------------------------------------- | -------------------------------------------------------------------- |
+| `list` (`ls`)       | —                                                   | stored credentials (`<data>/auth.json`) + detected env-var providers |
+| `login [url]`       | `-p/--provider <id-or-name>`, `-m/--method <label>` | `[url]` = well-known enterprise flow (`.well-known/prioricode`)      |
+| `logout [provider]` | —                                                   | forget one or all                                                    |
 
 ## `prioricode mcp`
 
-| Sub | Flags | Notes |
-| --- | --- | --- |
-| `list` (`ls`) | — | status per server: connected/disabled/needs\_auth/needs\_client\_registration/failed |
-| `add [name]` | non-interactive: `--url <u> [--header K=V]…` **or** `-- cmd args… [--env K=V]…` | writes project or global config (comment-preserving) |
-| `auth [name]` / `auth list` | — | OAuth flow / token inventory |
-| `logout [name]` | — | forget tokens/clients |
-| `debug <name>` | — | probe remote: discovery, registration, token state |
+| Sub                         | Flags                                                                           | Notes                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `list` (`ls`)               | —                                                                               | status per server: connected/disabled/needs_auth/needs_client_registration/failed |
+| `add [name]`                | non-interactive: `--url <u> [--header K=V]…` **or** `-- cmd args… [--env K=V]…` | writes project or global config (comment-preserving)                              |
+| `auth [name]` / `auth list` | —                                                                               | OAuth flow / token inventory                                                      |
+| `logout [name]`             | —                                                                               | forget tokens/clients                                                             |
+| `debug <name>`              | —                                                                               | probe remote: discovery, registration, token state                                |
 
 ## `prioricode agent`
 
-| Sub | Flags | Notes |
-| --- | --- | --- |
+| Sub      | Flags                                                                                                             | Notes                                                                                                                     |
+| -------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `create` | `--path`, `--description`, `--mode all\|primary\|subagent`, `--permissions <csv>` (alias `--tools`), `-m/--model` | non-interactive iff all of path+description+mode+permissions given; writes `agents/<name>.md` under the target config dir |
-| `list` | — | `name (mode)` + permission JSON |
+| `list`   | —                                                                                                                 | `name (mode)` + permission JSON                                                                                           |
 
 Permission keys selectable at create: `bash, read, edit, glob, grep, webfetch, task, todowrite, sessions, websearch, lsp, skill` — anything unselected is **denied**.
 
@@ -104,39 +104,39 @@ Permission keys selectable at create: `bash, read, edit, glob, grep, webfetch, t
 
 ## `prioricode upgrade [target]` / `uninstall`
 
-| Command | Flags | Notes |
-| --- | --- | --- |
-| `upgrade [target]` | `-m/--method curl\|npm\|pnpm\|bun\|brew\|choco\|scoop` | target like `0.1.48`/`v0.1.48`; detects install method; verifies result |
-| `uninstall` | `-c/--keep-config`, `-d/--keep-data`, `--dry-run`, `-f/--force` | removes dirs, PATH lines (`# prioricode`), package via owning manager |
+| Command            | Flags                                                           | Notes                                                                   |
+| ------------------ | --------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| `upgrade [target]` | `-m/--method curl\|npm\|pnpm\|bun\|brew\|choco\|scoop`          | target like `0.1.48`/`v0.1.48`; detects install method; verifies result |
+| `uninstall`        | `-c/--keep-config`, `-d/--keep-data`, `--dry-run`, `-f/--force` | removes dirs, PATH lines (`# prioricode`), package via owning manager   |
 
 ## Catalog & data commands
 
-| Command | Flags | Notes |
-| --- | --- | --- |
-| `models [provider]` | `--verbose`, `--refresh` | `provider/model` lines; `--refresh` re-fetches the catalog |
-| `stats` | `--days <n>` (`0`=today), `--tools`, `--models`, `--project <p>` | cost/token aggregates; empty `--project` = current |
-| `export [sessionID]` | `--sanitize` | JSON to stdout (picker if no id; status to stderr) |
-| `import <file>` | — | local export or `https://<host>/share/<slug>` |
-| `session list` | `-n/--max-count`, `--format table\|json` | paginated via bundled `less` (Windows fallbacks) |
-| `session delete <id>` | — | |
-| `db [query]` | `--format json\|tsv` (default `tsv`) | sqlite3 shell or one-shot query |
-| `db path` | — | print resolved DB file |
+| Command               | Flags                                                            | Notes                                                      |
+| --------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------- |
+| `models [provider]`   | `--verbose`, `--refresh`                                         | `provider/model` lines; `--refresh` re-fetches the catalog |
+| `stats`               | `--days <n>` (`0`=today), `--tools`, `--models`, `--project <p>` | cost/token aggregates; empty `--project` = current         |
+| `export [sessionID]`  | `--sanitize`                                                     | JSON to stdout (picker if no id; status to stderr)         |
+| `import <file>`       | —                                                                | local export or `https://<host>/share/<slug>`              |
+| `session list`        | `-n/--max-count`, `--format table\|json`                         | paginated via bundled `less` (Windows fallbacks)           |
+| `session delete <id>` | —                                                                |                                                            |
+| `db [query]`          | `--format json\|tsv` (default `tsv`)                             | sqlite3 shell or one-shot query                            |
+| `db path`             | —                                                                | print resolved DB file                                     |
 
 ## GitHub commands
 
-| Command | Flags | Notes |
-| --- | --- | --- |
-| `github install` | — | app + workflow + OIDC walkthrough |
-| `github run` | `--event <file>`, `--token <pat>` | replay an event JSON locally |
-| `pr <number>` | — | needs git repo + `gh`; checkout `pr/<n>`, import linked session, launch TUI |
+| Command          | Flags                             | Notes                                                                       |
+| ---------------- | --------------------------------- | --------------------------------------------------------------------------- |
+| `github install` | —                                 | app + workflow + OIDC walkthrough                                           |
+| `github run`     | `--event <file>`, `--token <pat>` | replay an event JSON locally                                                |
+| `pr <number>`    | —                                 | needs git repo + `gh`; checkout `pr/<n>`, import linked session, launch TUI |
 
 ## Hidden & developer
 
-| Command | Notes |
-| --- | --- |
-| `console login/logout/switch/orgs/open` | PrioriCode console account (device-code flow) — hidden from help ([enterprise](/platforms/enterprise)) |
-| `generate` | dump OpenAPI + inject JS samples (SDK developer tooling) |
-| `debug …` | `info`, `paths`, `config`, `lsp`, `ripgrep`, `file`, `search`, `skill`, `snapshot`, `startup`, `agent`, `v2`, `wait` ([troubleshooting](/support/troubleshooting)) |
+| Command                                 | Notes                                                                                                                                                              |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `console login/logout/switch/orgs/open` | PrioriCode console account (device-code flow) — hidden from help ([enterprise](/platforms/enterprise))                                                             |
+| `generate`                              | dump OpenAPI + inject JS samples (SDK developer tooling)                                                                                                           |
+| `debug …`                               | `info`, `paths`, `config`, `lsp`, `ripgrep`, `file`, `search`, `skill`, `snapshot`, `startup`, `agent`, `v2`, `wait` ([troubleshooting](/support/troubleshooting)) |
 
 ## Related
 

@@ -349,8 +349,8 @@ MCP timeouts have separate startup and request budgets, expressed in millisecond
 
 Behavior affecting long-running conversations and context management.
 
-| Field        | Current Purpose                                             | Status   | Notes                                                                                 |
-| ------------ | ----------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------- |
+| Field        | Current Purpose                                             | Status   | Notes                                                                                                                                                 |
+| ------------ | ----------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `compaction` | Automatic compaction, pruning, and context reserve settings | redesign | Group retained verbatim history under `keep` (`tokens`, `turns`), rename context headroom to `buffer`, and move pruning to a top-level `prune` group. |
 
 Retain the compaction capability but redesign the less clear limits. `keep.tokens` is the token budget for recent history serialized into the textual compaction checkpoint; `keep.turns` caps that tail by turn count. `buffer` is the token headroom reserved so automatic compaction triggers before the input window is exhausted. Pruning of stale tool output is a separate top-level `prune` group, not part of compaction.

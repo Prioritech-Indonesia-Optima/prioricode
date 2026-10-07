@@ -3,7 +3,7 @@ title: "Hooks"
 description: "Shell hooks — PreToolUse (with exit-code-2 blocking), PostToolUse, SessionStart, Stop, Notification. Stdin JSON, timeouts, env scrubbing."
 ---
 
-Hooks are your scripts in the agent's loop. Five lifecycle events, plain shell commands, JSON on stdin — and one exit code that means *no*. No dependencies, no build step; if it runs in your terminal it runs as a hook.
+Hooks are your scripts in the agent's loop. Five lifecycle events, plain shell commands, JSON on stdin — and one exit code that means _no_. No dependencies, no build step; if it runs in your terminal it runs as a hook.
 
 ## Configuration
 
@@ -12,26 +12,26 @@ Hooks are your scripts in the agent's loop. Five lifecycle events, plain shell c
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "bash",          // wildcard over tool name; omit to match all
+        "matcher": "bash", // wildcard over tool name; omit to match all
         "command": "./.prioricode/hooks/block-push.sh",
-        "timeout": 10               // seconds; default 30
-      }
+        "timeout": 10, // seconds; default 30
+      },
     ],
     "PostToolUse": [{ "command": "jq -r '.tool_response' >> /tmp/agent-audit.log", "matcher": "edit" }],
     "SessionStart": [{ "command": "echo branch=$(git branch --show-current)" }],
     "Stop": [{ "command": "afplay /System/Library/Sounds/Glass.aiff" }],
-    "Notification": [{ "command": "curl -s -X POST https://ntfy.example.com/room -d \"$1\"" }]
-  }
+    "Notification": [{ "command": "curl -s -X POST https://ntfy.example.com/room -d \"$1\"" }],
+  },
 }
 ```
 
-| Event | Fires | Can it stop things? |
-| --- | --- | --- |
-| `PreToolUse` | Before every tool call | **Yes** — exit code **2** blocks the call; stderr is handed to the model as the reason. |
-| `PostToolUse` | After a tool call completes | No — observe/log only. |
-| `SessionStart` | A new root session begins | No. |
-| `Stop` | A root session goes idle | No — "it's done" ping. |
-| `Notification` | Something needs you (permission decision, session error) | No — route the alert somewhere you'll see it. |
+| Event          | Fires                                                    | Can it stop things?                                                                     |
+| -------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `PreToolUse`   | Before every tool call                                   | **Yes** — exit code **2** blocks the call; stderr is handed to the model as the reason. |
+| `PostToolUse`  | After a tool call completes                              | No — observe/log only.                                                                  |
+| `SessionStart` | A new root session begins                                | No.                                                                                     |
+| `Stop`         | A root session goes idle                                 | No — "it's done" ping.                                                                  |
+| `Notification` | Something needs you (permission decision, session error) | No — route the alert somewhere you'll see it.                                           |
 
 Hook lists from multiple config files concatenate (deduped by command), so a project ships its guards and your global config adds personal ones.
 
@@ -40,7 +40,14 @@ Hook lists from multiple config files concatenate (deduped by command), so a pro
 Every hook receives one JSON object on stdin:
 
 ```json
-{ "hook_event_name": "PreToolUse", "session_id": "ses_…", "cwd": "/work/repo", "tool_name": "bash", "tool_input": { "command": "git push" }, "tool_response": null }
+{
+  "hook_event_name": "PreToolUse",
+  "session_id": "ses_…",
+  "cwd": "/work/repo",
+  "tool_name": "bash",
+  "tool_input": { "command": "git push" },
+  "tool_response": null
+}
 ```
 
 `tool_input` is the pending arguments; `tool_response` populates for `PostToolUse`. That's the whole interface — parse with `jq`, grep it, decide, exit.
@@ -69,16 +76,18 @@ The model doesn't fail silently — it gets `Tool call blocked by a PreToolUse h
 - **Failures are loud where they matter:** a non-blocking hook erroring is logged and published as a hook-failed event; only `PreToolUse` exit-2 has teeth.
 
 <Tip>
-  Hooks are for guardrails and glue — lint after edit, log every shell command, ping your phone when a long run finishes. For anything that needs to *change* the tool call, rewrite the prompt, or add a provider, that's [plugins](/extending/plugins), which sit on the in-process hooks with full typed context.
+  Hooks are for guardrails and glue — lint after edit, log every shell command, ping your phone when a long run
+  finishes. For anything that needs to *change* the tool call, rewrite the prompt, or add a provider, that's
+  [plugins](/extending/plugins), which sit on the in-process hooks with full typed context.
 </Tip>
 
 ## Hooks vs plugins vs permissions
 
-| Need | Use |
-| --- | --- |
-| Block/observe by exit code from any language | hooks |
-| Rewrite args, mutate definitions, custom tools, auth | plugins |
-| Static policy by tool + pattern | [permissions](/using/permissions) |
+| Need                                                 | Use                               |
+| ---------------------------------------------------- | --------------------------------- |
+| Block/observe by exit code from any language         | hooks                             |
+| Rewrite args, mutate definitions, custom tools, auth | plugins                           |
+| Static policy by tool + pattern                      | [permissions](/using/permissions) |
 
 ## Related
 
