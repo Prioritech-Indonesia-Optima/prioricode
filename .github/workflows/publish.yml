@@ -139,8 +139,8 @@ jobs:
           curl -fsSL -o /tmp/bun-avx2.zip "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_V}/bun-linux-x64.zip"
           unzip -q /tmp/bun-avx2.zip -d /tmp/bun-avx2
           export PATH="/tmp/bun-avx2/bun-linux-x64:$PATH"
-           ./cli/script/build.ts
-         env:
+          ./cli/script/build.ts
+        env:
           PRIORICODE_VERSION: ${{ needs.version.outputs.version }}
           PRIORICODE_RELEASE: ${{ needs.version.outputs.release }}
           GH_REPO: ${{ needs.version.outputs.repo }}
