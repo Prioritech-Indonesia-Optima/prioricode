@@ -18,12 +18,6 @@ export default {
         );
       `)
       yield* tx.run(`
-        CREATE TABLE \`data_migration\` (
-          \`name\` text PRIMARY KEY,
-          \`time_completed\` integer NOT NULL
-        );
-      `)
-      yield* tx.run(`
         CREATE TABLE \`session_coordination\` (
           \`id\` text PRIMARY KEY,
           \`project_id\` text NOT NULL,
