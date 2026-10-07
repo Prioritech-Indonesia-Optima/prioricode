@@ -26,16 +26,16 @@ Or write the config directly — `mcp` maps a name to a local or remote definiti
       "command": ["npx", "-y", "@playwright/mcp"],
       "environment": { "BROWSER": "chromium" },
       "cwd": ".",
-      "timeout": 20000
+      "timeout": 20000,
     },
     "linear": {
       "type": "remote",
       "url": "https://mcp.linear.app/sse",
       "headers": { "X-Team": "platform" },
       "oauth": { "scope": "read write" },
-      "enabled": true
-    }
-  }
+      "enabled": true,
+    },
+  },
 }
 ```
 
@@ -73,7 +73,8 @@ Server info gets a roots handshake too: PrioriCode advertises your project direc
 Three places to tune, in resolution order: live `mcp.<name>.timeout`, static config timeout, and the `experimental.mcp_timeout` catch-all. Remote connection and tool-listing have their own generous defaults; local stdio init is the one people notice on slow machines — set `timeout` explicitly for anything you start cold.
 
 <Note>
-  A misbehaving server is quarantined, not trusted: connect/list failures surface in `mcp list` status and `/status`, and calls fail with the server named. You're never silently downgraded to half a toolset.
+  A misbehaving server is quarantined, not trusted: connect/list failures surface in `mcp list` status and `/status`,
+  and calls fail with the server named. You're never silently downgraded to half a toolset.
 </Note>
 
 ## Code mode (experimental)

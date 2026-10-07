@@ -381,7 +381,9 @@ function DesktopRoot(props: { windowState: DesktopWindowState }) {
     let lastTitle = ""
     createEffect(() => {
       const sessionId = location.pathname.match(/\/session\/([^/]+)/)?.[1]
-      const tab = sessionId ? tabs.store.find((item) => item.type === "session" && item.sessionId === sessionId) : undefined
+      const tab = sessionId
+        ? tabs.store.find((item) => item.type === "session" && item.sessionId === sessionId)
+        : undefined
       const title = tab ? tabs.info[tabKey(tab)]?.title : undefined
       const next = title ? `${title} — PrioriCode` : "PrioriCode"
       if (next === lastTitle) return

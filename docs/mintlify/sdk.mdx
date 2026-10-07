@@ -49,7 +49,11 @@ Parts are the vocabulary of prompts: text, files (data-URLs or `file://` URLs, i
 ```ts
 await client.session.prompt({
   path: { id: session.data.id },
-  body: { parts: [{ type: "text", text: "…" }], model: { providerID: "anthropic", modelID: "claude-sonnet-4-5" }, agent: "plan" },
+  body: {
+    parts: [{ type: "text", text: "…" }],
+    model: { providerID: "anthropic", modelID: "claude-sonnet-4-5" },
+    agent: "plan",
+  },
 })
 ```
 
@@ -83,7 +87,7 @@ await client.postSessionIdPermissionsPermissionId({
 
 Questions from the `question` tool reply through `POST /question/{requestID}/reply` — body `{ answers: [["selected label", …]] }`, one array per question — or via the `/api/session/...` family on the `@prioricode/sdk/v2` client, which namespaces `session`, `permission`, and `question` with typed helpers. Both shapes are fully described in the interactive [API reference](/sdk) below.
 
-That's the entire contract for policy engines: subscribe, evaluate the ask against *your* rules (CMDB, ownership, blast radius), reply. The agent blocks until you do — an approve-gate you can audit.
+That's the entire contract for policy engines: subscribe, evaluate the ask against _your_ rules (CMDB, ownership, blast radius), reply. The agent blocks until you do — an approve-gate you can audit.
 
 ## Patterns worth stealing
 
@@ -94,12 +98,15 @@ That's the entire contract for policy engines: subscribe, evaluate the ask again
 ## Reference
 
 <Card title="OpenAPI specification" icon="brackets-curly" href="/openapi.json">
-  Every endpoint with typed request/response schemas — machine-readable, the same document the playground and SDK are generated from.
+  Every endpoint with typed request/response schemas — machine-readable, the same document the playground and SDK are
+  generated from.
 </Card>
 
 <Note>
-  The spec at `backend/sdk/openapi.json` is generated — after HttpApi route changes, regenerate with `bun run build` in `backend/sdk` (repo convention). Docs never hand-copy endpoint tables; they link to the spec.
-  npm availability note: like the CLI, `@prioricode/sdk` publishes when registry credentials are configured; if npm 404s, vendor it from the repo.
+  The spec at `backend/sdk/openapi.json` is generated — after HttpApi route changes, regenerate with `bun run build` in
+  `backend/sdk` (repo convention). Docs never hand-copy endpoint tables; they link to the spec. npm availability note:
+  like the CLI, `@prioricode/sdk` publishes when registry credentials are configured; if npm 404s, vendor it from the
+  repo.
 </Note>
 
 ## Related

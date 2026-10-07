@@ -3,7 +3,7 @@ title: "Skills"
 description: "SKILL.md files that teach PrioriCode procedures on demand — format, discovery paths, remote skill packs, and how the model invokes skills."
 ---
 
-A skill is a folder with a `SKILL.md` inside: instructions for one procedure, loaded *when needed* instead of permanently bloating every prompt. It's the difference between a poster on the wall and a laminated card the agent pulls out for the job.
+A skill is a folder with a `SKILL.md` inside: instructions for one procedure, loaded _when needed_ instead of permanently bloating every prompt. It's the difference between a poster on the wall and a laminated card the agent pulls out for the job.
 
 ## The format
 
@@ -28,7 +28,7 @@ description: Run the pre-release checklist for this repo — lint, typecheck, sm
 4. Never push to main yourself; leave that human.
 ```
 
-Only two frontmatter fields are recognized: `name` (required) and `description`. The **description is the advertisement** — every skill's name+description lands in the system prompt, and the model decides from that one line whether to load the body. Make it say *when to use*, not just *what it is* (this repo's own skills are written that way; inspect `~/.local/share/prioricode` equivalents with `/skills`).
+Only two frontmatter fields are recognized: `name` (required) and `description`. The **description is the advertisement** — every skill's name+description lands in the system prompt, and the model decides from that one line whether to load the body. Make it say _when to use_, not just _what it is_ (this repo's own skills are written that way; inspect `~/.local/share/prioricode` equivalents with `/skills`).
 
 The body becomes the loaded content, delivered with the skill's directory and a sampled file list, so relative references (`changelog-template.md`) resolve for the agent.
 
@@ -61,16 +61,18 @@ Duplicate names: last one wins and you get a warning — intentional, project sk
 - **Permissions:** skill loading asks under the `skill` permission with the skill name as pattern — `"skill": { "my-*": "allow", "*": "ask" }` tunes the noise.
 
 <Tip>
-  Skill bodies can include shell snippets as *instructions*, but the skill file itself is just prompt material — it runs nothing. Anything executable happens because the agent decides to run it, which means it still passes through [permissions](/using/permissions). That's by design.
+  Skill bodies can include shell snippets as *instructions*, but the skill file itself is just prompt material — it runs
+  nothing. Anything executable happens because the agent decides to run it, which means it still passes through
+  [permissions](/using/permissions). That's by design.
 </Tip>
 
 ## Skills vs commands vs agents
 
-| Want | Build |
-| --- | --- |
-| The agent should know *how* to do procedure X when relevant | skill |
-| *You* want to trigger a canned prompt by name | [custom command](/extending/commands) |
-| A whole different persona with its own tools/model | [custom agent](/using/agents) |
+| Want                                                        | Build                                 |
+| ----------------------------------------------------------- | ------------------------------------- |
+| The agent should know _how_ to do procedure X when relevant | skill                                 |
+| _You_ want to trigger a canned prompt by name               | [custom command](/extending/commands) |
+| A whole different persona with its own tools/model          | [custom agent](/using/agents)         |
 
 ## Related
 

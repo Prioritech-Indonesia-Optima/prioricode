@@ -1444,9 +1444,7 @@ describe("session.compaction.process", () => {
                 : Array.isArray(content)
                   ? content
                       .map((part) =>
-                        typeof part === "string" || !("text" in part) || typeof part.text !== "string"
-                          ? ""
-                          : part.text,
+                        typeof part === "string" || !("text" in part) || typeof part.text !== "string" ? "" : part.text,
                       )
                       .join("")
                   : ""

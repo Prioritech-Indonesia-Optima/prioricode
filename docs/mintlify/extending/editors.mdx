@@ -3,7 +3,7 @@ title: "Editors & IDEs"
 description: "Use prioricode inside editors — the VS Code extension, ACP (Agent Client Protocol) for Zed/JetBrains/Neovim, terminal $EDITOR integration, and Zed selection context."
 ---
 
-PrioriCode is happiest in a terminal — including the terminal *docked in your IDE*. But it also speaks two protocols that put it natively inside editors: ACP, and plain `$EDITOR` handoffs.
+PrioriCode is happiest in a terminal — including the terminal _docked in your IDE_. But it also speaks two protocols that put it natively inside editors: ACP, and plain `$EDITOR` handoffs.
 
 ## The terminal is the integration
 
@@ -11,9 +11,9 @@ Run `prioricode` in VS Code, Cursor, Windsurf, VSCodium, or any IDE's integrated
 
 **The VS Code companion** (published as "PrioriCode" on the VS Code Marketplace and Open VSX) adds:
 
-| Keys | Action |
-| --- | --- |
-| `Cmd/Ctrl+Esc` | Open a PrioriCode terminal (focused / new) |
+| Keys                | Action                                                                                |
+| ------------------- | ------------------------------------------------------------------------------------- |
+| `Cmd/Ctrl+Esc`      | Open a PrioriCode terminal (focused / new)                                            |
 | `Cmd/Ctrl+Option+K` | Insert the current file — with a line range, `@File#L37-42` — into the agent's prompt |
 
 It's context-aware: your selection and active file travel with the reference. If auto-install is restricted in your setup (enterprise policy, airgapped), grab `prioricode.vsix` from the releases and install manually.
@@ -43,6 +43,7 @@ Register it wherever ACP is supported:
     ```
 
     Open with the `agent: new thread` action. Zed's ACP registry may also offer a one-click entry when PrioriCode is listed there — same engine either way.
+
   </Tab>
   <Tab title="JetBrains">
     ACP support lands in recent JetBrains IDEs via an `acp.json` agent definition pointing at the same `prioricode acp` command — see the ACP docs for your IDE build.
@@ -62,12 +63,12 @@ Feature parity through ACP: built-in tools, custom tools/commands, MCP servers, 
 
 ## Which do I want?
 
-| Situation | Use |
-| --- | --- |
+| Situation                                      | Use                                         |
+| ---------------------------------------------- | ------------------------------------------- |
 | Live in a terminal already; want zero protocol | Integrated terminal + the VS Code extension |
-| Want the agent inside the editor's UI chrome | ACP (`prioricode acp`) |
-| Just need to compose a long prompt | `/editor` / `<leader>e` |
-| Neovim without ACP plugins | Terminal is genuinely the integration |
+| Want the agent inside the editor's UI chrome   | ACP (`prioricode acp`)                      |
+| Just need to compose a long prompt             | `/editor` / `<leader>e`                     |
+| Neovim without ACP plugins                     | Terminal is genuinely the integration       |
 
 ## Related
 

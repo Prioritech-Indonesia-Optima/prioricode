@@ -15,36 +15,37 @@ prioricode models --verbose        # with per-model metadata
 
 ## Providers with first-class integration
 
-| Provider ID | Auth | Notes |
-| --- | --- | --- |
-| `prioricode` | API key (`PRIORICODE_API_KEY`) or login at `prioricode.ai/auth` | The hosted gateway — sorted first everywhere; no key ⇒ free-tier subset. |
-| `anthropic` | API key (`ANTHROPIC_API_KEY`) or OAuth | Claude family. |
-| `openai` | API key (`OPENAI_API_KEY`) **or ChatGPT Plus/Pro OAuth** | Responses-API transport; OAuth is the `codex` plugin flow. |
-| `github-copilot` | Copilot device/OAuth | Model list mirrors your Copilot plan. |
-| `google` | API key (`GOOGLE_GENERATIVE_AI_API_KEY`) / OAuth where applicable | Gemini family. |
-| `google-vertex` / `google-vertex-anthropic` | ADC / service account | Enterprise GCP routing, incl. Anthropic-on-Vertex. |
-| `amazon-bedrock` | Full AWS chain: `AWS_PROFILE`, region, access keys, bearer token, web identity, container creds | Cross-region model prefixes (`global.`, `us.`, `eu.`, `jp.`, `apac.`, `au.`); ARN model IDs supported. |
-| `azure` / `azure-cognitive-services` | API key or Azure auth; `AZURE_RESOURCE_NAME` | OpenAI-on-Azure paths. |
-| `openrouter` | Key (`OPENROUTER_API_KEY`) | Aggregator; `options.baseURL` honored. |
-| `vercel` (AI Gateway) | Token via `vercel.link/ai-gateway-token` | |
-| `cloudflare-workers-ai` / `cloudflare-ai-gateway` | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` (+ `CLOUDFLARE_GATEWAY_ID`) | Gateway routes to many upstreams. |
-| `xai` | API key or device-code OAuth (Grok) | |
-| `mistral`, `groq`, `deepinfra`, `cohere`, `perplexity`, `gateway`, `llmgateway`, `nvidia`, `zenmux`, `gitlab`, `cerebras`, `kilo`, `snowflake-cortex`, `sap-ai-core`, `meta` | API key (+ region/account vars where the service needs them) | Dedicated request/transform handling in source. |
-| *(Other)* | you fill in the config block | Any OpenAI-compatible endpoint: `@ai-sdk/openai-compatible` + `options.baseURL` — local servers included. |
+| Provider ID                                                                                                                                                                  | Auth                                                                                            | Notes                                                                                                     |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `prioricode`                                                                                                                                                                 | API key (`PRIORICODE_API_KEY`) or login at `prioricode.ai/auth`                                 | The hosted gateway — sorted first everywhere; no key ⇒ free-tier subset.                                  |
+| `anthropic`                                                                                                                                                                  | API key (`ANTHROPIC_API_KEY`) or OAuth                                                          | Claude family.                                                                                            |
+| `openai`                                                                                                                                                                     | API key (`OPENAI_API_KEY`) **or ChatGPT Plus/Pro OAuth**                                        | Responses-API transport; OAuth is the `codex` plugin flow.                                                |
+| `github-copilot`                                                                                                                                                             | Copilot device/OAuth                                                                            | Model list mirrors your Copilot plan.                                                                     |
+| `google`                                                                                                                                                                     | API key (`GOOGLE_GENERATIVE_AI_API_KEY`) / OAuth where applicable                               | Gemini family.                                                                                            |
+| `google-vertex` / `google-vertex-anthropic`                                                                                                                                  | ADC / service account                                                                           | Enterprise GCP routing, incl. Anthropic-on-Vertex.                                                        |
+| `amazon-bedrock`                                                                                                                                                             | Full AWS chain: `AWS_PROFILE`, region, access keys, bearer token, web identity, container creds | Cross-region model prefixes (`global.`, `us.`, `eu.`, `jp.`, `apac.`, `au.`); ARN model IDs supported.    |
+| `azure` / `azure-cognitive-services`                                                                                                                                         | API key or Azure auth; `AZURE_RESOURCE_NAME`                                                    | OpenAI-on-Azure paths.                                                                                    |
+| `openrouter`                                                                                                                                                                 | Key (`OPENROUTER_API_KEY`)                                                                      | Aggregator; `options.baseURL` honored.                                                                    |
+| `vercel` (AI Gateway)                                                                                                                                                        | Token via `vercel.link/ai-gateway-token`                                                        |                                                                                                           |
+| `cloudflare-workers-ai` / `cloudflare-ai-gateway`                                                                                                                            | `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ACCOUNT_ID` (+ `CLOUDFLARE_GATEWAY_ID`)                    | Gateway routes to many upstreams.                                                                         |
+| `xai`                                                                                                                                                                        | API key or device-code OAuth (Grok)                                                             |                                                                                                           |
+| `mistral`, `groq`, `deepinfra`, `cohere`, `perplexity`, `gateway`, `llmgateway`, `nvidia`, `zenmux`, `gitlab`, `cerebras`, `kilo`, `snowflake-cortex`, `sap-ai-core`, `meta` | API key (+ region/account vars where the service needs them)                                    | Dedicated request/transform handling in source.                                                           |
+| _(Other)_                                                                                                                                                                    | you fill in the config block                                                                    | Any OpenAI-compatible endpoint: `@ai-sdk/openai-compatible` + `options.baseURL` — local servers included. |
 
 ## Auth routes, mechanically
 
-| Route | Where it's used | What lands in `auth.json` |
-| --- | --- | --- |
+| Route           | Where it's used                                                             | What lands in `auth.json`                                        |
+| --------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | OAuth (browser) | ChatGPT, Copilot, Azure, Cloudflare, DigitalOcean, Snowflake, Modal, xAI, … | `oauth { refresh, access, expires, accountId?, enterpriseUrl? }` |
-| Device code | xAI, console logins | as above |
-| API key | most | `api { key, metadata? }` |
-| Well-known | `providers login <url>` enterprise endpoints | `wellknown { key, token }` + optional remote config merge |
+| Device code     | xAI, console logins                                                         | as above                                                         |
+| API key         | most                                                                        | `api { key, metadata? }`                                         |
+| Well-known      | `providers login <url>` enterprise endpoints                                | `wellknown { key, token }` + optional remote config merge        |
 
 Login priority: PrioriCode's own first (it's the zero-config path), then the major subscriptions above; `disabled_providers`/`enabled_providers` prune the list.
 
 <Note>
-  Model availability is a commercial fact about each provider, not a PrioriCode constant — no docs table will stay true here. Trust `prioricode models` for what you can actually run today; the catalog feed updates server-side.
+  Model availability is a commercial fact about each provider, not a PrioriCode constant — no docs table will stay true
+  here. Trust `prioricode models` for what you can actually run today; the catalog feed updates server-side.
 </Note>
 
 ## Related

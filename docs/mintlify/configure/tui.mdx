@@ -12,7 +12,7 @@ The interface half of configuration lives in its own file, `tui.json(c)` — dis
   "keybinds": {
     "leader": "ctrl+space",
     "agent_cycle": "none",
-    "session_compact": ["<leader>c", "<leader>k"]
+    "session_compact": ["<leader>c", "<leader>k"],
   },
   "leader_timeout": 2000,
 }
@@ -30,14 +30,14 @@ Settings changed through `/settings` and `/themes` write themselves back to the 
 
 Every binding is overridable by its **keybind id** (the full id→default table is in the [keybind reference](/reference/keybinds)). The grammar:
 
-| Value | Meaning |
-| --- | --- |
-| `"ctrl+p"` | Bind one chord |
-| `"up,ctrl+p"` | Comma-separated: multiple chords for one command |
-| `["<leader>m", "ctrl+m"]` | Array: same, as data |
-| `{ "key": "ctrl+v", "preventDefault": false }` | Object form — also `event: "press"|"release"`, `fallthrough` |
-| `"none"` or `false` | Unbind |
-| `"<leader>…"` | The leader prefix expands to your leader key (default `ctrl+x`) |
+| Value                                          | Meaning                                                         |
+| ---------------------------------------------- | --------------------------------------------------------------- | ------------------------- |
+| `"ctrl+p"`                                     | Bind one chord                                                  |
+| `"up,ctrl+p"`                                  | Comma-separated: multiple chords for one command                |
+| `["<leader>m", "ctrl+m"]`                      | Array: same, as data                                            |
+| `{ "key": "ctrl+v", "preventDefault": false }` | Object form — also `event: "press"                              | "release"`, `fallthrough` |
+| `"none"` or `false`                            | Unbind                                                          |
+| `"<leader>…"`                                  | The leader prefix expands to your leader key (default `ctrl+x`) |
 
 Chords read left-to-right with `+` for modifiers (`shift+`, `ctrl+`, `alt+`, `super+`). `enter`/`esc`/`pgup`/`pgdown` are understood as aliases. An unrecognized keybind id is rejected loudly (`Unrecognized keybind…`) rather than silently ignored — typos don't hide here.
 
@@ -53,18 +53,18 @@ Sounds and notifications for the moments you're not looking at the terminal:
 ```jsonc
 {
   "attention": {
-    "enabled": true,            // master switch (default: off)
-    "notifications": true,      // desktop notifications
+    "enabled": true, // master switch (default: off)
+    "notifications": true, // desktop notifications
     "sound": true,
     "volume": 0.4,
     "sounds": {
-      "question": "~/sounds/ask.wav",     // the agent needs an answer
-      "permission": "~/sounds/ask.wav",   // a permission prompt is pending
+      "question": "~/sounds/ask.wav", // the agent needs an answer
+      "permission": "~/sounds/ask.wav", // a permission prompt is pending
       "error": "~/sounds/error.wav",
-      "done": "~/sounds/done.wav",        // session went idle
-      "subagent_done": "~/sounds/ding.wav"
-    }
-  }
+      "done": "~/sounds/done.wav", // session went idle
+      "subagent_done": "~/sounds/ding.wav",
+    },
+  },
 }
 ```
 
@@ -72,16 +72,18 @@ Each slot accepts a custom audio file path; the default pack (`prioricode.defaul
 
 ## Interface odds and ends
 
-| Key | Default | Effect |
-| --- | --- | --- |
-| `mouse` | `true` | Mouse selection/scroll in the TUI |
-| `diff_style` | `"auto"` | `"stacked"` forces single-pane diffs on narrow terminals |
-| `cursor.style` / `blinking` | terminal default | Block/underline/line in the prompt |
-| `prompt.max_height` / `max_width` | adaptive | Cap the composer box |
-| `scroll_speed`, `scroll_acceleration.enabled` | — | How the wheel feels |
+| Key                                           | Default          | Effect                                                   |
+| --------------------------------------------- | ---------------- | -------------------------------------------------------- |
+| `mouse`                                       | `true`           | Mouse selection/scroll in the TUI                        |
+| `diff_style`                                  | `"auto"`         | `"stacked"` forces single-pane diffs on narrow terminals |
+| `cursor.style` / `blinking`                   | terminal default | Block/underline/line in the prompt                       |
+| `prompt.max_height` / `max_width`             | adaptive         | Cap the composer box                                     |
+| `scroll_speed`, `scroll_acceleration.enabled` | —                | How the wheel feels                                      |
 
 <Note>
-  `PRIORICODE_DISABLE_MOUSE=1` is there for terminal multiplexers that fight mouse capture; `PRIORICODE_DISABLE_TERMINAL_TITLE=1` for shells that hate title writes. Full list on the [environment reference](/reference/environment-variables).
+  `PRIORICODE_DISABLE_MOUSE=1` is there for terminal multiplexers that fight mouse capture;
+  `PRIORICODE_DISABLE_TERMINAL_TITLE=1` for shells that hate title writes. Full list on the [environment
+  reference](/reference/environment-variables).
 </Note>
 
 ## Related

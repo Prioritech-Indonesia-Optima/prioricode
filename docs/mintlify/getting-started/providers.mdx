@@ -23,6 +23,7 @@ Three ways a credential can arrive:
     One browser hop, no copy-paste. Supported for ChatGPT-plan OpenAI logins, GitHub Copilot, xAI (device code), Azure, Cloudflare, DigitalOcean, Snowflake Cortex, and Modal — the login list marks these as `plugin` methods. Some flows offer **auto** (open a browser) or **code** (paste a code you got elsewhere) — handy on a headless box.
 
     Refresh tokens and access tokens land in the credential store; PrioriCode renews them for you.
+
   </Tab>
   <Tab title="API key">
     The classic. Pick a provider, paste the key, it's stored locally. Works for Anthropic, Google, OpenRouter, Mistral, Groq, xAI, Cerebras, and anything else with a key-based API.
@@ -31,6 +32,7 @@ Three ways a credential can arrive:
     Skip the flow entirely: standard SDK env vars are detected automatically — `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_GENERATIVE_AI_API_KEY`, and the rest of each provider's `env` list from the model catalog. `prioricode providers list` shows which ones it currently sees under the **Environment** heading.
 
     Bedrock reads the whole AWS chain (`AWS_PROFILE`, `AWS_REGION`, `AWS_BEARER_TOKEN_BEDROCK`, web-identity and container-credential files). Azure wants `AZURE_RESOURCE_NAME`; the Cloudflare AI Gateway wants `CLOUDFLARE_GATEWAY_ID`, `CLOUDFLARE_ACCOUNT_ID`, and `CLOUDFLARE_API_TOKEN`.
+
   </Tab>
 </Tabs>
 
@@ -42,7 +44,7 @@ If your org sits behind an OpenAI-compatible proxy, point PrioriCode at it:
 prioricode providers login https://llm.example.com
 ```
 
-This fetches `<url>/.well-known/prioricode`, runs the advertised auth command, and stores the result — one URL can hand out auth *and* configuration (see [config files](/configure/files)).
+This fetches `<url>/.well-known/prioricode`, runs the advertised auth command, and stores the result — one URL can hand out auth _and_ configuration (see [config files](/configure/files)).
 
 ## Where credentials live
 
@@ -54,13 +56,13 @@ A model is `provider/model` — `anthropic/claude-sonnet-4-5`, `openai/gpt-5.4`,
 
 Where to set one:
 
-| Scope | How |
-| --- | --- |
-| Per prompt/session | `/models` in the TUI, or `--model provider/model` on the CLI |
-| Cycle favorites | `f2` / `shift+f2` cycle recently used models without leaving the prompt |
-| Every session | `model` in `prioricode.json` |
+| Scope                 | How                                                                                                                                     |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Per prompt/session    | `/models` in the TUI, or `--model provider/model` on the CLI                                                                            |
+| Cycle favorites       | `f2` / `shift+f2` cycle recently used models without leaving the prompt                                                                 |
+| Every session         | `model` in `prioricode.json`                                                                                                            |
 | Cheap background work | `small_model` — used for titles and summaries; leave it unset and PrioriCode picks a fast small model from whichever providers you have |
-| Per agent | `agent.<name>.model` — e.g. plan mode on a thinker, subagents on something quick |
+| Per agent             | `agent.<name>.model` — e.g. plan mode on a thinker, subagents on something quick                                                        |
 
 ```jsonc
 {
@@ -115,7 +117,7 @@ To keep the picker tidy: `disabled_providers` and `enabled_providers` are allow/
 ## Troubleshooting
 
 - `/status` in the TUI shows what connected — and `/connect` jumps straight to the provider list when something's missing.
-- `prioricode providers list` distinguishes *stored* credentials from *environment* ones.
+- `prioricode providers list` distinguishes _stored_ credentials from _environment_ ones.
 - After changing provider config, start a new session; model metadata is loaded per session.
 - Full playbook on the [troubleshooting page](/support/troubleshooting).
 

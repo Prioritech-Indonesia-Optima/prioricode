@@ -84,5 +84,7 @@ test("matches the rounded panel corners to the dark new-session background", asy
 
   // The dark theme's panel background is a warm grey (#232220), not near-black.
   // The corners must blend into that dark background (no light halo at the rounded edge).
-  expect(corners.every(([red, green, blue, alpha]) => red <= 60 && green <= 60 && blue <= 60 && alpha === 255)).toBe(true)
+  expect(corners.every(([red, green, blue, alpha]) => red <= 60 && green <= 60 && blue <= 60 && alpha === 255)).toBe(
+    true,
+  )
 })

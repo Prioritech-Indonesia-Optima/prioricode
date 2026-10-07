@@ -3,7 +3,7 @@ title: "Teams & enterprise"
 description: "PrioriCode in an organization — console accounts and org config, managed system config, MDM on macOS, self-hosted share pages, and the data posture."
 ---
 
-PrioriCode is honest about its default posture: it runs on *your* machine with *your* keys. Everything on this page is the layer for when "your machine" becomes "your fleet."
+PrioriCode is honest about its default posture: it runs on _your_ machine with _your_ keys. Everything on this page is the layer for when "your machine" becomes "your fleet."
 
 ## Console accounts
 
@@ -28,10 +28,10 @@ With an active console session two things come automatically:
 
 Two enforcement planes that override user and project config:
 
-| Plane | Location | Platform |
-| --- | --- | --- |
+| Plane              | Location                                                                                                        | Platform              |
+| ------------------ | --------------------------------------------------------------------------------------------------------------- | --------------------- |
 | Managed config dir | `/Library/Application Support/prioricode`, `%ProgramData%\prioricode`, `/etc/prioricode` — `prioricode.json(c)` | macOS, Windows, Linux |
-| MDM preferences | domain `ai.prioricode.managed` (`.mobileconfig`) | macOS |
+| MDM preferences    | domain `ai.prioricode.managed` (`.mobileconfig`)                                                                | macOS                 |
 
 Use them for the non-negotiables: `share: disabled`, `autoupdate` pinned, required `permission` rules, locked `disabled_providers`. Also worth fleet-spreading as defaults: the `hooks` and `bashSandbox` blocks — a PreToolUse hook can enforce policy in any language CI already speaks.
 
@@ -43,17 +43,19 @@ Use them for the non-negotiables: `share: disabled`, `autoupdate` pinned, requir
 { "enterprise": { "url": "https://shares.acme.dev" } }
 ```
 
-The self-hostable app is `cloud/enterprise` in this repo (share pages only — the transcripts stay on users' machines and stream their updates to your deployment). For orgs that must share *without* leaving the domain: this is the door, and `"share": "disabled"` is the wall.
+The self-hostable app is `cloud/enterprise` in this repo (share pages only — the transcripts stay on users' machines and stream their updates to your deployment). For orgs that must share _without_ leaving the domain: this is the door, and `"share": "disabled"` is the wall.
 
 ## Data posture — the plain version
 
-- **Code and context don't leave the machine.** Processing is local or direct-to-your-provider API calls. There's no default telemetry; OpenTelemetry (`experimental.openTelemetry`, standard `OTEL_*` env) is opt-in plumbing that exports to *your* collector.
+- **Code and context don't leave the machine.** Processing is local or direct-to-your-provider API calls. There's no default telemetry; OpenTelemetry (`experimental.openTelemetry`, standard `OTEL_*` env) is opt-in plumbing that exports to _your_ collector.
 - **The exceptions are explicit**: AI providers (they see prompts by definition — org gateways control which ones), and share links (opt-in, revocable, disableable fleet-wide).
 - **Credentials**: `<data>/auth.json`, `0600`, local. Org-managed providers keep member machines from holding raw keys at all.
 - **Server mode is user infrastructure**: `serve`/`web` default to loopback and say so when unsecured — the network boundary is yours to draw ([server](/platforms/server)).
 
 <Note>
-  The repo's [SECURITY.md](https://github.com/Prioritech-Indonesia-Optima/prioricode/blob/main/SECURITY.md) is the threat model of record: permissions are UX, not isolation; out-of-scope items are enumerated; responsible disclosure goes through GitHub Security Advisories. Enterprise docs claims and this page both defer to it on wording.
+  The repo's [SECURITY.md](https://github.com/Prioritech-Indonesia-Optima/prioricode/blob/main/SECURITY.md) is the
+  threat model of record: permissions are UX, not isolation; out-of-scope items are enumerated; responsible disclosure
+  goes through GitHub Security Advisories. Enterprise docs claims and this page both defer to it on wording.
 </Note>
 
 ## Related

@@ -6,33 +6,36 @@ description: "allow/ask/deny rules per tool and pattern, permission modes, the a
 Nothing destructive happens quietly. Every tool call — reads, edits, shell commands, web fetches — is evaluated against permission rules before it runs, and the outcome is `allow`, `ask`, or `deny`.
 
 <Warning>
-  The permission system is **guardrails, not isolation**. It asks before it touches, but it is not a security boundary — a determined prompt injection is still a prompt injection. For true containment, run PrioriCode in a container or VM, and read the [threat model in SECURITY.md](https://github.com/Prioritech-Indonesia-Optima/prioricode/blob/main/SECURITY.md).
+  The permission system is **guardrails, not isolation**. It asks before it touches, but it is not a security boundary —
+  a determined prompt injection is still a prompt injection. For true containment, run PrioriCode in a container or VM,
+  and read the [threat model in
+  SECURITY.md](https://github.com/Prioritech-Indonesia-Optima/prioricode/blob/main/SECURITY.md).
 </Warning>
 
 ## The grammar
 
 Each permission corresponds to a tool — `read`, `edit`, `bash`, `glob`, `grep`, `list`, `task`, `webfetch`, `websearch`, `external_directory`, `todowrite`, `question`, `lsp`, `skill`, `doom_loop`, plus MCP tool names — and each one resolves to an action:
 
-| Action | Meaning |
-| --- | --- |
-| `allow` | Runs without asking. |
-| `ask` | You approve or reject — per call. |
-| `deny` | Refused; the model is told. A tool denied outright (`"*": "deny"`) disappears from the agent's toolset entirely. |
+| Action  | Meaning                                                                                                          |
+| ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `allow` | Runs without asking.                                                                                             |
+| `ask`   | You approve or reject — per call.                                                                                |
+| `deny`  | Refused; the model is told. A tool denied outright (`"*": "deny"`) disappears from the agent's toolset entirely. |
 
-Rules are pattern-based: the tool takes the *thing* it wants to touch (a file path, a command string, a URL) and matches it against glob patterns. **Last match wins**, so put your exceptions after your generalities. When no rule matches, the default is `ask`.
+Rules are pattern-based: the tool takes the _thing_ it wants to touch (a file path, a command string, a URL) and matches it against glob patterns. **Last match wins**, so put your exceptions after your generalities. When no rule matches, the default is `ask`.
 
 In `prioricode.json` (see [config files](/configure/files)):
 
 ```jsonc
 {
   "permission": {
-    "edit": "allow",                    // shorthand: every edit, always
+    "edit": "allow", // shorthand: every edit, always
     "read": {
-      "*.env": "ask",                   // .env is sensitive — ask
+      "*.env": "ask", // .env is sensitive — ask
       "*.env.example": "allow",
     },
     "bash": {
-      "bun run *": "allow",             // tests are fine
+      "bun run *": "allow", // tests are fine
       "git push*": "ask",
       "rm *": "deny",
     },
@@ -56,7 +59,7 @@ Before your config is layered in, every agent starts from a baseline:
 When something asks, the session view shows the actual object: a syntax-highlighted diff for edits, the full command string for bash, the URL for fetches. Three choices:
 
 1. **Allow once** — this call only.
-2. **Allow always** — a confirmation stage lists the rule it's adding (e.g. `git diff*`), and it holds *until PrioriCode is restarted*. Approve accordingly.
+2. **Allow always** — a confirmation stage lists the rule it's adding (e.g. `git diff*`), and it holds _until PrioriCode is restarted_. Approve accordingly.
 3. **Reject** — and for subagent requests, rejection opens a text field: tell it what to do differently, and your words become the correction it receives.
 
 `escape` rejects, `return` confirms, arrow keys (or `h`/`l`) select, and `ctrl+f` toggles fullscreen for the big diffs. Pending asks stack up in the footer as "N Permissions".
@@ -65,10 +68,10 @@ When something asks, the session view shows the actual object: a syntax-highligh
 
 `/permission` (or the palette's "Permission mode") sets the whole session's posture:
 
-| Mode | Behavior |
-| --- | --- |
-| `default` | Follow agent + project rules. The normal life. |
-| `ask-first` | Edits and bash always confirm, whatever config says. Trust but verify. |
+| Mode           | Behavior                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------- |
+| `default`      | Follow agent + project rules. The normal life.                                                                |
+| `ask-first`    | Edits and bash always confirm, whatever config says. Trust but verify.                                        |
 | `always-allow` | Skips confirmations — **except destructive bash commands**, which still ask. Yes, `rm -rf` keeps its manners. |
 
 `prioricode --auto` sets `always-allow` at launch (aliases `--yolo` and `--dangerously-skip-permissions` do the same). It's honest about what it does: the CLI help literally calls it dangerous. Use it for CI and one-shot batch work, not for "I don't want to read".
@@ -85,10 +88,10 @@ On macOS and Linux, `bashSandbox` wraps shell commands in an OS sandbox — macO
 ```jsonc
 {
   "bashSandbox": {
-    "mode": "best-effort",          // "off" (default) | "best-effort" | "require"
-    "network": "deny",              // deny network to commands by default
-    "writablePaths": ["tmp/"]       // extra paths commands may write
-  }
+    "mode": "best-effort", // "off" (default) | "best-effort" | "require"
+    "network": "deny", // deny network to commands by default
+    "writablePaths": ["tmp/"], // extra paths commands may write
+  },
 }
 ```
 

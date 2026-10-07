@@ -18,20 +18,18 @@ One binary, no runtime to babysit. PrioriCode ships a native executable for ever
 
 The script detects your OS, architecture, and CPU — it picks the `baseline` build on x64 machines without AVX2 and the `musl` build on Alpine — downloads the matching archive from [GitHub Releases](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases), verifies it against `SHA256SUMS.txt`, and adds the install directory to your shell's `PATH` (the line is tagged `# prioricode`, so it's easy to find and remove later).
 
-<Note>
-  Remove PrioriCode versions older than `0.1.x` before installing.
-</Note>
+<Note>Remove PrioriCode versions older than `0.1.x` before installing.</Note>
 
 ### Installer knobs
 
-| Setting | How |
-| --- | --- |
-| Pin a version | `install -v 0.1.48` or `VERSION=v0.1.48 curl … \| bash`; PowerShell: `-Version` |
-| Use a pre-downloaded binary | `install -b ./path/to/prioricode` |
-| Custom install dir | `PRIORICODE_INSTALL_DIR=/usr/local/bin` |
-| Alternative bin dir | `XDG_BIN_DIR=$HOME/.local/bin` |
-| Don't touch PATH | `--no-modify-path` |
-| Skip clipboard tooling | `--no-clipboard` / `PRIORICODE_NO_CLIPBOARD=1` |
+| Setting                     | How                                                                             |
+| --------------------------- | ------------------------------------------------------------------------------- |
+| Pin a version               | `install -v 0.1.48` or `VERSION=v0.1.48 curl … \| bash`; PowerShell: `-Version` |
+| Use a pre-downloaded binary | `install -b ./path/to/prioricode`                                               |
+| Custom install dir          | `PRIORICODE_INSTALL_DIR=/usr/local/bin`                                         |
+| Alternative bin dir         | `XDG_BIN_DIR=$HOME/.local/bin`                                                  |
+| Don't touch PATH            | `--no-modify-path`                                                              |
+| Skip clipboard tooling      | `--no-clipboard` / `PRIORICODE_NO_CLIPBOARD=1`                                  |
 
 Install directory priority on macOS/Linux: `$PRIORICODE_INSTALL_DIR` → `$XDG_BIN_DIR` → `$HOME/bin` → `$HOME/.prioricode/bin`. On Windows: `$env:PRIORICODE_INSTALL_DIR`, else `%USERPROFILE%\.prioricode\bin`.
 
@@ -49,6 +47,7 @@ Install directory priority on macOS/Linux: `$PRIORICODE_INSTALL_DIR` → `$XDG_B
       npm publishing runs in the release pipeline only when registry credentials are configured, so the package can lag a
       GitHub release. If npm 404s, use the installer script — it is always current.
     </Note>
+
   </Tab>
   <Tab title="Nix">
     ```bash
@@ -56,6 +55,7 @@ Install directory priority on macOS/Linux: `$PRIORICODE_INSTALL_DIR` → `$XDG_B
     ```
 
     The repo ships a flake at its root.
+
   </Tab>
   <Tab title="Docker">
     ```bash
@@ -64,6 +64,7 @@ Install directory priority on macOS/Linux: `$PRIORICODE_INSTALL_DIR` → `$XDG_B
     ```
 
     Images are tagged per version and per release channel. Mount your project so the agent can see it — and bring credentials with you via environment variables.
+
   </Tab>
   <Tab title="Manual binary">
     Download `prioricode-<os>-<arch>[.zip|.tar.gz]` straight from the [releases page](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases), unzip, place it anywhere on your `PATH`. Targets: darwin (arm64, x64, x64-baseline), linux (arm64, x64, x64-baseline, plus `-musl` variants), windows (arm64, x64, x64-baseline). Check the download against `SHA256SUMS.txt` in the same release.
@@ -80,11 +81,11 @@ PrioriCode keeps its state in standard XDG directories (`~/.local/share/priorico
 
 `prioricode` checks for updates shortly after the TUI starts. Behavior is controlled by the `autoupdate` config key:
 
-| Value | Behavior |
-| --- | --- |
-| `true` (default) | Patch releases update silently; minor/major bumps prompt in the TUI footer. |
-| `"notify"` | Never auto-applies; always asks first. |
-| `false` | Quiet. Set `PRIORICODE_DISABLE_AUTOUPDATE=1` for the same effect with extra steps. |
+| Value            | Behavior                                                                           |
+| ---------------- | ---------------------------------------------------------------------------------- |
+| `true` (default) | Patch releases update silently; minor/major bumps prompt in the TUI footer.        |
+| `"notify"`       | Never auto-applies; always asks first.                                             |
+| `false`          | Quiet. Set `PRIORICODE_DISABLE_AUTOUPDATE=1` for the same effect with extra steps. |
 
 Only patch versions auto-apply — a minor or major bump is your decision, because those can change behavior.
 

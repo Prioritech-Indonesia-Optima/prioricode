@@ -9,13 +9,13 @@ Short answer: **the docs you're reading track the latest release of PrioriCode, 
 
 PrioriCode ships small and often: every release is a **+1 patch** (`v0.1.11 → v0.1.12 → …`), cut automatically when verified work lands on `main`. Documentation follows a matching discipline:
 
-| Thing | Where it lives | Cadence |
-| --- | --- | --- |
-| **These docs** | This site (`docs/mintlify`) | Updated in the *same commit* as the change they describe — feature, flag, default, all of it. |
-| **Release notes** | [GitHub Releases](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) | Generated per release: the raw list of what shipped, newest first. |
-| **Versioned doc lines** | The docs version selector | One entry per **minor release line** (`v0.1`, later `v0.2`, `v1.0`). Snapshots of the whole site at the moment a line ends. |
+| Thing                   | Where it lives                                                                        | Cadence                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **These docs**          | This site (`docs/mintlify`)                                                           | Updated in the _same commit_ as the change they describe — feature, flag, default, all of it.                               |
+| **Release notes**       | [GitHub Releases](https://github.com/Prioritech-Indonesia-Optima/prioricode/releases) | Generated per release: the raw list of what shipped, newest first.                                                          |
+| **Versioned doc lines** | The docs version selector                                                             | One entry per **minor release line** (`v0.1`, later `v0.2`, `v1.0`). Snapshots of the whole site at the moment a line ends. |
 
-Patch releases don't get their own docs version — a dropdown with forty near-identical entries isn't granularity, it's noise. The living docs *are* the patch history, kept honest by the same-commit rule.
+Patch releases don't get their own docs version — a dropdown with forty near-identical entries isn't granularity, it's noise. The living docs _are_ the patch history, kept honest by the same-commit rule.
 
 ## Am I reading the right docs for my build?
 
@@ -48,7 +48,8 @@ When `v0.1.x` ends and a new line (`v0.2`) begins:
 Nothing in a snapshot is edited afterward; corrections happen on the living line. That way "what did the docs say back then" stays answerable, and "what is true now" stays single-sourced.
 
 <Note>
-  Release lines move when *you* decide they should: patch is automatic, minor/major bumps are explicitly requested in this project's publish pipeline. The docs switcher follows the same rule.
+  Release lines move when *you* decide they should: patch is automatic, minor/major bumps are explicitly requested in
+  this project's publish pipeline. The docs switcher follows the same rule.
 </Note>
 
 ## Related

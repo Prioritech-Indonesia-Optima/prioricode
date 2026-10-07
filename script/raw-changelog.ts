@@ -137,7 +137,8 @@ async function commits(from: string, to: string) {
       else if (file.startsWith("frontend/desktop/src-tauri/")) areas.add("tauri")
       else if (file.startsWith("frontend/desktop/") || file.startsWith("frontend/gui/")) areas.add("app")
       else if (file.startsWith("backend/sdk/") || file.startsWith("backend/plugin/")) areas.add("sdk")
-      else if (file.startsWith("integrations/vscode/") || file.startsWith("integrations/github/")) areas.add("extensions/vscode")
+      else if (file.startsWith("integrations/vscode/") || file.startsWith("integrations/github/"))
+        areas.add("extensions/vscode")
     }
 
     if (areas.size === 0) continue
