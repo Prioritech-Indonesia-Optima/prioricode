@@ -297,13 +297,13 @@ jobs:
       fail-fast: false
       matrix:
         settings:
-          # Mac x64 must build on an arch-matched intel runner (cross-building
-          # x64 on arm64 breaks native build tooling like rollup). macos-13 is
-          # the Intel label; macos-latest is arm64.
-          - host: macos-13
-            target: x86_64-apple-darwin
-            platform_flag: --mac --x64
-            bun_install_flags: --os=darwin --cpu=x64
+          # Mac arm64 builds on the arm64 host (macos-latest). Intel Mac
+          # (x86_64) is intentionally NOT built here: it needs an arch-matched
+          # Intel runner (cross-building x64 on arm64 breaks native tooling like
+          # rollup), and the GitHub-hosted macos-13 Intel label is no longer
+          # reliably available — a job queued there hangs the whole desktop
+          # release for days. Re-add a macos-13 (or self-hosted Intel Mac)
+          # entry once such a runner is available.
           - host: macos-latest
             target: aarch64-apple-darwin
             platform_flag: --mac --arm64
