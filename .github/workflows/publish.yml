@@ -618,5 +618,14 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: |
-          bun ./frontend/desktop/scripts/finalize-latest-json.ts
+          # electron-updater (the app's runtime updater) reads the consolidated
+          # latest*.yml manifests, so publish those unconditionally first. The
+          # Tauri latest.json is a separate, non-runtime artifact: only sign it
+          # when the updater key is configured, and never let a missing key fail
+          # the release (the installers and yml manifests are already published).
           bun ./frontend/desktop/scripts/finalize-latest-yml.ts
+          if [ -n "$TAURI_SIGNING_PRIVATE_KEY" ]; then
+            bun ./frontend/desktop/scripts/finalize-latest-json.ts
+          else
+            echo "TAURI_SIGNING_PRIVATE_KEY not set; skipping Tauri latest.json signing (electron-updater yml manifests still published)"
+          fi
