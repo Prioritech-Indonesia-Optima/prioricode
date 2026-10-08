@@ -974,12 +974,12 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "app.toggle.terminal_clipboard",
-        title: kv.get("terminal_clipboard_enabled", false)
+        title: kv.get("terminal_clipboard_enabled", true)
           ? "Disable OSC clipboard image reads (remote)"
           : "Enable OSC clipboard image reads (remote)",
         category: "System",
         run: () => {
-          kv.set("terminal_clipboard_enabled", !kv.get("terminal_clipboard_enabled", false))
+          kv.set("terminal_clipboard_enabled", !kv.get("terminal_clipboard_enabled", true))
           dialog.clear()
         },
       },

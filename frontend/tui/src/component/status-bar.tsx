@@ -68,7 +68,7 @@ export function StatusBar(props: { sessionID: string; permissions: () => Permiss
 
   return (
     <box flexDirection="row" justifyContent="space-between" gap={2} flexShrink={0} width="100%">
-      <box flexDirection="row" gap={1} minWidth={0} flexShrink={1}>
+      <box flexDirection="row" gap={1} minWidth={0} flexShrink={1} overflow="hidden">
         <Show when={!minimal()}>
           <text fg={theme.textMuted} wrapMode="none">
             {Locale.truncateMiddle(directory(), Math.min(40, Math.max(12, dimensions().width - 40)))}

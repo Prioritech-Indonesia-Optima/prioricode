@@ -70,8 +70,8 @@ import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
 import { pastedFilepath } from "./pasted-filepath"
 import { pasteDirectory, savePastedImage } from "./paste-store"
-import { REMOTE_PASTE_DISABLED, pasteMissHint } from "../../clipboard-scenario"
-import { readTerminalClipboard } from "../../clipboard-terminal"
+import { PROTOCOL_CLIPBOARD_TERMINALS, REMOTE_PASTE_DISABLED, detectTerminal, pasteMissHint } from "../../clipboard-scenario"
+import { readTerminalClipboard, wrapForMultiplexer } from "../../clipboard-terminal"
 import { useLocation } from "../../context/location"
 
 registerPrioricodeSpinner()
@@ -373,6 +373,13 @@ export function Prompt(props: PromptProps) {
     interrupt: 0,
   })
 
+  // The busy/retry status row pins the constant "esc interrupt" hint and lets
+  // the variable content (spinner + turn HUD + retry message) shrink and
+  // truncate. A long message can then never squeeze the hint toward zero
+  // width, which made the terminal wrap it one character per line.
+  const statusHintWidth = createMemo(() => (store.interrupt > 0 ? 22 : 13))
+  const statusContentWidth = createMemo(() => Math.max(24, dimensions().width - statusHintWidth() - 10))
+
   // The session route renders a persistent StatusBar that already shows the
   // agent, permission mode, and context/cost. In that context the prompt meta
   // row drops those duplicates and keeps only model/provider/variant; on home
@@ -463,18 +470,23 @@ export function Prompt(props: PromptProps) {
           lastPasteProbe = now
           const imageOnly = pasteImageOnlyRequest
           pasteImageOnlyRequest = false
-          // Remote image fetching is opt-in. By default a remote session never
-          // probes the terminal clipboard protocol, so Ctrl+V answers instantly
-          // with the terse disabled note instead of a multi-second stall. The
-          // "Enable OSC clipboard reads" command restores the kitty OSC 5522 /
-          // OSC 52 round-trip (only some emulators answer; tmux may block it).
+          // Remote image fetching rides the kitty OSC 5522 clipboard protocol,
+          // which only kitty/wezterm/ghostty answer. The silent "." targets
+          // probe never prompts, so the channel is on by default for those
+          // terminals; other emulators skip straight to the instant hint
+          // instead of stalling on a probe that can never be answered. Inside
+          // tmux/screen the request is DCS-passthrough-wrapped so it can reach
+          // the outer terminal at all.
+          const terminalName = detectTerminal(process.env)
+          const protocolTerminal = terminalName && PROTOCOL_CLIPBOARD_TERMINALS.includes(terminalName)
           const terminalChannel =
-            terminalEnvironment.remote &&
-            !terminalEnvironment.multiplexer &&
-            kv.get("terminal_clipboard_enabled", false)
+            terminalEnvironment.remote && protocolTerminal && kv.get("terminal_clipboard_enabled", true)
           let content = terminalChannel
             ? await readTerminalClipboard(renderer, {
-                write: (sequence) => void process.stdout.write(sequence),
+                write: (sequence) =>
+                  void process.stdout.write(
+                    terminalEnvironment.multiplexer ? wrapForMultiplexer(sequence) : sequence,
+                  ),
               })
             : undefined
           if (!content) content = await clipboard.read?.()
@@ -1654,16 +1666,16 @@ export function Prompt(props: PromptProps) {
                 flexGrow={1}
                 justifyContent={status().type === "retry" ? "space-between" : "flex-start"}
               >
-                <box flexShrink={0} flexDirection="row" gap={1}>
-                  <box marginLeft={1}>
+                <box minWidth={0} flexShrink={1} flexDirection="row" gap={1} overflow="hidden">
+                  <box marginLeft={1} flexShrink={0}>
                     <Show when={kv.get("animations_enabled", true)} fallback={<text fg={theme.textMuted}>[⋯]</text>}>
                       <spinner color={spinnerDef().color} frames={spinnerDef().frames} interval={40} />
                     </Show>
                   </box>
                   <Show when={turnHud()}>
-                    <box flexDirection="row" flexShrink={0}>
+                    <box flexDirection="row" minWidth={0} flexShrink={1}>
                       <text fg={theme.textMuted} wrapMode="none">
-                        {turnHud()}
+                        {Locale.truncateMiddle(turnHud(), Math.max(12, statusContentWidth() - 10))}
                       </text>
                     </box>
                   </Show>
@@ -1674,18 +1686,19 @@ export function Prompt(props: PromptProps) {
                         if (s.type !== "retry") return
                         return s
                       })
+                      const messageCap = createMemo(() => Math.min(80, Math.max(24, statusContentWidth() - 40)))
                       const message = createMemo(() => {
                         const r = retry()
                         if (!r) return
                         if (r.message.includes("exceeded your current quota") && r.message.includes("gemini"))
                           return "gemini is way too hot right now"
-                        if (r.message.length > 80) return r.message.slice(0, 80) + "…"
+                        if (r.message.length > messageCap()) return r.message.slice(0, messageCap()) + "…"
                         return r.message
                       })
                       const isTruncated = createMemo(() => {
                         const r = retry()
                         if (!r) return false
-                        return r.message.length > 120
+                        return r.message.length > messageCap()
                       })
                       const [seconds, setSeconds] = createSignal(0)
                       onMount(() => {
@@ -1719,14 +1732,16 @@ export function Prompt(props: PromptProps) {
                       return (
                         <Show when={retry()}>
                           <box onMouseUp={handleMessageClick}>
-                            <text fg={theme.error}>{retryText()}</text>
+                            <text fg={theme.error} wrapMode="none">
+                              {retryText()}
+                            </text>
                           </box>
                         </Show>
                       )
                     })()}
                   </box>
                 </box>
-                <text fg={store.interrupt > 0 ? theme.primary : theme.text}>
+                <text flexShrink={0} wrapMode="none" fg={store.interrupt > 0 ? theme.primary : theme.text}>
                   esc{" "}
                   <span style={{ fg: store.interrupt > 0 ? theme.primary : theme.textMuted }}>
                     {store.interrupt > 0 ? "again to interrupt" : "interrupt"}
