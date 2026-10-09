@@ -1,9 +1,9 @@
 import { CellBuffer, type Cell } from "./cell"
 import { diffBuffers, emitRuns } from "./emit"
 import { FrameScheduler } from "./scheduler"
-import type { Renderable } from "../layout/engine"
-import { layoutEngine } from "../layout/engine"
-import type { Rect } from "../types"
+import type { MouseEventLike, Renderable as RenderableType } from "../layout/engine"
+import { Renderable, layoutEngine } from "../layout/engine"
+import type { InputEvent, KeyEvent, Rect } from "../types"
 
 export type OutputDevice = {
   columns: number
@@ -20,6 +20,8 @@ export type RendererOptions = Readonly<{
 
 export class CoreRenderer {
   readonly scheduler: FrameScheduler
+  readonly overlays: Renderable
+  private focusTarget: Renderable | undefined
   private front: CellBuffer
   private back: CellBuffer
   private readonly root: Renderable
@@ -31,6 +33,9 @@ export class CoreRenderer {
 
   constructor(options: RendererOptions) {
     this.root = options.root
+    this.overlays = new Renderable({ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex" })
+    this.overlays.zIndex = 1_000_000
+    options.root.addChild(this.overlays)
     this.device = options.device
     this.scheduler = options.scheduler ?? new FrameScheduler()
     this.front = new CellBuffer(options.device.columns, options.device.rows)
@@ -121,7 +126,82 @@ export class CoreRenderer {
     }
     node.paint({ buffer, clip })
     if (node.measurable) return
-    for (const child of node.children) this.paintNode(child, buffer, node.style.overflow === "visible" ? clip : childClip)
+    for (const child of ordered(node.children)) this.paintNode(child, buffer, node.style.overflow === "visible" ? clip : childClip)
+  }
+
+  hitTest(x: number, y: number): RenderableType | undefined {
+    const walk = (node: RenderableType, clip: Rect): RenderableType | undefined => {
+      if (!node.visible || node.style.display === "none") return undefined
+      const r = node.layoutRect
+      if (x < Math.max(r.x, clip.x) || y < Math.max(r.y, clip.y) || x >= Math.min(r.x + r.width, clip.x + clip.width) || y >= Math.min(r.y + r.height, clip.y + clip.height)) return undefined
+      if (!node.measurable) {
+        for (const child of [...ordered(node.children)].reverse()) {
+          const found = walk(child, {
+            x: Math.max(r.x, clip.x),
+            y: Math.max(r.y, clip.y),
+            width: Math.max(0, Math.min(r.x + r.width, clip.x + clip.width) - Math.max(r.x, clip.x)),
+            height: Math.max(0, Math.min(r.y + r.height, clip.y + clip.height) - Math.max(r.y, clip.y)),
+          })
+          if (found) return found
+        }
+      }
+      if (node === this.overlays) return undefined
+      return node
+    }
+    return walk(this.root, { x: 0, y: 0, width: this.front.width, height: this.front.height })
+  }
+
+  handleMouse(event: Extract<InputEvent, { kind: "mouse" }>): boolean {
+    const target = this.hitTest(event.x, event.y)
+    const bucket: "mouse:down" | "mouse:up" | "mouse:move" | "mouse:wheel" =
+      event.type === "down" ? "mouse:down" : event.type === "up" ? "mouse:up" : event.type.startsWith("wheel") ? "mouse:wheel" : "mouse:move"
+    if (target?.hasHandlers("key")) this.focus(target)
+    let node: RenderableType | undefined = target
+    let handled = false
+    let stopped = false
+    while (node && !stopped) {
+      if (node.hasHandlers(bucket)) {
+        handled = true
+        const payload: MouseEventLike = {
+          type: event.type,
+          button: event.button,
+          x: event.x,
+          y: event.y,
+          localX: event.x - node.layoutRect.x,
+          localY: event.y - node.layoutRect.y,
+          ctrl: event.ctrl,
+          alt: event.alt,
+          shift: event.shift,
+          stopPropagation: () => {
+            stopped = true
+          },
+        }
+        if (node.emit(bucket, payload) === true) stopped = true
+      }
+      node = node.parent
+    }
+    return handled
+  }
+
+  focus(node: RenderableType | undefined): void {
+    if (this.focusTarget === node) return
+    if (this.focusTarget) {
+      this.focusTarget.focused = false
+      this.focusTarget.emit("blur", undefined)
+    }
+    this.focusTarget = node
+    if (node) {
+      node.focused = true
+      node.emit("focus", undefined)
+    }
+  }
+
+  get focusedNode(): RenderableType | undefined {
+    return this.focusTarget
+  }
+
+  handleKey(event: KeyEvent): boolean {
+    return this.focusTarget?.emit("key", event) === true
   }
 
   private clearDirtyTree(node: Renderable): void {
@@ -141,4 +221,11 @@ export class CoreRenderer {
     this.disposed = true
     this.scheduler.dispose()
   }
+}
+
+function ordered(children: readonly RenderableType[]): RenderableType[] {
+  return children
+    .map((child, index) => ({ child, index }))
+    .sort((a, b) => (a.child.zIndex - b.child.zIndex || a.index - b.index))
+    .map((entry) => entry.child)
 }

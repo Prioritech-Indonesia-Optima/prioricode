@@ -1,3 +1,4 @@
+export { For, Show, Switch, Match, Index } from "solid-js"
 export {
   createElement,
   createTextNode,
@@ -21,4 +22,5 @@ export {
   type TuiDimensions,
   type MountedApp,
 } from "./mount"
+export { Portal } from "./portal"
 export type { JSX, BoxProps, TextProps, SpanProps } from "./jsx-types"

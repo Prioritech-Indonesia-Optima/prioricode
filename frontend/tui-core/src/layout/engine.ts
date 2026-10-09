@@ -11,6 +11,21 @@ export type PaintContext = Readonly<{
   clip: Rect
 }>
 
+export type MouseEventLike = Readonly<{
+  type: "down" | "up" | "move" | "drag" | "wheelUp" | "wheelDown" | "wheelLeft" | "wheelRight"
+  button: number
+  x: number
+  y: number
+  localX: number
+  localY: number
+  ctrl: boolean
+  alt: boolean
+  shift: boolean
+  stopPropagation(): void
+}>
+
+export type RenderableEventName = "mouse:down" | "mouse:up" | "mouse:move" | "mouse:wheel" | "key" | "focus" | "blur"
+
 export class Renderable {
   readonly id = ++idCounter
   style: Style = {}
@@ -18,11 +33,35 @@ export class Renderable {
   bg = NO_COLOR
   visible = true
   measurable = false
+  zIndex = 0
+  focused = false
   parent: Renderable | undefined
   children: Renderable[] = []
   yoga: YogaNode | undefined
   layoutRect: Rect = { x: 0, y: 0, width: 0, height: 0 }
   dirty = true
+  private handlers = new Map<RenderableEventName, Set<(event: never) => unknown>>()
+
+  on<E extends RenderableEventName>(event: E, handler: (payload: E extends "key" ? import("../types").KeyEvent : MouseEventLike) => unknown): () => void {
+    let set = this.handlers.get(event)
+    if (!set) {
+      set = new Set()
+      this.handlers.set(event, set)
+    }
+    set.add(handler as (payload: never) => unknown)
+    return () => set?.delete(handler as (payload: never) => unknown)
+  }
+
+  emit(event: RenderableEventName, payload: unknown): boolean {
+    const set = this.handlers.get(event)
+    if (!set?.size) return false
+    for (const handler of [...set]) if ((handler as (p: unknown) => unknown)(payload) === true) return true
+    return false
+  }
+
+  hasHandlers(event: RenderableEventName): boolean {
+    return (this.handlers.get(event)?.size ?? 0) > 0
+  }
 
   constructor(style?: Style) {
     if (style) this.restyle(style)

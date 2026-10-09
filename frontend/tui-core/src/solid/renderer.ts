@@ -69,6 +69,26 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
     node.markDirty()
     return
   }
+  if (name === "zIndex") {
+    node.zIndex = Number(value ?? 0)
+    node.markDirty()
+    return
+  }
+  if (name.startsWith("on") && typeof value === "function") {
+    const map: Record<string, "mouse:down" | "mouse:up" | "mouse:move" | "mouse:wheel" | "key"> = {
+      onMouseDown: "mouse:down",
+      onMouseUp: "mouse:up",
+      onMouseMove: "mouse:move",
+      onMouseHover: "mouse:move",
+      onMouseWheel: "mouse:wheel",
+      onKeyDown: "key",
+    }
+    const event = map[name]
+    if (event) {
+      node.on(event, value as never)
+      return
+    }
+  }
   if (node instanceof TextRenderable) {
     if (name === "content" || name === "text") {
       node.content = value as never
