@@ -1,9 +1,41 @@
 import { describe, expect, mock, test } from "bun:test"
 import { EventEmitter } from "node:events"
+import { createServer, type Server } from "node:net"
 
 mock.module("../server", () => ({
   checkHealth: async () => true,
 }))
+
+let portOverride: number | null = null
+mock.module("../ports", () => ({
+  allocateLoopbackPort: async () => {
+    if (portOverride !== null) return portOverride
+    return await new Promise<number>((resolve, reject) => {
+      const server = createServer()
+      server.once("error", reject)
+      server.listen(0, "127.0.0.1", () => {
+        const address = server.address()
+        const port = typeof address === "object" && address ? address.port : 0
+        server.close(() => resolve(port))
+      })
+    })
+  },
+}))
+
+function listenOn(port: number) {
+  return new Promise<Server>((resolve) => {
+    const server = createServer()
+    server.listen(port, "127.0.0.1", () => resolve(server))
+  })
+}
+
+async function reserveFreePort() {
+  const server = await listenOn(0)
+  const address = server.address()
+  const port = typeof address === "object" && address ? address.port : 0
+  await new Promise<void>((resolve) => server.close(() => resolve()))
+  return port
+}
 
 const { spawnSshSidecar } = await import("./sidecar")
 const { SSH_BOOTSTRAP_MARKER } = await import("./commands")
@@ -61,13 +93,15 @@ class FakeChild extends EventEmitter {
 
 function harness(handlers: Record<number, (child: FakeChild) => void>) {
   const children: FakeChild[] = []
-  const spawn = ((..._args: unknown[]) => {
+  const args: unknown[][] = []
+  const spawn = ((...spawnArgs: unknown[]) => {
+    args.push(spawnArgs)
     const child = new FakeChild()
     children.push(child)
     handlers[children.length - 1]?.(child)
     return child
   }) as never
-  return { children, spawn }
+  return { children, args, spawn }
 }
 
 const pwAssignment = new RegExp("PW='" + "[0-9a-f-]{36}" + "'")
@@ -106,6 +140,47 @@ describe("spawnSshSidecar", () => {
       2: (child) => child.die(255, "Connection refused\n"),
     })
     await expect(spawnSshSidecar("web", { spawn, healthTimeoutMs: 2_000 })).rejects.toThrow(/SSH tunnel to web/)
+    expect(children).toHaveLength(3)
+  })
+
+  test("config remote-forward failure retries the tunnel without ExitOnForwardFailure", async () => {
+    const dummy = await listenOn(0)
+    const address = dummy.address()
+    portOverride = typeof address === "object" && address ? address.port : 0
+    const { children, args, spawn } = harness({
+      0: (child) => child.succeed(""),
+      1: (child) => child.succeed(marker()),
+      2: (child) => child.die(255, "Error: remote port forwarding failed for listen port 48917\n"),
+    })
+    const sidecar = await spawnSshSidecar("web", { spawn, healthTimeoutMs: 2_000, bootstrapTimeoutMs: 5_000 })
+    expect(children).toHaveLength(4)
+    expect((args[2]![1] as string[]).join(" ")).toContain("ExitOnForwardFailure=yes")
+    expect((args[3]![1] as string[]).join(" ")).not.toContain("ExitOnForwardFailure")
+    sidecar.listener.stop()
+    dummy.close()
+    portOverride = null
+  })
+
+  test("retry path fails fast when the local tunnel port never listens", async () => {
+    portOverride = await reserveFreePort()
+    const { spawn } = harness({
+      0: (child) => child.succeed(""),
+      1: (child) => child.succeed(marker()),
+      2: (child) => child.die(255, "Error: remote port forwarding failed for listen port 48917\n"),
+    })
+    await expect(
+      spawnSshSidecar("web", { spawn, healthTimeoutMs: 2_000, listenerTimeoutMs: 400 }),
+    ).rejects.toThrow(/already in use/)
+    portOverride = null
+  })
+
+  test("local listen failure maps to the port-busy error", async () => {
+    const { children, spawn } = harness({
+      0: (child) => child.succeed(""),
+      1: (child) => child.succeed(marker()),
+      2: (child) => child.die(255, "bind [127.0.0.1]:41234: Address already in use\n"),
+    })
+    await expect(spawnSshSidecar("web", { spawn, healthTimeoutMs: 2_000 })).rejects.toThrow(/already in use/)
     expect(children).toHaveLength(3)
   })
 

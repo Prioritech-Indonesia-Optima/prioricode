@@ -1,9 +1,10 @@
 import { spawn } from "node:child_process"
 import { randomUUID } from "node:crypto"
+import { connect } from "node:net"
 import { checkHealth } from "../server"
 import { pollWslHealth } from "../wsl/startup"
 import { nativeT } from "../native-translations"
-import { classifySshFailure } from "./errors"
+import { classifySshFailure, isForeignForwardFailure, isLocalBindFailure } from "./errors"
 import {
   bootstrapArgs,
   bootstrapScript,
@@ -29,8 +30,23 @@ export type SshSidecarOptions = {
   healthTimeoutMs?: number
   bootstrapTimeoutMs?: number
   probeTimeoutMs?: number
+  listenerTimeoutMs?: number
   spawn?: typeof spawn
 }
+
+export class SshTunnelExitError extends Error {
+  constructor(
+    message: string,
+    readonly output: string,
+    readonly code: number | null,
+    readonly signal: NodeJS.Signals | null,
+  ) {
+    super(message)
+    this.name = "SshTunnelExitError"
+  }
+}
+
+
 
 export async function spawnSshSidecar(alias: string, opts: SshSidecarOptions = {}): Promise<SshSidecar> {
   const username = "prioricode"
@@ -51,7 +67,11 @@ export async function spawnSshSidecar(alias: string, opts: SshSidecarOptions = {
 
 async function bootstrap(alias: string, opts: SshSidecarOptions): Promise<SshBootstrapResult> {
   const boot = await runBootstrap(alias, randomUUID(), opts)
-  if ("code" in boot) throw new Error(bootstrapError(alias, boot.code))
+  if ("code" in boot) {
+    const error = new Error(bootstrapError(alias, boot.code)) as Error & { sshBootstrapCode?: string }
+    error.sshBootstrapCode = boot.code
+    throw error
+  }
   return boot
 }
 
@@ -123,7 +143,61 @@ async function openTunnel(
   username: string,
   opts: SshSidecarOptions,
 ): Promise<SshSidecar> {
-  const child = (opts.spawn ?? spawn)("ssh", tunnelArgs(alias, localPort, boot.port), {
+  for (let attempt = 0; ; attempt++) {
+    const strict = attempt === 0
+    try {
+      return await spawnTunnel(alias, boot, localPort, username, opts, strict)
+    } catch (error) {
+      if (error instanceof SshTunnelExitError && isLocalBindFailure(error.output)) {
+        throw new Error(nativeT("desktop.ssh.error.localPortBusy", { host: alias, port: localPort }))
+      }
+      if (strict && error instanceof SshTunnelExitError && isForeignForwardFailure(error.output)) {
+        opts.onLine?.({
+          stream: "stderr",
+          text: `retrying tunnel for ${alias} without ExitOnForwardFailure (unrelated remote forward failed)`,
+        })
+        continue
+      }
+      throw error
+    }
+  }
+}
+
+function assertLocalListener(alias: string, localPort: number, timeoutMs: number) {
+  return new Promise<void>((resolve, reject) => {
+    const deadline = Date.now() + timeoutMs
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const tryOnce = () => {
+      const socket = connect({ host: "127.0.0.1", port: localPort })
+      const fail = () => {
+        socket.destroy()
+        if (Date.now() >= deadline) {
+          reject(new Error(nativeT("desktop.ssh.error.localPortBusy", { host: alias, port: localPort })))
+          return
+        }
+        timer = setTimeout(tryOnce, 150)
+      }
+      socket.once("connect", () => {
+        if (timer) clearTimeout(timer)
+        socket.destroy()
+        resolve()
+      })
+      socket.once("error", fail)
+      socket.setTimeout(250, fail)
+    }
+    tryOnce()
+  })
+}
+
+async function spawnTunnel(
+  alias: string,
+  boot: SshBootstrapResult,
+  localPort: number,
+  username: string,
+  opts: SshSidecarOptions,
+  strict: boolean,
+): Promise<SshSidecar> {
+  const child = (opts.spawn ?? spawn)("ssh", tunnelArgs(alias, localPort, boot.port, strict), {
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
   })
@@ -141,13 +215,16 @@ async function openTunnel(
     child.once("error", reject)
     child.once("exit", (code, signal) =>
       reject(
-        new Error(
+        new SshTunnelExitError(
           nativeT("desktop.ssh.error.serverExitedBeforeHealthy", {
             host: alias,
             code: code ?? "null",
             signal: signal ?? "null",
             output: recentOutput.length ? `\n${recentOutput.join("\n")}` : "",
           }),
+          recentOutput.join("\n"),
+          code,
+          signal,
         ),
       ),
     )
@@ -165,6 +242,7 @@ async function openTunnel(
       )),
   )
 
+  if (!strict) await assertLocalListener(alias, localPort, opts.listenerTimeoutMs ?? 5_000)
   await Promise.race([health, exit, timedOut])
     .catch((error) => {
       child.kill()

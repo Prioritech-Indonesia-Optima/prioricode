@@ -107,6 +107,54 @@ test("stale start attempt cannot clobber a newer attempt", async () => {
   expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
 })
 
+test("missing remote binary auto-installs once and retries the sidecar", async () => {
+  let spawns = 0
+  const execs: string[] = []
+  const { controller } = setup({
+    spawnSidecar: async () => {
+      spawns++
+      if (spawns === 1) {
+        const error = new Error("PrioriCode is not installed on web") as Error & { sshBootstrapCode?: string }
+        error.sshBootstrapCode = "missing_binary"
+        throw error
+      }
+      return fakeSidecar() as never
+    },
+    remoteExec: async (args) => {
+      execs.push(args.join(" "))
+      return { code: 0, output: 'PRIORICODE_SSH_CHECK {"version":"0.1.18","path":"/usr/local/bin/prioricode"}\n' }
+    },
+  })
+  await controller.addServer("web")
+  for (let i = 0; i < 10; i++) await flush()
+  expect(spawns).toBe(2)
+  expect(execs.some((x) => x.includes("curl -fsSL https://prioricode.ai/install"))).toBeTrue()
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
+})
+
+test("auto-install runs at most once per server", async () => {
+  let spawns = 0
+  const execs: string[] = []
+  const { controller } = setup({
+    spawnSidecar: async () => {
+      spawns++
+      const error = new Error("PrioriCode is not installed on web") as Error & { sshBootstrapCode?: string }
+      error.sshBootstrapCode = "missing_binary"
+      throw error
+    },
+    remoteExec: async (args) => {
+      execs.push(args.join(" "))
+      return { code: 0, output: 'PRIORICODE_SSH_CHECK {"version":"0.1.18","path":"/usr/local/bin/prioricode"}\n' }
+    },
+  })
+  await controller.addServer("web")
+  for (let i = 0; i < 10; i++) await flush()
+  await controller.startServer("ssh:web")
+  for (let i = 0; i < 10; i++) await flush()
+  expect(execs.filter((x) => x.includes("curl -fsSL https://prioricode.ai/install"))).toHaveLength(1)
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("failed")
+})
+
 test("tunnel exit flips runtime to failed", async () => {
   const side = fakeSidecar()
   const { controller } = setup({ spawnSidecar: async () => side as never })

@@ -12,7 +12,7 @@ import { SSH_SERVERS_KEY } from "../store-keys"
 import { getStore } from "../store"
 import { nativeT } from "../native-translations"
 import { readSshConfigProfiles } from "./config"
-import { isValidSshAlias } from "./errors"
+import { isValidSshAlias, sshBootstrapCodeOf } from "./errors"
 import { checkArgs, checkScript, installArgs, parseCheckMarker } from "./commands"
 
 type RunningSidecar = {
@@ -57,6 +57,7 @@ export function createSshServersController(
   const listeners = new Set<(event: SshServersEvent) => void>()
   const sidecars = new Map<string, RunningSidecar>()
   const startAttempts = new Map<string, number>()
+  const autoInstalled = new Set<string>()
   let jobAbort: AbortController | undefined
   const logger = options?.logger
   const readServers = options?.readServers ?? readPersistedServers
@@ -170,6 +171,52 @@ export function createSshServersController(
     return startAttempts.get(id) === attempt && state.servers.some((item) => item.config.id === id)
   }
 
+  const failStart = (id: string, attempt: number, alias: string, error: unknown, note: string) => {
+    if (!isCurrentStartAttempt(id, attempt)) return
+    const message = error instanceof Error ? error.message : String(error)
+    setRuntime(id, { kind: "failed", message })
+    logger?.error(note, { id, alias, message })
+  }
+
+  const startSidecarWithAutoInstall = async (id: string, alias: string, attempt: number) => {
+    try {
+      return await spawnSidecar(alias)
+    } catch (error) {
+      if (
+        sshBootstrapCodeOf(error) !== "missing_binary" ||
+        autoInstalled.has(id) ||
+        !isCurrentStartAttempt(id, attempt)
+      ) {
+        failStart(id, attempt, alias, error, "ssh sidecar failed to start")
+        return null
+      }
+      autoInstalled.add(id)
+      logger?.log("ssh prioricode binary missing on remote; auto-installing", { id, alias })
+      let installed = false
+      try {
+        const result = await remoteExec(installArgs(alias, appVersion), "", INSTALL_TIMEOUT_MS)
+        if (result.code === 0) {
+          const check = await checkPrioricode(alias)
+          setPrioricodeCheck(alias, check)
+          installed = check.version !== null
+        }
+      } catch (installError) {
+        logger?.error("ssh auto-install failed", { id, alias, message: String(installError) })
+      }
+      if (!isCurrentStartAttempt(id, attempt)) return null
+      if (!installed) {
+        failStart(id, attempt, alias, error, "ssh sidecar failed to start")
+        return null
+      }
+      try {
+        return await spawnSidecar(alias)
+      } catch (retryError) {
+        failStart(id, attempt, alias, retryError, "ssh sidecar failed to start after auto-install")
+        return null
+      }
+    }
+  }
+
   const startServer = async (id: string) => {
     const item = state.servers.find((x) => x.config.id === id)
     if (!item) return
@@ -178,44 +225,38 @@ export function createSshServersController(
     if (!isCurrentStartAttempt(id, attempt)) return
     setRuntime(id, { kind: "starting" })
     logger?.log("ssh sidecar starting", { id, alias: item.config.alias })
-    try {
-      const sidecar = await spawnSidecar(item.config.alias)
-      if (!isCurrentStartAttempt(id, attempt)) {
-        try {
-          sidecar.listener.stop()
-        } catch {
-          // ignore stop errors for stale sidecars
-        }
-        return
+    const sidecar = await startSidecarWithAutoInstall(id, item.config.alias, attempt)
+    if (!sidecar) return
+    if (!isCurrentStartAttempt(id, attempt)) {
+      try {
+        sidecar.listener.stop()
+      } catch {
+        // ignore stop errors for stale sidecars
       }
-      sidecars.set(id, sidecar)
-      setRuntime(id, {
-        kind: "ready",
-        url: sidecar.url,
-        username: sidecar.username,
-        password: sidecar.password,
-      })
-      sidecar.listener.onExit((code, signal) => {
-        if (sidecars.get(id) !== sidecar) return
-        sidecars.delete(id)
-        setRuntime(id, {
-          kind: "failed",
-          message: nativeT("desktop.ssh.error.serverExited", {
-            host: item.config.alias,
-            code: code ?? "null",
-            signal: signal ?? "null",
-          }),
-        })
-        logger?.error("ssh sidecar exited", { id, alias: item.config.alias, code, signal })
-      })
-      refreshPrioricodeCheckBackground(id, item.config.alias)
-      logger?.log("ssh sidecar ready", { id, alias: item.config.alias, url: sidecar.url })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      if (!isCurrentStartAttempt(id, attempt)) return
-      setRuntime(id, { kind: "failed", message })
-      logger?.error("ssh sidecar failed to start", { id, alias: item.config.alias, message })
+      return
     }
+    sidecars.set(id, sidecar)
+    setRuntime(id, {
+      kind: "ready",
+      url: sidecar.url,
+      username: sidecar.username,
+      password: sidecar.password,
+    })
+    sidecar.listener.onExit((code, signal) => {
+      if (sidecars.get(id) !== sidecar) return
+      sidecars.delete(id)
+      setRuntime(id, {
+        kind: "failed",
+        message: nativeT("desktop.ssh.error.serverExited", {
+          host: item.config.alias,
+          code: code ?? "null",
+          signal: signal ?? "null",
+        }),
+      })
+      logger?.error("ssh sidecar exited", { id, alias: item.config.alias, code, signal })
+    })
+    refreshPrioricodeCheckBackground(id, item.config.alias)
+    logger?.log("ssh sidecar ready", { id, alias: item.config.alias, url: sidecar.url })
   }
 
   const stopServerInternal = async (id: string) => {

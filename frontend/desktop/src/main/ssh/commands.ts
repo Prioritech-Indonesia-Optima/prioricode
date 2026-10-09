@@ -42,12 +42,10 @@ export function installArgs(alias: string, version: string) {
   ]
 }
 
-export function tunnelArgs(alias: string, localPort: number, remotePort: number) {
-  return [
-    ...BASE_ARGS,
-    "-N",
-    "-o",
-    "ExitOnForwardFailure=yes",
+export function tunnelArgs(alias: string, localPort: number, remotePort: number, exitOnForwardFailure = true) {
+  const args = [...BASE_ARGS, "-N"]
+  if (exitOnForwardFailure) args.push("-o", "ExitOnForwardFailure=yes")
+  args.push(
     "-o",
     "ServerAliveInterval=30",
     "-o",
@@ -55,7 +53,8 @@ export function tunnelArgs(alias: string, localPort: number, remotePort: number)
     "-L",
     `127.0.0.1:${localPort}:127.0.0.1:${remotePort}`,
     alias,
-  ]
+  )
+  return args
 }
 
 export function bootstrapScript(password: string) {

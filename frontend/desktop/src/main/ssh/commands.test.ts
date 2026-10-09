@@ -59,6 +59,12 @@ test("tunnel binds loopback both sides with fail-fast and keepalive options", ()
   expect(args.some((a) => a.startsWith("ServerAliveInterval="))).toBeTrue()
 })
 
+test("tunnel retry mode drops ExitOnForwardFailure but keeps the forward", () => {
+  const args = tunnelArgs("web", 41234, 4096, false)
+  expect(args).not.toContain("ExitOnForwardFailure=yes")
+  expect(args[args.indexOf("-L") + 1]).toBe("127.0.0.1:41234:127.0.0.1:4096")
+})
+
 test("bootstrap script embeds the password only as a shell assignment and is POSIX sh", () => {
   const script = bootstrapScript(PASSWORD)
   expect(script).toContain(`PW='${PASSWORD}'`)

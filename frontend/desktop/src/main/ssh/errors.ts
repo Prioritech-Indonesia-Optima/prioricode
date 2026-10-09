@@ -29,6 +29,22 @@ const PATTERNS: Array<{ test: RegExp; key: Parameters<typeof nativeT>[0] }> = [
   },
 ]
 
+export function isForeignForwardFailure(output: string) {
+  return /remote port forwarding failed for listen port/i.test(output)
+}
+
+export function isLocalBindFailure(output: string) {
+  return /cannot listen to port: \d+|bind \[127\.0\.0\.1\]:\d+:|local port forwarding failed/i.test(output)
+}
+
+export function sshBootstrapCodeOf(error: unknown): string | null {
+  if (error instanceof Error) {
+    const code = (error as unknown as { sshBootstrapCode?: unknown }).sshBootstrapCode
+    if (typeof code === "string") return code
+  }
+  return null
+}
+
 export function classifySshFailure(output: string, alias: string, code: number | null) {
   for (const pattern of PATTERNS) {
     if (pattern.test.test(output)) return nativeT(pattern.key, { host: alias })

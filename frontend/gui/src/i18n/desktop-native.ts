@@ -349,6 +349,8 @@ export const DESKTOP_NATIVE_ENGLISH = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "Could not open the local SSH tunnel for {{host}} because local port {{port}} is already in use.",
 
   "desktop.picker.error.notSelected": "File was not selected by the picker",
   "desktop.picker.error.sizeLimit": "Selected attachments exceed the {{limit}} MB limit",
