@@ -432,8 +432,15 @@ async function defaultRemoteExec(
   timeoutMs: number,
 ): Promise<{ code: number; output: string }> {
   const { spawn } = await import("node:child_process")
-  return new Promise((resolve, reject) => {
-    const child = spawn("ssh", args, { stdio: ["pipe", "pipe", "pipe"], windowsHide: true })
+  const { createAskpassSession, requestAuthPrompt } = await import("./askpass")
+  const askpass = await createAskpassSession(requestAuthPrompt)
+  try {
+    return await new Promise((resolve, reject) => {
+      const child = spawn("ssh", args, {
+        stdio: ["pipe", "pipe", "pipe"],
+        windowsHide: true,
+        env: { ...process.env, ...askpass.env },
+      })
     if (stdin) child.stdin.end(stdin)
     else child.stdin.end()
     let output = ""
@@ -449,9 +456,12 @@ async function defaultRemoteExec(
       clearTimeout(timer)
       reject(error)
     })
-    child.once("exit", (code) => {
-      clearTimeout(timer)
-      resolve({ code: code ?? -1, output })
+      child.once("exit", (code) => {
+        clearTimeout(timer)
+        resolve({ code: code ?? -1, output })
+      })
     })
-  })
+  } finally {
+    await askpass.dispose()
+  }
 }

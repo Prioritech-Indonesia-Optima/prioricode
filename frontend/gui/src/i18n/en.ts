@@ -405,6 +405,9 @@ export const dict = {
   "ssh.server.workspace.open": "Open workspace",
   "ssh.server.workspace.save": "Save",
   "ssh.server.workspace.dialogTitle": "Workspace directory on {{host}}",
+  "ssh.auth.title": "SSH authentication required",
+  "ssh.auth.cancel": "Cancel",
+  "ssh.auth.submit": "Continue",
 
   "wsl.server.add": "Add WSL server",
   "wsl.server.addShort": "Add WSL",

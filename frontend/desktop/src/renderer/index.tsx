@@ -32,6 +32,7 @@ import { resetZoom, setPinchZoomEnabled, webviewZoom, zoomIn, zoomOut } from "./
 import { windowFullscreen } from "./window-fullscreen"
 import { availableStartupServer, readyWslConnections } from "./wsl/connections"
 import { availableSshStartupServer, readySshConnections } from "./ssh/connections"
+import { SshAuthPromptHost } from "./ssh/auth-dialog"
 import "./styles.css"
 import { Splash } from "@prioricode/ui/logo"
 import { useTheme } from "@prioricode/ui/theme/context"
@@ -456,6 +457,7 @@ function DesktopRoot(props: { windowState: DesktopWindowState }) {
         locale={locale.latest}
         onNativeTranslations={(bundle) => void window.api.setNativeTranslations(bundle).catch(() => undefined)}
       >
+        <SshAuthPromptHost />
         <Show when={true}>{(_) => <App />}</Show>
       </AppBaseProviders>
     </PlatformProvider>

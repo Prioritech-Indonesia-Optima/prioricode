@@ -4,6 +4,7 @@ import { connect } from "node:net"
 import { checkHealth } from "../server"
 import { pollWslHealth } from "../wsl/startup"
 import { nativeT } from "../native-translations"
+import { createAskpassSession, requestAuthPrompt } from "./askpass"
 import { classifySshFailure, isForeignForwardFailure, isLocalBindFailure } from "./errors"
 import {
   bootstrapArgs,
@@ -31,6 +32,7 @@ export type SshSidecarOptions = {
   bootstrapTimeoutMs?: number
   probeTimeoutMs?: number
   listenerTimeoutMs?: number
+  authEnv?: Record<string, string>
   spawn?: typeof spawn
 }
 
@@ -48,8 +50,22 @@ export class SshTunnelExitError extends Error {
 
 
 
-export async function spawnSshSidecar(alias: string, opts: SshSidecarOptions = {}): Promise<SshSidecar> {
+export async function spawnSshSidecar(alias: string, options: SshSidecarOptions = {}): Promise<SshSidecar> {
   const username = "prioricode"
+  const askpass = await createAskpassSession(requestAuthPrompt)
+  const opts: SshSidecarOptions = { ...options, authEnv: { ...process.env, ...askpass.env } as Record<string, string> }
+  try {
+    return await spawnSshSidecarInner(alias, opts, username)
+  } finally {
+    await askpass.dispose()
+  }
+}
+
+async function spawnSshSidecarInner(
+  alias: string,
+  opts: SshSidecarOptions,
+  username: string,
+): Promise<SshSidecar> {
   await runPreflight(alias, opts)
   const boot = await bootstrap(alias, opts)
   try {
@@ -91,6 +107,7 @@ function runPreflight(alias: string, opts: SshSidecarOptions) {
     const child = (opts.spawn ?? spawn)("ssh", probeArgs(alias), {
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
+      env: opts.authEnv,
     })
     let output = ""
     child.stdout.setEncoding("utf8")
@@ -119,7 +136,11 @@ function runPreflight(alias: string, opts: SshSidecarOptions) {
 
 function runRemoteExec(args: string[], stdinText: string, opts: SshSidecarOptions): Promise<void> {
   return new Promise((resolve) => {
-    const child = (opts.spawn ?? spawn)("ssh", args, { stdio: ["pipe", "ignore", "ignore"], windowsHide: true })
+    const child = (opts.spawn ?? spawn)("ssh", args, {
+      stdio: ["pipe", "ignore", "ignore"],
+      windowsHide: true,
+      env: opts.authEnv,
+    })
     child.stdin.end(stdinText)
     const timer = setTimeout(() => {
       child.kill()
@@ -200,6 +221,7 @@ async function spawnTunnel(
   const child = (opts.spawn ?? spawn)("ssh", tunnelArgs(alias, localPort, boot.port, strict), {
     stdio: ["ignore", "pipe", "pipe"],
     windowsHide: true,
+    env: opts.authEnv,
   })
   const recentOutput: string[] = []
   const emit = (line: { stream: "stdout" | "stderr"; text: string }) => {
@@ -273,6 +295,7 @@ function runBootstrap(
   const child = (opts.spawn ?? spawn)("ssh", bootstrapArgs(alias), {
     stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
+    env: opts.authEnv,
   })
   child.stdin.end(bootstrapScript(password))
   let stdout = ""
@@ -303,10 +326,22 @@ function runBootstrap(
   })
 }
 
-export async function stopSshServer(alias: string, opts: { spawn?: typeof spawn; timeoutMs?: number } = {}) {
+export async function stopSshServer(
+  alias: string,
+  opts: { spawn?: typeof spawn; timeoutMs?: number; authEnv?: Record<string, string> } = {},
+) {
+  if (!opts.authEnv) {
+    const askpass = await createAskpassSession(requestAuthPrompt)
+    try {
+      return await stopSshServer(alias, { ...opts, authEnv: { ...process.env, ...askpass.env } as Record<string, string> })
+    } finally {
+      await askpass.dispose()
+    }
+  }
   const child = (opts.spawn ?? spawn)("ssh", stopArgs(alias), {
     stdio: ["pipe", "ignore", "ignore"],
     windowsHide: true,
+    env: opts.authEnv,
   })
   child.stdin.end(stopScript())
   await new Promise<void>((resolve) => {

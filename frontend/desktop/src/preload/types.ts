@@ -60,6 +60,10 @@ export type ElectronAPI = {
   awaitInitialization: () => Promise<ServerReadyData>
   wslServers: WslServersAPI
   sshServers: SshServersAPI
+  sshAuth: {
+    onPrompt: (cb: (payload: { requestId: string; prompt: string }) => void) => () => void
+    respond: (requestId: string, answer: string | null) => Promise<void>
+  }
   updater: UpdaterAPI
   consumeInitialDeepLinks: () => Promise<string[]>
   getDefaultServerUrl: () => Promise<string | null>

@@ -35,11 +35,9 @@ test("every ssh argv vector addresses the alias verbatim and never carries the p
   }
 })
 
-test("bootstrap uses BatchMode, timeout, accept-new host keys", () => {
+test("bootstrap allows interactive auth via askpass, with timeout and accept-new host keys", () => {
   const args = bootstrapArgs("web")
   expect(args).toEqual([
-    "-o",
-    "BatchMode=yes",
     "-o",
     "ConnectTimeout=10",
     "-o",

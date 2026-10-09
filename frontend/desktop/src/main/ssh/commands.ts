@@ -14,7 +14,7 @@ export type SshBootstrapError = {
   code: string
 }
 
-const BASE_ARGS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new"]
+const BASE_ARGS = ["-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new"]
 
 export function sshBaseArgs() {
   return [...BASE_ARGS]

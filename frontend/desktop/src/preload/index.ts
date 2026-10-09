@@ -55,6 +55,14 @@ const api: ElectronAPI = {
     stopServer: (id) => ipcRenderer.invoke("ssh-servers-stop", id),
     installPrioricode: (alias) => ipcRenderer.invoke("ssh-servers-install-prioricode", alias),
   },
+  sshAuth: {
+    onPrompt: (cb) => {
+      const handler = (_: unknown, payload: { requestId: string; prompt: string }) => cb(payload)
+      ipcRenderer.on("ssh-auth-prompt", handler)
+      return () => ipcRenderer.removeListener("ssh-auth-prompt", handler)
+    },
+    respond: (requestId, answer) => ipcRenderer.invoke("ssh-auth-respond", requestId, answer),
+  },
   updater: {
     subscribe: async (cb) => {
       updaterCallbacks.add(cb)
