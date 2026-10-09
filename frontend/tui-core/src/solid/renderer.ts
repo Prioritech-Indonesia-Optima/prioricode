@@ -3,6 +3,7 @@ import { Renderable } from "../layout/engine"
 import { BoxRenderable } from "../primitives/box"
 import { SpanRenderable, TextNodeRenderable, TextRenderable } from "../primitives/text"
 import { InputRenderable } from "../primitives/input"
+import { TextareaRenderable } from "../primitives/textarea"
 import type { BorderEdge } from "../types"
 
 const STYLE_KEYS = new Set([
@@ -47,9 +48,16 @@ export function createElementTag(tag: string): Renderable {
       return new SpanRenderable()
     case "input":
       return new InputRenderable()
+    case "textarea":
+      return new TextareaRenderable()
     default:
       throw new Error(`@prioricode/tui-core: unsupported element <${tag}>`)
   }
+}
+
+function parseHex(value: unknown): number {
+  const hex = String(value).replace("#", "")
+  return Number.parseInt(hex.slice(0, 6), 16) || 0
 }
 
 function setProperty(node: Renderable, name: string, value: unknown): void {
@@ -89,6 +97,61 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
     const event = map[name]
     if (event) {
       node.on(event, value as never)
+      return
+    }
+  }
+  if (node instanceof TextareaRenderable) {
+    if (name === "value") {
+      node.setText(String(value ?? ""))
+      return
+    }
+    if (name === "placeholder") {
+      node.placeholder = String(value ?? "")
+      node.markDirty()
+      return
+    }
+    if (name === "placeholderColor") {
+      node.placeholderColor = typeof value === "number" ? value : parseHex(value)
+      node.markDirty()
+      return
+    }
+    if (name === "focusedTextColor") {
+      node.focusedTextColor = typeof value === "number" ? value : parseHex(value)
+      node.markDirty()
+      return
+    }
+    if (name === "cursorColor") {
+      node.cursorColor = typeof value === "number" ? value : parseHex(value)
+      return
+    }
+    if (name === "selectionColor") {
+      node.selectionColor = typeof value === "number" ? value : parseHex(value)
+      return
+    }
+    if (name === "minHeight") {
+      node.minHeight = Number(value ?? 1)
+      node.markDirty()
+      return
+    }
+    if (name === "maxHeight") {
+      node.maxHeight = Number(value ?? Number.MAX_SAFE_INTEGER)
+      node.markDirty()
+      return
+    }
+    if (name === "traits") {
+      node.traits = value as never
+      return
+    }
+    if (name === "onContentChange" || name === "onCursorChange" || name === "onSubmit") {
+      node[name] = value as never
+      return
+    }
+    if (name === "onPaste") {
+      node.onPaste = value as never
+      return
+    }
+    if (name === "textColor") {
+      node.restyle({ fg: value as string | number })
       return
     }
   }

@@ -53,6 +53,10 @@ export class InputRenderable extends Renderable {
     this.markDirty()
   }
 
+  get hasSelection(): boolean {
+    return this.anchor !== undefined && this.anchor !== this.caret
+  }
+
   get selectionStart(): number {
     if (this.anchor === undefined) return this.caret
     return Math.min(this.anchor, this.caret)
@@ -219,7 +223,7 @@ export class InputRenderable extends Renderable {
         visibleWidth += gw
         if (column < this.scroll) continue
         if (x >= r.x + r.width) break
-        const selected = this.selectionStart <= this.raw.length && this.anchor !== undefined && inSelection(this, source, column)
+        const selected = this.anchor !== undefined && inSelection(this, column)
         const isCursor = !showPlaceholder && column === cursorColumn && this.focused
         const cellFg = isCursor ? this.cursorColor : segment.fg === -1 ? this.fg : segment.fg
         const cellBg = selected ? this.selectionColor : segment.bg === -1 ? this.bg : segment.bg
@@ -242,8 +246,8 @@ export class InputRenderable extends Renderable {
   }
 }
 
-function inSelection(input: InputRenderable, _source: string, column: number): boolean {
-  if (input.anchor === undefined) return false
+function inSelection(input: InputRenderable, column: number): boolean {
+  if (!input.hasSelection) return false
   const from = graphemeColumn(input.value, input.selectionStart)
   const to = graphemeColumn(input.value, input.selectionEnd)
   return column >= from && column < to

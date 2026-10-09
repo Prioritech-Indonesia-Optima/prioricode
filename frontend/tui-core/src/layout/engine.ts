@@ -24,7 +24,7 @@ export type MouseEventLike = Readonly<{
   stopPropagation(): void
 }>
 
-export type RenderableEventName = "mouse:down" | "mouse:up" | "mouse:move" | "mouse:wheel" | "key" | "focus" | "blur"
+export type RenderableEventName = "mouse:down" | "mouse:up" | "mouse:move" | "mouse:wheel" | "key" | "paste" | "focus" | "blur"
 
 export class Renderable {
   readonly id = ++idCounter
@@ -35,6 +35,7 @@ export class Renderable {
   measurable = false
   zIndex = 0
   focused = false
+  showCursor = true
   parent: Renderable | undefined
   children: Renderable[] = []
   yoga: YogaNode | undefined
@@ -42,7 +43,7 @@ export class Renderable {
   dirty = true
   private handlers = new Map<RenderableEventName, Set<(event: never) => unknown>>()
 
-  on<E extends RenderableEventName>(event: E, handler: (payload: E extends "key" ? import("../types").KeyEvent : MouseEventLike) => unknown): () => void {
+  on(event: RenderableEventName, handler: (payload: never) => unknown): () => void {
     let set = this.handlers.get(event)
     if (!set) {
       set = new Set()

@@ -5,6 +5,7 @@ import { Renderable } from "../layout/engine"
 import { BoxRenderable } from "../primitives/box"
 import { InputRenderable, type InputStyleProps } from "../primitives/input"
 import { TextRenderable } from "../primitives/text"
+import { TextareaRenderable, type TextareaStyleProps } from "../primitives/textarea"
 
 export type TestRenderer = Readonly<{
   renderer: CoreRenderer
@@ -13,6 +14,7 @@ export type TestRenderer = Readonly<{
   box(style?: import("../types").BoxStyle): BoxRenderable
   text(style?: import("../types").TextStyleProps): TextRenderable
   input(props?: InputStyleProps): InputRenderable
+  textarea(props?: TextareaStyleProps): TextareaRenderable
   output(): string
   charFrame(): string
   frameCount(): number
@@ -41,6 +43,7 @@ export async function createTestRenderer(options: Readonly<{ width: number; heig
     box: (style) => new BoxRenderable(style),
     text: (style) => new TextRenderable(style),
     input: (props) => new InputRenderable(props),
+    textarea: (props) => new TextareaRenderable(props),
     output: () => chunks.join(""),
     charFrame: () => renderer.captureCharFrame(),
     frameCount: () => renderer.frameCount,

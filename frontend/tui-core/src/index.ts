@@ -16,3 +16,7 @@ export { createAttachmentBroker, fakeTransport, type BrokerOutcome } from "./att
 export type { AttachmentPayload, AttachmentReadResult, AttachmentSource, AttachmentTransport, AttachmentTransportKind } from "./attachments/types"
 export { mount, useTui, useRenderer, useTerminalDimensions, type TuiContext, type MountedApp } from "./solid/mount"
 export { createTerminal, type Terminal, type TerminalOptions } from "./io/terminal"
+export { InputRenderable, type InputStyleProps } from "./primitives/input"
+export { TextareaRenderable, type EditorTraits, type PastePayload, type TextareaStyleProps } from "./primitives/textarea"
+export { EditBuffer, type ExtmarkHandle } from "./text/edit-buffer"
+export { EditorView, computeVisualLines, type VisualLine } from "./text/editor-view"

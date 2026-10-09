@@ -111,6 +111,12 @@ export class CoreRenderer {
     const runs = diffBuffers(this.back.width === next.width && this.back.height === next.height ? this.back : undefined, next)
     const out = emitRuns(runs)
     if (out.length) this.device.write(out)
+    const cursor = (this.focusTarget as { cursorPosition?: { x: number; y: number } } | undefined)?.cursorPosition
+    if (cursor && this.focusTarget?.showCursor !== false) {
+      this.device.write(`\x1b[${cursor.y + 1};${cursor.x + 1}H\x1b[?25h`)
+    } else {
+      this.device.write("\x1b[?25l")
+    }
     this.back.copyFrom(next)
     this.clearDirtyTree(this.root)
   }
@@ -202,6 +208,17 @@ export class CoreRenderer {
 
   handleKey(event: KeyEvent): boolean {
     return this.focusTarget?.emit("key", event) === true
+  }
+
+  handlePaste(event: Extract<InputEvent, { kind: "paste" }>): boolean {
+    const target = this.focusTarget
+    if (!target?.hasHandlers("paste")) return false
+    target.emit("paste", {
+      text: event.text,
+      bytes: new TextEncoder().encode(event.text),
+      preventDefault: () => {},
+    })
+    return true
   }
 
   private clearDirtyTree(node: Renderable): void {
