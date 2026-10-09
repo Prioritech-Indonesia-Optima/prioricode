@@ -23,4 +23,4 @@ export {
   type MountedApp,
 } from "./mount"
 export { Portal } from "./portal"
-export type { JSX, BoxProps, TextProps, SpanProps } from "./jsx-types"
+export type { JSX, BoxProps, TextProps, SpanProps, ScrollBoxElementProps } from "./jsx-types"

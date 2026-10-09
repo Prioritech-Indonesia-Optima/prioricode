@@ -166,7 +166,7 @@ class LayoutImpl {
     }
   }
 
-  calculate(root: Renderable, width: number, height: number): OverflowReport {
+  calculate(root: Renderable, width: number, height: number | undefined): OverflowReport {
     this.ensure(root)
     this.relink(root)
     root.yoga!.calculateLayout(width, height, this.Y.DIRECTION_LTR)

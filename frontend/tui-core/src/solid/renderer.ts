@@ -3,6 +3,7 @@ import { Renderable } from "../layout/engine"
 import { BoxRenderable } from "../primitives/box"
 import { SpanRenderable, TextNodeRenderable, TextRenderable } from "../primitives/text"
 import { InputRenderable } from "../primitives/input"
+import { ScrollBoxRenderable, type ScrollViewportOptions, type VerticalScrollbarOptions } from "../primitives/scroll"
 import { TextareaRenderable } from "../primitives/textarea"
 import type { BorderEdge } from "../types"
 
@@ -50,6 +51,8 @@ export function createElementTag(tag: string): Renderable {
       return new InputRenderable()
     case "textarea":
       return new TextareaRenderable()
+    case "scrollbox":
+      return new ScrollBoxRenderable()
     default:
       throw new Error(`@prioricode/tui-core: unsupported element <${tag}>`)
   }
@@ -171,6 +174,27 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
     }
     if (name === "onEnter") {
       node.commit = value as () => void
+      return
+    }
+  }
+  if (node instanceof ScrollBoxRenderable) {
+    if (name === "viewportOptions") {
+      node.viewportOptions = { ...(value as ScrollViewportOptions | undefined) }
+      node.markDirty()
+      return
+    }
+    if (name === "verticalScrollbarOptions") {
+      const options = value as VerticalScrollbarOptions | undefined
+      node.verticalScrollbarOptions = {
+        ...(options ?? {}),
+        trackOptions: options?.trackOptions ? { ...options.trackOptions } : undefined,
+      }
+      node.markDirty()
+      return
+    }
+    if (name === "stickyScroll") {
+      node.stickyScroll = value !== false
+      node.markDirty()
       return
     }
   }

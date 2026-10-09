@@ -8,6 +8,14 @@ export { FrameScheduler } from "./render/scheduler"
 export { CoreRenderer, type OutputDevice } from "./render/renderer"
 export { BoxRenderable } from "./primitives/box"
 export { TextRenderable, type TextSegment } from "./primitives/text"
+export {
+  ScrollBoxRenderable,
+  SCROLL_WHEEL_ROWS,
+  type ScrollBoxProps,
+  type ScrollViewportOptions,
+  type ScrollbarTrackOptions,
+  type VerticalScrollbarOptions,
+} from "./primitives/scroll"
 export { createInputParser, type InputParserOptions } from "./io/parser"
 export { createOscChannel, encodeOsc, encodeDcsPassthrough, type OscChannel, type OscRequest } from "./io/osc"
 export { createKeymap, type CommandInfo, type KeymapLayer, type CommandDispatcher } from "./keymap/keymap"

@@ -2,15 +2,17 @@ export type Rect = Readonly<{ x: number; y: number; width: number; height: numbe
 
 export type Attributes = number
 
+// Numeric parity with @opentui/core TextAttributes (verified against 0.4.5).
 export const Attr = {
   None: 0,
-  Bold: 1 << 0,
-  Dim: 1 << 1,
-  Italic: 1 << 2,
-  Underline: 1 << 3,
-  Inverse: 1 << 4,
-  Strike: 1 << 5,
-  Invisible: 1 << 6,
+  Bold: 1,
+  Dim: 2,
+  Italic: 4,
+  Underline: 8,
+  Blink: 16,
+  Inverse: 32,
+  Hidden: 64,
+  Strike: 128,
 } as const
 
 export type NamedKey =

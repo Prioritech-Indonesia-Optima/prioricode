@@ -70,16 +70,17 @@ export function emitRuns(runs: Run[]): string {
 
 export function sgrDelta(from: { fg: number; bg: number; attrs: Attributes }, to: { fg: number; bg: number; attrs: Attributes }): string {
   const codes: number[] = []
-  const attrBits = to.attrs & ~Attr.Invisible
-  if (attrBits !== (from.attrs & ~Attr.Invisible)) {
+  const attrBits = to.attrs & ~Attr.Hidden
+  if (attrBits !== (from.attrs & ~Attr.Hidden)) {
     codes.push(0)
     if (attrBits & Attr.Bold) codes.push(1)
     if (attrBits & Attr.Dim) codes.push(2)
     if (attrBits & Attr.Italic) codes.push(3)
     if (attrBits & Attr.Underline) codes.push(4)
+    if (attrBits & Attr.Blink) codes.push(5)
     if (attrBits & Attr.Inverse) codes.push(7)
     if (attrBits & Attr.Strike) codes.push(9)
-    if (to.attrs & Attr.Invisible) codes.push(8)
+    if (to.attrs & Attr.Hidden) codes.push(8)
   }
   if (to.fg !== from.fg) {
     if (to.fg === NO_COLOR) codes.push(39)

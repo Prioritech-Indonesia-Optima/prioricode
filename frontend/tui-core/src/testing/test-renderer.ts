@@ -4,6 +4,7 @@ import { createLayoutEngine } from "../layout/engine"
 import { Renderable } from "../layout/engine"
 import { BoxRenderable } from "../primitives/box"
 import { InputRenderable, type InputStyleProps } from "../primitives/input"
+import { ScrollBoxRenderable, type ScrollBoxProps } from "../primitives/scroll"
 import { TextRenderable } from "../primitives/text"
 import { TextareaRenderable, type TextareaStyleProps } from "../primitives/textarea"
 
@@ -15,6 +16,7 @@ export type TestRenderer = Readonly<{
   text(style?: import("../types").TextStyleProps): TextRenderable
   input(props?: InputStyleProps): InputRenderable
   textarea(props?: TextareaStyleProps): TextareaRenderable
+  scrollbox(props?: ScrollBoxProps): ScrollBoxRenderable
   output(): string
   charFrame(): string
   frameCount(): number
@@ -44,6 +46,7 @@ export async function createTestRenderer(options: Readonly<{ width: number; heig
     text: (style) => new TextRenderable(style),
     input: (props) => new InputRenderable(props),
     textarea: (props) => new TextareaRenderable(props),
+    scrollbox: (props) => new ScrollBoxRenderable(props),
     output: () => chunks.join(""),
     charFrame: () => renderer.captureCharFrame(),
     frameCount: () => renderer.frameCount,

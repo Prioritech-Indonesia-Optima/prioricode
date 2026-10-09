@@ -1,5 +1,6 @@
 import type { Renderable } from "../layout/engine"
 import type { BoxStyle, TextStyleProps } from "../types"
+import type { ScrollBoxProps } from "../primitives/scroll"
 
 export namespace JSX {
   // `any` keeps solid-js control-flow generics (For/Show children) interoperable with
@@ -13,6 +14,7 @@ export namespace JSX {
     box: BoxProps
     text: TextProps
     span: SpanProps
+    scrollbox: ScrollBoxElementProps
   }
 }
 
@@ -41,3 +43,10 @@ export type SpanProps = Readonly<{
   style?: { fg?: string | number; bg?: string | number }
   [key: string]: unknown
 }>
+
+export type ScrollBoxElementProps = ScrollBoxProps &
+  Readonly<{
+    ref?: (el: Renderable) => void
+    children?: unknown
+    [key: string]: unknown
+  }>
