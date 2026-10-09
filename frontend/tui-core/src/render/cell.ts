@@ -48,10 +48,13 @@ export class CellBuffer {
   }
 
   setChar(x: number, y: number, text: string, fg: number, bg: number, attrs: Attributes): void {
-    this.set(x, y, { text, fg, bg, attrs })
+    // Transparent composition: painting with the default bg keeps whatever
+    // fill is already on the cell (matches how text composites over boxes).
+    const effectiveBg = bg === NO_COLOR ? (this.cells[this.index(x, y)]?.bg ?? NO_COLOR) : bg
+    this.set(x, y, { text, fg, bg: effectiveBg, attrs })
     const w = graphemeWidth(text)
     if (w > 1) {
-      for (let i = 1; i < w; i++) this.set(x + i, y, { text: "", fg, bg, attrs })
+      for (let i = 1; i < w; i++) this.set(x + i, y, { text: "", fg, bg: effectiveBg, attrs })
     } else if (this.get(x + 1, y)?.text === "") {
       this.set(x + 1, y, BLANK_CELL)
     }

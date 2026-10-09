@@ -137,6 +137,10 @@ export type Style = Readonly<{
   position?: "relative" | "absolute"
   top?: number
   left?: number
+  right?: number
+  bottom?: number
+  padding?: number
+  margin?: number
 }>
 
 export type TextStyle = Readonly<{

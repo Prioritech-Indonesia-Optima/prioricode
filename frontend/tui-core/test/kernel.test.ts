@@ -78,3 +78,35 @@ test("flex row shrink distributes to flexible children", async () => {
     app.destroy()
   }
 })
+
+test("compat props: backgroundColor, textColor, padding shorthand, right/bottom, truncate ellipsis", async () => {
+  const app = await createTestRenderer({ width: 30, height: 8 })
+  try {
+    const box = app.box({})
+    box.restyle({ bg: "#336699", padding: 2, width: 20 })
+    const text = app.text({ content: "0123456789abcdefghij" })
+    text.restyle({ fg: "#ff0000" })
+    text.truncate = true
+    text.wrap = "none"
+    box.addChild(text)
+    const badge = app.box({})
+    badge.restyle({ position: "absolute", right: 2, bottom: 1, width: 4, height: 1 })
+    const badgeText = app.text({ content: "BR" })
+    badge.addChild(badgeText)
+    app.root.addChild(box)
+    app.root.addChild(badge)
+    await Bun.sleep(10)
+    app.renderer.renderNow()
+    const frame = app.charFrame()
+    // padding 2 → text starts at column 2
+    expect(frame.split("\n")[2]).toBe("  0123456789abcde…")
+    // absolute bottom-right anchoring
+    expect(frame.split("\n")[6]).toContain("BR")
+    // backgroundColor fills cells with the parsed color
+    const cell = app.renderer.currentCells()[2 * 30 + 2]
+    expect(cell.bg).toBe(0x336699)
+    expect(cell.fg).toBe(0xff0000)
+  } finally {
+    app.destroy()
+  }
+})
