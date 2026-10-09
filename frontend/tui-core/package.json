@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@prioricode/tui-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "bun test --timeout 30000",
+    "typecheck": "tsgo --noEmit"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts",
+    "./solid": "./src/solid/index.ts",
+    "./solid/jsx-runtime": "./src/solid/jsx-runtime.ts",
+    "./solid/jsx-dev-runtime": "./src/solid/jsx-dev-runtime.ts"
+  },
+  "dependencies": {
+    "solid-js": "catalog:",
+    "yoga-layout": "3.2.1"
+  },
+  "devDependencies": {
+    "@opentui/core": "catalog:",
+    "@opentui/solid": "catalog:",
+    "@tsconfig/bun": "catalog:",
+    "@types/bun": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  }
+}
