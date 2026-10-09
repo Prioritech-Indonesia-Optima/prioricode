@@ -194,3 +194,12 @@ After all phases:
   columns and wraps one character per line. Fix (pin hint + shrink/clip +
   dynamic truncate) is guarded at 80/100/120 in
   `test/cli/tui/status-row-overflow.test.tsx`.
+
+
+## Appendix: execution progress log (2026-10-09)
+
+- **Phase 0 — DONE, shipped** (commit b4368e9e). User-visible fixes: status-row overflow pin/truncate + `overflow` guards; clipboard default-on, protocol-terminal gated, DCS-wrapped for tmux; real-PTY + real-tmux integration tests; plugin census (`specs/tui-plugin-abi-census.md`); empirical tmux findings (above).
+- **Phase 1 — DONE** (commits bb24659f/c7340785). `frontend/tui-core` (@prioricode/tui-core): hand-rolled input parser + OSC channel + Terminal device (raw mode via stty, kitty negotiation, SIGWINCH), Yoga-WASM layout with overflow-clamp invariant + OverflowReport, double-buffered cell renderer with demand-driven scheduler (idle 0fps test green) + post-process pipeline, Box/Text/Span/TextNode primitives matching OpenTUI borders/insets, universal Solid bridge (`solid-js/universal` + tui-core-local babel preload transform emitting into our runtime), layered keymap w/ leader chains, attachments interface + cascade broker. **Golden-buffer parity vs real OpenTUI** proven via subprocess oracle; 91 tests, tsgo clean.
+- **Phase 2 — DONE** (commit c7340785). `backend/tui-abi` (@prioricode/tui-abi): neutral `EngineSurface` (renderer/keymap/color/vignette/binding-lookup/formatting) + `TUI_ABI_VERSION`. tui-core compat layer byte-matches OpenTUI's RGBA + `createBindingLookup.gather` semantics against the real packages in tests.
+- **Phase 6 (clipboard transports) — ALREADY SHIPPED** in the current product: OSC5522 (+tmux) via Phase 0; VS Code companion (`integrations/vscode`, push `/tui/attach` → `tui.prompt.attach` event → prompt attach); local native clipboard; pasted-file-path attachments (`pasted-filepath.ts` + `local-attachment.ts`, tested). The engine-neutral broker for the cutover landed in tui-core Phase 1.
+- **Phases 3-5, 7 (app cut-over + OpenTUI removal) — NOT STARTED.** Honest gap analysis: tui-core still lacks `Input`/`Textarea` (extmarks, selection, cursor), `ScrollBox`, `Select`, `Portal`/overlay+zIndex, mouse hit-testing, focus management, syntax-highlighted `Code`/`Diff`/`Markdown`, and the split-footer mode. The 170-file app migration is gated on those primitives. Recommendation: build primitives in vertical slices (each with OpenTUI cross-tests) on a flag-off default; the 0.2.x band-aids from Phase 0 remain the shipped UX meanwhile.
