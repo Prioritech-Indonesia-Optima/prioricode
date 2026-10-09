@@ -40,7 +40,7 @@ export function NewSessionView(props: {
         <div class="absolute inset-x-0 top-[25.375%] flex justify-center px-6">
           <div class={NEW_SESSION_CONTENT_WIDTH}>
             <div class="flex justify-center">
-              <Logo class="w-[420px] opacity-15" />
+              <Logo class="w-[min(420px,70%)] opacity-15" />
             </div>
             <div class="mt-8 flex flex-col gap-8">
               <PromptInputV2Composer controller={props.input} />
