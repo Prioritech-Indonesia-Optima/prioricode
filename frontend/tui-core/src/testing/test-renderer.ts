@@ -3,6 +3,7 @@ import { FrameScheduler } from "../render/scheduler"
 import { createLayoutEngine } from "../layout/engine"
 import { Renderable } from "../layout/engine"
 import { BoxRenderable } from "../primitives/box"
+import { InputRenderable, type InputStyleProps } from "../primitives/input"
 import { TextRenderable } from "../primitives/text"
 
 export type TestRenderer = Readonly<{
@@ -11,6 +12,7 @@ export type TestRenderer = Readonly<{
   scheduler: FrameScheduler
   box(style?: import("../types").BoxStyle): BoxRenderable
   text(style?: import("../types").TextStyleProps): TextRenderable
+  input(props?: InputStyleProps): InputRenderable
   output(): string
   charFrame(): string
   frameCount(): number
@@ -38,6 +40,7 @@ export async function createTestRenderer(options: Readonly<{ width: number; heig
     scheduler,
     box: (style) => new BoxRenderable(style),
     text: (style) => new TextRenderable(style),
+    input: (props) => new InputRenderable(props),
     output: () => chunks.join(""),
     charFrame: () => renderer.captureCharFrame(),
     frameCount: () => renderer.frameCount,

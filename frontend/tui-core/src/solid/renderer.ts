@@ -2,6 +2,7 @@ import { createRenderer, type RendererOptions } from "solid-js/universal"
 import { Renderable } from "../layout/engine"
 import { BoxRenderable } from "../primitives/box"
 import { SpanRenderable, TextNodeRenderable, TextRenderable } from "../primitives/text"
+import { InputRenderable } from "../primitives/input"
 import type { BorderEdge } from "../types"
 
 const STYLE_KEYS = new Set([
@@ -44,6 +45,8 @@ export function createElementTag(tag: string): Renderable {
       return new TextRenderable()
     case "span":
       return new SpanRenderable()
+    case "input":
+      return new InputRenderable()
     default:
       throw new Error(`@prioricode/tui-core: unsupported element <${tag}>`)
   }
@@ -86,6 +89,25 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
     const event = map[name]
     if (event) {
       node.on(event, value as never)
+      return
+    }
+  }
+  if (node instanceof InputRenderable) {
+    if (name === "value") {
+      node.value = String(value ?? "")
+      return
+    }
+    if (name === "placeholder") {
+      node.placeholder = String(value ?? "")
+      node.markDirty()
+      return
+    }
+    if (name === "onInput") {
+      node.onInput = value as (next: string) => void
+      return
+    }
+    if (name === "onEnter") {
+      node.commit = value as () => void
       return
     }
   }
