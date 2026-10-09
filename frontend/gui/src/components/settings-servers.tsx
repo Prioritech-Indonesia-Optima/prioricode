@@ -1,10 +1,17 @@
-import { Show, type Component } from "solid-js"
+import { useDialog } from "@prioricode/ui/context/dialog"
+import { createMemo, Show, type Component } from "solid-js"
 import { useLanguage } from "@/context/language"
+import { usePlatform } from "@/context/platform"
+import { openAddSshServer, SshServerSettings, useFilteredSshServers } from "@/ssh/settings"
 import { ServerConnectionForm, ServerConnectionList, useServerManagementController } from "./dialog-select-server"
 
 export const SettingsServers: Component = () => {
   const language = useLanguage()
   const controller = useServerManagementController()
+  const platform = usePlatform()
+  const dialog = useDialog()
+  const emptyFilter = createMemo(() => "")
+  const sshServers = useFilteredSshServers(emptyFilter)
 
   return (
     <div class="flex flex-col h-full overflow-y-auto no-scrollbar px-4 pb-10 sm:px-10 sm:pb-10">
@@ -19,6 +26,21 @@ export const SettingsServers: Component = () => {
                 </div>
               </div>
               <ServerConnectionList controller={controller} />
+              <Show when={platform.sshServers}>
+                <div class="flex flex-col gap-2 pt-8">
+                  <div class="flex items-center justify-between">
+                    <h2 class="text-16-medium text-text-strong">{language.t("ssh.server.menu.label")}</h2>
+                    <button
+                      type="button"
+                      class="text-13-medium text-text-interactive"
+                      onClick={() => openAddSshServer(dialog)}
+                    >
+                      {language.t("ssh.server.add")}
+                    </button>
+                  </div>
+                  <SshServerSettings controller={controller} servers={sshServers} />
+                </div>
+              </Show>
             </>
           }
         >

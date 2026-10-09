@@ -47,7 +47,12 @@ export function sshBootstrapCodeOf(error: unknown): string | null {
 
 export function classifySshFailure(output: string, alias: string, code: number | null) {
   for (const pattern of PATTERNS) {
-    if (pattern.test.test(output)) return nativeT(pattern.key, { host: alias })
+    if (!pattern.test.test(output)) continue
+    const message = nativeT(pattern.key, { host: alias })
+    if (pattern.key === "desktop.ssh.error.authDenied") {
+      return `${message} ${nativeT("desktop.ssh.error.authDeniedNote")}`
+    }
+    return message
   }
   return nativeT("desktop.ssh.error.probeFailed", { host: alias, code: code ?? "null" })
 }

@@ -335,6 +335,8 @@ export const DESKTOP_NATIVE_ENGLISH = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Use key-based authentication (add your key to ssh-agent), or enter your password or verification code when prompted.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
