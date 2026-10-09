@@ -327,6 +327,25 @@
         "@typescript/native-preview": "catalog:",
       },
     },
+    "backend/tui-abi": {
+      "name": "@prioricode/tui-abi",
+      "version": "0.0.0",
+      "devDependencies": {
+        "@opentui/core": "catalog:",
+        "@opentui/keymap": "catalog:",
+        "@tsconfig/bun": "catalog:",
+        "@types/bun": "catalog:",
+        "@typescript/native-preview": "catalog:",
+      },
+      "peerDependencies": {
+        "@opentui/core": ">=0.4.5",
+        "@opentui/keymap": ">=0.4.5",
+      },
+      "optionalPeers": [
+        "@opentui/core",
+        "@opentui/keymap",
+      ],
+    },
     "cli": {
       "name": "prioricode",
       "version": "0.2.1",
@@ -950,11 +969,13 @@
       "name": "@prioricode/tui-core",
       "version": "0.0.0",
       "dependencies": {
+        "@prioricode/tui-abi": "workspace:*",
         "solid-js": "catalog:",
         "yoga-layout": "3.2.1",
       },
       "devDependencies": {
         "@opentui/core": "catalog:",
+        "@opentui/keymap": "catalog:",
         "@opentui/solid": "catalog:",
         "@tsconfig/bun": "catalog:",
         "@types/bun": "catalog:",
@@ -2343,6 +2364,8 @@
     "@prioricode/storybook": ["@prioricode/storybook@workspace:frontend/storybook"],
 
     "@prioricode/tui": ["@prioricode/tui@workspace:frontend/tui"],
+
+    "@prioricode/tui-abi": ["@prioricode/tui-abi@workspace:backend/tui-abi"],
 
     "@prioricode/tui-core": ["@prioricode/tui-core@workspace:frontend/tui-core"],
 

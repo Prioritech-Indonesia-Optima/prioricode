@@ -26,6 +26,8 @@ export class CoreRenderer {
   private readonly device: OutputDevice
   private disposed = false
   private frames = 0
+  private postProcess: ((buffer: CellBuffer, deltaTime: number) => void)[] = []
+  private lastPaint = 0
 
   constructor(options: RendererOptions) {
     this.root = options.root
@@ -46,6 +48,23 @@ export class CoreRenderer {
 
   get rows(): number {
     return this.front.height
+  }
+
+  write(data: string): void {
+    this.device.write(data)
+  }
+
+  setTerminalTitle(title: string): void {
+    this.device.write(`\x1b]0;${title.replace(/[\x00-\x1f\x07]/g, "")}\x07`)
+  }
+
+  addPostProcessFn(fn: (buffer: CellBuffer, deltaTime: number) => void): void {
+    if (!this.postProcess.includes(fn)) this.postProcess.push(fn)
+  }
+
+  removePostProcessFn(fn: (buffer: CellBuffer, deltaTime: number) => void): void {
+    const index = this.postProcess.indexOf(fn)
+    if (index !== -1) this.postProcess.splice(index, 1)
   }
 
   resize(columns: number, rows: number): void {
@@ -80,6 +99,10 @@ export class CoreRenderer {
     const report = layoutEngine().calculate(this.root, size.columns, size.rows)
     void report
     this.paintNode(this.root, next, { x: 0, y: 0, width: size.columns, height: size.rows })
+    const now = Date.now()
+    const deltaTime = this.lastPaint === 0 ? 0 : now - this.lastPaint
+    this.lastPaint = now
+    for (const fn of this.postProcess) fn(next, deltaTime)
     const runs = diffBuffers(this.back.width === next.width && this.back.height === next.height ? this.back : undefined, next)
     const out = emitRuns(runs)
     if (out.length) this.device.write(out)

@@ -41,11 +41,26 @@ function namesMatch(names: readonly string[], chain: readonly Binding[], count: 
   return true
 }
 
+export type Keymap = Readonly<{
+  registerLayer(layer: KeymapLayer): () => void
+  registerCommand(cmd: CommandInfo): () => void
+  commandBindings(names: readonly string[]): ReadonlyMap<string, readonly string[]>
+  commands(): CommandInfo[]
+  dispatch(event: InputEvent): boolean
+  press(seq: string): Promise<boolean>
+  pendingChain(): string[]
+  clearPending(): void
+  leaderTimeoutMs(ms: number): void
+  setMode(name: string): void
+  mode(): string
+}>
+
 export function createKeymap(
   input: Readonly<{ dispatcher?: CommandDispatcher }> = {},
 ): Readonly<{
   registerLayer(layer: KeymapLayer): () => void
   registerCommand(cmd: CommandInfo): () => void
+  commandBindings(names: readonly string[]): ReadonlyMap<string, readonly string[]>
   commands(): CommandInfo[]
   dispatch(event: InputEvent): boolean
   press(seq: string): Promise<boolean>
@@ -211,6 +226,20 @@ export function createKeymap(
   }
 
   return {
+    commandBindings(names: readonly string[]) {
+      const map = new Map<string, readonly string[]>()
+      for (const name of names) {
+        const entries: string[] = []
+        for (const layer of orderedLayers()) {
+          const value = layer.bindings?.[name]
+          if (value === undefined || value === false) continue
+          if (Array.isArray(value)) entries.push(...value)
+          else entries.push(value)
+        }
+        map.set(name, entries)
+      }
+      return map
+    },
     registerLayer(layer) {
       const entry = { layer, order: order++ }
       layers.push(entry)

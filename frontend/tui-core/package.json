@@ -14,17 +14,21 @@
     "./testing": "./src/testing/index.ts",
     "./solid": "./src/solid/index.ts",
     "./solid/jsx-runtime": "./src/solid/jsx-runtime.ts",
-    "./solid/jsx-dev-runtime": "./src/solid/jsx-dev-runtime.ts"
+    "./solid/jsx-dev-runtime": "./src/solid/jsx-dev-runtime.ts",
+    "./compat": "./src/compat/index.ts",
+    "./abi": "./src/abi/surface.ts"
   },
   "dependencies": {
     "solid-js": "catalog:",
-    "yoga-layout": "3.2.1"
+    "yoga-layout": "3.2.1",
+    "@prioricode/tui-abi": "workspace:*"
   },
   "devDependencies": {
     "@opentui/core": "catalog:",
     "@opentui/solid": "catalog:",
     "@tsconfig/bun": "catalog:",
     "@types/bun": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "@opentui/keymap": "catalog:"
   }
 }
