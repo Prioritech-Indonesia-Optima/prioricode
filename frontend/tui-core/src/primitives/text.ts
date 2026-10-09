@@ -112,8 +112,6 @@ export class TextRenderable extends Renderable {
     return collectSegments(this.children, { fg: this.fg, bg: this.bg, attrs: this.attrs })
   }
 
-  truncate = false
-
   private place(width: number): Placed[][] {
     const segments = this.currentSegments()
     const lines: Placed[][] = []
@@ -170,23 +168,7 @@ export class TextRenderable extends Renderable {
   override paint(ctx: PaintContext): void {
     const { buffer, clip } = ctx
     const r = this.layoutRect
-    const placed = this.place(this.truncate ? 1e6 : Math.max(1, r.width))
-    if (this.truncate) {
-      for (const row of placed) {
-        const total = row.reduce((acc, p) => acc + graphemeWidth(p.grapheme), 0)
-        if (total <= r.width) continue
-        let width = 0
-        let cut = row.length
-        for (let i = 0; i < row.length; i++) {
-          width += graphemeWidth(row[i]!.grapheme)
-          if (width > r.width - 1) {
-            cut = i
-            break
-          }
-        }
-        row.splice(cut, row.length - cut, { grapheme: "…", segment: row[cut]!.segment })
-      }
-    }
+    const placed = this.place(Math.max(1, r.width))
     for (let y = 0; y < r.height && y < placed.length; y++) {
       const row = placed[y]
       const rowWidth = row.reduce((a, p) => a + graphemeWidth(p.grapheme), 0)

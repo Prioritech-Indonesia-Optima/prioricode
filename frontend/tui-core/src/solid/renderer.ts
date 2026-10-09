@@ -35,10 +35,6 @@ const STYLE_KEYS = new Set([
   "position",
   "top",
   "left",
-  "right",
-  "bottom",
-  "padding",
-  "margin",
 ])
 
 const warned = new Set<string>()
@@ -78,9 +74,8 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
     node.markDirty()
     return
   }
-  if (name === "fg" || name === "bg" || name === "backgroundColor" || name === "textColor") {
-    const target = name === "fg" || name === "textColor" ? "fg" : "bg"
-    node.restyle({ [target]: value as never })
+  if (name === "fg" || name === "bg") {
+    node.restyle({ [name]: value as never })
     return
   }
   if (name === "visible") {
@@ -221,9 +216,10 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
       return
     }
     if (name === "truncate") {
-      node.truncate = value === true || value === "true"
-      if (node.truncate) node.wrap = "none"
-      node.markDirty()
+      if (value) {
+        node.wrap = "none"
+        node.markDirty()
+      }
       return
     }
     if (name === "textAlign") {
