@@ -280,7 +280,11 @@ export const DESKTOP_MENU: DesktopMenu[] = [
     labelKey: "desktop.menu.help",
     items: [
       { type: "item", labelKey: "desktop.menu.documentation", href: "https://prioricode.ai/docs" },
-      { type: "item", labelKey: "desktop.menu.supportForum", href: "https://discord.com/invite/prioricode" },
+      {
+        type: "item",
+        labelKey: "desktop.menu.supportForum",
+        href: "https://github.com/Prioritech-Indonesia-Optima/prioricode/issues",
+      },
       { type: "item", labelKey: "desktop.menu.exportLogs", command: "logs.export" },
       { type: "separator" },
       {

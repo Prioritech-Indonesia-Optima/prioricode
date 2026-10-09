@@ -263,7 +263,7 @@ export const DESKTOP_NATIVE_ENGLISH = {
   "desktop.menu.minimize": "Minimize",
   "desktop.menu.maximize": "Maximize",
   "desktop.menu.documentation": "PrioriCode Documentation",
-  "desktop.menu.supportForum": "Support Forum",
+  "desktop.menu.supportForum": "Report an Issue",
   "desktop.menu.shareFeedback": "Share Feedback",
   "desktop.menu.reportBug": "Report a Bug",
   "desktop.menu.ariaLabel": "PrioriCode menu",
