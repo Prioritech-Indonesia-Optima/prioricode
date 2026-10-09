@@ -48,7 +48,8 @@ const api: ElectronAPI = {
       }
     },
     refreshHosts: () => ipcRenderer.invoke("ssh-servers-refresh-hosts"),
-    addServer: (alias) => ipcRenderer.invoke("ssh-servers-add", alias),
+    addServer: (alias, workspace) => ipcRenderer.invoke("ssh-servers-add", alias, workspace),
+    setWorkspace: (id, workspace) => ipcRenderer.invoke("ssh-servers-set-workspace", id, workspace),
     removeServer: (id) => ipcRenderer.invoke("ssh-servers-remove", id),
     startServer: (id) => ipcRenderer.invoke("ssh-servers-start", id),
     stopServer: (id) => ipcRenderer.invoke("ssh-servers-stop", id),

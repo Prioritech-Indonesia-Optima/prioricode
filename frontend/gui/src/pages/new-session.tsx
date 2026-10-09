@@ -27,6 +27,16 @@ export default function NewSessionPage() {
       open: () => project.setOpen(true),
     },
   })
+  let workspaceAutoSelected = false
+  createEffect(() => {
+    if (workspaceAutoSelected) return
+    const controls = draft.project.controls()
+    const workspace = controls.sshWorkspace
+    if (!workspace) return
+    workspaceAutoSelected = true
+    if (controls.directory === workspace) return
+    controls.select(workspace, controls.server)
+  })
   createEffect(() => {
     if (!draft.prompt.ready()) return
     draft.input.restoreFocus()

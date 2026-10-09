@@ -20,7 +20,7 @@ export function DialogAddSshServer() {
   const platform = usePlatform()
   const ssh = useSshServers()
   const api = platform.sshServers
-  const [store, setStore] = createStore({ filter: "", manual: "" })
+  const [store, setStore] = createStore({ filter: "", manual: "", workspace: "" })
   const [added, setAdded] = createSignal(false)
 
   createEffect(() => {
@@ -53,8 +53,9 @@ export function DialogAddSshServer() {
 
   const add = (alias: string) => {
     if (!api) return
+    const workspace = store.workspace.trim()
     request.mutate(async () => {
-      await api.addServer(alias)
+      await api.addServer(alias, workspace || undefined)
       setAdded(true)
     })
   }
@@ -201,6 +202,21 @@ export function DialogAddSshServer() {
           </Show>
         </Show>
 
+        <div class="settings-v2-ssh-manual">
+          <TextInputV2
+            type="text"
+            appearance="base"
+            value={store.workspace}
+            onInput={(event) => setStore("workspace", event.currentTarget.value)}
+            placeholder={language.t("ssh.server.workspace.placeholder")}
+            spellcheck={false}
+            autocorrect="off"
+            autocomplete="off"
+            autocapitalize="off"
+            dir="ltr"
+            class="settings-v2-ssh-search"
+          />
+        </div>
         <div class="settings-v2-ssh-manual">
           <TextInputV2
             type="text"

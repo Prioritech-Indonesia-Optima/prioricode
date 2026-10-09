@@ -33,6 +33,7 @@ export type PromptProjectControls = {
   available: PromptProject[]
   directory: string
   server?: string
+  sshWorkspace?: string
   select: (worktree: string, server?: string) => void
   add: (title: string, server?: string) => void
 }

@@ -19,6 +19,7 @@ export type SshPrioricodeCheck = {
 export type SshServerConfig = {
   id: string
   alias: string
+  workspace?: string
 }
 
 export type SshServerRuntime =
@@ -50,7 +51,8 @@ export type SshServersPlatform = {
   getState(): Promise<SshServersState>
   subscribe(cb: (event: SshServersEvent) => void): () => void
   refreshHosts(): Promise<void>
-  addServer(alias: string): Promise<SshServerConfig>
+  addServer(alias: string, workspace?: string): Promise<SshServerConfig>
+  setWorkspace(id: string, workspace: string): Promise<void>
   removeServer(id: string): Promise<void>
   startServer(id: string): Promise<void>
   stopServer(id: string): Promise<void>

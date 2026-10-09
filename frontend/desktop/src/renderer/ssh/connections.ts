@@ -9,6 +9,7 @@ export function readySshConnections(state?: SshServersState, label = "SSH") {
         label,
         type: "ssh" as const,
         host: item.config.alias,
+        workspace: item.config.workspace,
         http: {
           url: item.runtime.url,
           username: item.runtime.username ?? undefined,

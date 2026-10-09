@@ -313,14 +313,14 @@ export function createSshServersController(
       })
     },
 
-    async addServer(alias: string): Promise<SshServerConfig> {
+    async addServer(alias: string, workspace?: string): Promise<SshServerConfig> {
       const clean = alias.trim()
       if (!isValidSshAlias(clean)) throw new Error(nativeT("desktop.ssh.error.invalidAlias"))
       const id = sshServerIdForAlias(clean)
       if (state.servers.some((item) => item.config.id === id)) {
         throw new Error(nativeT("desktop.ssh.error.alreadyAdded", { host: clean }))
       }
-      const config: SshServerConfig = { id, alias: clean }
+      const config: SshServerConfig = { id, alias: clean, workspace: normalizeWorkspace(workspace) }
       writeServers([...readServers(), config])
       setState({ servers: [...state.servers, { config, runtime: { kind: "starting" } }] })
       void startServer(id)
@@ -329,6 +329,13 @@ export function createSshServersController(
         setPrioricodeCheck(clean, check)
       })
       return config
+    },
+
+    async setWorkspace(id: string, workspace: string) {
+      const clean = normalizeWorkspace(workspace)
+      const next = readServers().map((item) => (item.id === id ? { ...item, workspace: clean } : item))
+      writeServers(next)
+      updateServer(id, (item) => ({ ...item, config: { ...item.config, workspace: clean } }))
     },
 
     async removeServer(id: string) {
@@ -404,13 +411,19 @@ function writePersistedServers(servers: SshServerConfig[]) {
   getStore().set(SSH_SERVERS_KEY, { servers })
 }
 
+function normalizeWorkspace(value: string | undefined) {
+  if (typeof value !== "string") return undefined
+  const clean = value.trim()
+  return clean.length > 0 ? clean : undefined
+}
+
 function normalizePersistedServer(value: unknown): SshServerConfig[] {
   if (!value || typeof value !== "object") return []
   const record = value as Record<string, unknown>
   const alias = typeof record.alias === "string" && record.alias.length > 0 ? record.alias : null
   if (!alias) return []
   const id = typeof record.id === "string" && record.id.length > 0 ? record.id : sshServerIdForAlias(alias)
-  return [{ id, alias }]
+  return [{ id, alias, workspace: normalizeWorkspace(typeof record.workspace === "string" ? record.workspace : undefined) }]
 }
 
 async function defaultRemoteExec(

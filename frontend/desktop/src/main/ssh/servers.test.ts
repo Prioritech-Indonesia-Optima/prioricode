@@ -107,6 +107,17 @@ test("stale start attempt cannot clobber a newer attempt", async () => {
   expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
 })
 
+test("workspace path persists through add and setWorkspace", async () => {
+  const { controller, persistedConfigs } = setup()
+  await controller.addServer("web", "/srv/projects")
+  expect(persistedConfigs()).toEqual([{ id: "ssh:web", alias: "web", workspace: "/srv/projects" }])
+  await controller.setWorkspace("ssh:web", "/srv/other")
+  expect(controller.getState().servers[0]?.config.workspace).toBe("/srv/other")
+  await controller.setWorkspace("ssh:web", "   ")
+  expect(controller.getState().servers[0]?.config.workspace).toBeUndefined()
+  expect(persistedConfigs()[0]?.workspace).toBeUndefined()
+})
+
 test("missing remote binary auto-installs once and retries the sidecar", async () => {
   let spawns = 0
   const execs: string[] = []

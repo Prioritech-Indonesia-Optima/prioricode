@@ -1,9 +1,9 @@
 import { base64Encode } from "@prioricode/core/util/encode"
 import { createQuery } from "@tanstack/solid-query"
 import { useNavigate, useSearchParams } from "@solidjs/router"
-import { type Accessor, createMemo } from "solid-js"
+import { type Accessor, createEffect, createMemo } from "solid-js"
 import type { PromptInputControls } from "@/components/prompt-input/contracts"
-import type { PromptProjectControls } from "@/components/prompt-project-selector"
+import type { PromptProject, PromptProjectControls } from "@/components/prompt-project-selector"
 import { useDirectoryPicker } from "@/components/directory-picker"
 import { useGlobal } from "@/context/global"
 import { useLayout } from "@/context/layout"
@@ -72,17 +72,52 @@ export function createPromptProjectControls() {
   const [search] = useSearchParams<{ draftId?: string }>()
   const projectServer = () => serverSDK().server
   const projectServerCtx = createMemo(() => global.ensureServerCtx(projectServer()))
+  const sshWorkspace = createMemo(() => {
+    const conn = projectServer()
+    return conn?.type === "ssh" && conn.workspace ? conn.workspace : undefined
+  })
   const projects = createMemo(() => {
-    if (server.list.length <= 1) {
-      return search.draftId ? projectServerCtx().projects.list() : layout.projects.list()
+    const base = (): PromptProject[] => {
+      if (server.list.length <= 1) {
+        return search.draftId ? projectServerCtx().projects.list() : layout.projects.list()
+      }
+      return server.list.flatMap((conn) => {
+        const item = { key: ServerConnection.key(conn), name: serverName(conn) }
+        return global
+          .ensureServerCtx(conn)
+          .projects.list()
+          .map((project) => ({ ...project, server: item }))
+      })
     }
-    return server.list.flatMap((conn) => {
-      const item = { key: ServerConnection.key(conn), name: serverName(conn) }
-      return global
-        .ensureServerCtx(conn)
-        .projects.list()
-        .map((project) => ({ ...project, server: item }))
-    })
+    const list = base()
+    const workspace = sshWorkspace()
+    if (!workspace) return list
+    const conn = projectServer()
+    if (!conn) return list
+    const key = ServerConnection.key(conn)
+    const present = list.some(
+      (project) =>
+        (!project.server || project.server.key === key) && pathKey(project.worktree) === pathKey(workspace),
+    )
+    if (present) return list
+    return [
+      { worktree: workspace, server: server.list.length > 1 ? { key, name: serverName(conn) } : undefined },
+      ...list,
+    ]
+  })
+  const openedWorkspaces = new Set<string>()
+  createEffect(() => {
+    const workspace = sshWorkspace()
+    const conn = projectServer()
+    if (!workspace || !conn || conn.type !== "ssh") return
+    const key = ServerConnection.key(conn)
+    const guard = `${key}:${pathKey(workspace)}`
+    if (openedWorkspaces.has(guard)) return
+    openedWorkspaces.add(guard)
+    const ctx = global.ensureServerCtx(conn)
+    if (ctx.projects.list().some((project) => pathKey(project.worktree) === pathKey(workspace))) return
+    ctx.projects.open(workspace)
+    ctx.projects.touch(workspace)
   })
   const selectProject = (worktree: string, serverKey?: string) => {
     const conn = serverKey ? server.list.find((conn) => ServerConnection.key(conn) === serverKey) : projectServer()
@@ -127,6 +162,7 @@ export function createPromptProjectControls() {
     available: projects(),
     directory: sdk().directory,
     server: server.list.length > 1 ? ServerConnection.key(projectServer()) : undefined,
+    sshWorkspace: sshWorkspace(),
     select: selectProject,
     add: addProject,
   }))

@@ -45,8 +45,17 @@ export function registerSshIpcHandlers(controller: SshServersController) {
   ipcMain.handle("ssh-servers-unsubscribe", (event) => unsubscribe(event.sender.id))
   ipcMain.handle("ssh-servers-get-state", () => controller.getState())
   ipcMain.handle("ssh-servers-refresh-hosts", () => controller.refreshHosts())
-  ipcMain.handle("ssh-servers-add", (_event: IpcMainInvokeEvent, alias: string) =>
-    controller.addServer(requireSshIpcString("host alias", alias)),
+  ipcMain.handle("ssh-servers-add", (_event: IpcMainInvokeEvent, alias: string, workspace?: unknown) =>
+    controller.addServer(
+      requireSshIpcString("host alias", alias),
+      typeof workspace === "string" && workspace.trim() ? workspace : undefined,
+    ),
+  )
+  ipcMain.handle("ssh-servers-set-workspace", (_event: IpcMainInvokeEvent, id: string, workspace: unknown) =>
+    controller.setWorkspace(
+      requireSshIpcString("server id", id),
+      typeof workspace === "string" ? workspace : "",
+    ),
   )
   ipcMain.handle("ssh-servers-remove", (_event: IpcMainInvokeEvent, id: string) =>
     controller.removeServer(requireSshIpcString("server id", id)),

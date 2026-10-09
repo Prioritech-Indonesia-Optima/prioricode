@@ -400,6 +400,11 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Remote workspace directory (optional)",
+  "ssh.server.workspace.edit": "Set workspace directory",
+  "ssh.server.workspace.open": "Open workspace",
+  "ssh.server.workspace.save": "Save",
+  "ssh.server.workspace.dialogTitle": "Workspace directory on {{host}}",
 
   "wsl.server.add": "Add WSL server",
   "wsl.server.addShort": "Add WSL",

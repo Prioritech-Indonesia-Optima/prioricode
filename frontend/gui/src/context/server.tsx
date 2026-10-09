@@ -214,6 +214,7 @@ export namespace ServerConnection {
     host: string
     // SSH client exposes an HTTP server for the app to use as a proxy
     http: HttpBase
+    workspace?: string
   } & Base
 
   export type Any =
