@@ -47,7 +47,7 @@ export class BoxRenderable extends Renderable {
     return { ...base, ...inset }
   }
 
-  paint(ctx: PaintContext): void {
+  override paint(ctx: PaintContext): void {
     const { buffer, clip } = ctx
     const r = this.layoutRect
     if (this.bg >= 0) {

@@ -21,4 +21,4 @@ export {
   type TuiDimensions,
   type MountedApp,
 } from "./mount"
-export type { JSX, BoxProps, TextProps, SpanProps } from "./jsx-runtime"
+export type { JSX, BoxProps, TextProps, SpanProps } from "./jsx-types"

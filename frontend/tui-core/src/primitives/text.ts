@@ -23,7 +23,7 @@ export class TextNodeRenderable extends Renderable {
     return { width: Math.max(1, stringWidth(this.value)), height: 1 }
   }
 
-  paint(ctx: PaintContext): void {
+  override paint(ctx: PaintContext): void {
     const { buffer, clip } = ctx
     const r = this.layoutRect
     let x = r.x
@@ -55,7 +55,7 @@ export class SpanRenderable extends Renderable {
     return { width: Math.max(1, ...lines.map((l) => stringWidth(l))), height: lines.length }
   }
 
-  paint(ctx: PaintContext): void {
+  override paint(ctx: PaintContext): void {
     // Spans are inline runs painted by their TextRenderable host; standalone
     // spans render as plain lines for tolerance.
     const { buffer, clip } = ctx
@@ -164,7 +164,7 @@ export class TextRenderable extends Renderable {
     return { width: Math.max(1, fixed ?? max), height: Math.max(1, placed.length) }
   }
 
-  paint(ctx: PaintContext): void {
+  override paint(ctx: PaintContext): void {
     const { buffer, clip } = ctx
     const r = this.layoutRect
     const placed = this.place(Math.max(1, r.width))
@@ -199,10 +199,10 @@ function normalize(
   if (typeof value === "string") return [{ text: value, fg: inheritFg, bg: inheritBg, attrs: Attr.None }]
   if (Array.isArray(value)) {
     const out: TextSegment[] = []
-    for (const part of value) out.push(...normalize(part, inheritFg, inheritBg))
+    for (const part of value as readonly (string | TextSegment)[]) out.push(...normalize(part, inheritFg, inheritBg))
     return out
   }
-  return [value]
+  return [value as TextSegment]
 }
 
 export function inlineText(nodes: readonly Renderable[]): string {

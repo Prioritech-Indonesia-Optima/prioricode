@@ -4,6 +4,13 @@
   "compilerOptions": {
     "jsx": "preserve",
     "jsxImportSource": "@prioricode/tui-core/solid",
-    "noUncheckedIndexedAccess": false
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "noUncheckedIndexedAccess": false,
+    "paths": {
+      "@prioricode/tui-core": ["./src/index.ts"],
+      "@prioricode/tui-core/solid": ["./src/solid/index.ts"],
+      "@prioricode/tui-core/solid/jsx-runtime": ["./src/solid/jsx-runtime.ts"],
+      "@prioricode/tui-core/solid/jsx-dev-runtime": ["./src/solid/jsx-dev-runtime.ts"]
+    }
   }
 }

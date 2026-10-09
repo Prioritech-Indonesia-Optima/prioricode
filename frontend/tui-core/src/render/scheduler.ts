@@ -1,6 +1,10 @@
 export type FrameTask = () => void
 
-type Participant = Readonly<{ task: FrameTask; intervalMs: number; lastRun: number }>
+interface Participant {
+  task: FrameTask
+  intervalMs: number
+  lastRun: number
+}
 
 export class FrameScheduler {
   private participants = new Set<Participant>()

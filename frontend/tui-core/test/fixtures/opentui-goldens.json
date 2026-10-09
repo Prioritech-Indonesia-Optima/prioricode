@@ -1,0 +1,33 @@
+{
+  "note": "captured from real @opentui/core+solid 0.4.5 testRender on 2026-10-09 (linux, bun 1.3.14)",
+  "paddedBox": [
+    "│ golden parity    │                    ",
+    "│                  │                    ",
+    "│                  │                    ",
+    "│                  │                    ",
+    "│                  │                    ",
+    "                                        ",
+    "                                        ",
+    "                                        ",
+    ""
+  ],
+  "plainText": [
+    "plain line                              ",
+    "                                        ",
+    "                                        ",
+    "                                        ",
+    ""
+  ],
+  "stackedBorders": [
+    "────────────────────────────            ",
+    "first                                   ",
+    "                                        ",
+    "second                                  ",
+    "────────────────────────────            ",
+    "                                        ",
+    "                                        ",
+    "                                        ",
+    "                                        ",
+    ""
+  ]
+}

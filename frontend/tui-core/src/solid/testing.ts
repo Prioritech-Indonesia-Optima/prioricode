@@ -8,7 +8,7 @@ export type SolidTestRenderer = MountedApp & Readonly<{
 }>
 
 export async function testRender(
-  code: () => Renderable,
+  code: () => unknown,
   options: Readonly<{ width: number; height: number }>,
 ): Promise<SolidTestRenderer> {
   const chunks: string[] = []

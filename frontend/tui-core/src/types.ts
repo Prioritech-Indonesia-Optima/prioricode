@@ -105,7 +105,7 @@ export type OscCapabilities = Readonly<{ osc5522: boolean; osc52: boolean; dcs: 
 
 export type Style = Readonly<{
   display?: "flex" | "none"
-  flexDirection?: "row" | "column"
+  flexDirection?: "row" | "column" | "row-reverse" | "column-reverse"
   flexGrow?: number
   flexShrink?: number
   flexBasis?: number | string
@@ -158,11 +158,12 @@ export type BoxStyle = Style & Readonly<{
 
 export type TextMode = "primary" | "prepend" | "append"
 
-export type TextStyleProps = Readonly<{
-  content?: string
-  fg?: string | number
-  bg?: string | number
-  attributes?: Attributes
-  wrap?: WrapMode
-  textAlign?: "left" | "center" | "right"
-}>
+export type TextStyleProps = Style &
+  Readonly<{
+    content?: string
+    fg?: string | number
+    bg?: string | number
+    attributes?: Attributes
+    wrap?: WrapMode
+    textAlign?: "left" | "center" | "right"
+  }>

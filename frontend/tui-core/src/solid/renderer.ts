@@ -69,7 +69,7 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
     node.markDirty()
     return
   }
-  if (node instanceof TextRenderable || node instanceof SpanRenderable) {
+  if (node instanceof TextRenderable) {
     if (name === "content" || name === "text") {
       node.content = value as never
       return
@@ -84,6 +84,15 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
       node.markDirty()
       return
     }
+  }
+  if (node instanceof SpanRenderable && (name === "content" || name === "text")) {
+    for (const child of [...node.children]) node.removeChild(child)
+    node.addChild(new TextNodeRenderable(String(value ?? "")))
+    return
+  }
+  if (name === "style" && value && typeof value === "object") {
+    node.restyle(value as never)
+    return
   }
   if (node instanceof BoxRenderable) {
     if (name === "border") {
