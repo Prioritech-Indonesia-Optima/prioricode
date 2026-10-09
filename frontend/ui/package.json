@@ -25,6 +25,7 @@
     "src/**/*.css",
     "src/theme/themes/*.json",
     "src/components/app-icons/sprite.svg",
+    "src/assets/brand/*.png",
     "src/components/file-icons/sprite.svg",
     "src/components/provider-icons/sprite.svg",
     "src/assets/icons/app/*",

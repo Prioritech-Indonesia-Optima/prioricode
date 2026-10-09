@@ -1,4 +1,21 @@
 [data-component="logo-mark"] {
   width: 16px;
-  aspect-ratio: 4/5;
+  aspect-ratio: 1124/932;
+  object-fit: contain;
+}
+
+[data-component="logo-splash"] {
+  object-fit: contain;
+}
+
+.pc-brand-scheme-light {
+  display: none;
+}
+
+html[data-color-scheme="light"] .pc-brand-scheme-light {
+  display: inline-block;
+}
+
+html[data-color-scheme="light"] .pc-brand-scheme-dark {
+  display: none;
 }

@@ -235,6 +235,13 @@ async function main() {
   await out(`${img}/social-share-zen.png`, await social(`${img}/social-share-zen.png`, 1200, 630, lockWhite))
   await out(`${img}/social-share-black.png`, await social(`${img}/social-share-black.png`, 1280, 721, lockWhite, "#000000"))
 
+  const oauthWhite = await sharp(wordWhite).resize(480).png().toBuffer()
+  const oauthInk = await sharp(wordInk).resize(480).png().toBuffer()
+  await out(
+    "backend/core/src/oauth/wordmark.ts",
+    `export const WORDMARK_WHITE = "data:image/png;base64,${oauthWhite.toString("base64")}"\nexport const WORDMARK_INK = "data:image/png;base64,${oauthInk.toString("base64")}"\n`,
+  )
+
   // docs (mintlify) + cloud console raster-wrapper svgs
   await out("docs/mintlify/logo/light.svg", svgWrap(wordInk, 1117, 180))
   await out("docs/mintlify/logo/dark.svg", svgWrap(wordWhite, 1117, 180))

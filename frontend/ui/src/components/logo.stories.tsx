@@ -7,19 +7,20 @@ PrioriCode logo assets: mark, splash, and wordmark.
 Use Mark for compact spaces, Logo for headers, Splash for hero sections.
 
 ### API
-- \`Mark\`, \`Splash\`, and \`Logo\` components accept standard SVG props.
+- \`Mark\` and \`Logo\` accept a \`class\` prop; \`Splash\` accepts \`class\` and \`ref\`.
 
 ### Variants and states
 - Multiple logo variants for different contexts.
 
 ### Behavior
-- Pure SVG rendering.
+- Raster rendering from generated brand assets; the light scheme swaps to
+  ink-colored variants via \`html[data-color-scheme]\`.
 
 ### Accessibility
-- Provide title/aria-label when logos convey meaning.
+- Images carry a "PrioriCode" alt label.
 
 ### Theming/tokens
-- Uses theme color tokens via CSS variables.
+- White art on dark schemes, ink art on light schemes.
 
 `
 
@@ -46,11 +47,13 @@ export const Basic = {
       </div>
       <div>
         <div style={{ color: "var(--text-weak)", "font-size": "12px" }}>Splash</div>
-        <mod.Splash style={{ width: "80px", height: "100px" }} />
+        <div style={{ width: "80px", height: "100px" }}>
+          <mod.Splash class="h-full w-full" />
+        </div>
       </div>
       <div>
         <div style={{ color: "var(--text-weak)", "font-size": "12px" }}>Logo</div>
-        <mod.Logo style={{ width: "200px" }} />
+        <mod.Logo class="w-[200px]" />
       </div>
     </div>
   ),
