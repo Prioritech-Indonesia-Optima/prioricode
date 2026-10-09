@@ -13,6 +13,7 @@ export type CommandInfo = Readonly<{
   description?: string
   category?: string
   enabled?: () => boolean
+  run?: () => void | Promise<void>
   suggested?: boolean
   hidden?: boolean
   onSelect?: () => void | Promise<void>
@@ -150,8 +151,9 @@ export function createKeymap(
     if (!commandEnabled(command)) return false
     if (input.dispatcher !== undefined) return input.dispatcher(command, event)
     const cmd = commandMap().get(command)
-    if (cmd?.onSelect === undefined) return false
-    void Promise.resolve(cmd.onSelect()).catch(() => {})
+    const handler = cmd?.run ?? cmd?.onSelect
+    if (handler === undefined) return false
+    void Promise.resolve(handler()).catch(() => {})
     return true
   }
 
@@ -159,8 +161,9 @@ export function createKeymap(
     if (!commandEnabled(command)) return false
     if (input.dispatcher !== undefined) return input.dispatcher(command, event)
     const cmd = commandMap().get(command)
-    if (cmd?.onSelect === undefined) return false
-    await cmd.onSelect()
+    const handler = cmd?.run ?? cmd?.onSelect
+    if (handler === undefined) return false
+    await handler()
     return true
   }
 

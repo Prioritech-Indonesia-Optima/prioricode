@@ -15,6 +15,8 @@ export namespace JSX {
     text: TextProps
     span: SpanProps
     scrollbox: ScrollBoxElementProps
+    input: Record<string, unknown>
+    textarea: Record<string, unknown>
   }
 }
 

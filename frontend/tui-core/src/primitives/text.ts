@@ -83,6 +83,7 @@ export class TextRenderable extends Renderable {
   private segments: TextSegment[] = []
   wrap: WrapMode = "word"
   align: "left" | "center" | "right" = "left"
+  attrs = 0
 
   constructor(style?: TextStyleProps) {
     super(style)
@@ -107,8 +108,8 @@ export class TextRenderable extends Renderable {
   }
 
   private currentSegments(): TextSegment[] {
-    if (!this.children.length) return this.segments
-    return collectSegments(this.children, { fg: this.fg, bg: this.bg, attrs: 0 })
+    if (!this.children.length) return this.segments.map((segment) => ({ ...segment, attrs: segment.attrs | this.attrs }))
+    return collectSegments(this.children, { fg: this.fg, bg: this.bg, attrs: this.attrs })
   }
 
   private place(width: number): Placed[][] {

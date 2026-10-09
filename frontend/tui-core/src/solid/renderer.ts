@@ -75,7 +75,7 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
     return
   }
   if (name === "fg" || name === "bg") {
-    node.restyle({ [name]: value as string | number })
+    node.restyle({ [name]: value as never })
     return
   }
   if (name === "visible") {
@@ -198,14 +198,28 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
       return
     }
   }
+  if (node instanceof TextRenderable || node instanceof SpanRenderable) {
+    if (name === "attributes") {
+      node.attrs = Number(value ?? 0)
+      node.markDirty()
+      return
+    }
+  }
   if (node instanceof TextRenderable) {
     if (name === "content" || name === "text") {
       node.content = value as never
       return
     }
-    if (name === "wrap") {
-      node.wrap = value as never
+    if (name === "wrap" || name === "wrapMode") {
+      node.wrap = (name === "wrapMode" && value === "none" ? "none" : value === "word" || value === "char" || value === "none" ? value : "word") as never
       node.markDirty()
+      return
+    }
+    if (name === "truncate") {
+      if (value) {
+        node.wrap = "none"
+        node.markDirty()
+      }
       return
     }
     if (name === "textAlign") {
@@ -225,7 +239,7 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
   }
   if (node instanceof BoxRenderable) {
     if (name === "border") {
-      node.border = value as BorderEdge | BorderEdge[] | "all"
+      node.border = value === true ? "all" : (value as BorderEdge | BorderEdge[] | "all")
       node.markDirty()
       return
     }

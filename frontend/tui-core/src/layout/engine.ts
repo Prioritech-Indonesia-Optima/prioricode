@@ -68,10 +68,10 @@ export class Renderable {
     if (style) this.restyle(style)
   }
 
-  restyle(style: Partial<Style> & { fg?: string | number; bg?: string | number }): void {
+  restyle(style: Partial<Style> & { fg?: unknown; bg?: unknown }): void {
     Object.assign(this.style, style)
-    if (style.fg !== undefined) this.fg = toColor(style.fg)
-    if (style.bg !== undefined) this.bg = toColor(style.bg)
+    if (style.fg !== undefined) this.fg = toColor(style.fg as never)
+    if (style.bg !== undefined) this.bg = toColor(style.bg as never)
     this.markDirty()
   }
 
@@ -111,10 +111,14 @@ export class Renderable {
   paint(_ctx: PaintContext): void {}
 }
 
-export function toColor(value: string | number | undefined): number {
+export function toColor(value: string | number | { toInts(): readonly number[] } | undefined): number {
   if (value === undefined) return NO_COLOR
   if (typeof value === "number") return value
-  return parseColor(value)
+  if (typeof value === "object" && typeof value.toInts === "function") {
+    const [r, g, b] = value.toInts()
+    return ((r ?? 0) << 16) | ((g ?? 0) << 8) | (b ?? 0)
+  }
+  return parseColor(String(value))
 }
 
 export type OverflowViolation = Readonly<{

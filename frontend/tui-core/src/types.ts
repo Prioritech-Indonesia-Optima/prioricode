@@ -2,6 +2,10 @@ export type Rect = Readonly<{ x: number; y: number; width: number; height: numbe
 
 export type Attributes = number
 
+export type ColorValue = Readonly<{ toInts(): readonly [number, number, number, number] }>
+
+export type ColorInput = string | number | ColorValue
+
 // Numeric parity with @opentui/core TextAttributes (verified against 0.4.5).
 export const Attr = {
   None: 0,
@@ -153,7 +157,7 @@ export type BorderEdge = "top" | "bottom" | "left" | "right"
 
 export type BoxStyle = Style & Readonly<{
   border?: BorderEdge | BorderEdge[] | "all"
-  borderColor?: string | number
+  borderColor?: ColorInput
   borderStyle?: "single"
   title?: string
 }>
@@ -163,8 +167,8 @@ export type TextMode = "primary" | "prepend" | "append"
 export type TextStyleProps = Style &
   Readonly<{
     content?: string
-    fg?: string | number
-    bg?: string | number
+    fg?: ColorInput
+    bg?: ColorInput
     attributes?: Attributes
     wrap?: WrapMode
     textAlign?: "left" | "center" | "right"

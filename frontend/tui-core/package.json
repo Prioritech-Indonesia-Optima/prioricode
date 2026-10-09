@@ -16,7 +16,13 @@
     "./solid/jsx-runtime": "./src/solid/jsx-runtime.ts",
     "./solid/jsx-dev-runtime": "./src/solid/jsx-dev-runtime.ts",
     "./compat": "./src/compat/index.ts",
-    "./abi": "./src/abi/surface.ts"
+    "./abi": "./src/abi/surface.ts",
+    "./compat/core": "./src/compat/core.ts",
+    "./compat/solid": "./src/compat/solid.ts",
+    "./compat/cli": "./src/compat/cli.ts",
+    "./compat/keymap": "./src/compat/keymap.ts",
+    "./compat/bindings": "./src/compat/bindings.ts",
+    "./compat/effects": "./src/compat/effects.ts"
   },
   "dependencies": {
     "solid-js": "catalog:",
