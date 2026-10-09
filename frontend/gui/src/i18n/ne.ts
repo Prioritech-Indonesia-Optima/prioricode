@@ -1181,6 +1181,14 @@ export const dict: Record<string, string> = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "टाढाको कार्यस्थान निर्देशिका (वैकल्पिक)",
+  "ssh.server.workspace.edit": "कार्यस्थान निर्देशिका सेट गर्नुहोस्",
+  "ssh.server.workspace.open": "कार्यस्थान खोल्नुहोस्",
+  "ssh.server.workspace.save": "बचत गर्नुहोस्",
+  "ssh.server.workspace.dialogTitle": "{{host}} मा कार्यस्थान निर्देशिका",
+  "ssh.auth.title": "SSH प्रमाणीकरण आवश्यक छ",
+  "ssh.auth.cancel": "रद्द गर्नुहोस्",
+  "ssh.auth.submit": "जारी राख्नुहोस्",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1206,6 +1214,8 @@ export const dict: Record<string, string> = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "कुञ्जी-आधारित प्रमाणीकरण प्रयोग गर्नुहोस् (आफ्नो कुञ्जी ssh-agent मा थप्नुहोस्), वा सोधिएको बेला आफ्नो पासवर्ड वा प्रमाणीकरण कोड प्रविष्ट गर्नुहोस्।",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1220,6 +1230,8 @@ export const dict: Record<string, string> = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "{{host}} का लागि स्थानीय SSH tunnel खोल्न सकिएन किनभने स्थानीय पोर्ट {{port}} पहिले नै प्रयोगमा छ।",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

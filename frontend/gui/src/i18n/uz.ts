@@ -1195,6 +1195,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Masofaviy ish maydoni katalogi (ixtiyoriy)",
+  "ssh.server.workspace.edit": "Ish maydoni katalogini belgilash",
+  "ssh.server.workspace.open": "Ish maydonini ochish",
+  "ssh.server.workspace.save": "Saqlash",
+  "ssh.server.workspace.dialogTitle": "{{host}} da ish maydoni katalogi",
+  "ssh.auth.title": "SSH autentifikatsiyasi talab qilinadi",
+  "ssh.auth.cancel": "Bekor qilish",
+  "ssh.auth.submit": "Davom eting",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1220,6 +1228,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Kalitga asoslangan autentifikatsiyadan foydalaning (kalitingizni ssh-agent-ga qoʻshing) yoki soʻralganda parolingizni yoki tasdiqlash kodini kiriting.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1234,6 +1244,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "{{host}} uchun mahalliy SSH tunnelini ochib boʻlmadi, chunki mahalliy {{port}} porti allaqachon band.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

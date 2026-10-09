@@ -1176,6 +1176,14 @@ export const dict: Record<string, string> = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "রিমোট ওয়ার্কস্পেস ডিরেক্টরি (ঐচ্ছিক)",
+  "ssh.server.workspace.edit": "ওয়ার্কস্পেস ডিরেক্টরি সেট করুন",
+  "ssh.server.workspace.open": "ওয়ার্কস্পেস খুলুন",
+  "ssh.server.workspace.save": "সংরক্ষণ করুন",
+  "ssh.server.workspace.dialogTitle": "{{host}}-এ ওয়ার্কস্পেস ডিরেক্টরি",
+  "ssh.auth.title": "SSH প্রমাণীকরণ প্রয়োজন",
+  "ssh.auth.cancel": "বাতিল করুন",
+  "ssh.auth.submit": "চালিয়ে যান",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1201,6 +1209,8 @@ export const dict: Record<string, string> = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "কী-ভিত্তিক প্রমাণীকরণ ব্যবহার করুন (ssh-agent-এ আপনার কী যোগ করুন), অথবা প্রম্পট করা হলে আপনার পাসওয়ার্ড বা যাচাইকরণ কোড লিখুন।",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1215,6 +1225,8 @@ export const dict: Record<string, string> = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "{{host}}-এর জন্য স্থানীয় SSH টানেল খোলা যায়নি, কারণ স্থানীয় পোর্ট {{port}} ইতিমধ্যেই ব্যবহৃত হচ্ছে।",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

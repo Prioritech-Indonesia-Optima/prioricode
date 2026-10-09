@@ -1191,6 +1191,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "원격 작업 공간 디렉터리 (선택 사항)",
+  "ssh.server.workspace.edit": "작업 공간 디렉터리 설정",
+  "ssh.server.workspace.open": "작업 공간 열기",
+  "ssh.server.workspace.save": "저장",
+  "ssh.server.workspace.dialogTitle": "{{host}}의 작업 공간 디렉터리",
+  "ssh.auth.title": "SSH 인증 필요",
+  "ssh.auth.cancel": "취소",
+  "ssh.auth.submit": "계속",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1216,6 +1224,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "키 기반 인증을 사용하거나(키를 ssh-agent에 추가), 메시지가 표시되면 비밀번호 또는 인증 코드를 입력하세요.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1230,6 +1240,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "로컬 포트 {{port}}이(가) 이미 사용 중이어서 {{host}}의 로컬 SSH 터널을 열 수 없습니다.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

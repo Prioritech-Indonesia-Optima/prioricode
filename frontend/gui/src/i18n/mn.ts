@@ -1191,6 +1191,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Алсын ажлын талбарын лавлах (заавал биш)",
+  "ssh.server.workspace.edit": "Ажлын талбарын лавлахыг тохируулах",
+  "ssh.server.workspace.open": "Ажлын талбарыг нээх",
+  "ssh.server.workspace.save": "Хадгалах",
+  "ssh.server.workspace.dialogTitle": "{{host}} дээрх ажлын талбарын лавлах",
+  "ssh.auth.title": "SSH баталгаажуулалт шаардлагатай",
+  "ssh.auth.cancel": "Цуцлах",
+  "ssh.auth.submit": "Үргэлжлүүлэх",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1216,6 +1224,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Түлхүүр дээр суурилсан баталгаажуулалт ашиглана уу (түлхүүрээ ssh-agent-д нэмнэ үү), эсвэл асуугдвал нууц үг эсвэл баталгаажуулах кодоо оруулна уу.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1230,6 +1240,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "{{host}}-д зориулсан дотоод SSH туннелийг нээж чадсангүй, учир нь дотоод порт {{port}} аль хэдийн ашиглагдаж байна.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

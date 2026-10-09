@@ -1182,6 +1182,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Adresár vzdialeného pracovného priestoru (voliteľné)",
+  "ssh.server.workspace.edit": "Nastaviť adresár pracovného priestoru",
+  "ssh.server.workspace.open": "Otvoriť pracovný priestor",
+  "ssh.server.workspace.save": "Uložiť",
+  "ssh.server.workspace.dialogTitle": "Adresár pracovného priestoru na {{host}}",
+  "ssh.auth.title": "Vyžaduje sa autentifikácia SSH",
+  "ssh.auth.cancel": "Zrušiť",
+  "ssh.auth.submit": "Pokračovať",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1207,6 +1215,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Použite overovanie pomocou kľúča (pridajte svoj kľúč do ssh-agent), alebo pri výzve zadajte heslo či overovací kód.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1221,6 +1231,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "Nepodarilo sa otvoriť lokálny SSH tunel pre {{host}}, pretože lokálny port {{port}} sa už používa.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

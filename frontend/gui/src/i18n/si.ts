@@ -1177,6 +1177,14 @@ export const dict: Record<string, string> = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "දුරස්ථ වැඩබිම් නාමාවලිය (විකල්ප)",
+  "ssh.server.workspace.edit": "වැඩබිම් නාමාවලිය සකසන්න",
+  "ssh.server.workspace.open": "වැඩබිම විවෘත කරන්න",
+  "ssh.server.workspace.save": "සුරකින්න",
+  "ssh.server.workspace.dialogTitle": "{{host}} හි වැඩබිම් නාමාවලිය",
+  "ssh.auth.title": "SSH සත්‍යාපනය අවශ්‍යයි",
+  "ssh.auth.cancel": "අවලංගු කරන්න",
+  "ssh.auth.submit": "දිගටම කරගෙන යන්න",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1202,6 +1210,8 @@ export const dict: Record<string, string> = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "යතුර මත පදනම් වූ සත්‍යාපනය භාවිතා කරන්න (ඔබේ යතුර ssh-agent වෙත එක් කරන්න), නැතහොත් ඉල්ලා සිටින විට ඔබේ මුරපදය හෝ තහවුරු කිරීමේ කේතය ඇතුළත් කරන්න.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1216,6 +1226,8 @@ export const dict: Record<string, string> = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "දේශීය වරාය {{port}} දැනටමත් භාවිතයේ ඇති බැවින් {{host}} සඳහා දේශීය SSH උමඟ විවෘත කිරීමට නොහැකි විය.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

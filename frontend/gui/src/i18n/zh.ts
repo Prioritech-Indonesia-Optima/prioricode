@@ -1251,6 +1251,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "远程工作区目录（可选）",
+  "ssh.server.workspace.edit": "设置工作区目录",
+  "ssh.server.workspace.open": "打开工作区",
+  "ssh.server.workspace.save": "保存",
+  "ssh.server.workspace.dialogTitle": "{{host}} 上的工作区目录",
+  "ssh.auth.title": "需要 SSH 认证",
+  "ssh.auth.cancel": "取消",
+  "ssh.auth.submit": "继续",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1276,6 +1284,7 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote": "使用基于密钥的认证（将你的密钥添加到 ssh-agent），或在出现提示时输入密码或验证码。",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1290,6 +1299,7 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy": "无法为 {{host}} 打开本地 SSH 隧道，因为本地端口 {{port}} 已被占用。",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

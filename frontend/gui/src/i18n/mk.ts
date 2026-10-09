@@ -1191,6 +1191,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Директориум на оддалечениот работен простор (изборно)",
+  "ssh.server.workspace.edit": "Поставете директориум на работниот простор",
+  "ssh.server.workspace.open": "Отворете го работниот простор",
+  "ssh.server.workspace.save": "Зачувај",
+  "ssh.server.workspace.dialogTitle": "Директориум на работниот простор на {{host}}",
+  "ssh.auth.title": "Потребна е SSH автентикација",
+  "ssh.auth.cancel": "Откажи",
+  "ssh.auth.submit": "Продолжи",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1216,6 +1224,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Користете автентикација со клуч (додадете го вашиот клуч во ssh-agent), или внесете лозинка или код за потврда кога ќе ви биде побарано.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1230,6 +1240,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "Не можеше да се отвори локалниот SSH тунел за {{host}} бидејќи локалната порта {{port}} веќе се користи.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

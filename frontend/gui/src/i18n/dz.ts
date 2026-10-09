@@ -1204,6 +1204,14 @@ export const dict: Record<string, string> = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "ཐག་རིང་གི་ ལཱ་གི་ས་སྒོ་གི་ སྣོད་འཛིན (གདམ་ཁ་ཅན།)",
+  "ssh.server.workspace.edit": "ལཱ་གི་ས་སྒོ་གི་ སྣོད་འཛིན་ གཞི་སྒྲིག་འབད།",
+  "ssh.server.workspace.open": "ལཱ་གི་ས་སྒོ་ ཁ་ཕྱེ།",
+  "ssh.server.workspace.save": "སྲུང༌སྐྱོབས༌འབད༌བ",
+  "ssh.server.workspace.dialogTitle": "{{host}} གུ་ ལཱ་གི་ས་སྒོ་གི་ སྣོད་འཛིན།",
+  "ssh.auth.title": "SSH བདེན་བཤད་ དགོཔ་ཨིན།",
+  "ssh.auth.cancel": "ཆ་མེད་བཏང་པ་",
+  "ssh.auth.submit": "འཕྲོ༌མཐུད",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1229,6 +1237,8 @@ export const dict: Record<string, string> = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "ལྡེ་མིག་རྟེན་ཅན་གྱི་ བདེན་བཤད་འདི་ ལག་ལེན་འཐབ་ (ཁྱོད་རའི་ ལྡེ་མིག་ ssh-agent ནང་ལུ་ ཁ་སྐོང་རྐྱབས)། ཡང་ན་ དྲི་བ་ཞུ་བའི་ སྐབས་ལུ་ ཁྱོད་རའི་ གསང་ཨང་ ཡང་ན་ ཞིབ་དཔྱད་ཨང་རྟགས་ བཙུགས།",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1243,6 +1253,8 @@ export const dict: Record<string, string> = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "ཉེ་གནས་འདྲེན་ལམ་ {{port}} འདི་ ཧེ་མ་ལས་རང་ ལག་ལེན་འཐབ་བཞིན་ཡོདཔ་ལས། {{host}} གི་ དོན་ལུ་ ཉེ་གནས་ SSH འགྲུལ་ལམ་ ཁ་ཕྱེ་མ་ཚུགས།",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

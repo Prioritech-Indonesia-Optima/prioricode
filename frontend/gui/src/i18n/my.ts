@@ -1200,6 +1200,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "အဝေးရှိ အလုပ်နေရာဖိုင်တွဲ (ချန်လှပ်ထားနိုင်သည်)",
+  "ssh.server.workspace.edit": "အလုပ်နေရာဖိုင်တွဲကို သတ်မှတ်ရန်",
+  "ssh.server.workspace.open": "အလုပ်နေရာကို ဖွင့်ရန်",
+  "ssh.server.workspace.save": "သိမ်းဆည်းပါ။",
+  "ssh.server.workspace.dialogTitle": "{{host}} ပေါ်ရှိ အလုပ်နေရာဖိုင်တွဲ",
+  "ssh.auth.title": "SSH အထောက်အထားစိစစ်ခြင်း လိုအပ်သည်။",
+  "ssh.auth.cancel": "မလုပ်တော့",
+  "ssh.auth.submit": "ဆက်ရန်",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1225,6 +1233,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "key အပေါ်အခြေခံသည့် အထောက်အထားစိစစ်ခြင်းကို အသုံးပြုပါ (သင့် key ကို ssh-agent တွင် ထည့်ပါ)၊ သို့မဟုတ် တောင်းဆိုလာပါက စကားဝှက် သို့မဟုတ် အတည်ပြုကုဒ်ကို ထည့်သွင်းပါ။",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1239,6 +1249,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "ဒေသတွင်းပို့တ် {{port}} ကို အသုံးပြုနေပြီးဖြစ်သောကြောင့် {{host}} အတွက် ဒေသတွင်း SSH tunnel ကို ဖွင့်၍မရပါ။",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

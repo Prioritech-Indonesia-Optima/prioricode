@@ -1185,6 +1185,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Directorul spațiului de lucru la distanță (opțional)",
+  "ssh.server.workspace.edit": "Setează directorul spațiului de lucru",
+  "ssh.server.workspace.open": "Deschide spațiul de lucru",
+  "ssh.server.workspace.save": "Salvează",
+  "ssh.server.workspace.dialogTitle": "Directorul spațiului de lucru pe {{host}}",
+  "ssh.auth.title": "Autentificare SSH necesară",
+  "ssh.auth.cancel": "Anulează",
+  "ssh.auth.submit": "Continuă",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1210,6 +1218,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Folosește autentificarea bazată pe cheie (adăugă-ți cheia în ssh-agent), sau introdu parola ori codul de verificare când ți se solicită.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1224,6 +1234,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "Nu s-a putut deschide tunelul SSH local pentru {{host}}, deoarece portul local {{port}} este deja utilizat.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

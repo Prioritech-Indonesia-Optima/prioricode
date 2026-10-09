@@ -1285,6 +1285,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Каталог удалённого рабочего пространства (необязательно)",
+  "ssh.server.workspace.edit": "Указать каталог рабочего пространства",
+  "ssh.server.workspace.open": "Открыть рабочее пространство",
+  "ssh.server.workspace.save": "Сохранить",
+  "ssh.server.workspace.dialogTitle": "Каталог рабочего пространства на {{host}}",
+  "ssh.auth.title": "Требуется аутентификация SSH",
+  "ssh.auth.cancel": "Отмена",
+  "ssh.auth.submit": "Продолжить",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1310,6 +1318,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Используйте аутентификацию на основе ключей (добавьте свой ключ в ssh-agent), или введите пароль либо код подтверждения, когда появится запрос.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1324,6 +1334,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "Не удалось открыть локальный SSH-туннель для {{host}}: локальный порт {{port}} уже используется.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

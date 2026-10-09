@@ -1192,6 +1192,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Thư mục không gian làm việc từ xa (tùy chọn)",
+  "ssh.server.workspace.edit": "Đặt thư mục không gian làm việc",
+  "ssh.server.workspace.open": "Mở không gian làm việc",
+  "ssh.server.workspace.save": "Lưu",
+  "ssh.server.workspace.dialogTitle": "Thư mục không gian làm việc trên {{host}}",
+  "ssh.auth.title": "Cần xác thực SSH",
+  "ssh.auth.cancel": "Hủy",
+  "ssh.auth.submit": "Tiếp tục",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1217,6 +1225,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Sử dụng xác thực bằng khóa (thêm khóa của bạn vào ssh-agent), hoặc nhập mật khẩu hay mã xác minh khi được nhắc.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1231,6 +1241,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "Không thể mở đường hầm SSH cục bộ cho {{host}} vì cổng cục bộ {{port}} đã được sử dụng.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

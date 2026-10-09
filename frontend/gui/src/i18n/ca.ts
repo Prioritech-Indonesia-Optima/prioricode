@@ -1196,6 +1196,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Directori de l'espai de treball remot (opcional)",
+  "ssh.server.workspace.edit": "Estableix el directori de l'espai de treball",
+  "ssh.server.workspace.open": "Obre l'espai de treball",
+  "ssh.server.workspace.save": "Desa",
+  "ssh.server.workspace.dialogTitle": "Directori de l'espai de treball a {{host}}",
+  "ssh.auth.title": "Cal autenticació SSH",
+  "ssh.auth.cancel": "Cancel·la",
+  "ssh.auth.submit": "Continua",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1221,6 +1229,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Utilitzeu l'autenticació basada en claus (afegiu la vostra clau a ssh-agent), o introduïu la contrasenya o el codi de verificació quan se us sol·liciti.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1235,6 +1245,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "No s'ha pogut obrir el túnel SSH local per a {{host}} perquè el port local {{port}} ja està en ús.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

@@ -1196,6 +1196,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "Κατάλογος απομακρυσμένου χώρου εργασίας (προαιρετικό)",
+  "ssh.server.workspace.edit": "Ορισμός καταλόγου χώρου εργασίας",
+  "ssh.server.workspace.open": "Άνοιγμα χώρου εργασίας",
+  "ssh.server.workspace.save": "Αποθήκευση",
+  "ssh.server.workspace.dialogTitle": "Κατάλογος χώρου εργασίας στο {{host}}",
+  "ssh.auth.title": "Απαιτείται έλεγχος ταυτότητας SSH",
+  "ssh.auth.cancel": "Ακύρωση",
+  "ssh.auth.submit": "Συνέχεια",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1221,6 +1229,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "Χρησιμοποιήστε έλεγχο ταυτότητας με βάση τα κλειδιά (προσθέστε το κλειδί σας στο ssh-agent) ή εισάγετε τον κωδικό πρόσβασης ή τον κωδικό επαλήθευσης όταν σας ζητηθεί.",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1235,6 +1245,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "Δεν ήταν δυνατό το άνοιγμα της τοπικής σήραγγας SSH για {{host}} επειδή η τοπική θύρα {{port}} χρησιμοποιείται ήδη.",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

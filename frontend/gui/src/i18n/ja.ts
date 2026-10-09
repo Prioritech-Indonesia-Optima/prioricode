@@ -1194,6 +1194,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "リモートのワークスペースディレクトリ (オプション)",
+  "ssh.server.workspace.edit": "ワークスペースディレクトリを設定",
+  "ssh.server.workspace.open": "ワークスペースを開く",
+  "ssh.server.workspace.save": "保存",
+  "ssh.server.workspace.dialogTitle": "{{host}} のワークスペースディレクトリ",
+  "ssh.auth.title": "SSH認証が必要です",
+  "ssh.auth.cancel": "キャンセル",
+  "ssh.auth.submit": "続行",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1219,6 +1227,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "キーベースの認証（ssh-agentにキーを追加）を使用するか、プロンプトが表示されたらパスワードまたは認証コードを入力してください。",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1233,6 +1243,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "ローカルポート {{port}} が既に使用中のため、{{host}} へのローカル SSH トンネルを開けませんでした。",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

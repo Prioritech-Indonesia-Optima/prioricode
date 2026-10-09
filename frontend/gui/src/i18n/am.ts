@@ -1154,6 +1154,14 @@ export const dict = {
   "ssh.server.dialog.add": "Connect",
   "ssh.server.status.starting": "Connecting...",
   "ssh.server.status.connected": "Connected",
+  "ssh.server.workspace.placeholder": "የሩቅ Workspace አቃፊ (አማራጭ)",
+  "ssh.server.workspace.edit": "የWorkspace አቃፊ አዘጋጅ",
+  "ssh.server.workspace.open": "Workspace ክፈት",
+  "ssh.server.workspace.save": "አስቀምጥ",
+  "ssh.server.workspace.dialogTitle": "በ{{host}} ላይ ያለ የWorkspace አቃፊ",
+  "ssh.auth.title": "የSSH ማረጋገጥ ያስፈልጋል",
+  "ssh.auth.cancel": "ሰርዝ",
+  "ssh.auth.submit": "ቀጥል",
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode is not installed on {{host}}. Install it from the SSH servers settings.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap on {{host}} failed ({{code}})",
@@ -1179,6 +1187,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
+  "desktop.ssh.error.authDeniedNote":
+    "የቁልፍ ላይ የተመሠረተ ማረጋገጥ ይጠቀሙ (ቁልፍዎን ወደ ssh-agent ያክሉ)፣ ወይም ሲጠየቁ የይለፍ ቃልዎን ወይም የማረጋገጫ ኮድ ያስገቡ።",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":
@@ -1193,6 +1203,8 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
+  "desktop.ssh.error.localPortBusy":
+    "አካባቢያዊውን የSSH ቱናል ለ{{host}} መክፈት አልተቻለም፣ አካባቢያዊው ፖርት {{port}} አስቀድሞ ጥቅም ላይ ስለሆነ።",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",
