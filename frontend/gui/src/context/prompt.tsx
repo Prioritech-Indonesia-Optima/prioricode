@@ -100,8 +100,7 @@ export const { use: usePrompt, provider: PromptProvider } = createSimpleContext(
     }
 
     const owner = getOwner()
-    const serverKey = () =>
-      serverKeyFromSegment(params.serverKey) ?? ServerConnection.key(serverSDK().server)
+    const serverKey = () => serverKeyFromSegment(params.serverKey) ?? ServerConnection.key(serverSDK().server)
     const scope = (): PromptScope =>
       search.draftId ? { draftID: search.draftId } : { dir: base64Encode(sdk().directory), id: params.id }
     const load = (scope: PromptScope) => {
