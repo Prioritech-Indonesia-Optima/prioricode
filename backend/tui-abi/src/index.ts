@@ -77,7 +77,9 @@ export interface AbiKeymap {
   registerLayer(layer: AbiLayer): () => void
   registerCommand(command: AbiCommand): () => void
   dispatchCommand(name: string): boolean | Promise<boolean>
-  getCommandBindings(input: Readonly<{ visibility?: string; commands?: readonly string[] }>): ReadonlyMap<string, readonly string[]>
+  getCommandBindings(
+    input: Readonly<{ visibility?: string; commands?: readonly string[] }>,
+  ): ReadonlyMap<string, readonly string[]>
   formatBindings(bindings: readonly string[] | undefined): string | undefined
   formatSequence(parts: readonly string[] | undefined): string
 }

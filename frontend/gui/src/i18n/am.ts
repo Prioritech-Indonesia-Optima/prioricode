@@ -1203,8 +1203,7 @@ export const dict = {
     "Another connection is still starting the PrioriCode server on {{host}}. Try again in a moment.",
   "desktop.ssh.error.insecureBind":
     "The PrioriCode server on {{host}} bound to {{address}} instead of loopback. Set server.hostname to 127.0.0.1 in the remote PrioriCode config.",
-  "desktop.ssh.error.localPortBusy":
-    "አካባቢያዊውን የSSH ቱናል ለ{{host}} መክፈት አልተቻለም፣ አካባቢያዊው ፖርት {{port}} አስቀድሞ ጥቅም ላይ ስለሆነ።",
+  "desktop.ssh.error.localPortBusy": "አካባቢያዊውን የSSH ቱናል ለ{{host}} መክፈት አልተቻለም፣ አካባቢያዊው ፖርት {{port}} አስቀድሞ ጥቅም ላይ ስለሆነ።",
   "settings.general.row.savedPermissions.title": "Saved permissions",
   "settings.general.row.savedPermissions.description": "Always-allow rules stored on this server.",
   "settings.general.row.savedPermissions.manage": "Manage",

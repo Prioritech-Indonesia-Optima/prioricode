@@ -1284,7 +1284,8 @@ export const dict = {
   "desktop.ssh.error.sshMissing":
     "The ssh command was not found on this system. Install an OpenSSH client to connect to remote hosts.",
   "desktop.ssh.error.probeFailed": "Could not connect to {{host}} over SSH (exit code {{code}}).",
-  "desktop.ssh.error.authDeniedNote": "使用基于密钥的认证（将你的密钥添加到 ssh-agent），或在出现提示时输入密码或验证码。",
+  "desktop.ssh.error.authDeniedNote":
+    "使用基于密钥的认证（将你的密钥添加到 ssh-agent），或在出现提示时输入密码或验证码。",
   "desktop.ssh.error.authDenied":
     "SSH authentication failed for {{host}}. PrioriCode connects without prompts, so add your key to the server (for example with ssh-copy-id) or load it into a running SSH agent.",
   "desktop.ssh.error.hostUnresolved":

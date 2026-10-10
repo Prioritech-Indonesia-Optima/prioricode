@@ -108,7 +108,8 @@ export class TextRenderable extends Renderable {
   }
 
   private currentSegments(): TextSegment[] {
-    if (!this.children.length) return this.segments.map((segment) => ({ ...segment, attrs: segment.attrs | this.attrs }))
+    if (!this.children.length)
+      return this.segments.map((segment) => ({ ...segment, attrs: segment.attrs | this.attrs }))
     return collectSegments(this.children, { fg: this.fg, bg: this.bg, attrs: this.attrs })
   }
 
@@ -227,7 +228,11 @@ function collectSegments(
       continue
     }
     if (node instanceof SpanRenderable) {
-      const nextInherit = { fg: node.fg !== -1 ? node.fg : inherit.fg, bg: node.bg !== -1 ? node.bg : inherit.bg, attrs: node.attrs | inherit.attrs }
+      const nextInherit = {
+        fg: node.fg !== -1 ? node.fg : inherit.fg,
+        bg: node.bg !== -1 ? node.bg : inherit.bg,
+        attrs: node.attrs | inherit.attrs,
+      }
       out.push(...collectSegments(node.children, nextInherit))
       continue
     }
@@ -278,4 +283,3 @@ export function wordWrapPlace(lines: Placed[][], width: number): Placed[][] {
   }
   return out.length ? out : [[]]
 }
-

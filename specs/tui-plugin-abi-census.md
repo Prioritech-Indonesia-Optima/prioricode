@@ -5,11 +5,11 @@ rewrite (see `plans/tui-engine-rewrite.md`). Recorded during Phase 0.
 
 ## Where plugins come from
 
-| Source | Population | Evidence |
-| --- | --- | --- |
-| In-repo smoke plugin | 1 | `.prioricode/plugins/tui-smoke.tsx` |
-| User-level plugins | 0 | `~/.config/prioricode/plugins/` does not exist on this machine (`~/.config/prioricode/` holds only `prioricode.jsonc` and `skills/`) |
-| npm-published external plugins | unknown | The public API `@opencode-ai/plugin/tui` (`.prioricode/node_modules/@opencode-ai/plugin/dist/tui.d.ts`) is a real published contract; its consumer population is not enumerable from this repo |
+| Source                         | Population | Evidence                                                                                                                                                                                       |
+| ------------------------------ | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| In-repo smoke plugin           | 1          | `.prioricode/plugins/tui-smoke.tsx`                                                                                                                                                            |
+| User-level plugins             | 0          | `~/.config/prioricode/plugins/` does not exist on this machine (`~/.config/prioricode/` holds only `prioricode.jsonc` and `skills/`)                                                           |
+| npm-published external plugins | unknown    | The public API `@opencode-ai/plugin/tui` (`.prioricode/node_modules/@opencode-ai/plugin/dist/tui.d.ts`) is a real published contract; its consumer population is not enumerable from this repo |
 
 Because the external population is unknown, the shim is mandatory rather than
 optional (locked decision from the plan).

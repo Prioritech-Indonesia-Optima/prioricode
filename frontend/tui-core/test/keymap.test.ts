@@ -23,7 +23,12 @@ function keyEvent(
 function harness(dispatcher?: CommandDispatcher) {
   const hits: { name: string; event: KeyEvent | undefined }[] = []
   const km = createKeymap({
-    dispatcher: dispatcher ?? ((name, event) => { hits.push({ name, event }); return true }),
+    dispatcher:
+      dispatcher ??
+      ((name, event) => {
+        hits.push({ name, event })
+        return true
+      }),
   })
   return { km, hits }
 }
@@ -76,28 +81,30 @@ test("dispatches single-key bindings through the dispatcher", () => {
   expect(km.dispatch(keyEvent("s", { ctrl: true }))).toBe(true)
   expect(hits).toEqual([{ name: "file.save", event: expect.objectContaining({ name: "s" }) }])
   expect(km.dispatch(keyEvent("s"))).toBe(false)
-  expect(km.dispatch({ kind: "mouse", type: "down", button: 0, x: 0, y: 0, ctrl: false, alt: false, shift: false })).toBe(false)
+  expect(
+    km.dispatch({ kind: "mouse", type: "down", button: 0, x: 0, y: 0, ctrl: false, alt: false, shift: false }),
+  ).toBe(false)
 })
 
 test("highest-priority layer owns a command binding; ties favor earlier registration", () => {
   const { km, hits } = harness()
-  km.registerLayer({ id: "low", priority: 1, bindings: { "cmd": "ctrl+x" } })
-  km.registerLayer({ id: "high", priority: 10, bindings: { "cmd": "ctrl+y" } })
+  km.registerLayer({ id: "low", priority: 1, bindings: { cmd: "ctrl+x" } })
+  km.registerLayer({ id: "high", priority: 10, bindings: { cmd: "ctrl+y" } })
   expect(km.dispatch(keyEvent("x", { ctrl: true }))).toBe(false)
   expect(km.dispatch(keyEvent("y", { ctrl: true }))).toBe(true)
   expect(hits.map((h) => h.name)).toEqual(["cmd"])
 
   const second = harness()
-  second.km.registerLayer({ id: "first", bindings: { "cmd": "ctrl+a" } })
-  second.km.registerLayer({ id: "second", bindings: { "cmd": "ctrl+b" } })
+  second.km.registerLayer({ id: "first", bindings: { cmd: "ctrl+a" } })
+  second.km.registerLayer({ id: "second", bindings: { cmd: "ctrl+b" } })
   expect(second.km.dispatch(keyEvent("a", { ctrl: true }))).toBe(true)
   expect(second.km.dispatch(keyEvent("b", { ctrl: true }))).toBe(false)
 })
 
 test("false binding disables a command bound by a lower layer", () => {
   const { km } = harness()
-  km.registerLayer({ id: "base", priority: 1, bindings: { "cmd": "ctrl+x" } })
-  km.registerLayer({ id: "inhibit", priority: 10, bindings: { "cmd": false } })
+  km.registerLayer({ id: "base", priority: 1, bindings: { cmd: "ctrl+x" } })
+  km.registerLayer({ id: "inhibit", priority: 10, bindings: { cmd: false } })
   expect(km.dispatch(keyEvent("x", { ctrl: true }))).toBe(false)
 })
 
@@ -160,7 +167,7 @@ test("disabled commands do not fire and are excluded from commands()", () => {
   km.registerLayer({
     id: "base",
     commands: [{ name: "gated", enabled: () => enabled }],
-    bindings: { "gated": "ctrl+g" },
+    bindings: { gated: "ctrl+g" },
   })
   expect(km.dispatch(keyEvent("g", { ctrl: true }))).toBe(false)
   expect(km.commands().map((c) => c.name)).toEqual([])
@@ -197,7 +204,7 @@ test("commands() is sorted, deduped, and limited to enabled layers plus globals"
 
 test("unregister stops contributions and clears stale pending chains", async () => {
   const { km, hits } = harness()
-  const off = km.registerLayer({ id: "temp", bindings: { "cmd": "ctrl+x k" } })
+  const off = km.registerLayer({ id: "temp", bindings: { cmd: "ctrl+x k" } })
   expect(await km.press("ctrl+x")).toBe(false)
   expect(km.pendingChain()).toEqual(["ctrl+x"])
   off()
@@ -209,8 +216,13 @@ test("unregister stops contributions and clears stale pending chains", async () 
 test("falls back to command onSelect when no dispatcher is configured", async () => {
   let fired = 0
   const km = createKeymap()
-  km.registerCommand({ name: "picked", onSelect: () => { fired++ } })
-  km.registerLayer({ id: "base", bindings: { "picked": "ctrl+p" } })
+  km.registerCommand({
+    name: "picked",
+    onSelect: () => {
+      fired++
+    },
+  })
+  km.registerLayer({ id: "base", bindings: { picked: "ctrl+p" } })
   expect(km.dispatch(keyEvent("p", { ctrl: true }))).toBe(true)
   expect(await km.press("ctrl+p")).toBe(true)
   expect(fired).toBe(2)

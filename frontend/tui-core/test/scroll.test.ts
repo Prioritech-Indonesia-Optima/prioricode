@@ -5,14 +5,24 @@ import { createTestRenderer } from "../src/testing/test-renderer"
 import { ScrollBoxRenderable, SCROLL_WHEEL_ROWS } from "../src/primitives/scroll"
 import { createElementTag } from "../src/solid/renderer"
 
-function fill(scroll: ScrollBoxRenderable, app: Awaited<ReturnType<typeof createTestRenderer>>, rows: number, prefix = "ROW"): void {
+function fill(
+  scroll: ScrollBoxRenderable,
+  app: Awaited<ReturnType<typeof createTestRenderer>>,
+  rows: number,
+  prefix = "ROW",
+): void {
   for (let i = 0; i < rows; i++) scroll.addChild(app.text({ content: `${prefix}${i}`, wrap: "none" }))
 }
 
 test("clips children outside the viewport and never paints off-screen rows", async () => {
   const app = await createTestRenderer({ width: 20, height: 4 })
   try {
-    const scroll = app.scrollbox({ width: 20, height: 4, stickyScroll: false, verticalScrollbarOptions: { visible: false } })
+    const scroll = app.scrollbox({
+      width: 20,
+      height: 4,
+      stickyScroll: false,
+      verticalScrollbarOptions: { visible: false },
+    })
     fill(scroll, app, 6)
     app.root.addChild(scroll)
     app.renderer.renderNow()
@@ -40,7 +50,12 @@ test("clips children outside the viewport and never paints off-screen rows", asy
 test("scrollBy and scrollTo clamp to whole rows within bounds", async () => {
   const app = await createTestRenderer({ width: 20, height: 4 })
   try {
-    const scroll = app.scrollbox({ width: 20, height: 4, stickyScroll: false, verticalScrollbarOptions: { visible: false } })
+    const scroll = app.scrollbox({
+      width: 20,
+      height: 4,
+      stickyScroll: false,
+      verticalScrollbarOptions: { visible: false },
+    })
     fill(scroll, app, 6)
     app.root.addChild(scroll)
     app.renderer.renderNow()
@@ -111,7 +126,12 @@ test("sticky scroll pins at end, survives content growth, and is disabled by scr
 test("scrollToEnd pins to the bottom of the content", async () => {
   const app = await createTestRenderer({ width: 10, height: 4 })
   try {
-    const scroll = app.scrollbox({ width: 10, height: 4, stickyScroll: false, verticalScrollbarOptions: { visible: false } })
+    const scroll = app.scrollbox({
+      width: 10,
+      height: 4,
+      stickyScroll: false,
+      verticalScrollbarOptions: { visible: false },
+    })
     fill(scroll, app, 10, "B")
     app.root.addChild(scroll)
     app.renderer.renderNow()
@@ -133,7 +153,12 @@ test("scrollToEnd pins to the bottom of the content", async () => {
 test("wheel events scroll three rows and stop propagation when handled", async () => {
   const app = await createTestRenderer({ width: 10, height: 4 })
   try {
-    const scroll = app.scrollbox({ width: 10, height: 4, stickyScroll: false, verticalScrollbarOptions: { visible: false } })
+    const scroll = app.scrollbox({
+      width: 10,
+      height: 4,
+      stickyScroll: false,
+      verticalScrollbarOptions: { visible: false },
+    })
     fill(scroll, app, 10, "B")
     app.root.addChild(scroll)
     app.renderer.renderNow()
@@ -141,18 +166,54 @@ test("wheel events scroll three rows and stop propagation when handled", async (
     app.renderer.renderNow()
     expect(scroll.y).toBe(0)
 
-    const handledDown = app.renderer.handleMouse({ kind: "mouse", type: "wheelDown", button: 0, x: 5, y: 2, ctrl: false, alt: false, shift: false })
+    const handledDown = app.renderer.handleMouse({
+      kind: "mouse",
+      type: "wheelDown",
+      button: 0,
+      x: 5,
+      y: 2,
+      ctrl: false,
+      alt: false,
+      shift: false,
+    })
     expect(handledDown).toBe(true)
     expect(scroll.y).toBe(SCROLL_WHEEL_ROWS)
     app.renderer.renderNow()
     expect(app.charFrame().split("\n")[0]).toBe("B3")
 
-    app.renderer.handleMouse({ kind: "mouse", type: "wheelUp", button: 0, x: 5, y: 2, ctrl: false, alt: false, shift: false })
+    app.renderer.handleMouse({
+      kind: "mouse",
+      type: "wheelUp",
+      button: 0,
+      x: 5,
+      y: 2,
+      ctrl: false,
+      alt: false,
+      shift: false,
+    })
     expect(scroll.y).toBe(0)
-    app.renderer.handleMouse({ kind: "mouse", type: "wheelUp", button: 0, x: 5, y: 2, ctrl: false, alt: false, shift: false })
+    app.renderer.handleMouse({
+      kind: "mouse",
+      type: "wheelUp",
+      button: 0,
+      x: 5,
+      y: 2,
+      ctrl: false,
+      alt: false,
+      shift: false,
+    })
     expect(scroll.y).toBe(0)
 
-    const outside = app.renderer.handleMouse({ kind: "mouse", type: "wheelDown", button: 0, x: 15, y: 2, ctrl: false, alt: false, shift: false })
+    const outside = app.renderer.handleMouse({
+      kind: "mouse",
+      type: "wheelDown",
+      button: 0,
+      x: 15,
+      y: 2,
+      ctrl: false,
+      alt: false,
+      shift: false,
+    })
     expect(outside).toBe(false)
     expect(scroll.y).toBe(0)
   } finally {
@@ -167,7 +228,10 @@ test("visible scrollbar paints a proportional thumb in the last column", async (
       width: 10,
       height: 6,
       stickyScroll: false,
-      verticalScrollbarOptions: { visible: true, trackOptions: { foregroundColor: "#ff0000", backgroundColor: "#000011" } },
+      verticalScrollbarOptions: {
+        visible: true,
+        trackOptions: { foregroundColor: "#ff0000", backgroundColor: "#000011" },
+      },
     })
     fill(scroll, app, 12, "C")
     app.root.addChild(scroll)
@@ -195,7 +259,12 @@ test("visible scrollbar paints a proportional thumb in the last column", async (
 test("hidden scrollbar consumes no column", async () => {
   const app = await createTestRenderer({ width: 20, height: 2 })
   try {
-    const scroll = app.scrollbox({ width: 20, height: 2, stickyScroll: false, verticalScrollbarOptions: { visible: false } })
+    const scroll = app.scrollbox({
+      width: 20,
+      height: 2,
+      stickyScroll: false,
+      verticalScrollbarOptions: { visible: false },
+    })
     scroll.addChild(app.text({ content: "A".repeat(20), wrap: "none" }))
     app.root.addChild(scroll)
     app.renderer.renderNow()

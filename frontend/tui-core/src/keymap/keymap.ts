@@ -56,9 +56,7 @@ export type Keymap = Readonly<{
   mode(): string
 }>
 
-export function createKeymap(
-  input: Readonly<{ dispatcher?: CommandDispatcher }> = {},
-): Readonly<{
+export function createKeymap(input: Readonly<{ dispatcher?: CommandDispatcher }> = {}): Readonly<{
   registerLayer(layer: KeymapLayer): () => void
   registerCommand(cmd: CommandInfo): () => void
   commandBindings(names: readonly string[]): ReadonlyMap<string, readonly string[]>

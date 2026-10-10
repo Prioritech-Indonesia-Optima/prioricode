@@ -81,10 +81,7 @@ export function registerSshIpcHandlers(controller: SshServersController) {
     ),
   )
   ipcMain.handle("ssh-servers-set-workspace", (_event: IpcMainInvokeEvent, id: string, workspace: unknown) =>
-    controller.setWorkspace(
-      requireSshIpcString("server id", id),
-      typeof workspace === "string" ? workspace : "",
-    ),
+    controller.setWorkspace(requireSshIpcString("server id", id), typeof workspace === "string" ? workspace : ""),
   )
   ipcMain.handle("ssh-servers-remove", (_event: IpcMainInvokeEvent, id: string) =>
     controller.removeServer(requireSshIpcString("server id", id)),

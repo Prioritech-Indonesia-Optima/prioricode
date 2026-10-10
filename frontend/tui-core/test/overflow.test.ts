@@ -7,8 +7,19 @@ await createLayoutEngine()
 
 function makeStatusRow(width: number): Renderable {
   const root = new Renderable({ flexDirection: "row", width, height: 1, display: "flex" })
-  const content = new Renderable({ flexGrow: 1, flexShrink: 1, minWidth: 0, flexDirection: "row", height: 1, display: "flex", overflow: "hidden" })
-  const long = new TextRenderable({ content: "Error: 429 this model's maximum context length is 200000 tokens, please retry later", wrap: "none" })
+  const content = new Renderable({
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    height: 1,
+    display: "flex",
+    overflow: "hidden",
+  })
+  const long = new TextRenderable({
+    content: "Error: 429 this model's maximum context length is 200000 tokens, please retry later",
+    wrap: "none",
+  })
   content.addChild(long)
   const hint = new TextRenderable({ content: "esc interrupt", wrap: "none" })
   root.addChild(content)
@@ -43,7 +54,13 @@ test("nested boxes cannot overflow the viewport at any size", () => {
   const body = new TextRenderable({ content: "x".repeat(4000), wrap: "word" })
   panel.addChild(body)
   root.addChild(panel)
-  for (const [w, h] of [[80, 24], [40, 12], [120, 40], [15, 5], [9, 3]] as const) {
+  for (const [w, h] of [
+    [80, 24],
+    [40, 12],
+    [120, 40],
+    [15, 5],
+    [9, 3],
+  ] as const) {
     const report = layoutEngine().calculate(root, w, h)
     expect(panel.layoutRect.x + panel.layoutRect.width).toBeLessThanOrEqual(w)
     expect(body.layoutRect.width).toBeLessThanOrEqual(w)

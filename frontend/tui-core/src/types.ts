@@ -105,7 +105,7 @@ export type InputEvent =
   | (Readonly<{ kind: "resize" }> & ResizeEvent)
   | (Readonly<{ kind: "osc"; code: number }> & Readonly<{ data: string }>)
   | (Readonly<{ kind: "dcs" }> & Readonly<{ prefix: string; data: string }>)
-  | (Readonly<{ kind: "unknown"; data: string }>)
+  | Readonly<{ kind: "unknown"; data: string }>
 
 export type OscCapabilities = Readonly<{ osc5522: boolean; osc52: boolean; dcs: boolean }>
 
@@ -155,12 +155,13 @@ export const WIDTH_AUTO = -1
 
 export type BorderEdge = "top" | "bottom" | "left" | "right"
 
-export type BoxStyle = Style & Readonly<{
-  border?: BorderEdge | BorderEdge[] | "all"
-  borderColor?: ColorInput
-  borderStyle?: "single"
-  title?: string
-}>
+export type BoxStyle = Style &
+  Readonly<{
+    border?: BorderEdge | BorderEdge[] | "all"
+    borderColor?: ColorInput
+    borderStyle?: "single"
+    title?: string
+  }>
 
 export type TextMode = "primary" | "prepend" | "append"
 

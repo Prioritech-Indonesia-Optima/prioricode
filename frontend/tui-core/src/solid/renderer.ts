@@ -211,7 +211,13 @@ function setProperty(node: Renderable, name: string, value: unknown): void {
       return
     }
     if (name === "wrap" || name === "wrapMode") {
-      node.wrap = (name === "wrapMode" && value === "none" ? "none" : value === "word" || value === "char" || value === "none" ? value : "word") as never
+      node.wrap = (
+        name === "wrapMode" && value === "none"
+          ? "none"
+          : value === "word" || value === "char" || value === "none"
+            ? value
+            : "word"
+      ) as never
       node.markDirty()
       return
     }
@@ -297,4 +303,3 @@ export const {
   mergeProps,
   use,
 } = createRenderer(options)
-

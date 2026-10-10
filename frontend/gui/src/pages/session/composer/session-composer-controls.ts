@@ -96,8 +96,7 @@ export function createPromptProjectControls() {
     if (!conn) return list
     const key = ServerConnection.key(conn)
     const present = list.some(
-      (project) =>
-        (!project.server || project.server.key === key) && pathKey(project.worktree) === pathKey(workspace),
+      (project) => (!project.server || project.server.key === key) && pathKey(project.worktree) === pathKey(workspace),
     )
     if (present) return list
     return [

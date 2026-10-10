@@ -41,7 +41,12 @@ test("home slice renders, accepts typing/paste, pins the status hint", async () 
         <text wrap="none" attributes={TextAttributes.BOLD}>
           PrioriCode — your terminal pair
         </text>
-        <textarea width="100%" flexGrow={1} placeholder="ask for anything…" ref={(r: { plainText: string }) => (textarea = r)} />
+        <textarea
+          width="100%"
+          flexGrow={1}
+          placeholder="ask for anything…"
+          ref={(r: { plainText: string }) => (textarea = r)}
+        />
         <box flexDirection="row" width="100%" flexShrink={0}>
           <box minWidth={0} flexShrink={1} overflow="hidden">
             <text flexShrink={0} wrapMode="none" fg={RGBA.fromHex("#ff0000")}>

@@ -133,7 +133,10 @@ async function tile(size: number, mark: Buffer, opts: { rounded?: boolean; fill?
   const mh = Math.round(size * fill)
   const mw = Math.round(mh * (meta.width! / meta.height!))
   const scaled = await sharp(mark).resize(mw, mh, { fit: "fill" }).png().toBuffer()
-  return sharp(bg).composite([{ input: scaled, gravity: "centre" }]).png().toBuffer()
+  return sharp(bg)
+    .composite([{ input: scaled, gravity: "centre" }])
+    .png()
+    .toBuffer()
 }
 
 async function social(file: string, w: number, h: number, lockup: Buffer, bgOverride?: string) {
@@ -223,7 +226,8 @@ async function main() {
     const icns = createICNS(iconMaster, BILINEAR)
     if (!icns) throw new Error(`${dir}/icon.icns generation failed`)
     await out(`${dir}/icon.icns`, icns)
-    for (const size of UWP) await out(`${dir}/Square${size}x${size}Logo.png`, await tile(size, markWhite, { rounded: false }))
+    for (const size of UWP)
+      await out(`${dir}/Square${size}x${size}Logo.png`, await tile(size, markWhite, { rounded: false }))
     await out(`${dir}/StoreLogo.png`, await tile(50, markWhite, { rounded: false }))
     await rm(path.join(ROOT, dir, "android"), { recursive: true, force: true })
     await rm(path.join(ROOT, dir, "ios"), { recursive: true, force: true })
@@ -233,7 +237,10 @@ async function main() {
   const img = "frontend/ui/src/assets/images"
   await out(`${img}/social-share.png`, await social(`${img}/social-share.png`, 1280, 721, lockWhite))
   await out(`${img}/social-share-zen.png`, await social(`${img}/social-share-zen.png`, 1200, 630, lockWhite))
-  await out(`${img}/social-share-black.png`, await social(`${img}/social-share-black.png`, 1280, 721, lockWhite, "#000000"))
+  await out(
+    `${img}/social-share-black.png`,
+    await social(`${img}/social-share-black.png`, 1280, 721, lockWhite, "#000000"),
+  )
 
   const oauthWhite = await sharp(wordWhite).resize(480).png().toBuffer()
   const oauthInk = await sharp(wordInk).resize(480).png().toBuffer()

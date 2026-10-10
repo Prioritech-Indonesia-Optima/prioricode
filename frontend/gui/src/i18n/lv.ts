@@ -1196,8 +1196,7 @@ export const dict = {
   "desktop.ssh.error.prioricodeNotInstalled":
     "PrioriCode nav instalēts resursdatorā {{host}}. Instalējiet to no SSH serveru iestatījumiem.",
   "desktop.ssh.error.bootstrapFailed": "PrioriCode bootstrap resursdatorā {{host}} neizdevās ({{code}})",
-  "desktop.ssh.error.bootstrapTimeout":
-    "PrioriCode bootstrap laiks resursdatorā {{host}} beidzās pēc {{timeout}}ms",
+  "desktop.ssh.error.bootstrapTimeout": "PrioriCode bootstrap laiks resursdatorā {{host}} beidzās pēc {{timeout}}ms",
   "desktop.ssh.error.healthTimeout":
     "Resursdatora {{host}} SSH servera darbības pārbaudes laiks beidzās pēc {{timeout}}ms",
   "desktop.ssh.error.serverExitedBeforeHealthy":

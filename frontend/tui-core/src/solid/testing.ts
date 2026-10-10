@@ -1,11 +1,12 @@
 import { mount, type MountedApp } from "./mount"
 import type { Renderable } from "../layout/engine"
 
-export type SolidTestRenderer = MountedApp & Readonly<{
-  charFrame(): string
-  waitForFrame(predicate: (frame: string) => boolean): Promise<string>
-  output(): string
-}>
+export type SolidTestRenderer = MountedApp &
+  Readonly<{
+    charFrame(): string
+    waitForFrame(predicate: (frame: string) => boolean): Promise<string>
+    output(): string
+  }>
 
 export async function testRender(
   code: () => unknown,

@@ -70,7 +70,12 @@ import { usePromptMove } from "./move"
 import { readLocalAttachment } from "./local-attachment"
 import { pastedFilepath } from "./pasted-filepath"
 import { pasteDirectory, savePastedImage } from "./paste-store"
-import { PROTOCOL_CLIPBOARD_TERMINALS, REMOTE_PASTE_DISABLED, detectTerminal, pasteMissHint } from "../../clipboard-scenario"
+import {
+  PROTOCOL_CLIPBOARD_TERMINALS,
+  REMOTE_PASTE_DISABLED,
+  detectTerminal,
+  pasteMissHint,
+} from "../../clipboard-scenario"
 import { readTerminalClipboard, wrapForMultiplexer } from "../../clipboard-terminal"
 import { useLocation } from "../../context/location"
 
@@ -484,9 +489,7 @@ export function Prompt(props: PromptProps) {
           let content = terminalChannel
             ? await readTerminalClipboard(renderer, {
                 write: (sequence) =>
-                  void process.stdout.write(
-                    terminalEnvironment.multiplexer ? wrapForMultiplexer(sequence) : sequence,
-                  ),
+                  void process.stdout.write(terminalEnvironment.multiplexer ? wrapForMultiplexer(sequence) : sequence),
               })
             : undefined
           if (!content) content = await clipboard.read?.()

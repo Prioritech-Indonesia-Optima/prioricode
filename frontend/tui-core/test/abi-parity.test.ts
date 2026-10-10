@@ -47,7 +47,9 @@ test("binding lookup gather parity (order, arrays, false, missing)", () => {
     "chain.a": "enter,return",
   }
   const commands = ["a.b", "a.c", "a.d", "a.missing", "cmd.palette.show", "chain.a"]
-  const theirs = (openTuiCreateBindingLookup(config) as unknown as { gather(n: string, c: string[]): { key: string; cmd: string }[] }).gather("ns", commands)
+  const theirs = (
+    openTuiCreateBindingLookup(config) as unknown as { gather(n: string, c: string[]): { key: string; cmd: string }[] }
+  ).gather("ns", commands)
   expect(createBindingLookup(config).gather("ns", commands)).toEqual(theirs)
 })
 
@@ -93,9 +95,17 @@ test("tui-core surface satisfies the neutral contract end-to-end", async () => {
     const color = surface.color("#5f87ff")
     expect(color.toInts()).toEqual([95, 135, 255, 255])
     expect(color.toHex()).toBe("#5f87ff")
-    expect(surface.formatKeyEvent({ name: "m", sequence: "", ctrl: true, alt: false, shift: true, meta: false, eventKind: "press" })).toBe(
-      "ctrl+shift+m",
-    )
+    expect(
+      surface.formatKeyEvent({
+        name: "m",
+        sequence: "",
+        ctrl: true,
+        alt: false,
+        shift: true,
+        meta: false,
+        eventKind: "press",
+      }),
+    ).toBe("ctrl+shift+m")
   } finally {
     app.destroy()
   }
@@ -124,7 +134,9 @@ test("opentui surface adapter wraps a renderer-like object", async () => {
     surface.renderer.removePostProcessFn(fn)
     expect(postFns.length).toBe(0)
     expect(surface.color("#ffffff").toInts()).toEqual([255, 255, 255, 255])
-    expect(surface.createBindingLookup({ "a.b": "ctrl+j" }).gather("ns", ["a.b"])).toEqual([{ key: "ctrl+j", cmd: "a.b" }])
+    expect(surface.createBindingLookup({ "a.b": "ctrl+j" }).gather("ns", ["a.b"])).toEqual([
+      { key: "ctrl+j", cmd: "a.b" },
+    ])
     expect(surface.vignette(0.2)).toBeDefined()
   } finally {
     app.destroy()

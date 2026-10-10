@@ -33,7 +33,14 @@ export class CoreRenderer {
 
   constructor(options: RendererOptions) {
     this.root = options.root
-    this.overlays = new Renderable({ position: "absolute", left: 0, top: 0, width: "100%", height: "100%", display: "flex" })
+    this.overlays = new Renderable({
+      position: "absolute",
+      left: 0,
+      top: 0,
+      width: "100%",
+      height: "100%",
+      display: "flex",
+    })
     this.overlays.zIndex = 1_000_000
     options.root.addChild(this.overlays)
     this.device = options.device
@@ -108,7 +115,10 @@ export class CoreRenderer {
     const deltaTime = this.lastPaint === 0 ? 0 : now - this.lastPaint
     this.lastPaint = now
     for (const fn of this.postProcess) fn(next, deltaTime)
-    const runs = diffBuffers(this.back.width === next.width && this.back.height === next.height ? this.back : undefined, next)
+    const runs = diffBuffers(
+      this.back.width === next.width && this.back.height === next.height ? this.back : undefined,
+      next,
+    )
     const out = emitRuns(runs)
     if (out.length) this.device.write(out)
     const cursor = (this.focusTarget as { cursorPosition?: { x: number; y: number } } | undefined)?.cursorPosition
@@ -132,14 +142,21 @@ export class CoreRenderer {
     }
     node.paint({ buffer, clip })
     if (node.measurable) return
-    for (const child of ordered(node.children)) this.paintNode(child, buffer, node.style.overflow === "visible" ? clip : childClip)
+    for (const child of ordered(node.children))
+      this.paintNode(child, buffer, node.style.overflow === "visible" ? clip : childClip)
   }
 
   hitTest(x: number, y: number): RenderableType | undefined {
     const walk = (node: RenderableType, clip: Rect): RenderableType | undefined => {
       if (!node.visible || node.style.display === "none") return undefined
       const r = node.layoutRect
-      if (x < Math.max(r.x, clip.x) || y < Math.max(r.y, clip.y) || x >= Math.min(r.x + r.width, clip.x + clip.width) || y >= Math.min(r.y + r.height, clip.y + clip.height)) return undefined
+      if (
+        x < Math.max(r.x, clip.x) ||
+        y < Math.max(r.y, clip.y) ||
+        x >= Math.min(r.x + r.width, clip.x + clip.width) ||
+        y >= Math.min(r.y + r.height, clip.y + clip.height)
+      )
+        return undefined
       if (!node.measurable) {
         for (const child of [...ordered(node.children)].reverse()) {
           const found = walk(child, {
@@ -160,7 +177,13 @@ export class CoreRenderer {
   handleMouse(event: Extract<InputEvent, { kind: "mouse" }>): boolean {
     const target = this.hitTest(event.x, event.y)
     const bucket: "mouse:down" | "mouse:up" | "mouse:move" | "mouse:wheel" =
-      event.type === "down" ? "mouse:down" : event.type === "up" ? "mouse:up" : event.type.startsWith("wheel") ? "mouse:wheel" : "mouse:move"
+      event.type === "down"
+        ? "mouse:down"
+        : event.type === "up"
+          ? "mouse:up"
+          : event.type.startsWith("wheel")
+            ? "mouse:wheel"
+            : "mouse:move"
     if (target?.hasHandlers("key")) this.focus(target)
     let node: RenderableType | undefined = target
     let handled = false
@@ -243,6 +266,6 @@ export class CoreRenderer {
 function ordered(children: readonly RenderableType[]): RenderableType[] {
   return children
     .map((child, index) => ({ child, index }))
-    .sort((a, b) => (a.child.zIndex - b.child.zIndex || a.index - b.index))
+    .sort((a, b) => a.child.zIndex - b.child.zIndex || a.index - b.index)
     .map((entry) => entry.child)
 }

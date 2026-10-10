@@ -156,7 +156,8 @@ export class TextareaRenderable extends Renderable {
   }
 
   measure(availableWidth: number): Readonly<{ width: number; height: number }> {
-    const width = Number.isFinite(availableWidth) && availableWidth > 0 ? Math.floor(availableWidth) : this.layoutRect.width || 80
+    const width =
+      Number.isFinite(availableWidth) && availableWidth > 0 ? Math.floor(availableWidth) : this.layoutRect.width || 80
     void stringWidth
     const rows = computeVisualLines(this.buffer.text || this.placeholder, width).length
     return { width: Math.max(1, width), height: Math.max(this.minHeight, Math.min(this.maxHeight, rows)) }
@@ -166,7 +167,11 @@ export class TextareaRenderable extends Renderable {
     const capture = this.traits.capture ?? []
     if (capture.includes(name)) return true
     if (name === "enter" && capture.includes("submit")) return true
-    if (["left", "right", "up", "down", "home", "end", "pageUp", "pageDown"].includes(name) && capture.includes("navigate")) return true
+    if (
+      ["left", "right", "up", "down", "home", "end", "pageUp", "pageDown"].includes(name) &&
+      capture.includes("navigate")
+    )
+      return true
     return false
   }
 
@@ -320,7 +325,9 @@ export class TextareaRenderable extends Renderable {
     const selEnd = this.buffer.selectionEnd
     this.cursorPosition = undefined
     for (let row = 0; row < r.height; row++) {
-      const line = showPlaceholder ? { start: 0, end: source.length, width: stringWidth(source) } : this.view.line(this._scrollY + row)
+      const line = showPlaceholder
+        ? { start: 0, end: source.length, width: stringWidth(source) }
+        : this.view.line(this._scrollY + row)
       const y = r.y + row
       if (!line) {
         continue
@@ -333,8 +340,8 @@ export class TextareaRenderable extends Renderable {
         const mark = showPlaceholder ? undefined : marks.find((m) => index >= m.start && index < m.end)
         const style = mark ? this.styleForId?.(mark.styleId) : undefined
         const selected = !showPlaceholder && index >= selStart && index < selEnd
-        const fg = showPlaceholder ? this.placeholderColor : style?.fg ?? baseFg
-        const bg = selected ? this.selectionColor : style?.bg ?? this.bg
+        const fg = showPlaceholder ? this.placeholderColor : (style?.fg ?? baseFg)
+        const bg = selected ? this.selectionColor : (style?.bg ?? this.bg)
         const attrs = (style?.attrs ?? Attr.None) | (selected ? Attr.None : Attr.None)
         if (x >= clip.x && x < clip.x + clip.width && y >= clip.y && y < clip.y + clip.height) {
           buffer.setChar(x, y, grapheme, fg, bg, attrs)
@@ -345,7 +352,12 @@ export class TextareaRenderable extends Renderable {
         x += gw
         index += grapheme.length
       }
-      if (!showPlaceholder && this.buffer.cursor === line.end && this.focused && line === this.view.line(this.view.count - 1)) {
+      if (
+        !showPlaceholder &&
+        this.buffer.cursor === line.end &&
+        this.focused &&
+        line === this.view.line(this.view.count - 1)
+      ) {
         this.cursorPosition = { x: Math.min(x, r.x + r.width - 1), y }
       }
     }
