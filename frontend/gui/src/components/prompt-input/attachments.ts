@@ -20,6 +20,7 @@ type PromptAttachmentsCoreInput = {
   addPart?: (part: ContentPart) => boolean
   warn?: () => void
   readClipboardImage?: () => Promise<File | null>
+  readClipboardImages?: () => Promise<File[]>
   getPathForFile?: (file: File) => string
   draftStore?: DraftStore
 }
@@ -32,6 +33,7 @@ export type PromptAttachmentsInput = {
   focusEditor: () => void
   addPart: (part: ContentPart) => boolean
   readClipboardImage?: () => Promise<File | null>
+  readClipboardImages?: () => Promise<File[]>
   getPathForFile?: (file: File) => string
 }
 
@@ -113,8 +115,13 @@ export function createPromptAttachmentsCore(input: PromptAttachmentsCoreInput) {
     const plainText = clipboardData.getData("text/plain") ?? ""
 
     // Desktop: Browser clipboard has no images and no text, try platform's native clipboard for images
-    if (input.readClipboardImage && !plainText) {
-      if (await addClipboardAttachment(input.readClipboardImage(), target)) return
+    if (!plainText) {
+      if (input.readClipboardImages) {
+        const files = await input.readClipboardImages()
+        if (files.length && (await addAttachments(files, true, target))) return
+      } else if (input.readClipboardImage) {
+        if (await addClipboardAttachment(input.readClipboardImage(), target)) return
+      }
     }
 
     if (!plainText) return

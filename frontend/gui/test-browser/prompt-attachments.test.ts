@@ -128,6 +128,42 @@ test("rejects a duplicate native clipboard attachment in the V2 prompt store", a
   })
 })
 
+test("keeps every image from a multi-image native clipboard paste in the V2 prompt store", async () => {
+  await createRoot(async (dispose) => {
+    const [state, setState] = createStore({ prompt: [] as PromptInputV2Prompt })
+    const images = Array.from({ length: 5 }, (_, i) =>
+      new File([new Uint8Array(1024).fill(i + 1)], `clipboard-${i}.png`, { type: "image/png" }),
+    )
+    const attachments = createPromptInputV2Attachments({
+      capture: () => ({
+        current: () => state.prompt,
+        cursor: () => 0,
+        set: (prompt) => setState("prompt", prompt),
+      }),
+      editor: () => document.createElement("div"),
+      focusEditor: () => undefined,
+      addPart: () => false,
+      setDraggingType: () => undefined,
+      directory: () => "/",
+      isDialogActive: () => false,
+      warn: () => undefined,
+      duplicate: () => undefined,
+      onError: () => undefined,
+      readClipboardImages: async () => images,
+    })
+    const event = {
+      clipboardData: { items: [], getData: () => "" },
+      preventDefault: () => undefined,
+      stopPropagation: () => undefined,
+    } as unknown as ClipboardEvent
+
+    await attachments.handlePaste(event)
+
+    expect(state.prompt).toHaveLength(5)
+    dispose()
+  })
+})
+
 test("rejects desktop duplicates and keeps changed files in the V2 prompt store", async () => {
   await createRoot(async (dispose) => {
     const [state, setState] = createStore({ prompt: [] as PromptInputV2Prompt })

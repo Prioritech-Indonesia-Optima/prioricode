@@ -117,6 +117,9 @@ type PlatformBase = {
   /** Read image from clipboard (desktop only) */
   readClipboardImage?(): Promise<File | null>
 
+  /** Read all images from the clipboard (desktop only) */
+  readClipboardImages?(): Promise<File[]>
+
   /** Export collected diagnostic logs (desktop only) */
   exportDebugLogs?(): Promise<string>
 

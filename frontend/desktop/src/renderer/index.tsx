@@ -115,6 +115,13 @@ function DesktopMemoryRouter(props: BaseRouterProps & { windowID: string }) {
   return <MemoryRouter {...props} history={history} />
 }
 
+async function readSingleClipboardImage() {
+  const image = await window.api.readClipboardImage().catch(() => null)
+  if (!image) return null
+  const blob = new Blob([image.buffer], { type: "image/png" })
+  return new File([blob], `pasted-image-${Date.now()}.png`, { type: "image/png" })
+}
+
 const createPlatform = (windowState: DesktopWindowState): Platform => {
   const attachmentPaths = new WeakMap<File, string>()
   const os = (() => {
@@ -313,13 +320,28 @@ const createPlatform = (windowState: DesktopWindowState): Platform => {
       return window.api.checkAppExists(appName)
     },
 
-    async readClipboardImage() {
-      const image = await window.api.readClipboardImage().catch(() => null)
-      if (!image) return null
-      const blob = new Blob([image.buffer], { type: "image/png" })
-      return new File([blob], `pasted-image-${Date.now()}.png`, {
-        type: "image/png",
-      })
+    readClipboardImage: readSingleClipboardImage,
+
+    async readClipboardImages() {
+      if (navigator.clipboard?.read) {
+        try {
+          const items = await navigator.clipboard.read()
+          const files: File[] = []
+          for (const item of items) {
+            for (const type of item.types) {
+              if (!type.startsWith("image/")) continue
+              const blob = await item.getType(type)
+              const ext = type.split("/")[1]?.split("+")[0] ?? "png"
+              files.push(new File([blob], `pasted-image-${Date.now()}-${files.length}.${ext}`, { type }))
+            }
+          }
+          if (files.length) return files
+        } catch {
+          // The async clipboard API is unavailable or denied; fall through to the native reader.
+        }
+      }
+      const single = await readSingleClipboardImage()
+      return single ? [single] : []
     },
   }
 }

@@ -379,6 +379,7 @@ export function usePromptInputV2Controller(props: PromptInputV2ControllerProps):
           description: error instanceof Error ? error.message : String(error),
         }),
       readClipboardImage: platform.readClipboardImage,
+      readClipboardImages: platform.readClipboardImages,
       getPathForFile: platform.getPathForFile,
       store: platform.draftStore?.putBlob,
     },

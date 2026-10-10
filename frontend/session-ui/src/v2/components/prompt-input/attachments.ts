@@ -77,6 +77,7 @@ export type PromptInputV2AttachmentConfig = {
   duplicate: () => void
   onError: (error: unknown) => void
   readClipboardImage?: () => Promise<File | null>
+  readClipboardImages?: () => Promise<File[]>
   getPathForFile?: (file: File) => string
   store?: (file: File) => Promise<{ id: string; url: string }>
 }
@@ -157,9 +158,18 @@ export function createPromptInputV2Attachments(
       return
     }
     const plainText = clipboardData.getData("text/plain") ?? ""
-    if (input.readClipboardImage && !plainText) {
-      const file = await input.readClipboardImage()
-      if (file && (await add(file, true, target, true))) return
+    if (!plainText) {
+      if (input.readClipboardImages) {
+        const files = await input.readClipboardImages()
+        let found = false
+        for (const file of files) {
+          if (await add(file, false, target, true)) found = true
+        }
+        if (found) return
+      } else if (input.readClipboardImage) {
+        const file = await input.readClipboardImage()
+        if (file && (await add(file, true, target, true))) return
+      }
     }
     if (!plainText) return
     const text = plainText.includes("\r") ? plainText.replace(/\r\n?/g, "\n") : plainText
