@@ -24,9 +24,14 @@ import {
   createDirectorySearch,
   currentPickerSuggestions,
   displayPickerPath,
+  joinPickerPath,
   pickerParent,
+  pickerRecentProjects,
   pickerRoot,
+  pickerSegments,
+  treePathWithin,
 } from "./directory-picker-domain"
+import { sessionUpdatedAt } from "@/context/global-sync/session-trim"
 import "./dialog-select-directory-v2.css"
 import { DividerV2 } from "@prioricode/ui/v2/divider-v2"
 import { getFilename } from "@prioricode/core/util/path"
@@ -42,7 +47,7 @@ interface DialogSelectDirectoryV2Props {
 
 export function DialogSelectDirectoryV2(props: DialogSelectDirectoryV2Props) {
   const global = useGlobal()
-  const { sync, sdk } = global.ensureServerCtx(props.server)
+  const { sync, sdk, projects } = global.ensureServerCtx(props.server)
   const dialog = useDialog()
   const language = useLanguage()
   const policy = pickerMode(props.mode ?? "directory", props.start)
@@ -87,6 +92,35 @@ export function DialogSelectDirectoryV2(props: DialogSelectDirectoryV2Props) {
       fallbackPath()?.home ||
       fallbackPath()?.directory,
   )
+  const fsRoot = createMemo(() => pickerRoot(home()) || "/")
+  const [locations] = createResource(
+    () => fsRoot(),
+    async (dir) => {
+      const entries = await sdk.api.file
+        .list({ location: { directory: dir } })
+        .then((result) => result.data)
+        .catch(() => [])
+      return entries
+        .filter((entry) => entry.type === "directory")
+        .map((entry) => {
+          const name = getFilename(entry.path.replace(/[\\/]+$/, ""))
+          return { name, path: joinPickerPath(dir, name) }
+        })
+    },
+  )
+  const recent = createMemo(() => {
+    const latest = (directory: string) => {
+      let at = 0
+      const sessions = sync.child(directory, { bootstrap: false })[0].session
+      for (const session of sessions) {
+        if (session.time.archived) continue
+        at = Math.max(at, sessionUpdatedAt(session))
+      }
+      return at
+    }
+    return pickerRecentProjects(projects.list(), latest, home())
+  })
+  const isActive = (path: string) => treePathWithin(path, root())
   const search = createDirectorySearch({ sdk, home, base: () => root() || start() })
   const [suggestions] = createResource(input, async (value) => {
     const cleaned = cleanPickerInput(value)
@@ -289,89 +323,155 @@ export function DialogSelectDirectoryV2(props: DialogSelectDirectoryV2Props) {
         <DialogTitle>{props.title ?? language.t("command.project.open")}</DialogTitle>
       </DialogHeader>
       <DividerV2 />
-      <DialogBody class="directory-picker-v2-body pt-4!">
-        <div class="directory-picker-v2-path" ref={pathArea}>
-          <TextInputV2
-            value={input()}
-            autofocus
-            autocomplete="off"
-            spellcheck={false}
-            class="!w-full"
-            onInput={(event) => {
-              setInput(cleanPickerInput(event.currentTarget.value))
-              setSelected("")
-              setSuggestionsOpen(true)
-              setActiveSuggestion(-1)
-            }}
-            role="combobox"
-            aria-autocomplete="list"
-            aria-expanded={suggestionsOpen()}
-            aria-controls="directory-picker-v2-suggestions"
-            aria-activedescendant={
-              activeSuggestion() >= 0 ? `directory-picker-v2-suggestion-${activeSuggestion()}` : undefined
-            }
-            onKeyDown={handleInputKey}
-          />
-          <div class="directory-picker-v2-actions">
-            <ButtonV2 size="small" variant="ghost" onClick={() => void navigate(home())}>
-              ~
-            </ButtonV2>
-            <ButtonV2 size="small" variant="ghost" onClick={() => void navigate(pickerRoot(root()) || root())}>
-              {language.t("dialog.directory.root")}
-            </ButtonV2>
-            <ButtonV2 size="small" variant="ghost" onClick={() => void navigate(pickerParent(root()))}>
-              {language.t("dialog.directory.parent")}
-            </ButtonV2>
-          </div>
-          <Show when={suggestionsOpen() && currentSuggestions().length > 0}>
-            <div id="directory-picker-v2-suggestions" role="listbox" class="directory-picker-v2-suggestions">
-              <For each={currentSuggestions()}>
-                {(suggestion, index) => (
+      <DialogBody class="directory-picker-v2-body">
+        <div class="directory-picker-v2-layout">
+          <aside class="directory-picker-v2-sidebar">
+            <div class="directory-picker-v2-sidebar-section">
+              <div class="directory-picker-v2-sidebar-title">{language.t("dialog.directory.places")}</div>
+              <button
+                type="button"
+                class="directory-picker-v2-sidebar-item"
+                data-active={isActive(home()) ? "" : undefined}
+                onClick={() => void navigate(home())}
+              >
+                {language.t("dialog.directory.home")}
+              </button>
+              <button
+                type="button"
+                class="directory-picker-v2-sidebar-item"
+                data-active={isActive(fsRoot()) ? "" : undefined}
+                onClick={() => void navigate(fsRoot())}
+              >
+                {language.t("dialog.directory.root")}
+              </button>
+            </div>
+            <div class="directory-picker-v2-sidebar-section">
+              <div class="directory-picker-v2-sidebar-title">{language.t("dialog.directory.locations")}</div>
+              <For each={locations()}>
+                {(location) => (
                   <button
-                    id={`directory-picker-v2-suggestion-${index()}`}
-                    data-directory-path={suggestion.absolute}
-                    role="option"
-                    aria-selected={index() === activeSuggestion()}
-                    data-active={index() === activeSuggestion() ? "" : undefined}
-                    onPointerMove={() => setActiveSuggestion(index())}
-                    onClick={() => chooseSuggestion(suggestion)}
+                    type="button"
+                    class="directory-picker-v2-sidebar-item"
+                    data-active={isActive(location.path) ? "" : undefined}
+                    onClick={() => void navigate(location.path)}
                   >
-                    {displayPickerPath(suggestion.absolute, input(), home())}
-                    {suggestion.type === "directory" ? "/" : ""}
+                    {location.name}
                   </button>
                 )}
               </For>
             </div>
-          </Show>
+            <div class="directory-picker-v2-sidebar-section">
+              <div class="directory-picker-v2-sidebar-title">{language.t("home.recentProjects")}</div>
+              <For each={recent()}>
+                {(project) => (
+                  <button
+                    type="button"
+                    class="directory-picker-v2-sidebar-item"
+                    data-active={isActive(project.absolute) ? "" : undefined}
+                    onClick={() => void navigate(project.absolute)}
+                  >
+                    {project.name}
+                  </button>
+                )}
+              </For>
+            </div>
+          </aside>
+          <div class="directory-picker-v2-main">
+            <div class="directory-picker-v2-crumbs">
+              <For each={pickerSegments(root(), home())}>
+                {(segment) => (
+                  <button
+                    type="button"
+                    class="directory-picker-v2-crumb"
+                    data-current={segment.path === root() ? "" : undefined}
+                    onClick={() => void navigate(segment.path)}
+                  >
+                    {segment.label}
+                  </button>
+                )}
+              </For>
+              <ButtonV2
+                size="small"
+                variant="ghost"
+                class="directory-picker-v2-up"
+                onClick={() => void navigate(pickerParent(root()))}
+              >
+                {language.t("dialog.directory.up")}
+              </ButtonV2>
+            </div>
+            <div class="directory-picker-v2-path" ref={pathArea}>
+              <TextInputV2
+                value={input()}
+                autofocus
+                autocomplete="off"
+                spellcheck={false}
+                class="!w-full"
+                onInput={(event) => {
+                  setInput(cleanPickerInput(event.currentTarget.value))
+                  setSelected("")
+                  setSuggestionsOpen(true)
+                  setActiveSuggestion(-1)
+                }}
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded={suggestionsOpen()}
+                aria-controls="directory-picker-v2-suggestions"
+                aria-activedescendant={
+                  activeSuggestion() >= 0 ? `directory-picker-v2-suggestion-${activeSuggestion()}` : undefined
+                }
+                onKeyDown={handleInputKey}
+              />
+              <Show when={suggestionsOpen() && currentSuggestions().length > 0}>
+                <div id="directory-picker-v2-suggestions" role="listbox" class="directory-picker-v2-suggestions">
+                  <For each={currentSuggestions()}>
+                    {(suggestion, index) => (
+                      <button
+                        id={`directory-picker-v2-suggestion-${index()}`}
+                        data-directory-path={suggestion.absolute}
+                        role="option"
+                        aria-selected={index() === activeSuggestion()}
+                        data-active={index() === activeSuggestion() ? "" : undefined}
+                        onPointerMove={() => setActiveSuggestion(index())}
+                        onClick={() => chooseSuggestion(suggestion)}
+                      >
+                        {displayPickerPath(suggestion.absolute, input(), home())}
+                        {suggestion.type === "directory" ? "/" : ""}
+                      </button>
+                    )}
+                  </For>
+                </div>
+              </Show>
+            </div>
+            <div
+              class="directory-picker-v2-browser"
+              ref={container}
+              onWheel={(event) => {
+                const scroller = tree
+                  ?.getFileTreeContainer()
+                  ?.shadowRoot?.querySelector<HTMLElement>("[data-file-tree-virtualized-scroll]")
+                if (!scroller) return
+                const next = nextTreeScrollTop(
+                  scroller.scrollTop,
+                  event.deltaY,
+                  scroller.scrollHeight,
+                  scroller.clientHeight,
+                )
+                if (next === scroller.scrollTop) return
+                event.preventDefault()
+                scroller.scrollTop = next
+                scroller.dispatchEvent(new Event("scroll"))
+              }}
+            >
+              <Show when={loading()}>
+                <div class="directory-picker-v2-state">{language.t("common.loading")}</div>
+              </Show>
+              <Show when={!loading() && error()}>
+                <div class="directory-picker-v2-state">{language.t("dialog.directory.readError")}</div>
+              </Show>
+            </div>
+            <div class="directory-picker-v2-selection">{policy.result(root(), selected(), rootValid())}</div>
+          </div>
         </div>
-        <div
-          class="directory-picker-v2-browser"
-          ref={container}
-          onWheel={(event) => {
-            const scroller = tree
-              ?.getFileTreeContainer()
-              ?.shadowRoot?.querySelector<HTMLElement>("[data-file-tree-virtualized-scroll]")
-            if (!scroller) return
-            const next = nextTreeScrollTop(
-              scroller.scrollTop,
-              event.deltaY,
-              scroller.scrollHeight,
-              scroller.clientHeight,
-            )
-            if (next === scroller.scrollTop) return
-            event.preventDefault()
-            scroller.scrollTop = next
-            scroller.dispatchEvent(new Event("scroll"))
-          }}
-        >
-          <Show when={loading()}>
-            <div class="directory-picker-v2-state">{language.t("common.loading")}</div>
-          </Show>
-          <Show when={!loading() && error()}>
-            <div class="directory-picker-v2-state">{language.t("dialog.directory.readError")}</div>
-          </Show>
-        </div>
-        <div class="directory-picker-v2-selection">{policy.result(root(), selected(), rootValid())}</div>
       </DialogBody>
       <DialogFooter>
         <ButtonV2 variant="neutral" onClick={() => dialog.close()}>
