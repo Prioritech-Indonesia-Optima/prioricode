@@ -20,6 +20,8 @@ import {
   pickerParent,
   pickerRoot,
   pickerAbsoluteInput,
+  pickerSegments,
+  pickerRecentProjects,
 } from "./directory-picker-domain"
 
 test("maps server directory entries into Pierre paths", () => {
@@ -307,4 +309,65 @@ test("returns absolute directories and relative files", () => {
   expect(selectedTreePath("/home/luke/repo", "src/index.ts", "file")).toBe("src/index.ts")
   expect(selectedTreePath("/home/luke/repo/src", "index.ts", "file", "/home/luke/repo")).toBe("src/index.ts")
   expect(selectedTreePath("/home/luke/repo", "src/", "file")).toBeUndefined()
+})
+
+test("splits a path into clickable breadcrumb segments", () => {
+  expect(pickerSegments("/home/aiadmin/work", "/home/aiadmin")).toEqual([
+    { label: "/", path: "/" },
+    { label: "home", path: "/home" },
+    { label: "~", path: "/home/aiadmin" },
+    { label: "work", path: "/home/aiadmin/work" },
+  ])
+  expect(pickerSegments("/", "")).toEqual([{ label: "/", path: "/" }])
+  expect(pickerSegments("/home/luke", "/home/luke")).toEqual([
+    { label: "/", path: "/" },
+    { label: "home", path: "/home" },
+    { label: "~", path: "/home/luke" },
+  ])
+})
+
+test("splits Windows and UNC paths into breadcrumb segments", () => {
+  expect(pickerSegments("C:/Users/luke/repos", "C:/Users/luke")).toEqual([
+    { label: "C:\\", path: "C:/" },
+    { label: "Users", path: "C:/Users" },
+    { label: "luke", path: "C:/Users/luke" },
+    { label: "repos", path: "C:/Users/luke/repos" },
+  ])
+  expect(pickerSegments("//Server/Share/repo", "")).toEqual([
+    { label: "\\\\Server\\Share", path: "//Server/Share" },
+    { label: "repo", path: "//Server/Share/repo" },
+  ])
+  expect(pickerSegments("C:/", "C:/")).toEqual([{ label: "C:\\", path: "C:/" }])
+})
+
+test("returns empty segments for a path with no recognizable root", () => {
+  expect(pickerSegments("relative/path", "/home/luke")).toEqual([])
+})
+
+test("sorts recent projects by most recent session and dedupes worktrees", () => {
+  const times = new Map<string, number>([
+    ["/home/luke/older", 100],
+    ["/home/luke/newer", 300],
+    ["/home/luke/middle", 200],
+  ])
+  const latest = (directory: string) => times.get(directory) ?? 0
+  const projects = [
+    { worktree: "/home/luke/older", name: "Older" },
+    { worktree: "/home/luke/newer" },
+    { worktree: "/home/luke/middle", name: "Middle" },
+    { worktree: "/home/luke/newer", name: "Newer duplicate" },
+  ]
+  expect(pickerRecentProjects(projects, latest, "/home/luke")).toEqual([
+    { name: "newer", absolute: "/home/luke/newer" },
+    { name: "Middle", absolute: "/home/luke/middle" },
+    { name: "Older", absolute: "/home/luke/older" },
+  ])
+})
+
+test("falls back to worktree order when no session times exist", () => {
+  const projects = [{ worktree: "/home/luke/a" }, { worktree: "/home/luke/b" }]
+  expect(pickerRecentProjects(projects, () => 0, "/home/luke")).toEqual([
+    { name: "a", absolute: "/home/luke/a" },
+    { name: "b", absolute: "/home/luke/b" },
+  ])
 })

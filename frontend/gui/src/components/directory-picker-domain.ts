@@ -321,6 +321,60 @@ export function displayPickerPath(path: string, input: string, home: string) {
   return pickerTilde(value, home) || value
 }
 
+export type PickerSegment = {
+  label: string
+  path: string
+}
+
+export function pickerSegments(path: string, home: string): PickerSegment[] {
+  const value = trimPickerPath(path)
+  const root = pickerRoot(value)
+  if (!root) return []
+  const segments: PickerSegment[] = [{ label: nativePickerPath(root), path: root }]
+  const parts = value.slice(root.length).split("/").filter((part) => part)
+  let cursor = root
+  for (const part of parts) {
+    cursor = joinPickerPath(cursor, part)
+    segments.push({ label: part, path: cursor })
+  }
+  const homePath = trimPickerPath(home)
+  if (homePath && !/^[A-Za-z]:\//.test(homePath)) {
+    for (const segment of segments) {
+      if (segment.path === homePath) segment.label = "~"
+    }
+  }
+  return segments
+}
+
+export type PickerRecentProject = {
+  name: string
+  absolute: string
+}
+
+export function pickerRecentProjects(
+  projects: ReadonlyArray<{ worktree: string; name?: string; sandboxes?: string[] }>,
+  latestSessionTime: (directory: string) => number,
+  home: string,
+): PickerRecentProject[] {
+  const seen = new Set<string>()
+  return projects
+    .map((project, index) => {
+      let at = 0
+      for (const directory of [project.worktree, ...(project.sandboxes ?? [])]) {
+        at = Math.max(at, latestSessionTime(directory))
+      }
+      return { project, at, index }
+    })
+    .sort((a, b) => b.at - a.at || a.index - b.index)
+    .map(({ project }) => {
+      const absolute = trimPickerPath(project.worktree)
+      if (seen.has(absolute)) return undefined
+      seen.add(absolute)
+      return { name: project.name || getFilename(project.worktree), absolute }
+    })
+    .filter((item): item is PickerRecentProject => item !== undefined)
+}
+
 export function createDirectorySearch(args: { sdk: ServerSDK; base: () => string | undefined; home: () => string }) {
   const cache = new Map<string, Promise<Array<{ name: string; absolute: string }>>>()
   let current = 0
