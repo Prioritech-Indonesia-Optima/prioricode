@@ -11,9 +11,23 @@ export function legacySessionHref(directory: string, sessionID: string) {
 }
 
 export function requireServerKey(segment: string | undefined) {
+  const key = serverKeyFromSegment(segment)
+  if (!key) throw new Error("Invalid server route")
+  return key
+}
+
+export function serverKeyFromSegment(segment: string | undefined): ServerConnection.Key | undefined {
   const key = decode64(segment)
-  if (!key || base64Encode(key) !== segment) throw new Error("Invalid server route")
+  if (!key || base64Encode(key) !== segment) return
   return ServerConnection.Key.make(key)
+}
+
+export function serverKeyLabel(key: ServerConnection.Key) {
+  const value = key as string
+  if (value === "sidecar") return "Local"
+  if (value.startsWith("wsl:")) return value.slice(4)
+  if (value.startsWith("ssh:")) return value.slice(4)
+  return value.replace(/^https?:\/\//, "").replace(/\/+$/, "")
 }
 
 export function legacySessionServer(
