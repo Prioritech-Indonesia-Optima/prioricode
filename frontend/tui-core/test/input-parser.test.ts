@@ -429,7 +429,12 @@ test("osc channel routes by code and supports unsubscribe", () => {
   const parser = createInputParser()
   const received: string[] = []
   const unsubscribe = channel.on(5522, (data) => received.push(data))
-  channel.feed(parser.feed(encodeOsc(5522, "type=read:status=OK:id=x"))[0] as Extract<InputEvent, { kind: "osc" } | { kind: "dcs" }>)
+  channel.feed(
+    parser.feed(encodeOsc(5522, "type=read:status=OK:id=x"))[0] as Extract<
+      InputEvent,
+      { kind: "osc" } | { kind: "dcs" }
+    >,
+  )
   expect(received).toEqual(["type=read:status=OK:id=x"])
   unsubscribe()
   channel.feed(parser.feed(encodeOsc(5522, "late"))[0] as Extract<InputEvent, { kind: "osc" } | { kind: "dcs" }>)

@@ -187,7 +187,8 @@ export class ScrollBoxRenderable extends Renderable {
     if (this.bg >= 0) {
       for (let y = box.y; y < box.y + box.height; y++) {
         for (let x = box.x; x < box.x + box.width; x++) {
-          if (x < ctx.clip.x || y < ctx.clip.y || x >= ctx.clip.x + ctx.clip.width || y >= ctx.clip.y + ctx.clip.height) continue
+          if (x < ctx.clip.x || y < ctx.clip.y || x >= ctx.clip.x + ctx.clip.width || y >= ctx.clip.y + ctx.clip.height)
+            continue
           ctx.buffer.setChar(x, y, " ", this.fg, this.bg, Attr.None)
         }
       }

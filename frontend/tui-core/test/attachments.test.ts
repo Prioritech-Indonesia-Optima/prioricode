@@ -12,8 +12,16 @@ test("cascade stops at first attached transport", async () => {
   const broker = createAttachmentBroker({
     transports: () => [
       fakeTransport(clipboard, { status: "empty", source: clipboard }),
-      fakeTransport(drop, { status: "attached", source: drop, payload: { filename: "shot.png", mime: "image/png", bytes: png } }),
-      fakeTransport(companion, { status: "attached", source: companion, payload: { filename: "other.png", mime: "image/png", bytes: png } }),
+      fakeTransport(drop, {
+        status: "attached",
+        source: drop,
+        payload: { filename: "shot.png", mime: "image/png", bytes: png },
+      }),
+      fakeTransport(companion, {
+        status: "attached",
+        source: companion,
+        payload: { filename: "other.png", mime: "image/png", bytes: png },
+      }),
     ],
   })
   const outcome = await broker.request()
@@ -25,8 +33,16 @@ test("cascade stops at first attached transport", async () => {
 test("preferred transport goes first", async () => {
   const broker = createAttachmentBroker({
     transports: () => [
-      fakeTransport(clipboard, { status: "attached", source: clipboard, payload: { filename: "clip.png", mime: "image/png", bytes: png } }),
-      fakeTransport(companion, { status: "attached", source: companion, payload: { filename: "comp.png", mime: "image/png", bytes: png } }),
+      fakeTransport(clipboard, {
+        status: "attached",
+        source: clipboard,
+        payload: { filename: "clip.png", mime: "image/png", bytes: png },
+      }),
+      fakeTransport(companion, {
+        status: "attached",
+        source: companion,
+        payload: { filename: "comp.png", mime: "image/png", bytes: png },
+      }),
     ],
   })
   const outcome = await broker.request("companion")
@@ -37,7 +53,11 @@ test("denial short-circuits with denied status", async () => {
   const broker = createAttachmentBroker({
     transports: () => [
       fakeTransport(clipboard, { status: "denied", source: clipboard }),
-      fakeTransport(companion, { status: "attached", source: companion, payload: { filename: "x", mime: "image/png", bytes: png } }),
+      fakeTransport(companion, {
+        status: "attached",
+        source: companion,
+        payload: { filename: "x", mime: "image/png", bytes: png },
+      }),
     ],
   })
   expect((await broker.request()).status).toBe("denied")
@@ -62,7 +82,14 @@ test("throwing transport is recorded as failed without losing the cascade", asyn
     },
   }
   const broker = createAttachmentBroker({
-    transports: () => [boom, fakeTransport(drop, { status: "attached", source: drop, payload: { filename: "d", mime: "image/png", bytes: png } })],
+    transports: () => [
+      boom,
+      fakeTransport(drop, {
+        status: "attached",
+        source: drop,
+        payload: { filename: "d", mime: "image/png", bytes: png },
+      }),
+    ],
   })
   const outcome = await broker.request()
   expect(outcome.status).toBe("attached")

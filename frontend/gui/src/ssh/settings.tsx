@@ -55,9 +55,7 @@ function DialogSshWorkspace(props: { item: SshServerItem }) {
   return (
     <Dialog fit>
       <DialogHeader>
-        <DialogTitle>
-          {language.t("ssh.server.workspace.dialogTitle", { host: props.item.config.alias })}
-        </DialogTitle>
+        <DialogTitle>{language.t("ssh.server.workspace.dialogTitle", { host: props.item.config.alias })}</DialogTitle>
       </DialogHeader>
       <DialogBody class="flex flex-col gap-2 p-4">
         <TextInputV2

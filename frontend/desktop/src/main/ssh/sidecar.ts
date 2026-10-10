@@ -48,8 +48,6 @@ export class SshTunnelExitError extends Error {
   }
 }
 
-
-
 export async function spawnSshSidecar(alias: string, options: SshSidecarOptions = {}): Promise<SshSidecar> {
   const username = "prioricode"
   const askpass = await createAskpassSession(requestAuthPrompt)
@@ -61,11 +59,7 @@ export async function spawnSshSidecar(alias: string, options: SshSidecarOptions 
   }
 }
 
-async function spawnSshSidecarInner(
-  alias: string,
-  opts: SshSidecarOptions,
-  username: string,
-): Promise<SshSidecar> {
+async function spawnSshSidecarInner(alias: string, opts: SshSidecarOptions, username: string): Promise<SshSidecar> {
   await runPreflight(alias, opts)
   const boot = await bootstrap(alias, opts)
   try {
@@ -333,7 +327,10 @@ export async function stopSshServer(
   if (!opts.authEnv) {
     const askpass = await createAskpassSession(requestAuthPrompt)
     try {
-      return await stopSshServer(alias, { ...opts, authEnv: { ...process.env, ...askpass.env } as Record<string, string> })
+      return await stopSshServer(alias, {
+        ...opts,
+        authEnv: { ...process.env, ...askpass.env } as Record<string, string>,
+      })
     } finally {
       await askpass.dispose()
     }

@@ -146,7 +146,9 @@ describe("terminal clipboard through real tmux", () => {
       bridge.kill()
       await bridge.closed()
       killTmuxServer(sock)
-      await Bun.file(conf).unlink().catch(() => {})
+      await Bun.file(conf)
+        .unlink()
+        .catch(() => {})
     }
   })
 
@@ -169,7 +171,9 @@ describe("terminal clipboard through real tmux", () => {
       bridge.kill()
       await bridge.closed()
       killTmuxServer(sock)
-      await Bun.file(conf).unlink().catch(() => {})
+      await Bun.file(conf)
+        .unlink()
+        .catch(() => {})
     }
   })
 })

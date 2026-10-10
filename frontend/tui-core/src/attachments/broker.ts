@@ -20,7 +20,11 @@ export function createAttachmentBroker(input: Readonly<{ transports: () => reado
         try {
           result = await transport.read()
         } catch (error) {
-          result = { status: "failed", source: transport.source, error: error instanceof Error ? error.message : String(error) }
+          result = {
+            status: "failed",
+            source: transport.source,
+            error: error instanceof Error ? error.message : String(error),
+          }
         }
         attempts.push(result)
         if (result.status === "attached") return { payload: result.payload, attempts, status: "attached" }
@@ -42,7 +46,11 @@ function order(transports: readonly AttachmentTransport[], preferred?: string): 
   return picked ? [picked, ...list] : list
 }
 
-export function fakeTransport(source: AttachmentSource, result: AttachmentReadResult | (() => AttachmentReadResult), available = true): AttachmentTransport {
+export function fakeTransport(
+  source: AttachmentSource,
+  result: AttachmentReadResult | (() => AttachmentReadResult),
+  available = true,
+): AttachmentTransport {
   return {
     source,
     available: () => available,

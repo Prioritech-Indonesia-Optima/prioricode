@@ -37,15 +37,7 @@ test("every ssh argv vector addresses the alias verbatim and never carries the p
 
 test("bootstrap allows interactive auth via askpass, with timeout and accept-new host keys", () => {
   const args = bootstrapArgs("web")
-  expect(args).toEqual([
-    "-o",
-    "ConnectTimeout=10",
-    "-o",
-    "StrictHostKeyChecking=accept-new",
-    "web",
-    "sh",
-    "-s",
-  ])
+  expect(args).toEqual(["-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=accept-new", "web", "sh", "-s"])
 })
 
 test("tunnel binds loopback both sides with fail-fast and keepalive options", () => {

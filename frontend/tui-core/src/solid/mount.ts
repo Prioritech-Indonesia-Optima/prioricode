@@ -38,7 +38,10 @@ export type MountedApp = Readonly<{
   dispose(): void
 }>
 
-export async function mount(code: () => unknown, options: Readonly<{ device: OutputDevice; scheduler?: FrameScheduler }>): Promise<MountedApp> {
+export async function mount(
+  code: () => unknown,
+  options: Readonly<{ device: OutputDevice; scheduler?: FrameScheduler }>,
+): Promise<MountedApp> {
   await createLayoutEngine()
   const root = new Renderable({ width: "100%", height: "100%" })
   const scheduler = options.scheduler ?? new FrameScheduler()
@@ -51,12 +54,15 @@ export async function mount(code: () => unknown, options: Readonly<{ device: Out
   const Provider = TuiCtx.Provider as unknown as (props: { value: TuiContext; children?: unknown }) => Renderable
   const disposeTree = renderSolid(
     () =>
-      createComponent(Provider as never, {
-        value: ctx,
-        get children() {
-          return code()
-        },
-      } as never) as unknown as Renderable,
+      createComponent(
+        Provider as never,
+        {
+          value: ctx,
+          get children() {
+            return code()
+          },
+        } as never,
+      ) as unknown as Renderable,
     root,
   )
   renderer.renderNow()

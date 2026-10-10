@@ -9,7 +9,16 @@ import { Portal } from "../src/solid/portal"
 import type { MouseEventLike } from "../src/layout/engine"
 import type { KeyEvent } from "../src/types"
 
-const key = (name: string): KeyEvent => ({ name, sequence: name, raw: name, eventKind: "press", ctrl: false, alt: false, shift: false, meta: false })
+const key = (name: string): KeyEvent => ({
+  name,
+  sequence: name,
+  raw: name,
+  eventKind: "press",
+  ctrl: false,
+  alt: false,
+  shift: false,
+  meta: false,
+})
 
 test("mouse hit-testing targets the deepest node and bubbles", async () => {
   const app = await createTestRenderer({ width: 40, height: 8 })
@@ -23,11 +32,31 @@ test("mouse hit-testing targets the deepest node and bubbles", async () => {
     const innerHits: string[] = []
     outer.on("mouse:up", () => void outerHits.push("outer"))
     inner.on("mouse:up", () => void innerHits.push("inner"))
-    const handled = app.renderer.handleMouse({ kind: "mouse", type: "up", button: 0, x: 4, y: 3, ctrl: false, alt: false, shift: false })
+    const handled = app.renderer.handleMouse({
+      kind: "mouse",
+      type: "up",
+      button: 0,
+      x: 4,
+      y: 3,
+      ctrl: false,
+      alt: false,
+      shift: false,
+    })
     expect(handled).toBe(true)
     expect(innerHits).toEqual(["inner"])
     expect(outerHits).toEqual(["outer"])
-    expect(app.renderer.handleMouse({ kind: "mouse", type: "up", button: 0, x: 35, y: 7, ctrl: false, alt: false, shift: false })).toBe(false)
+    expect(
+      app.renderer.handleMouse({
+        kind: "mouse",
+        type: "up",
+        button: 0,
+        x: 35,
+        y: 7,
+        ctrl: false,
+        alt: false,
+        shift: false,
+      }),
+    ).toBe(false)
   } finally {
     app.destroy()
   }
@@ -48,7 +77,16 @@ test("stopPropagation halts the bubble and delivers local coordinates", async ()
       local = [event.localX, event.localY]
       event.stopPropagation()
     })
-    app.renderer.handleMouse({ kind: "mouse", type: "down", button: 0, x: 5, y: 2, ctrl: false, alt: false, shift: false })
+    app.renderer.handleMouse({
+      kind: "mouse",
+      type: "down",
+      button: 0,
+      x: 5,
+      y: 2,
+      ctrl: false,
+      alt: false,
+      shift: false,
+    })
     expect(outerSaw).toBe(0)
     expect(local).toEqual([3, 1])
   } finally {
@@ -88,7 +126,16 @@ test("focus routes keys; clicking a focusable node focuses it", async () => {
     app.renderer.focus(box)
     expect(app.renderer.handleKey(key("a"))).toBe(true)
     expect(focused).toBe(1)
-    app.renderer.handleMouse({ kind: "mouse", type: "down", button: 0, x: 1, y: 0, ctrl: false, alt: false, shift: false })
+    app.renderer.handleMouse({
+      kind: "mouse",
+      type: "down",
+      button: 0,
+      x: 1,
+      y: 0,
+      ctrl: false,
+      alt: false,
+      shift: false,
+    })
     expect(app.renderer.focusedNode).toBe(box)
     app.renderer.focus(undefined)
     expect(blurred).toBe(1)

@@ -6,7 +6,17 @@ import { expect, test } from "bun:test"
 
 type Line = Readonly<{
   type: string
-  event?: { kind: string; name?: string; ctrl?: boolean; text?: string; button?: number; x?: number; y?: number; data?: string; code?: number }
+  event?: {
+    kind: string
+    name?: string
+    ctrl?: boolean
+    text?: string
+    button?: number
+    x?: number
+    y?: number
+    data?: string
+    code?: number
+  }
   data?: string
   columns?: number
   rows?: number
@@ -18,7 +28,14 @@ const pty = usesPty ? test : test.skip
 async function runDevice(inputBytes: string): Promise<Line[]> {
   const lines: Line[] = []
   const proc = Bun.spawn(
-    ["script", "-q", "-e", "-c", `stty raw -echo; exec ${process.execPath} run ${import.meta.dir}/fixture/terminal-device.ts`, "/dev/null"],
+    [
+      "script",
+      "-q",
+      "-e",
+      "-c",
+      `stty raw -echo; exec ${process.execPath} run ${import.meta.dir}/fixture/terminal-device.ts`,
+      "/dev/null",
+    ],
     { stdin: "pipe", stdout: "pipe", stderr: "ignore" },
   )
   const reader = proc.stdout.getReader()

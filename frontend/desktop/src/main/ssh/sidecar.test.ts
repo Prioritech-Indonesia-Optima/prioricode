@@ -168,9 +168,9 @@ describe("spawnSshSidecar", () => {
       1: (child) => child.succeed(marker()),
       2: (child) => child.die(255, "Error: remote port forwarding failed for listen port 48917\n"),
     })
-    await expect(
-      spawnSshSidecar("web", { spawn, healthTimeoutMs: 2_000, listenerTimeoutMs: 400 }),
-    ).rejects.toThrow(/already in use/)
+    await expect(spawnSshSidecar("web", { spawn, healthTimeoutMs: 2_000, listenerTimeoutMs: 400 })).rejects.toThrow(
+      /already in use/,
+    )
     portOverride = null
   })
 

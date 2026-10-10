@@ -21,7 +21,9 @@ export type CreateRendererOptions = Readonly<{
   write?: (data: string) => void
 }>
 
-export async function createCliRendererCore(options: CreateRendererOptions = {}): Promise<CoreRenderer & { terminal: Terminal; root: Renderable }> {
+export async function createCliRendererCore(
+  options: CreateRendererOptions = {},
+): Promise<CoreRenderer & { terminal: Terminal; root: Renderable }> {
   await createLayoutEngine()
   const terminal = createTerminal({
     mouse: options.useMouse,

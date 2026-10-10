@@ -24,7 +24,15 @@ export type MouseEventLike = Readonly<{
   stopPropagation(): void
 }>
 
-export type RenderableEventName = "mouse:down" | "mouse:up" | "mouse:move" | "mouse:wheel" | "key" | "paste" | "focus" | "blur"
+export type RenderableEventName =
+  | "mouse:down"
+  | "mouse:up"
+  | "mouse:move"
+  | "mouse:wheel"
+  | "key"
+  | "paste"
+  | "focus"
+  | "blur"
 
 export class Renderable {
   readonly id = ++idCounter

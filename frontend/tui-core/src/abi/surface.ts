@@ -1,4 +1,13 @@
-import type { EngineSurface, AbiRenderer, AbiKeymap, AbiColorLike, AbiEffect, AbiKeyEvent, AbiBindingLookup, PostProcessFn } from "@prioricode/tui-abi"
+import type {
+  EngineSurface,
+  AbiRenderer,
+  AbiKeymap,
+  AbiColorLike,
+  AbiEffect,
+  AbiKeyEvent,
+  AbiBindingLookup,
+  PostProcessFn,
+} from "@prioricode/tui-abi"
 import { TUI_ABI_VERSION } from "@prioricode/tui-abi"
 import type { CoreRenderer } from "../render/renderer"
 import type { Keymap, CommandInfo } from "../keymap/keymap"

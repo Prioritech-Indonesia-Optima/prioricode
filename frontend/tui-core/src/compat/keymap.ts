@@ -38,12 +38,14 @@ export interface OpenTuiKeymap extends Keymap {
   dispatchInput(event: KeyEvent): boolean
 }
 
-export function createKeymapFacade(input: Readonly<{ dispatcher?: (name: string, event: KeyEvent | undefined) => boolean }> = {}): OpenTuiKeymap {
+export function createKeymapFacade(
+  input: Readonly<{ dispatcher?: (name: string, event: KeyEvent | undefined) => boolean }> = {},
+): OpenTuiKeymap {
   const base = createKeymap(input)
   const data = new Map<string, unknown>()
   return Object.assign(base, {
     setData: (key: string, value: unknown) => void data.set(key, value),
-    getData: <T,>(key: string) => data.get(key) as T | undefined,
+    getData: <T>(key: string) => data.get(key) as T | undefined,
     registerLayerFields: () => {},
     appendBindingExpander: () => () => {},
     getPendingSequence: () => base.pendingChain().map((name) => ({ tokenName: name })),

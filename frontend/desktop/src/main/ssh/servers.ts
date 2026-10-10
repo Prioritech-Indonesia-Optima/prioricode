@@ -423,7 +423,9 @@ function normalizePersistedServer(value: unknown): SshServerConfig[] {
   const alias = typeof record.alias === "string" && record.alias.length > 0 ? record.alias : null
   if (!alias) return []
   const id = typeof record.id === "string" && record.id.length > 0 ? record.id : sshServerIdForAlias(alias)
-  return [{ id, alias, workspace: normalizeWorkspace(typeof record.workspace === "string" ? record.workspace : undefined) }]
+  return [
+    { id, alias, workspace: normalizeWorkspace(typeof record.workspace === "string" ? record.workspace : undefined) },
+  ]
 }
 
 async function defaultRemoteExec(
@@ -441,21 +443,21 @@ async function defaultRemoteExec(
         windowsHide: true,
         env: { ...process.env, ...askpass.env },
       })
-    if (stdin) child.stdin.end(stdin)
-    else child.stdin.end()
-    let output = ""
-    child.stdout.setEncoding("utf8")
-    child.stdout.on("data", (chunk: string) => (output += chunk))
-    child.stderr.setEncoding("utf8")
-    child.stderr.on("data", (chunk: string) => (output += chunk))
-    const timer = setTimeout(() => {
-      child.kill()
-      reject(new Error(`ssh timed out after ${timeoutMs}ms`))
-    }, timeoutMs)
-    child.once("error", (error) => {
-      clearTimeout(timer)
-      reject(error)
-    })
+      if (stdin) child.stdin.end(stdin)
+      else child.stdin.end()
+      let output = ""
+      child.stdout.setEncoding("utf8")
+      child.stdout.on("data", (chunk: string) => (output += chunk))
+      child.stderr.setEncoding("utf8")
+      child.stderr.on("data", (chunk: string) => (output += chunk))
+      const timer = setTimeout(() => {
+        child.kill()
+        reject(new Error(`ssh timed out after ${timeoutMs}ms`))
+      }, timeoutMs)
+      child.once("error", (error) => {
+        clearTimeout(timer)
+        reject(error)
+      })
       child.once("exit", (code) => {
         clearTimeout(timer)
         resolve({ code: code ?? -1, output })

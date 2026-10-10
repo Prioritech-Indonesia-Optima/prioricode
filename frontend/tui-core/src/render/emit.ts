@@ -68,7 +68,10 @@ export function emitRuns(runs: Run[]): string {
   return out
 }
 
-export function sgrDelta(from: { fg: number; bg: number; attrs: Attributes }, to: { fg: number; bg: number; attrs: Attributes }): string {
+export function sgrDelta(
+  from: { fg: number; bg: number; attrs: Attributes },
+  to: { fg: number; bg: number; attrs: Attributes },
+): string {
   const codes: number[] = []
   const attrBits = to.attrs & ~Attr.Hidden
   if (attrBits !== (from.attrs & ~Attr.Hidden)) {
@@ -107,8 +110,7 @@ export function fullFrame(buffer: CellBuffer): string {
         x++
         continue
       }
-      const isDefault =
-        c.text === " " && c.fg === NO_COLOR && c.bg === NO_COLOR && (c.attrs & ~Attr.None) === 0
+      const isDefault = c.text === " " && c.fg === NO_COLOR && c.bg === NO_COLOR && (c.attrs & ~Attr.None) === 0
       if (isDefault && curFg === NO_COLOR && curBg === NO_COLOR && curAttrs === Attr.None) {
         x += Math.max(1, displayWidth(c))
         continue

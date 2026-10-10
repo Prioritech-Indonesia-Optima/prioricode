@@ -30,15 +30,7 @@ function BrandImage(props: BrandImageProps): JSX.Element {
 }
 
 export const Mark = (props: { class?: string }) => {
-  return (
-    <BrandImage
-      class={props.class}
-      component="logo-mark"
-      white={markWhite}
-      ink={markInk}
-      alt="PrioriCode"
-    />
-  )
+  return <BrandImage class={props.class} component="logo-mark" white={markWhite} ink={markInk} alt="PrioriCode" />
 }
 
 export const Splash = (props: Pick<ComponentProps<"svg">, "ref" | "class">) => {

@@ -183,7 +183,9 @@ class TerminalImpl implements Terminal {
 
   private enterRawMode(): void {
     try {
-      const previous = Bun.spawnSync({ cmd: ["stty", "-g"], stdin: "inherit", stdout: "pipe" }).stdout.toString().trim()
+      const previous = Bun.spawnSync({ cmd: ["stty", "-g"], stdin: "inherit", stdout: "pipe" })
+        .stdout.toString()
+        .trim()
       Bun.spawnSync({ cmd: ["stty", "raw", "-echo"], stdin: "inherit", stdout: "ignore" })
       this.cleanupRaw = () => {
         if (!previous) return

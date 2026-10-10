@@ -1,7 +1,15 @@
 export * from "./types"
 export { parseColor, colorChannels, blendColor, type ColorInput } from "./color"
 export { graphemes, graphemeWidth, stringWidth, truncate, wrapLines, type TruncateMode, type WrapMode } from "./text"
-export { Renderable, toColor, createLayoutEngine, layoutEngine, type OverflowReport, type OverflowViolation, type PaintContext } from "./layout/engine"
+export {
+  Renderable,
+  toColor,
+  createLayoutEngine,
+  layoutEngine,
+  type OverflowReport,
+  type OverflowViolation,
+  type PaintContext,
+} from "./layout/engine"
 export { CellBuffer, BLANK_CELL, type Cell } from "./render/cell"
 export { diffBuffers, emitRuns, fullFrame, type Run } from "./render/emit"
 export { FrameScheduler } from "./render/scheduler"
@@ -21,10 +29,21 @@ export { createOscChannel, encodeOsc, encodeDcsPassthrough, type OscChannel, typ
 export { createKeymap, type CommandInfo, type KeymapLayer, type CommandDispatcher } from "./keymap/keymap"
 export { parseBinding, parseBindings, bindingMatchesEvent, type Binding } from "./keymap/binding"
 export { createAttachmentBroker, fakeTransport, type BrokerOutcome } from "./attachments/broker"
-export type { AttachmentPayload, AttachmentReadResult, AttachmentSource, AttachmentTransport, AttachmentTransportKind } from "./attachments/types"
+export type {
+  AttachmentPayload,
+  AttachmentReadResult,
+  AttachmentSource,
+  AttachmentTransport,
+  AttachmentTransportKind,
+} from "./attachments/types"
 export { mount, useTui, useRenderer, useTerminalDimensions, type TuiContext, type MountedApp } from "./solid/mount"
 export { createTerminal, type Terminal, type TerminalOptions } from "./io/terminal"
 export { InputRenderable, type InputStyleProps } from "./primitives/input"
-export { TextareaRenderable, type EditorTraits, type PastePayload, type TextareaStyleProps } from "./primitives/textarea"
+export {
+  TextareaRenderable,
+  type EditorTraits,
+  type PastePayload,
+  type TextareaStyleProps,
+} from "./primitives/textarea"
 export { EditBuffer, type ExtmarkHandle } from "./text/edit-buffer"
 export { EditorView, computeVisualLines, type VisualLine } from "./text/editor-view"

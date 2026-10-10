@@ -11,7 +11,7 @@ import { Locale } from "../../../src/util/locale"
 
 const HINT = "esc interrupt"
 const LONG_MESSAGE =
-  "API Error: 429 data: {\"error\":{\"message\":\"This model's maximum context length is 200000 tokens. Please reduce the length of the messages.\",\"type\":\"invalid_request_error\"}}"
+  'API Error: 429 data: {"error":{"message":"This model\'s maximum context length is 200000 tokens. Please reduce the length of the messages.","type":"invalid_request_error"}}'
 
 function StatusRow(props: { width: number }) {
   const hintWidth = () => 13
@@ -25,7 +25,9 @@ function StatusRow(props: { width: number }) {
           <text wrapMode="none">[⋯]</text>
         </box>
         <box flexDirection="row" minWidth={0} flexShrink={1}>
-          <text wrapMode="none">{Locale.truncateMiddle("tool-name-that-is-quite-long-1234567890", Math.max(12, contentWidth() - 10))}</text>
+          <text wrapMode="none">
+            {Locale.truncateMiddle("tool-name-that-is-quite-long-1234567890", Math.max(12, contentWidth() - 10))}
+          </text>
         </box>
         <box flexDirection="row" gap={1} flexShrink={0}>
           <text wrapMode="none">{message()}</text>

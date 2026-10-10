@@ -22,7 +22,10 @@ async function oracle(): Promise<Goldens> {
 }
 
 function normalize(lines: readonly string[]): string {
-  return lines.map((line) => line.replace(/\s+$/, "")).join("\n").replace(/\n+$/, "")
+  return lines
+    .map((line) => line.replace(/\s+$/, ""))
+    .join("\n")
+    .replace(/\n+$/, "")
 }
 
 const goldens = await oracle()

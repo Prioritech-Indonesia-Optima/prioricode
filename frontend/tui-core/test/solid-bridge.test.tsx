@@ -9,7 +9,14 @@ await createLayoutEngine()
 
 test("renders a signal-driven text through the solid bridge", async () => {
   const [count, setCount] = createSignal(3)
-  const app = await testRender(() => <box><text wrap="none">items {count()}</text></box>, { width: 30, height: 4 })
+  const app = await testRender(
+    () => (
+      <box>
+        <text wrap="none">items {count()}</text>
+      </box>
+    ),
+    { width: 30, height: 4 },
+  )
   try {
     const frame = await app.waitForFrame((f) => f.includes("items 3"))
     expect(frame).toContain("items 3")
