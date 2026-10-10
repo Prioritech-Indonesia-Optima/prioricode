@@ -210,6 +210,18 @@ const main = Effect.gen(function* () {
   ensureLoopbackNoProxy()
   useEnvProxy()
   app.commandLine.appendSwitch("proxy-bypass-list", "<-loopback>")
+  if (
+    process.platform === "linux" &&
+    process.env.WAYLAND_DISPLAY &&
+    process.env.PRIORICODE_OZONE !== "wayland" &&
+    process.env.PRIORICODE_OZONE !== "x11" &&
+    !process.argv.some((arg) => arg.startsWith("--ozone-platform"))
+  ) {
+    process.env.PRIORICODE_OZONE = "x11"
+    app.relaunch({ args: [...process.argv.slice(1), "--ozone-platform=x11"] })
+    app.exit(0)
+    return
+  }
   const features = app.commandLine.getSwitchValue("enable-features")
   app.commandLine.appendSwitch("enable-features", features ? `${jsCallStackFeature},${features}` : jsCallStackFeature)
   if (!app.isPackaged) app.commandLine.appendSwitch("remote-debugging-port", "9222")
