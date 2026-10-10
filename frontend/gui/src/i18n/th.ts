@@ -436,6 +436,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "เลือกโฟลเดอร์",
   "dialog.directory.root": "โฟลเดอร์ราก",
   "dialog.directory.parent": "โฟลเดอร์หลัก",
+  "dialog.directory.places": "สถานที่",
+  "dialog.directory.home": "บ้าน",
+  "dialog.directory.locations": "ตำแหน่ง",
   "dialog.directory.readError": "ไม่สามารถอ่านโฟลเดอร์นี้ได้",
 
   "dialog.server.title": "เซิร์ฟเวอร์",

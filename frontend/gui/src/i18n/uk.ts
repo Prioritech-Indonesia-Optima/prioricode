@@ -440,6 +440,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "Вибрати папку",
   "dialog.directory.root": "Корінь",
   "dialog.directory.parent": "Батьківська папка",
+  "dialog.directory.places": "Місця",
+  "dialog.directory.home": "Дім",
+  "dialog.directory.locations": "Розташування",
   "dialog.directory.readError": "Не вдалося прочитати цю папку",
 
   "app.server.unreachable": "Не вдалося зв'язатися із {{server}}",

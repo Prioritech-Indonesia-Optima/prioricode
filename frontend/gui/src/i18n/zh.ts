@@ -457,6 +457,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "选择文件夹",
   "dialog.directory.root": "根目录",
   "dialog.directory.parent": "上级目录",
+  "dialog.directory.places": "位置",
+  "dialog.directory.home": "主目录",
+  "dialog.directory.locations": "位置",
   "dialog.directory.readError": "无法读取此文件夹",
 
   "dialog.server.title": "服务器",

@@ -429,6 +429,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "Velg mappe",
   "dialog.directory.root": "Rot",
   "dialog.directory.parent": "Overordnet",
+  "dialog.directory.places": "Plasser",
+  "dialog.directory.home": "Hjem",
+  "dialog.directory.locations": "Steder",
   "dialog.directory.readError": "Kan ikke lese denne mappen",
 
   "dialog.server.title": "Servere",

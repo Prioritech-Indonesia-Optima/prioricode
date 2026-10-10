@@ -443,6 +443,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "Klasör seç",
   "dialog.directory.root": "Kök",
   "dialog.directory.parent": "Üst klasör",
+  "dialog.directory.places": "Yerler",
+  "dialog.directory.home": "Ev",
+  "dialog.directory.locations": "Konumlar",
   "dialog.directory.readError": "Bu klasör okunamıyor",
 
   "dialog.server.title": "Sunucular",

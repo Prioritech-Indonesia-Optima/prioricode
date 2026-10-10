@@ -436,6 +436,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "選擇資料夾",
   "dialog.directory.root": "根目錄",
   "dialog.directory.parent": "上層目錄",
+  "dialog.directory.places": "位置",
+  "dialog.directory.home": "主目錄",
+  "dialog.directory.locations": "位置",
   "dialog.directory.readError": "無法讀取此資料夾",
 
   "dialog.server.title": "伺服器",

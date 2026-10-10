@@ -439,6 +439,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "Pilih folder",
   "dialog.directory.root": "Akar",
   "dialog.directory.parent": "Induk",
+  "dialog.directory.places": "Lokasi",
+  "dialog.directory.home": "Beranda",
+  "dialog.directory.locations": "Tempat",
   "dialog.directory.readError": "Tidak dapat membaca folder ini",
 
   "app.server.unreachable": "Tidak dapat menjangkau {{server}}",

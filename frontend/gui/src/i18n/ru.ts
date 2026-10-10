@@ -437,6 +437,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "Выбрать папку",
   "dialog.directory.root": "Корень",
   "dialog.directory.parent": "Родительская папка",
+  "dialog.directory.places": "Места",
+  "dialog.directory.home": "Дом",
+  "dialog.directory.locations": "Расположения",
   "dialog.directory.readError": "Не удалось прочитать эту папку",
 
   "dialog.server.title": "Серверы",

@@ -336,6 +336,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "Vælg mappe",
   "dialog.directory.root": "Rod",
   "dialog.directory.parent": "Overordnet",
+  "dialog.directory.places": "Pladser",
+  "dialog.directory.home": "Hjem",
+  "dialog.directory.locations": "Steder",
   "dialog.directory.readError": "Denne mappe kan ikke læses",
 
   "dialog.server.title": "Servere",

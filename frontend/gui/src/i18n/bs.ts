@@ -439,6 +439,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "Odaberi fasciklu",
   "dialog.directory.root": "Korijen",
   "dialog.directory.parent": "Nadređena fascikla",
+  "dialog.directory.places": "Mesta",
+  "dialog.directory.home": "Početna",
+  "dialog.directory.locations": "Lokacije",
   "dialog.directory.readError": "Nije moguće pročitati ovu fasciklu",
 
   "dialog.server.title": "Serveri",

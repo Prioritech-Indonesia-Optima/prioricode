@@ -440,6 +440,9 @@ export const dict = {
   "dialog.directory.action.selectFolder": "Seleccionar carpeta",
   "dialog.directory.root": "Raíz",
   "dialog.directory.parent": "Carpeta superior",
+  "dialog.directory.places": "Lugares",
+  "dialog.directory.home": "Inicio",
+  "dialog.directory.locations": "Ubicaciones",
   "dialog.directory.readError": "No se puede leer esta carpeta",
 
   "dialog.server.title": "Servidores",
