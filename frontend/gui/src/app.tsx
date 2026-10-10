@@ -6,6 +6,7 @@ import { FileComponentProvider } from "@prioricode/ui/context/file"
 import { File } from "@prioricode/session-ui/file"
 import { Font } from "@prioricode/ui/font"
 import { Splash } from "@prioricode/ui/logo"
+import { ButtonV2 } from "@prioricode/ui/v2/button-v2"
 import { ThemeProvider } from "@prioricode/ui/theme/context"
 import { MetaProvider } from "@solidjs/meta"
 import {
@@ -63,7 +64,7 @@ import LegacyLayout from "@/pages/layout"
 import NewLayout from "@/pages/layout-new"
 import { ErrorPage } from "./pages/error"
 import { useCheckServerHealth } from "./utils/server-health"
-import { legacySessionHref, legacySessionServer, requireServerKey, sessionHref } from "./utils/session-route"
+import { legacySessionHref, legacySessionServer, serverKeyFromSegment, serverKeyLabel, sessionHref } from "./utils/session-route"
 import { createSessionLineage } from "@/pages/session/session-lineage"
 
 import { SessionPage, SessionRouteErrorBoundary, TargetSessionRouteContent } from "@/pages/session"
@@ -108,22 +109,69 @@ const SessionRoute = () => {
   )
 }
 
+// Contained fallback for a target-server route that cannot render its session yet:
+// either the server key in the URL is unresolvable, or the server is not connected
+// (e.g. an SSH sidecar still starting after a restart). Shows a loading state that
+// auto-resolves when the server becomes available, instead of crashing the app or
+// silently targeting another server.
+function ServerRouteFallback(props: { server?: string; invalid?: boolean }) {
+  const language = useLanguage()
+  const navigate = useNavigate()
+  const [timedOut, setTimedOut] = createSignal(false)
+  if (!props.invalid) {
+    const timer = setTimeout(() => setTimedOut(true), 30_000)
+    onCleanup(() => clearTimeout(timer))
+  }
+  const title = props.invalid
+    ? language.t("session.server.invalidRoute")
+    : timedOut()
+      ? language.t("app.server.unreachable", { server: props.server ?? "" })
+      : language.t("session.server.connecting", { server: props.server ?? "" })
+
+  return (
+    <div
+      data-component="server-route-fallback"
+      class="h-dvh w-screen flex flex-col items-center justify-center bg-background-base gap-6 p-6"
+    >
+      <Splash class="w-16 h-20 opacity-50 animate-pulse" />
+      <div class="flex flex-col items-center max-w-md text-center gap-2">
+        <p class="text-14-regular text-text-base">{title}</p>
+        <Show when={!props.invalid && !timedOut()}>
+          <p class="text-12-regular text-text-weak">{language.t("app.server.retrying")}</p>
+        </Show>
+      </div>
+      <ButtonV2 variant="neutral" size="normal" onClick={() => navigate("/")}>
+        {language.t("session.server.goHome")}
+      </ButtonV2>
+    </div>
+  )
+}
+
 function TargetServerRoute(props: ParentProps) {
   const params = useParams<{ serverKey: string; id: string }>()
   const global = useGlobal()
+  const key = createMemo(() => serverKeyFromSegment(params.serverKey))
   const conn = createMemo(() => {
-    const key = requireServerKey(params.serverKey)
-    return global.servers.list().find((item) => ServerConnection.key(item) === key)
+    const k = key()
+    return k ? global.servers.list().find((item) => ServerConnection.key(item) === k) : undefined
+  })
+  const label = createMemo(() => {
+    const k = key()
+    return k ? serverKeyLabel(k) : ""
   })
 
   return (
     // Owns the server-identity remount. Session changes must NOT remount this
     // subtree (SessionRouteErrorBoundary resets and createSessionLineage
     // re-resolves reactively instead); both rely on this key for server changes.
-    <Show when={requireServerKey(params.serverKey)} keyed>
-      <ServerSDKProvider server={conn}>
-        <ServerSyncProvider server={conn}>{props.children}</ServerSyncProvider>
-      </ServerSDKProvider>
+    // The inner Show is intentionally unkeyed so a reconnect with the same key
+    // updates the SDK reactively rather than remounting the session subtree.
+    <Show when={key()} keyed fallback={<ServerRouteFallback invalid />}>
+      <Show when={conn()} fallback={<ServerRouteFallback server={label()} />}>
+        <ServerSDKProvider server={conn}>
+          <ServerSyncProvider server={conn}>{props.children}</ServerSyncProvider>
+        </ServerSDKProvider>
+      </Show>
     </Show>
   )
 }
@@ -136,9 +184,10 @@ const TargetSessionRoute = () => (
 
 function LegacyTargetSessionRoute() {
   const params = useParams<{ serverKey: string; id: string }>()
+  const key = createMemo(() => serverKeyFromSegment(params.serverKey))
   return (
     <TargetServerRoute>
-      <SessionRouteErrorBoundary sessionID={params.id} serverKey={requireServerKey(params.serverKey)}>
+      <SessionRouteErrorBoundary sessionID={params.id} serverKey={key()}>
         <LegacyTargetSessionRedirect />
       </SessionRouteErrorBoundary>
     </TargetServerRoute>
