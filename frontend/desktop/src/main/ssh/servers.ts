@@ -47,6 +47,9 @@ export function sshServerIdForAlias(alias: string) {
 
 const INSTALL_TIMEOUT_MS = 15 * 60_000
 const CHECK_TIMEOUT_MS = 30_000
+const RECONNECT_BASE_DELAY_MS = 2_000
+const RECONNECT_MAX_DELAY_MS = 30_000
+const RECONNECT_MAX_ATTEMPTS = 10
 
 export function createSshServersController(
   appVersion: string,
@@ -58,6 +61,8 @@ export function createSshServersController(
   const sidecars = new Map<string, RunningSidecar>()
   const startAttempts = new Map<string, number>()
   const autoInstalled = new Set<string>()
+  const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  const reconnectAttempts = new Map<string, number>()
   let jobAbort: AbortController | undefined
   const logger = options?.logger
   const readServers = options?.readServers ?? readPersistedServers
@@ -174,8 +179,48 @@ export function createSshServersController(
   const failStart = (id: string, attempt: number, alias: string, error: unknown, note: string) => {
     if (!isCurrentStartAttempt(id, attempt)) return
     const message = error instanceof Error ? error.message : String(error)
-    setRuntime(id, { kind: "failed", message })
     logger?.error(note, { id, alias, message })
+    if (reconnectAttempts.has(id)) {
+      scheduleReconnect(id, alias)
+      return
+    }
+    setRuntime(id, { kind: "failed", message })
+  }
+
+  const clearReconnectTimer = (id: string) => {
+    const timer = reconnectTimers.get(id)
+    if (timer) {
+      clearTimeout(timer)
+      reconnectTimers.delete(id)
+    }
+  }
+
+  const scheduleReconnect = (id: string, alias: string) => {
+    clearReconnectTimer(id)
+    const attempt = (reconnectAttempts.get(id) ?? 0) + 1
+    reconnectAttempts.set(id, attempt)
+    if (attempt > RECONNECT_MAX_ATTEMPTS) {
+      reconnectAttempts.delete(id)
+      setRuntime(id, {
+        kind: "failed",
+        message: nativeT("desktop.ssh.error.serverExited", {
+          host: alias,
+          code: "reconnect_exhausted",
+          signal: "null",
+        }),
+      })
+      logger?.error("ssh reconnect attempts exhausted", { id, alias, attempts: attempt })
+      return
+    }
+    setRuntime(id, { kind: "reconnecting", attempt })
+    const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** (attempt - 1), RECONNECT_MAX_DELAY_MS)
+    logger?.log("ssh scheduling reconnect", { id, alias, attempt, delayMs: delay })
+    const timer = setTimeout(() => {
+      reconnectTimers.delete(id)
+      if (!state.servers.some((item) => item.config.id === id)) return
+      void startServer(id)
+    }, delay)
+    reconnectTimers.set(id, timer)
   }
 
   const startSidecarWithAutoInstall = async (id: string, alias: string, attempt: number) => {
@@ -220,6 +265,7 @@ export function createSshServersController(
   const startServer = async (id: string) => {
     const item = state.servers.find((x) => x.config.id === id)
     if (!item) return
+    clearReconnectTimer(id)
     const attempt = nextStartAttempt(id)
     await stopServerInternal(id)
     if (!isCurrentStartAttempt(id, attempt)) return
@@ -235,6 +281,7 @@ export function createSshServersController(
       }
       return
     }
+    reconnectAttempts.delete(id)
     sidecars.set(id, sidecar)
     setRuntime(id, {
       kind: "ready",
@@ -245,15 +292,8 @@ export function createSshServersController(
     sidecar.listener.onExit((code, signal) => {
       if (sidecars.get(id) !== sidecar) return
       sidecars.delete(id)
-      setRuntime(id, {
-        kind: "failed",
-        message: nativeT("desktop.ssh.error.serverExited", {
-          host: item.config.alias,
-          code: code ?? "null",
-          signal: signal ?? "null",
-        }),
-      })
       logger?.error("ssh sidecar exited", { id, alias: item.config.alias, code, signal })
+      scheduleReconnect(id, item.config.alias)
     })
     refreshPrioricodeCheckBackground(id, item.config.alias)
     logger?.log("ssh sidecar ready", { id, alias: item.config.alias, url: sidecar.url })
@@ -340,6 +380,8 @@ export function createSshServersController(
 
     async removeServer(id: string) {
       invalidateStartAttempt(id)
+      clearReconnectTimer(id)
+      reconnectAttempts.delete(id)
       await stopServerInternal(id)
       const remaining = readServers().filter((item) => item.id !== id)
       writeServers(remaining)
@@ -352,6 +394,8 @@ export function createSshServersController(
 
     async stopServer(id: string) {
       invalidateStartAttempt(id)
+      clearReconnectTimer(id)
+      reconnectAttempts.delete(id)
       await stopServerInternal(id)
       if (state.servers.some((item) => item.config.id === id)) setRuntime(id, { kind: "stopped" })
     },
@@ -380,6 +424,9 @@ export function createSshServersController(
 
     stopAll() {
       for (const item of state.servers) invalidateStartAttempt(item.config.id)
+      for (const timer of reconnectTimers.values()) clearTimeout(timer)
+      reconnectTimers.clear()
+      reconnectAttempts.clear()
       for (const existing of sidecars.values()) {
         try {
           existing.listener.stop()
