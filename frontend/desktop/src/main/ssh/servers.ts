@@ -383,7 +383,17 @@ export function createSshServersController(
       invalidateStartAttempt(id)
       clearReconnectTimer(id)
       reconnectAttempts.delete(id)
+      const alias = state.servers.find((item) => item.config.id === id)?.config.alias
       await stopServerInternal(id)
+      if (alias) {
+        void stopSshServer(alias)
+          .then((result) => {
+            if (result.code !== 0) logger?.error("ssh remote stop failed", { id, alias, code: result.code, output: result.output })
+          })
+          .catch((error) => {
+            logger?.error("ssh remote stop failed", { id, alias, message: String(error) })
+          })
+      }
       const remaining = readServers().filter((item) => item.id !== id)
       writeServers(remaining)
       setState({
@@ -434,7 +444,16 @@ export function createSshServersController(
     },
 
     stopAll() {
-      for (const item of state.servers) invalidateStartAttempt(item.config.id)
+      for (const item of state.servers) {
+        invalidateStartAttempt(item.config.id)
+        void stopSshServer(item.config.alias)
+          .then((result) => {
+            if (result.code !== 0) logger?.error("ssh remote stop failed", { id: item.config.id, alias: item.config.alias, code: result.code, output: result.output })
+          })
+          .catch((error) => {
+            logger?.error("ssh remote stop failed", { id: item.config.id, alias: item.config.alias, message: String(error) })
+          })
+      }
       for (const timer of reconnectTimers.values()) clearTimeout(timer)
       reconnectTimers.clear()
       reconnectAttempts.clear()
