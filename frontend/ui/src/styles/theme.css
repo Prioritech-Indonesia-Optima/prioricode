@@ -362,7 +362,7 @@
     --text-mix-blend-mode: plus-lighter;
 
     /* PrioriCode token fallbacks (dark) */
-    --background-base: #101010;
+    --background-base: #1a1a1a;
     --background-weak: #1e1e1e;
     --background-strong: #121212;
     --background-stronger: #151515;

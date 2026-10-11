@@ -5,11 +5,12 @@ import { BILINEAR, createICNS, createICO } from "png2icons"
 
 const ROOT = path.resolve(import.meta.dir, "..")
 const SOURCE = path.join(ROOT, "branding/source/2026-lockup.png")
+const EMBLEM = path.join(ROOT, "branding/source/emblem.png")
+const WORDMARK = path.join(ROOT, "branding/source/wordmark.png")
 const INK = { r: 28, g: 27, b: 23 }
 const BG_THRESHOLD = 32
+const DARK_BG_THRESHOLD = 60
 
-// Measured on branding/source/2026-lockup.png (2000x2000), 8px padding:
-//   stem x 444-645, chevron x 691-1552 y 282-1198, wordmark text y 1512-1676
 const MARK = { left: 436, top: 274, width: 1124, height: 932 }
 const WORD = { left: 436, top: 1504, width: 1117, height: 180 }
 const LOCK = { left: 436, top: 274, width: 1124, height: 1410 }
@@ -31,6 +32,37 @@ function floodBackground(raw: Uint8Array, w: number, h: number) {
     if (mask[i]) return
     const o = i * 4
     if (raw[o] >= BG_THRESHOLD || raw[o + 1] >= BG_THRESHOLD || raw[o + 2] >= BG_THRESHOLD) return
+    mask[i] = 1
+    stack[sp++] = i
+  }
+  for (let x = 0; x < w; x++) {
+    push(x)
+    push((h - 1) * w + x)
+  }
+  for (let y = 0; y < h; y++) {
+    push(y * w)
+    push(y * w + w - 1)
+  }
+  while (sp) {
+    const i = stack[--sp]
+    const x = i % w
+    const y = (i - x) / w
+    if (x > 0) push(i - 1)
+    if (x < w - 1) push(i + 1)
+    if (y > 0) push(i - w)
+    if (y < h - 1) push(i + w)
+  }
+  return mask
+}
+
+function floodDarkBackground(raw: Uint8Array, w: number, h: number) {
+  const mask = new Uint8Array(w * h)
+  const stack = new Int32Array(w * h)
+  let sp = 0
+  const push = (i: number) => {
+    if (mask[i]) return
+    const o = i * 4
+    if (raw[o] > DARK_BG_THRESHOLD || raw[o + 1] > DARK_BG_THRESHOLD || raw[o + 2] > DARK_BG_THRESHOLD) return
     mask[i] = 1
     stack[sp++] = i
   }
@@ -114,6 +146,21 @@ function toInk(raw: Uint8Array) {
   return copy
 }
 
+function toWhite(raw: Uint8Array) {
+  const copy = Uint8Array.from(raw)
+  for (let i = 0; i < copy.length; i += 4) {
+    if (copy[i + 3] > 0) {
+      const lum = 0.299 * copy[i] + 0.587 * copy[i + 1] + 0.114 * copy[i + 2]
+      if (lum > 100) {
+        copy[i] = 255
+        copy[i + 1] = 255
+        copy[i + 2] = 255
+      }
+    }
+  }
+  return copy
+}
+
 function png(raw: Uint8Array, w: number, h: number) {
   return sharp(Buffer.from(raw), { raw: { width: w, height: h, channels: 4 } })
 }
@@ -130,8 +177,16 @@ async function tile(size: number, mark: Buffer, opts: { rounded?: boolean; fill?
     `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}"><rect width="${size}" height="${size}" rx="${r}" ry="${r}" fill="#000000"/></svg>`,
   )
   const meta = await sharp(mark).metadata()
-  const mh = Math.round(size * fill)
-  const mw = Math.round(mh * (meta.width! / meta.height!))
+  const maxDim = Math.round(size * fill)
+  const aspect = meta.width! / meta.height!
+  let mw: number, mh: number
+  if (aspect > 1) {
+    mw = maxDim
+    mh = Math.round(mw / aspect)
+  } else {
+    mh = maxDim
+    mw = Math.round(mh * aspect)
+  }
   const scaled = await sharp(mark).resize(mw, mh, { fit: "fill" }).png().toBuffer()
   return sharp(bg)
     .composite([{ input: scaled, gravity: "centre" }])
@@ -155,28 +210,61 @@ async function social(file: string, w: number, h: number, lockup: Buffer, bgOver
     .toBuffer()
 }
 
-async function main() {
-  const { data: raw, info } = await sharp(SOURCE).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
+async function processDarkSource(file: string) {
+  const { data: raw, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true })
   const { width: w, height: h } = info
-  const mask = floodBackground(raw, w, h)
-  clearEnclosedWhiteCounters(raw, w, h, mask)
+  const mask = floodDarkBackground(raw, w, h)
   const cut = Uint8Array.from(raw)
   for (let i = 0, p = 0; i < mask.length; i++, p += 4) if (mask[i]) cut[p + 3] = 0
-  const ink = toInk(cut)
+  const white = toWhite(cut)
+  const trimmed = await png(cut, w, h).trim().png().toBuffer()
+  const trimmedWhite = await png(white, w, h).trim().png().toBuffer()
+  return { trimmed, trimmedWhite, w, h }
+}
 
-  const markWhite = await png(cut, w, h).extract(MARK).png().toBuffer()
-  const markInk = await png(ink, w, h).extract(MARK).png().toBuffer()
-  const wordWhite = await png(cut, w, h).extract(WORD).png().toBuffer()
-  const wordInk = await png(ink, w, h).extract(WORD).png().toBuffer()
-  const lockWhite = await png(cut, w, h).extract(LOCK).png().toBuffer()
-  const lockInk = await png(ink, w, h).extract(LOCK).png().toBuffer()
+async function main() {
+  // Process new dark-background sources
+  const emblem = await processDarkSource(EMBLEM)
+  const wordmark = await processDarkSource(WORDMARK)
+
+  // Compose lockup: emblem on top, wordmark below
+  const emblemMeta = await sharp(emblem.trimmed).metadata()
+  const wordMeta = await sharp(wordmark.trimmed).metadata()
+  const lockW = Math.max(emblemMeta.width!, wordMeta.width!)
+  const lockH = emblemMeta.height! + wordMeta.height! + 40
+  const lockup = await sharp({ create: { width: lockW, height: lockH, channels: 4, background: "#00000000" } })
+    .composite([
+      { input: emblem.trimmed, gravity: "north" },
+      { input: wordmark.trimmed, gravity: "south" },
+    ])
+    .png()
+    .toBuffer()
+  const lockupWhite = await sharp({ create: { width: lockW, height: lockH, channels: 4, background: "#00000000" } })
+    .composite([
+      { input: emblem.trimmedWhite, gravity: "north" },
+      { input: wordmark.trimmedWhite, gravity: "south" },
+    ])
+    .png()
+    .toBuffer()
+
+  // Use emblem as the mark (icon)
+  const markWhite = emblem.trimmedWhite
+  const markInk = emblem.trimmed
+
+  // Use wordmark for text
+  const wordWhite = wordmark.trimmedWhite
+  const wordInk = wordmark.trimmed
+
+  // Use composed lockup
+  const lockWhite = lockupWhite
+  const lockInk = lockup
 
   const iconMaster = await tile(1024, markWhite)
 
   // branding/
   const brandMark512 = await tile(512, markWhite, { rounded: false, fill: 0.78 })
   const brandMarkLight512 = await sharp({ create: { width: 512, height: 512, channels: 4, background: "#00000000" } })
-    .composite([{ input: await sharp(markInk).resize(398, 330, { fit: "fill" }).png().toBuffer(), gravity: "centre" }])
+    .composite([{ input: await sharp(markInk).resize(400, 400, { fit: "contain" }).png().toBuffer(), gravity: "centre" }])
     .png()
     .toBuffer()
   await out("branding/mark-512x512.png", brandMark512)
@@ -250,14 +338,16 @@ async function main() {
   )
 
   // docs (mintlify) + cloud console raster-wrapper svgs
-  await out("docs/mintlify/logo/light.svg", svgWrap(wordInk, 1117, 180))
-  await out("docs/mintlify/logo/dark.svg", svgWrap(wordWhite, 1117, 180))
+  const wordW = wordMeta.width!
+  const wordH = wordMeta.height!
+  await out("docs/mintlify/logo/light.svg", svgWrap(wordInk, wordW, wordH))
+  await out("docs/mintlify/logo/dark.svg", svgWrap(wordWhite, wordW, wordH))
   await out("docs/mintlify/favicon.svg", svgWrap(favTile96, 96, 96))
   const consoleAsset = "cloud/console/app/src/asset"
-  await out(`${consoleAsset}/logo-ornate-light.svg`, svgWrap(wordInk, 1117, 180))
-  await out(`${consoleAsset}/logo-ornate-dark.svg`, svgWrap(wordWhite, 1117, 180))
-  await out(`${consoleAsset}/lander/logo-light.svg`, svgWrap(wordInk, 1117, 180))
-  await out(`${consoleAsset}/lander/logo-dark.svg`, svgWrap(wordWhite, 1117, 180))
+  await out(`${consoleAsset}/logo-ornate-light.svg`, svgWrap(wordInk, wordW, wordH))
+  await out(`${consoleAsset}/logo-ornate-dark.svg`, svgWrap(wordWhite, wordW, wordH))
+  await out(`${consoleAsset}/lander/logo-light.svg`, svgWrap(wordInk, wordW, wordH))
+  await out(`${consoleAsset}/lander/logo-dark.svg`, svgWrap(wordWhite, wordW, wordH))
 
   console.log("brand generation complete")
 }

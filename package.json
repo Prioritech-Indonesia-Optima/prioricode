@@ -134,6 +134,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.933.0",
+    "@img/sharp-libvips-linux-x64": "1.0.4",
+    "@img/sharp-linux-x64": "0.33.5",
     "@prioricode/plugin": "workspace:*",
     "@prioricode/script": "workspace:*",
     "@prioricode/sdk": "workspace:*",
