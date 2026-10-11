@@ -166,6 +166,9 @@ export function SshServerSettings(props: {
                   </span>
                   <span class="settings-v2-servers-meta">
                     <Show when={check()?.version}>{(version) => `v${version()}`}</Show>
+                    <Show when={item.runtime.kind === "reconnecting"}>
+                      <span class="text-pc-text-muted">{language.t("ssh.server.status.reconnecting")}</span>
+                    </Show>
                     <Show when={item.config.workspace}>
                       {(workspace) => (
                         <span class="truncate" dir="ltr">
