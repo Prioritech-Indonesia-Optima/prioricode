@@ -51,6 +51,8 @@ type WslServersControllerOptions = {
   probeDistro?: typeof probeWslDistro
   resolvePrioricode?: typeof resolveWslPrioricode
   readCommandVersion?: typeof readWslCommandVersion
+  reconnectBaseDelayMs?: number
+  reconnectMaxAttempts?: number
 }
 
 export type WslServersController = ReturnType<typeof createWslServersController>
@@ -79,6 +81,8 @@ export function createWslServersController(
   const readServers = options?.readServers ?? readPersistedServers
   const writeServers = options?.writeServers ?? writePersistedServers
   const probeDistro = options?.probeDistro ?? probeWslDistro
+  const reconnectBaseDelayMs = options?.reconnectBaseDelayMs ?? RECONNECT_BASE_DELAY_MS
+  const reconnectMaxAttempts = options?.reconnectMaxAttempts ?? RECONNECT_MAX_ATTEMPTS
 
   const emit = () => {
     for (const listener of listeners) listener({ type: "state", state })
@@ -238,7 +242,7 @@ export function createWslServersController(
     clearReconnectTimer(id)
     const attempt = (reconnectAttempts.get(id) ?? 0) + 1
     reconnectAttempts.set(id, attempt)
-    if (attempt > RECONNECT_MAX_ATTEMPTS) {
+    if (attempt > reconnectMaxAttempts) {
       reconnectAttempts.delete(id)
       setRuntime(id, {
         kind: "failed",
@@ -251,7 +255,7 @@ export function createWslServersController(
       return
     }
     setRuntime(id, { kind: "reconnecting", attempt })
-    const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** (attempt - 1), RECONNECT_MAX_DELAY_MS)
+    const delay = Math.min(reconnectBaseDelayMs * 2 ** (attempt - 1), RECONNECT_MAX_DELAY_MS)
     logger?.log("wsl scheduling reconnect", { id, distro, attempt, delayMs: delay })
     const timer = setTimeout(() => {
       reconnectTimers.delete(id)

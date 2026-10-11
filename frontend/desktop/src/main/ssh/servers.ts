@@ -38,6 +38,8 @@ type SshServersControllerOptions = {
   writeServers?: (servers: SshServerConfig[]) => void
   readHosts?: () => { profiles: SshHostProfile[]; files: { path: string; exists: boolean; error: string | null }[] }
   remoteExec?: RemoteExec
+  reconnectBaseDelayMs?: number
+  reconnectMaxAttempts?: number
 }
 
 export type SshServersController = ReturnType<typeof createSshServersController>
@@ -70,6 +72,8 @@ export function createSshServersController(
   const writeServers = options?.writeServers ?? writePersistedServers
   const readHosts = options?.readHosts ?? readSshConfigProfiles
   const remoteExec = options?.remoteExec ?? defaultRemoteExec
+  const reconnectBaseDelayMs = options?.reconnectBaseDelayMs ?? RECONNECT_BASE_DELAY_MS
+  const reconnectMaxAttempts = options?.reconnectMaxAttempts ?? RECONNECT_MAX_ATTEMPTS
 
   const emit = () => {
     for (const listener of listeners) listener({ type: "state", state })
@@ -200,7 +204,7 @@ export function createSshServersController(
     clearReconnectTimer(id)
     const attempt = (reconnectAttempts.get(id) ?? 0) + 1
     reconnectAttempts.set(id, attempt)
-    if (attempt > RECONNECT_MAX_ATTEMPTS) {
+    if (attempt > reconnectMaxAttempts) {
       reconnectAttempts.delete(id)
       setRuntime(id, {
         kind: "failed",
@@ -214,7 +218,7 @@ export function createSshServersController(
       return
     }
     setRuntime(id, { kind: "reconnecting", attempt })
-    const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** (attempt - 1), RECONNECT_MAX_DELAY_MS)
+    const delay = Math.min(reconnectBaseDelayMs * 2 ** (attempt - 1), RECONNECT_MAX_DELAY_MS)
     logger?.log("ssh scheduling reconnect", { id, alias, attempt, delayMs: delay })
     const timer = setTimeout(() => {
       reconnectTimers.delete(id)

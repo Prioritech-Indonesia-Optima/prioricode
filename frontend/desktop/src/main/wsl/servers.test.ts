@@ -206,6 +206,147 @@ test("does not check PrioriCode in addable distros that cannot execute commands"
   expect(Object.keys(controller.getState().prioricodeChecks)).toEqual(["Debian"])
 })
 
+test("tunnel exit schedules reconnect (attempt 1)", async () => {
+  persistedServers = []
+  releasePrioricodeResolve = undefined
+  let exitCb: ((code: number | null, signal: NodeJS.Signals | null) => void) | undefined
+  const controller = createWslServersController(
+    "1.16.2",
+    async () => ({
+      listener: {
+        stop: () => undefined,
+        onExit: (cb: (code: number | null, signal: NodeJS.Signals | null) => void) => {
+          exitCb = cb
+        },
+      },
+      url: "http://127.0.0.1:4096",
+      username: "prioricode",
+      password: "secret",
+    }),
+    {
+      ...testControllerOptions(),
+      resolvePrioricode: async () => "/home/me/.prioricode/bin/prioricode",
+      reconnectBaseDelayMs: 1,
+    },
+  )
+
+  await controller.addServer("Debian")
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
+  exitCb?.(137, null)
+  const runtime = controller.getState().servers[0]?.runtime
+  expect(runtime?.kind).toBe("reconnecting")
+  if (runtime?.kind === "reconnecting") expect(runtime.attempt).toBe(1)
+})
+
+test("wsl reconnect succeeds and returns to ready", async () => {
+  persistedServers = []
+  releasePrioricodeResolve = undefined
+  let spawns = 0
+  let exitCb: ((code: number | null, signal: NodeJS.Signals | null) => void) | undefined
+  const controller = createWslServersController(
+    "1.16.2",
+    async () => {
+      spawns++
+      return {
+        listener: {
+          stop: () => undefined,
+          onExit: (cb: (code: number | null, signal: NodeJS.Signals | null) => void) => {
+            exitCb = cb
+          },
+        },
+        url: "http://127.0.0.1:4096",
+        username: "prioricode",
+        password: "secret",
+      }
+    },
+    {
+      ...testControllerOptions(),
+      resolvePrioricode: async () => "/home/me/.prioricode/bin/prioricode",
+      reconnectBaseDelayMs: 1,
+    },
+  )
+
+  await controller.addServer("Debian")
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
+  exitCb?.(137, null)
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("reconnecting")
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
+  expect(spawns).toBe(2)
+})
+
+test("wsl reconnect exhaustion flips to failed", async () => {
+  persistedServers = []
+  releasePrioricodeResolve = undefined
+  let exitCb: ((code: number | null, signal: NodeJS.Signals | null) => void) | undefined
+  const controller = createWslServersController(
+    "1.16.2",
+    async () => ({
+      listener: {
+        stop: () => undefined,
+        onExit: (cb: (code: number | null, signal: NodeJS.Signals | null) => void) => {
+          exitCb = cb
+        },
+      },
+      url: "http://127.0.0.1:4096",
+      username: "prioricode",
+      password: "secret",
+    }),
+    {
+      ...testControllerOptions(),
+      resolvePrioricode: async () => "/home/me/.prioricode/bin/prioricode",
+      reconnectBaseDelayMs: 1,
+      reconnectMaxAttempts: 3,
+    },
+  )
+
+  await controller.addServer("Debian")
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
+  exitCb?.(137, null)
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("reconnecting")
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  const runtime = controller.getState().servers[0]?.runtime
+  expect(runtime?.kind).toBe("failed")
+  if (runtime?.kind === "failed") expect(runtime.message).toContain("reconnect_exhausted")
+})
+
+test("wsl stopServer cancels pending reconnect", async () => {
+  persistedServers = []
+  releasePrioricodeResolve = undefined
+  let exitCb: ((code: number | null, signal: NodeJS.Signals | null) => void) | undefined
+  const controller = createWslServersController(
+    "1.16.2",
+    async () => ({
+      listener: {
+        stop: () => undefined,
+        onExit: (cb: (code: number | null, signal: NodeJS.Signals | null) => void) => {
+          exitCb = cb
+        },
+      },
+      url: "http://127.0.0.1:4096",
+      username: "prioricode",
+      password: "secret",
+    }),
+    {
+      ...testControllerOptions(),
+      resolvePrioricode: async () => "/home/me/.prioricode/bin/prioricode",
+      reconnectBaseDelayMs: 100,
+    },
+  )
+
+  await controller.addServer("Debian")
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  exitCb?.(137, null)
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("reconnecting")
+  await controller.stopServer("wsl:Debian")
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("stopped")
+  await new Promise((resolve) => setTimeout(resolve, 110))
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("stopped")
+})
+
 async function waitFor(check: () => boolean) {
   for (let attempt = 0; attempt < 20; attempt++) {
     if (check()) return

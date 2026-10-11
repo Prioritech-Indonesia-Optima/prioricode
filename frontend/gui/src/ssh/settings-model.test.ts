@@ -15,6 +15,7 @@ test("retryable runtimes are failed and stopped", () => {
   expect(sshRuntimeRetryable({ kind: "failed", message: "x" })).toBeTrue()
   expect(sshRuntimeRetryable({ kind: "stopped" })).toBeTrue()
   expect(sshRuntimeRetryable({ kind: "starting" })).toBeFalse()
+  expect(sshRuntimeRetryable({ kind: "reconnecting", attempt: 1 })).toBeFalse()
   expect(sshRuntimeRetryable({ kind: "ready", url: "http://127.0.0.1:1", username: null, password: null })).toBeFalse()
 })
 
