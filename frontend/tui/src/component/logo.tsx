@@ -3,7 +3,7 @@ import { useTerminalDimensions } from "@opentui/solid"
 import { For, createMemo, createSignal, onCleanup, onMount, type JSX } from "solid-js"
 import { useKV } from "../context/kv"
 import { tint, useTheme } from "../context/theme"
-import { big, tagline as TAGLINE } from "../logo"
+import { big, BLOCK_CHAR, tagline as TAGLINE } from "../logo"
 
 // Home screen hero: an oversized block-letter "PrioriCode" wordmark (the `big`
 // bitmap in ../logo.ts) rendered as full-block cells. The letters carry a
@@ -57,7 +57,7 @@ for (let gy = 0; gy < GLOW_ROWS; gy++) {
   const cells: Cell[] = []
   for (let x = 0; x < GLOW_W; x++) {
     const char = x >= ART_X && x - ART_X < line.length ? line[x - ART_X] : " "
-    cells.push({ char, x, y, kind: char === "█" ? "block" : "glow", wordIndex: -1 })
+    cells.push({ char, x, y, kind: char === BLOCK_CHAR ? "block" : "glow", wordIndex: -1 })
   }
   ART.push(cells)
 }
