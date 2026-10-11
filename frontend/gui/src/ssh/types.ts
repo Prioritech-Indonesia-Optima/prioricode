@@ -25,6 +25,7 @@ export type SshServerConfig = {
 export type SshServerRuntime =
   | { kind: "starting" }
   | { kind: "ready"; url: string; username: string | null; password: string | null }
+  | { kind: "reconnecting"; attempt: number }
   | { kind: "failed"; message: string }
   | { kind: "stopped" }
 
