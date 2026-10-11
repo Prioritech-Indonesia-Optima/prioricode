@@ -14,6 +14,7 @@ import { nativeT } from "../native-translations"
 import { readSshConfigProfiles } from "./config"
 import { isValidSshAlias, sshBootstrapCodeOf } from "./errors"
 import { checkArgs, checkScript, installArgs, parseCheckMarker } from "./commands"
+import { stopSshServer } from "./sidecar"
 
 type RunningSidecar = {
   listener: { stop: () => void; onExit: (cb: (code: number | null, signal: NodeJS.Signals | null) => void) => void }
@@ -396,7 +397,17 @@ export function createSshServersController(
       invalidateStartAttempt(id)
       clearReconnectTimer(id)
       reconnectAttempts.delete(id)
+      const alias = state.servers.find((item) => item.config.id === id)?.config.alias
       await stopServerInternal(id)
+      if (alias) {
+        void stopSshServer(alias)
+          .then((result) => {
+            if (result.code !== 0) logger?.error("ssh remote stop failed", { id, alias, code: result.code, output: result.output })
+          })
+          .catch((error) => {
+            logger?.error("ssh remote stop failed", { id, alias, message: String(error) })
+          })
+      }
       if (state.servers.some((item) => item.config.id === id)) setRuntime(id, { kind: "stopped" })
     },
 
