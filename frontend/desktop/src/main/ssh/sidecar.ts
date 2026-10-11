@@ -128,25 +128,30 @@ function runPreflight(alias: string, opts: SshSidecarOptions) {
   })
 }
 
-function runRemoteExec(args: string[], stdinText: string, opts: SshSidecarOptions): Promise<void> {
+function runRemoteExec(args: string[], stdinText: string, opts: SshSidecarOptions): Promise<{ code: number; output: string }> {
   return new Promise((resolve) => {
     const child = (opts.spawn ?? spawn)("ssh", args, {
-      stdio: ["pipe", "ignore", "ignore"],
+      stdio: ["pipe", "pipe", "pipe"],
       windowsHide: true,
       env: opts.authEnv,
     })
     child.stdin.end(stdinText)
+    let output = ""
+    child.stdout.setEncoding("utf8")
+    child.stdout.on("data", (chunk: string) => (output += chunk))
+    child.stderr.setEncoding("utf8")
+    child.stderr.on("data", (chunk: string) => (output += chunk))
     const timer = setTimeout(() => {
       child.kill()
-      resolve()
+      resolve({ code: -1, output: output + "\n[timeout]" })
     }, 15_000)
-    child.once("exit", () => {
+    child.once("exit", (code) => {
       clearTimeout(timer)
-      resolve()
+      resolve({ code: code ?? -1, output })
     })
-    child.once("error", () => {
+    child.once("error", (error) => {
       clearTimeout(timer)
-      resolve()
+      resolve({ code: -1, output: output + `\n${error.message}` })
     })
   })
 }
@@ -323,7 +328,7 @@ function runBootstrap(
 export async function stopSshServer(
   alias: string,
   opts: { spawn?: typeof spawn; timeoutMs?: number; authEnv?: Record<string, string> } = {},
-) {
+): Promise<{ code: number; output: string }> {
   if (!opts.authEnv) {
     const askpass = await createAskpassSession(requestAuthPrompt)
     try {
@@ -336,23 +341,28 @@ export async function stopSshServer(
     }
   }
   const child = (opts.spawn ?? spawn)("ssh", stopArgs(alias), {
-    stdio: ["pipe", "ignore", "ignore"],
+    stdio: ["pipe", "pipe", "pipe"],
     windowsHide: true,
     env: opts.authEnv,
   })
   child.stdin.end(stopScript())
-  await new Promise<void>((resolve) => {
+  let output = ""
+  child.stdout.setEncoding("utf8")
+  child.stdout.on("data", (chunk: string) => (output += chunk))
+  child.stderr.setEncoding("utf8")
+  child.stderr.on("data", (chunk: string) => (output += chunk))
+  return new Promise<{ code: number; output: string }>((resolve) => {
     const timer = setTimeout(() => {
       child.kill()
-      resolve()
+      resolve({ code: -1, output: output + "\n[timeout]" })
     }, opts.timeoutMs ?? 15_000)
-    child.once("exit", () => {
+    child.once("exit", (code) => {
       clearTimeout(timer)
-      resolve()
+      resolve({ code: code ?? -1, output })
     })
-    child.once("error", () => {
+    child.once("error", (error) => {
       clearTimeout(timer)
-      resolve()
+      resolve({ code: -1, output: output + `\n${error.message}` })
     })
   })
 }
