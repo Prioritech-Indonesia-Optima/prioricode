@@ -29,6 +29,16 @@ type PermissionRespondFn = (input: {
   directory?: string
 }) => void
 
+export type PermissionDecision = {
+  id: string
+  permission: string
+  patterns: string[]
+  reply: "once" | "always" | "reject"
+  time: number
+}
+
+const PERMISSION_HISTORY_LIMIT = 100
+
 function isNonAllowRule(rule: unknown) {
   if (!rule) return false
   if (typeof rule === "string") return rule !== "allow"
@@ -183,6 +193,9 @@ export const { use: usePermission, provider: PermissionProvider } = createSimple
       isPermissionAllowAll(directory: string) {
         return selected().isPermissionAllowAll(directory)
       },
+      history(sessionID: string | undefined) {
+        return selected().history(sessionID)
+      },
     }
   },
 })
@@ -232,7 +245,26 @@ function createServerPermissionState(input: { sdk: ServerSDK; sync: ServerSync }
   const RESPONDED_TTL_MS = 60 * 60 * 1000
   const responded = new Map<string, number>()
   const enableVersion = new Map<string, number>()
+  const history = new Map<string, PermissionDecision[]>()
   const meta = { disposed: false }
+
+  function recordDecision(sessionID: string, requestID: string, reply: "once" | "always" | "reject") {
+    if (meta.disposed) return
+    const pending = input.sync.session.data.permission[sessionID]
+    const request = pending?.find((item) => item.id === requestID)
+    if (!request) return
+    const decision: PermissionDecision = {
+      id: request.id,
+      permission: request.permission,
+      patterns: request.patterns,
+      reply,
+      time: Date.now(),
+    }
+    const list = history.get(sessionID) ?? []
+    list.push(decision)
+    if (list.length > PERMISSION_HISTORY_LIMIT) list.shift()
+    history.set(sessionID, list)
+  }
 
   function pruneResponded(now: number) {
     for (const [id, ts] of responded) {
@@ -336,8 +368,15 @@ function createServerPermissionState(input: { sdk: ServerSDK; sync: ServerSync }
 
   const handlePermission = (e: PermissionEvent) => {
     const event = e.details
-    if (event?.type !== "permission.asked") return
-    void respondPending(event.properties, e.name)
+    if (event?.type === "permission.asked") {
+      void respondPending(event.properties, e.name)
+      return
+    }
+    if (event?.type === "permission.replied") {
+      const props = event.properties as { sessionID: string; requestID: string; reply?: string }
+      const reply = (props.reply === "reject" ? "reject" : props.reply === "always" ? "always" : "once") as "once" | "always" | "reject"
+      recordDecision(props.sessionID, props.requestID, reply)
+    }
   }
 
   const unsubscribe = input.sdk.event.listen((event) => {
@@ -470,6 +509,10 @@ function createServerPermissionState(input: { sdk: ServerSDK; sync: ServerSync }
       if (meta.disposed) return false
       const [childStore] = input.sync.child(directory)
       return childStore.config.permission === "allow"
+    },
+    history(sessionID: string | undefined): PermissionDecision[] {
+      if (!sessionID || meta.disposed) return []
+      return history.get(sessionID) ?? []
     },
   }
 
