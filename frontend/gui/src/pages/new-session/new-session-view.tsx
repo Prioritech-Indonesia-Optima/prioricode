@@ -2,7 +2,7 @@ import { useDialog } from "@prioricode/ui/context/dialog"
 import { Tooltip } from "@prioricode/ui/tooltip"
 import { Icon as IconV2 } from "@prioricode/ui/v2/icon"
 import { TooltipV2 } from "@prioricode/ui/v2/tooltip-v2"
-import { Logo } from "@prioricode/ui/logo"
+import { ColorLogo } from "@prioricode/ui/logo"
 import { Show, createMemo, createSignal, type Accessor } from "solid-js"
 import { createStore } from "solid-js/store"
 import { Portal } from "solid-js/web"
@@ -40,7 +40,7 @@ export function NewSessionView(props: {
         <div class="absolute inset-x-0 top-[25.375%] flex justify-center px-6">
           <div class={NEW_SESSION_CONTENT_WIDTH}>
             <div class="flex justify-center">
-              <Logo class="w-[min(420px,70%)] opacity-15" />
+              <ColorLogo class="w-[min(420px,70%)] opacity-15" />
             </div>
             <div class="mt-8 flex flex-col gap-8">
               <PromptInputV2Composer controller={props.input} />

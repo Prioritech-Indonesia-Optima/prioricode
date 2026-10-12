@@ -8,6 +8,10 @@
   object-fit: contain;
 }
 
+[data-component="logo-color"] {
+  object-fit: contain;
+}
+
 .pc-brand-scheme-light {
   display: none;
 }
