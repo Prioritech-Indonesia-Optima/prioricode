@@ -255,9 +255,8 @@ async function main() {
   const wordWhite = wordmark.trimmedWhite
   const wordInk = wordmark.trimmed
 
-  // Use composed lockup
+  // Use composed lockup (social share only)
   const lockWhite = lockupWhite
-  const lockInk = lockup
 
   const iconMaster = await tile(1024, markWhite)
 
@@ -280,8 +279,6 @@ async function main() {
   await out(`${brand}/mark-ink.png`, await sharp(markInk).resize(1024).png().toBuffer())
   await out(`${brand}/wordmark-white.png`, await sharp(wordWhite).resize(2048).png().toBuffer())
   await out(`${brand}/wordmark-ink.png`, await sharp(wordInk).resize(2048).png().toBuffer())
-  await out(`${brand}/lockup-white.png`, await sharp(lockWhite).resize(1024).png().toBuffer())
-  await out(`${brand}/lockup-ink.png`, await sharp(lockInk).resize(1024).png().toBuffer())
   await out(`${brand}/icon-master.png`, iconMaster)
 
   // favicons (gui/public symlinks point here; -v3 names kept in sync)
