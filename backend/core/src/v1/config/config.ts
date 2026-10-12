@@ -182,7 +182,7 @@ export const Info = Schema.Struct({
       }),
       default_context: Schema.optional(NonNegativeInt).annotate({
         description:
-          "Fallback context window size in tokens for models that do not declare a context limit. Defaults to 128000 when omitted. Set to 0 to disable compaction for such models.",
+          "Fallback context window size in tokens for models that do not declare a context limit. Defaults to 256000 when omitted. Set to 0 to disable compaction for such models.",
       }),
       tail_turns: Schema.optional(NonNegativeInt).annotate({
         description:

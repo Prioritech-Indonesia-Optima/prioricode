@@ -14,7 +14,7 @@ const makeSettings = (overrides?: Partial<Settings>): Settings => ({
   tokens: 8_000,
   turns: undefined,
   threshold: undefined,
-  defaultContext: 128_000,
+  defaultContext: 256_000,
   ...overrides,
 })
 
@@ -72,6 +72,15 @@ describe("SessionCompaction.resolveContext", () => {
       source: "default",
       declared: 0,
     })
+  })
+
+  it("undeclared 256k-window model triggers at >90% not ~42%", () => {
+    const m = modelWith(0, 8_000)
+    const resolution = SessionCompaction.resolveContext(m, 256_000)
+    expect(resolution.source).toBe("default")
+    expect(resolution.context).toBe(256_000)
+    const trigger = 256_000 - Math.max(8_000, 20_000)
+    expect(trigger / 256_000).toBeGreaterThan(0.9)
   })
 })
 

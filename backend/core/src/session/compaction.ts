@@ -195,7 +195,7 @@ const settings = (documents: readonly Config.Entry[]) => {
       tokens: DEFAULT_KEEP_TOKENS,
       turns: undefined,
       threshold: undefined,
-      defaultContext: 128_000,
+      defaultContext: 256_000,
     },
   )
 }

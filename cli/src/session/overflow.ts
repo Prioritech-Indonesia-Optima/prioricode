@@ -6,7 +6,7 @@ import { ProviderTransform } from "@/provider/transform"
 import type { MessageV2 } from "./message-v2"
 
 const COMPACTION_BUFFER = 20_000
-const DEFAULT_CONTEXT_WINDOW = 128_000
+const DEFAULT_CONTEXT_WINDOW = 256_000
 
 export function effectiveContext(cfg: ConfigV1.Info, model: Provider.Model): number {
   if (model.limit.context > 0) return model.limit.context

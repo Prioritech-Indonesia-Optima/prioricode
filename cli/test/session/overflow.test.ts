@@ -28,9 +28,16 @@ function tokens(count: number) {
 }
 
 describe("usable()", () => {
-  test("uses 128k default when context is 0 and no default_context set", () => {
+  test("uses 256k default when context is 0 and no default_context set", () => {
     const result = usable({ cfg: {}, model: model({ context: 0, output: 4096 }) })
-    expect(result).toBe(128_000 - 4_096)
+    expect(result).toBe(256_000 - 4_096)
+  })
+
+  test("undeclared 256k-window model triggers at >90% not ~42%", () => {
+    const m = model({ context: 0, output: 8_000 })
+    const u = usable({ cfg: {}, model: m })
+    expect(u).toBe(256_000 - 8_000)
+    expect(u / 256_000).toBeGreaterThan(0.9)
   })
 
   test("uses default_context when context is 0", () => {
