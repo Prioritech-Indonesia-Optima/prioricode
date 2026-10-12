@@ -1037,9 +1037,18 @@ const layer = Layer.effect(
       const parts = yield* Effect.forEach(resolvedParts, (part) =>
         part.type === "file" && part.mime.startsWith("image/")
           ? image.normalize(part).pipe(
-              Effect.catchIf(
-                (error) => error instanceof Image.ResizerUnavailableError,
-                () => Effect.succeed(part),
+              Effect.catch((error) =>
+                Effect.gen(function* () {
+                  yield* Effect.logWarning("image normalize failed", { error, filename: part.filename })
+                  return {
+                    id: PartID.ascending(),
+                    messageID: info.id,
+                    sessionID: input.sessionID,
+                    type: "text" as const,
+                    synthetic: true,
+                    text: `[Image ${part.filename ?? "attachment"} could not be processed: ${error.message}]`,
+                  } satisfies Draft<SessionV1.Part>
+                }),
               ),
             )
           : Effect.succeed(part),
