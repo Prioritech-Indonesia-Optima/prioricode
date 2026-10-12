@@ -136,7 +136,7 @@
 
 [data-component="tabs-v2"][data-variant="normal"][data-orientation="horizontal"]
   [data-slot="tabs-v2-trigger-wrapper"]:has([data-selected]) {
-  border-bottom-color: var(--pc-gold-600);
+  border-bottom-color: var(--pc-text-accent);
   color: var(--pc-text-base);
 }
 

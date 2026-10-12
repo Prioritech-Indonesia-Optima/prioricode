@@ -110,10 +110,10 @@ export function PromptInputV2(props: PromptInputV2Props) {
       <form
         data-component="prompt-input-v2"
         data-dock-border-underlay={props.borderUnderlay ? "v2" : undefined}
-        class="group/prompt-input relative min-h-[96px] w-full overflow-clip rounded-xl bg-pc-bg-base outline outline-1 -outline-offset-1 outline-transparent transition-[outline-color] duration-150 focus-within:outline-pc-gold-600"
+        class="group/prompt-input relative min-h-[96px] w-full overflow-clip rounded-xl bg-pc-bg-base outline outline-1 -outline-offset-1 outline-transparent transition-[outline-color] duration-150 focus-within:outline-pc-border-focus"
         classList={{
           "shadow-[var(--pc-elevation-raised)]": !props.borderUnderlay,
-          "border border-pc-border-brand border-dashed": state.drag === "active",
+          "border border-pc-border-focus border-dashed": state.drag === "active",
         }}
         onSubmit={(event) => {
           event.preventDefault()

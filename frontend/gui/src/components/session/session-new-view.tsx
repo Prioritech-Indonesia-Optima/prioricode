@@ -55,7 +55,7 @@ export function NewSessionView(props: NewSessionViewProps) {
           <div class="flex flex-col items-center gap-6">
             <div class="flex flex-col items-center gap-3">
               <div class="flex items-center gap-2">
-                <span aria-hidden="true" class="size-2 bg-pc-gold-500" />
+                <span aria-hidden="true" class="size-2 bg-pc-icon-accent" />
                 <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-pc-text-accent">
                   {language.t("session.new.eyebrow")}
                 </span>

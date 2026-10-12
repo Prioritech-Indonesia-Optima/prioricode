@@ -594,7 +594,7 @@ function HomeProjectNavButton(props: JSX.ButtonHTMLAttributes<HTMLButtonElement>
         flex h-7 min-w-0 w-full shrink-0 cursor-default items-center gap-2 rounded-[6px] bg-transparent px-1.5 text-left
         text-pc-text-muted [font-weight:440] transition-[background-color,color,box-shadow] duration-[120ms] ease-in-out
         hover:bg-pc-bg-layer-01 hover:text-pc-text-base
-        data-[selected]:bg-pc-bg-layer-03 data-[selected]:text-pc-text-base data-[selected]:shadow-[inset_3px_0_0_0_var(--pc-gold-600)] rtl:data-[selected]:shadow-[inset_-3px_0_0_0_var(--pc-gold-600)]
+        data-[selected]:bg-pc-bg-layer-03 data-[selected]:text-pc-text-base data-[selected]:shadow-[inset_3px_0_0_0_var(--pc-icon-accent)] rtl:data-[selected]:shadow-[inset_-3px_0_0_0_var(--pc-icon-accent)]
         data-[selected]:hover:bg-pc-bg-layer-03
         focus-visible:bg-pc-bg-layer-01 focus-visible:text-pc-text-base focus-visible:outline-none
         focus-visible:[box-shadow:inset_0_0_0_0.5px_var(--pc-border-muted)]
