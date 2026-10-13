@@ -329,11 +329,11 @@ export const Event = {
   Error: SessionV1.Event.Error,
 }
 
-export function plan(input: { slug: string; time: { created: number } }, instance: InstanceContext) {
+export function plan(input: { id: SessionID; slug: string; time: { created: number } }, instance: InstanceContext) {
   const base = instance.project.vcs
     ? path.join(instance.worktree, ".prioricode", "plans")
     : path.join(Global.Path.data, "plans")
-  return path.join(base, [input.time.created, input.slug].join("-") + ".md")
+  return path.join(base, [input.time.created, input.slug, input.id].join("-") + ".md")
 }
 
 export const getUsage = (input: { model: Provider.ProviderModel; usage: Usage; metadata?: ProviderMetadata }) => {
