@@ -169,7 +169,9 @@ async function openTunnel(
       return await spawnTunnel(alias, boot, localPort, username, opts, strict)
     } catch (error) {
       if (error instanceof SshTunnelExitError && isLocalBindFailure(error.output)) {
-        throw new Error(nativeT("desktop.ssh.error.localPortBusy", { host: alias, port: localPort }))
+        throw new Error(nativeT("desktop.ssh.error.localPortBusy", { host: alias, port: localPort }), {
+          cause: error,
+        })
       }
       if (strict && error instanceof SshTunnelExitError && isForeignForwardFailure(error.output)) {
         opts.onLine?.({
