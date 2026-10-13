@@ -147,9 +147,9 @@ describe("OpenAIPlugin", () => {
       })
       yield* addPlugin()
       expect(required(yield* catalog.model.get(Provider.ID.openai, Model.ID.make("gpt-5"))).enabled).toBe(true)
-      expect(
-        required(yield* catalog.model.get(Provider.ID.openai, Model.ID.make("gpt-5-chat-latest"))).enabled,
-      ).toBe(false)
+      expect(required(yield* catalog.model.get(Provider.ID.openai, Model.ID.make("gpt-5-chat-latest"))).enabled).toBe(
+        false,
+      )
     }),
   )
 

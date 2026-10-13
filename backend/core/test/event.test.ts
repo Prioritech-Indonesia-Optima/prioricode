@@ -79,7 +79,9 @@ const durableData = (sessionID: Session.ID, text: string) => ({
 })
 
 const it = testEffect(
-  AppNodeBuilder.build(LayerNode.group([Database.node, EventCore.node, Location.node]), [[Location.node, locationLayer]]),
+  AppNodeBuilder.build(LayerNode.group([Database.node, EventCore.node, Location.node]), [
+    [Location.node, locationLayer],
+  ]),
 )
 const itWithoutLocation = testEffect(AppNodeBuilder.build(LayerNode.group([Database.node, EventCore.node])))
 
@@ -135,7 +137,6 @@ describe("EventV2", () => {
         durable: { version: 1, aggregate: "id" },
         schema: { id: Schema.String },
       })
-
     }),
   )
 
@@ -339,7 +340,9 @@ describe("EventV2", () => {
       yield* Deferred.succeed(release, undefined)
 
       const slowExit = yield* Fiber.await(slow)
-      expect(Exit.findErrorOption(slowExit).pipe(Option.getOrUndefined)).toBeInstanceOf(EventCore.SubscriberOverflowError)
+      expect(Exit.findErrorOption(slowExit).pipe(Option.getOrUndefined)).toBeInstanceOf(
+        EventCore.SubscriberOverflowError,
+      )
       expect(Array.from(yield* Fiber.join(fast))).toEqual([
         expect.objectContaining({ data: { text: "one" } }),
         expect.objectContaining({ data: { text: "two" } }),

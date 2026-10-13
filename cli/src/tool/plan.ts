@@ -126,7 +126,13 @@ export const PlanEnterTool = Tool.define(
 
           if (answers[0]?.[0] === "No") yield* new Question.RejectedError()
 
-          yield* injectSyntheticSwitch(session, provider, ctx.sessionID, "plan", "Switch to plan mode. Analyze the request and create a plan.")
+          yield* injectSyntheticSwitch(
+            session,
+            provider,
+            ctx.sessionID,
+            "plan",
+            "Switch to plan mode. Analyze the request and create a plan.",
+          )
 
           return {
             title: "Switching to plan agent",

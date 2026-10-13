@@ -31,10 +31,7 @@ export const Output = Schema.Struct({
 })
 export type Output = typeof Output.Type
 
-export const toModelOutput = (
-  questions: ReadonlyArray<Question.Prompt>,
-  answers: ReadonlyArray<Question.Answer>,
-) => {
+export const toModelOutput = (questions: ReadonlyArray<Question.Prompt>, answers: ReadonlyArray<Question.Answer>) => {
   const formatted = questions
     .map(
       (question, index) =>

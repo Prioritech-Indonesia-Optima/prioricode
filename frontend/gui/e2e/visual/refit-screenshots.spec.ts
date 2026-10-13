@@ -30,7 +30,10 @@ async function newLayout(page: Parameters<typeof mockPrioriCodeServer>[0]) {
   await page.addInitScript((directory) => {
     localStorage.setItem(
       "prioricode.global.dat:server",
-      JSON.stringify({ projects: { local: [{ worktree: directory, expanded: true }] }, lastProject: { local: directory } }),
+      JSON.stringify({
+        projects: { local: [{ worktree: directory, expanded: true }] },
+        lastProject: { local: directory },
+      }),
     )
   }, fixture.directory)
 }
@@ -39,13 +42,18 @@ async function legacyLayout(page: Parameters<typeof mockPrioriCodeServer>[0]) {
   await page.addInitScript(() => {
     localStorage.setItem(
       "settings.v3",
-      JSON.stringify({ general: { editToolPartsExpanded: true, shellToolPartsExpanded: true, showReasoningSummaries: true } }),
+      JSON.stringify({
+        general: { editToolPartsExpanded: true, shellToolPartsExpanded: true, showReasoningSummaries: true },
+      }),
     )
   })
   await page.addInitScript((directory) => {
     localStorage.setItem(
       "prioricode.global.dat:server",
-      JSON.stringify({ projects: { local: [{ worktree: directory, expanded: true }] }, lastProject: { local: directory } }),
+      JSON.stringify({
+        projects: { local: [{ worktree: directory, expanded: true }] },
+        lastProject: { local: directory },
+      }),
     )
   }, fixture.directory)
 }

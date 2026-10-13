@@ -486,9 +486,7 @@ export function fetchAll(sessionID: SessionID) {
 }
 
 export function stream(sessionID: SessionID) {
-  return fetchAll(sessionID).pipe(
-    Effect.catchIf(NotFoundError.isInstance, () => Effect.succeed([] as WithParts[])),
-  )
+  return fetchAll(sessionID).pipe(Effect.catchIf(NotFoundError.isInstance, () => Effect.succeed([] as WithParts[])))
 }
 
 export function parts(messageID: MessageID) {

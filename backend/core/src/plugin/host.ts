@@ -85,8 +85,7 @@ export const make = Effect.fn("PluginHost.make")(function* (plugin: Plugin.Inter
                 mutable(draft.model.get(Provider.ID.make(providerID), Model.ID.make(modelID))),
               update: (providerID, modelID, update) =>
                 draft.model.update(Provider.ID.make(providerID), Model.ID.make(modelID), update),
-              remove: (providerID, modelID) =>
-                draft.model.remove(Provider.ID.make(providerID), Model.ID.make(modelID)),
+              remove: (providerID, modelID) => draft.model.remove(Provider.ID.make(providerID), Model.ID.make(modelID)),
               default: {
                 get: draft.model.default.get,
                 set: (providerID, modelID) =>

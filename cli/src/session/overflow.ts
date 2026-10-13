@@ -47,6 +47,10 @@ export function isOverflow(input: {
 
   const count =
     input.tokens.total ||
-    input.tokens.input + input.tokens.output + input.tokens.reasoning + input.tokens.cache.read + input.tokens.cache.write
+    input.tokens.input +
+      input.tokens.output +
+      input.tokens.reasoning +
+      input.tokens.cache.read +
+      input.tokens.cache.write
   return count >= triggerPoint(input)
 }

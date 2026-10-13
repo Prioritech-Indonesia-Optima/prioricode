@@ -106,10 +106,7 @@ describe("TogetherAIPlugin", () => {
 
       const result = yield* aisdk.runLanguage({
         model: Model.Info.make({
-          ...Model.Info.empty(
-            Provider.ID.make("togetherai"),
-            Model.ID.make("meta-llama/Llama-3.3-70B-Instruct-Turbo"),
-          ),
+          ...Model.Info.empty(Provider.ID.make("togetherai"), Model.ID.make("meta-llama/Llama-3.3-70B-Instruct-Turbo")),
           api: {
             id: Model.ID.make("meta-llama/Llama-3.3-70B-Instruct-Turbo"),
             type: "aisdk",

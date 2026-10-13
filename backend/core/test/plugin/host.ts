@@ -124,8 +124,7 @@ export function catalogHost(catalog: Catalog.Interface): PluginContext["catalog"
                   })),
                 })
               }),
-            remove: (providerID, modelID) =>
-              draft.model.remove(Provider.ID.make(providerID), Model.ID.make(modelID)),
+            remove: (providerID, modelID) => draft.model.remove(Provider.ID.make(providerID), Model.ID.make(modelID)),
             default: {
               get: () => {
                 const value = draft.model.default.get()

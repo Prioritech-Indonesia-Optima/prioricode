@@ -150,10 +150,7 @@ export interface Interface {
   }) => Effect.Effect<{ events: ReadonlyArray<SessionEvent.DurableEvent>; hasMore: boolean }, NotFoundError>
   readonly switchAgent: (input: { sessionID: SessionSchema.ID; agent: string }) => Effect.Effect<void, NotFoundError>
   readonly setGoal: (input: { sessionID: SessionSchema.ID; goal: string }) => Effect.Effect<void, NotFoundError>
-  readonly switchModel: (input: {
-    sessionID: SessionSchema.ID
-    model: Model.Ref
-  }) => Effect.Effect<void, NotFoundError>
+  readonly switchModel: (input: { sessionID: SessionSchema.ID; model: Model.Ref }) => Effect.Effect<void, NotFoundError>
   readonly prompt: (input: {
     id?: SessionMessage.ID
     sessionID: SessionSchema.ID

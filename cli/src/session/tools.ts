@@ -601,6 +601,4 @@ function base64Size(value: string) {
   return Math.max(0, Math.floor((trimmed.length * 3) / 4) - padding)
 }
 
-
-
 export * as SessionTools from "./tools"

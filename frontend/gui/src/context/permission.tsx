@@ -374,7 +374,10 @@ function createServerPermissionState(input: { sdk: ServerSDK; sync: ServerSync }
     }
     if (event?.type === "permission.replied") {
       const props = event.properties as { sessionID: string; requestID: string; reply?: string }
-      const reply = (props.reply === "reject" ? "reject" : props.reply === "always" ? "always" : "once") as "once" | "always" | "reject"
+      const reply = (props.reply === "reject" ? "reject" : props.reply === "always" ? "always" : "once") as
+        | "once"
+        | "always"
+        | "reject"
       recordDecision(props.sessionID, props.requestID, reply)
     }
   }

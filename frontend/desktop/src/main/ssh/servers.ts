@@ -392,7 +392,8 @@ export function createSshServersController(
       if (alias) {
         void stopSshServer(alias)
           .then((result) => {
-            if (result.code !== 0) logger?.error("ssh remote stop failed", { id, alias, code: result.code, output: result.output })
+            if (result.code !== 0)
+              logger?.error("ssh remote stop failed", { id, alias, code: result.code, output: result.output })
           })
           .catch((error) => {
             logger?.error("ssh remote stop failed", { id, alias, message: String(error) })
@@ -416,7 +417,8 @@ export function createSshServersController(
       if (alias) {
         void stopSshServer(alias)
           .then((result) => {
-            if (result.code !== 0) logger?.error("ssh remote stop failed", { id, alias, code: result.code, output: result.output })
+            if (result.code !== 0)
+              logger?.error("ssh remote stop failed", { id, alias, code: result.code, output: result.output })
           })
           .catch((error) => {
             logger?.error("ssh remote stop failed", { id, alias, message: String(error) })
@@ -452,10 +454,20 @@ export function createSshServersController(
         invalidateStartAttempt(item.config.id)
         void stopSshServer(item.config.alias)
           .then((result) => {
-            if (result.code !== 0) logger?.error("ssh remote stop failed", { id: item.config.id, alias: item.config.alias, code: result.code, output: result.output })
+            if (result.code !== 0)
+              logger?.error("ssh remote stop failed", {
+                id: item.config.id,
+                alias: item.config.alias,
+                code: result.code,
+                output: result.output,
+              })
           })
           .catch((error) => {
-            logger?.error("ssh remote stop failed", { id: item.config.id, alias: item.config.alias, message: String(error) })
+            logger?.error("ssh remote stop failed", {
+              id: item.config.id,
+              alias: item.config.alias,
+              message: String(error),
+            })
           })
       }
       for (const timer of reconnectTimers.values()) clearTimeout(timer)

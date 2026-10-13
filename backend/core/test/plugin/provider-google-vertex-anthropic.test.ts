@@ -68,9 +68,9 @@ describe("GoogleVertexAnthropicPlugin", () => {
             }),
           )
           yield* addPlugin(GoogleVertexAnthropicPlugin)
-          expect(
-            (yield* catalog.provider.get(Provider.ID.make("google-vertex-anthropic")))?.request.body.project,
-          ).toBe("cloud-project")
+          expect((yield* catalog.provider.get(Provider.ID.make("google-vertex-anthropic")))?.request.body.project).toBe(
+            "cloud-project",
+          )
           expect(
             (yield* catalog.provider.get(Provider.ID.make("google-vertex-anthropic")))?.request.body.location,
           ).toBe("cloud-location")
@@ -93,9 +93,9 @@ describe("GoogleVertexAnthropicPlugin", () => {
         expect((yield* catalog.provider.get(Provider.ID.make("google-vertex-anthropic")))?.request.body.project).toBe(
           "configured-project",
         )
-        expect(
-          (yield* catalog.provider.get(Provider.ID.make("google-vertex-anthropic")))?.request.body.location,
-        ).toBe("configured-location")
+        expect((yield* catalog.provider.get(Provider.ID.make("google-vertex-anthropic")))?.request.body.location).toBe(
+          "configured-location",
+        )
       }),
     ),
   )
@@ -117,10 +117,7 @@ describe("GoogleVertexAnthropicPlugin", () => {
           yield* addPlugin(GoogleVertexAnthropicPlugin)
           const result = yield* aisdk.runSDK({
             model: Model.Info.make({
-              ...Model.Info.empty(
-                Provider.ID.make("google-vertex-anthropic"),
-                Model.ID.make("claude-sonnet-4-5"),
-              ),
+              ...Model.Info.empty(Provider.ID.make("google-vertex-anthropic"), Model.ID.make("claude-sonnet-4-5")),
               api: { id: Model.ID.make("claude-sonnet-4-5"), type: "aisdk", package: "test-provider" },
             }),
             package: "@ai-sdk/google-vertex/anthropic",
@@ -143,10 +140,7 @@ describe("GoogleVertexAnthropicPlugin", () => {
           yield* addPlugin(GoogleVertexAnthropicPlugin)
           const result = yield* aisdk.runSDK({
             model: Model.Info.make({
-              ...Model.Info.empty(
-                Provider.ID.make("google-vertex-anthropic"),
-                Model.ID.make("claude-sonnet-4-5"),
-              ),
+              ...Model.Info.empty(Provider.ID.make("google-vertex-anthropic"), Model.ID.make("claude-sonnet-4-5")),
               api: { id: Model.ID.make("claude-sonnet-4-5"), type: "aisdk", package: "test-provider" },
             }),
             package: "@ai-sdk/google-vertex/anthropic",

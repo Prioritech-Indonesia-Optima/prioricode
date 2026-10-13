@@ -1701,7 +1701,10 @@ export function schema(model: Provider.ProviderModel, schema: JSONSchema7): JSON
   return schema
 }
 
-export function reasoningVariants(model: ModelsDev.Model, target: Provider.ProviderModel): Provider.ProviderModel["variants"] {
+export function reasoningVariants(
+  model: ModelsDev.Model,
+  target: Provider.ProviderModel,
+): Provider.ProviderModel["variants"] {
   const options = model.reasoning_options
   if (options === undefined) return
   if (options.length === 0) return {}
@@ -1748,7 +1751,9 @@ function budgetVariants(model: Provider.ProviderModel, min?: number, max?: numbe
   )
 }
 
-function nonEmptyVariants(variants: NonNullable<Provider.ProviderModel["variants"]>): Provider.ProviderModel["variants"] {
+function nonEmptyVariants(
+  variants: NonNullable<Provider.ProviderModel["variants"]>,
+): Provider.ProviderModel["variants"] {
   return Object.keys(variants).length > 0 ? variants : undefined
 }
 

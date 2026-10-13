@@ -81,7 +81,11 @@ export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Per
 
 export type Error = BlockedError | CorrectedError
 
-export function evaluate(action: string, resource: string, ...rulesets: PermissionSchema.Ruleset[]): PermissionSchema.Rule {
+export function evaluate(
+  action: string,
+  resource: string,
+  ...rulesets: PermissionSchema.Ruleset[]
+): PermissionSchema.Rule {
   return (
     rulesets
       .flat()
@@ -175,10 +179,7 @@ const layer = Layer.effect(
       return session.permissionMode
     })
 
-    const configured = EffectRuntime.fn("Permission.configured")(function* (
-      sessionID: Session.ID,
-      agentID?: Agent.ID,
-    ) {
+    const configured = EffectRuntime.fn("Permission.configured")(function* (sessionID: Session.ID, agentID?: Agent.ID) {
       const session = yield* sessions.get(sessionID)
       if (!session) return yield* new Session.NotFoundError({ sessionID })
       const agent = yield* agents.resolve(agentID ?? session.agent)
@@ -242,7 +243,11 @@ const layer = Layer.effect(
           return "ask" as const
         return effect
       })
-      let effect: PermissionSchema.Effect = effects.includes("deny") ? "deny" : effects.includes("ask") ? "ask" : "allow"
+      let effect: PermissionSchema.Effect = effects.includes("deny")
+        ? "deny"
+        : effects.includes("ask")
+          ? "ask"
+          : "allow"
       if (
         mode === "ask-first" &&
         effect === "ask" &&

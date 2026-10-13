@@ -263,7 +263,9 @@ async function main() {
   // branding/
   const brandMark512 = await tile(512, markWhite, { rounded: false, fill: 0.78 })
   const brandMarkLight512 = await sharp({ create: { width: 512, height: 512, channels: 4, background: "#00000000" } })
-    .composite([{ input: await sharp(markInk).resize(400, 400, { fit: "contain" }).png().toBuffer(), gravity: "centre" }])
+    .composite([
+      { input: await sharp(markInk).resize(400, 400, { fit: "contain" }).png().toBuffer(), gravity: "centre" },
+    ])
     .png()
     .toBuffer()
   await out("branding/mark-512x512.png", brandMark512)

@@ -44,7 +44,9 @@ export namespace ProviderTest {
     }
   }
 
-  export function fake(override: Partial<ProviderCli.Interface> & { model?: ProviderCli.ProviderModel; info?: ProviderCli.Info } = {}) {
+  export function fake(
+    override: Partial<ProviderCli.Interface> & { model?: ProviderCli.ProviderModel; info?: ProviderCli.Info } = {},
+  ) {
     const mdl = override.model ?? model()
     const row = override.info ?? info({}, mdl)
     return {

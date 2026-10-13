@@ -128,7 +128,11 @@ function runPreflight(alias: string, opts: SshSidecarOptions) {
   })
 }
 
-function runRemoteExec(args: string[], stdinText: string, opts: SshSidecarOptions): Promise<{ code: number; output: string }> {
+function runRemoteExec(
+  args: string[],
+  stdinText: string,
+  opts: SshSidecarOptions,
+): Promise<{ code: number; output: string }> {
   return new Promise((resolve) => {
     const child = (opts.spawn ?? spawn)("ssh", args, {
       stdio: ["pipe", "pipe", "pipe"],

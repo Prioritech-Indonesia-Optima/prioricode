@@ -294,7 +294,11 @@ export const ApplyPatchTool = Tool.define(
       const changedFiles = fileChanges
         .filter((change) => change.type !== "delete")
         .map((change) => change.movePath ?? change.filePath)
-      const { output: lspOutput, diagnostics } = yield* LspDiagnostics.reportDiagnosticsForFiles(lsp, changedFiles, instance.worktree)
+      const { output: lspOutput, diagnostics } = yield* LspDiagnostics.reportDiagnosticsForFiles(
+        lsp,
+        changedFiles,
+        instance.worktree,
+      )
       if (lspOutput) output += `\n\n${lspOutput}`
 
       return {

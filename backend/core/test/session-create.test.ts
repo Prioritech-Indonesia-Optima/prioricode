@@ -309,9 +309,7 @@ describe("Session.create", () => {
     Effect.gen(function* () {
       const session = yield* Session.Service
       const created = yield* session.create({ location })
-      const unavailable = (
-        effect: Effect.Effect<void, Session.NotFoundError | Session.OperationUnavailableError>,
-      ) =>
+      const unavailable = (effect: Effect.Effect<void, Session.NotFoundError | Session.OperationUnavailableError>) =>
         effect.pipe(
           Effect.flip,
           Effect.map((error) => (error instanceof Session.OperationUnavailableError ? error.operation : "not-found")),

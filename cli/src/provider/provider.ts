@@ -140,7 +140,12 @@ const BUNDLED_PROVIDERS: Record<string, () => Promise<(opts: any) => BundledSDK>
   "venice-ai-sdk-provider": () => import("venice-ai-sdk-provider").then((m) => m.createVenice),
 }
 
-type CustomModelLoader = (sdk: any, modelID: string, options?: Record<string, any>, model?: ProviderModel) => Promise<any>
+type CustomModelLoader = (
+  sdk: any,
+  modelID: string,
+  options?: Record<string, any>,
+  model?: ProviderModel,
+) => Promise<any>
 type CustomVarsLoader = (options: Record<string, any>) => Record<string, string>
 type CustomDiscoverModels = () => Promise<Record<string, ProviderModel>>
 type CustomLoader = (provider: Info) => Effect.Effect<{
@@ -1041,7 +1046,9 @@ export function toPublicInfo(provider: Info): Info {
     JSON.stringify(
       {
         ...provider,
-        models: Object.fromEntries(Object.entries(provider.models).filter(([, model]) => Schema.is(ProviderModel)(model))),
+        models: Object.fromEntries(
+          Object.entries(provider.models).filter(([, model]) => Schema.is(ProviderModel)(model)),
+        ),
       },
       (_, value) => {
         if (typeof value === "function" || typeof value === "symbol" || value === undefined) return undefined

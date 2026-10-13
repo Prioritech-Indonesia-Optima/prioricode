@@ -240,14 +240,7 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/apply-patch",
   layer,
-  deps: [
-    ToolRegistry.node,
-    LocationMutation.node,
-    FileMutation.node,
-    FSUtil.node,
-    Permission.node,
-    EditObserver.node,
-  ],
+  deps: [ToolRegistry.node, LocationMutation.node, FileMutation.node, FSUtil.node, Permission.node, EditObserver.node],
 })
 
 function patchFile(change: Prepared): typeof FileDiff.Info.Type {

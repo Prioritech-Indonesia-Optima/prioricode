@@ -65,10 +65,7 @@ describe("CerebrasPlugin", () => {
       yield* addPlugin()
       const result = yield* aisdk.runSDK({
         model: Model.Info.make({
-          ...Model.Info.empty(
-            Provider.ID.make("custom-cerebras"),
-            Model.ID.make("llama-4-scout-17b-16e-instruct"),
-          ),
+          ...Model.Info.empty(Provider.ID.make("custom-cerebras"), Model.ID.make("llama-4-scout-17b-16e-instruct")),
           api: {
             id: Model.ID.make("llama-4-scout-17b-16e-instruct"),
             type: "aisdk",
@@ -91,10 +88,7 @@ describe("CerebrasPlugin", () => {
       yield* addPlugin()
       yield* aisdk.runSDK({
         model: Model.Info.make({
-          ...Model.Info.empty(
-            Provider.ID.make("custom-cerebras"),
-            Model.ID.make("llama-4-scout-17b-16e-instruct"),
-          ),
+          ...Model.Info.empty(Provider.ID.make("custom-cerebras"), Model.ID.make("llama-4-scout-17b-16e-instruct")),
           api: {
             id: Model.ID.make("llama-4-scout-17b-16e-instruct"),
             type: "aisdk",
@@ -116,10 +110,7 @@ describe("CerebrasPlugin", () => {
       yield* addPlugin()
       const result = yield* aisdk.runSDK({
         model: Model.Info.make({
-          ...Model.Info.empty(
-            Provider.ID.make("custom-cerebras"),
-            Model.ID.make("llama-4-scout-17b-16e-instruct"),
-          ),
+          ...Model.Info.empty(Provider.ID.make("custom-cerebras"), Model.ID.make("llama-4-scout-17b-16e-instruct")),
           api: {
             id: Model.ID.make("llama-4-scout-17b-16e-instruct"),
             type: "aisdk",

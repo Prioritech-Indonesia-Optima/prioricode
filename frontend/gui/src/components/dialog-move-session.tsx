@@ -103,7 +103,9 @@ export const DialogMoveSession: Component = () => {
             <span class="truncate flex-1 min-w-0 text-left font-normal" dir="ltr">
               {item.directory}
             </span>
-            {item.isCurrent && <span class="text-text-weak shrink-0 font-normal">{language.t("dialog.moveSession.current")}</span>}
+            {item.isCurrent && (
+              <span class="text-text-weak shrink-0 font-normal">{language.t("dialog.moveSession.current")}</span>
+            )}
           </div>
         )}
       </List>

@@ -679,7 +679,9 @@ const layer: Layer.Layer<
         yield* events.publish(SessionV1.Event.Deleted, { sessionID, info: session })
         yield* events.remove(sessionID)
       }).pipe(
-        Effect.catchCause((cause) => Effect.logError("failed to remove session", { sessionID, error: Cause.squash(cause) })),
+        Effect.catchCause((cause) =>
+          Effect.logError("failed to remove session", { sessionID, error: Cause.squash(cause) }),
+        ),
       )
     })
 
@@ -926,9 +928,7 @@ const layer: Layer.Layer<
         )).items
       }
 
-      const result = yield* MessageV2.fetchAll(input.sessionID).pipe(
-        Effect.provideService(Database.Service, database),
-      )
+      const result = yield* MessageV2.fetchAll(input.sessionID).pipe(Effect.provideService(Database.Service, database))
       return result.reverse()
     })
 
@@ -1019,8 +1019,6 @@ const layer: Layer.Layer<
     })
   }),
 )
-
-
 
 function listByProject(
   db: Database.Interface["db"],
