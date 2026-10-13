@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test"
 import { QueryClient } from "@tanstack/solid-query"
-import type { Session, SessionV2Info } from "@prioricode/sdk/v2/client"
+import type { Session, SessionInfo } from "@prioricode/sdk/v2/client"
 import {
   applyHomeSessionEvent,
   appendHomeSessionEvent,
@@ -78,7 +78,7 @@ describe("Home V2 session index", () => {
     const activeNull = {
       ...session({ id: "active-null", updated: 20 }),
       time: { created: 1, updated: 20, archived: null },
-    } as unknown as SessionV2Info
+    } as unknown as SessionInfo
     const result = parseHomeSessionIndex([
       session({ id: "root", updated: 30 }),
       activeNull,

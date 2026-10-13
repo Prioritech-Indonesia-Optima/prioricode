@@ -1,5 +1,5 @@
 import type { LanguageModelV3 } from "@ai-sdk/provider"
-import type { ModelV2Info as ModelInfo } from "@prioricode/sdk/v2/types"
+import type { ModelInfo } from "@prioricode/sdk/v2/types"
 import type { Hooks } from "./registration.js"
 
 export type AISDKHooks = Hooks<{

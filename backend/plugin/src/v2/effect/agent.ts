@@ -1,4 +1,4 @@
-import type { AgentV2Info as AgentInfo } from "@prioricode/sdk/v2/types"
+import type { AgentInfo } from "@prioricode/sdk/v2/types"
 import type { Hooks } from "./registration.js"
 
 export interface AgentDraft {

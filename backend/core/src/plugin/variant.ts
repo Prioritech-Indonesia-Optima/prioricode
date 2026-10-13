@@ -1,6 +1,6 @@
 export * as VariantPlugin from "./variant"
 
-import type { ModelV2Info as ModelInfo } from "@prioricode/sdk/v2/types"
+import type { ModelInfo } from "@prioricode/sdk/v2/types"
 import { Effect } from "effect"
 import { define } from "./internal"
 

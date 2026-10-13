@@ -1,4 +1,4 @@
-import type { SkillV2Source as SkillSource } from "@prioricode/sdk/v2/types"
+import type { SkillSource } from "@prioricode/sdk/v2/types"
 import type { Hooks } from "./registration.js"
 
 export interface SkillDraft {

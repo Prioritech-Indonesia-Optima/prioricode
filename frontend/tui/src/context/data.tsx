@@ -1,21 +1,21 @@
 import type {
-  AgentV2Info,
-  CommandV2Info,
+  AgentInfo,
+  CommandInfo,
   IntegrationInfo,
   LocationRef,
-  ModelV2Info,
+  ModelInfo,
   PermissionSavedInfo,
-  PermissionV2Request,
-  ProviderV2Info,
-  QuestionV2Request,
+  PermissionRequest2,
+  ProviderInfo,
+  QuestionRequest2,
   ReferenceInfo,
   SessionMessage,
   SessionMessageAssistant,
   SessionMessageAssistantReasoning,
   SessionMessageAssistantText,
   SessionMessageAssistantTool,
-  SessionV2Info,
-  SkillV2Info,
+  SessionInfo,
+  SkillInfo,
   V2Event,
 } from "@prioricode/sdk/v2"
 import { createStore, produce } from "solid-js/store"
@@ -25,21 +25,21 @@ import { useEvent } from "./event"
 import { createSignal, onCleanup, onMount } from "solid-js"
 
 type LocationData = {
-  agent?: AgentV2Info[]
-  command?: CommandV2Info[]
+  agent?: AgentInfo[]
+  command?: CommandInfo[]
   integration?: IntegrationInfo[]
-  model?: ModelV2Info[]
-  provider?: ProviderV2Info[]
+  model?: ModelInfo[]
+  provider?: ProviderInfo[]
   reference?: ReferenceInfo[]
-  skill?: SkillV2Info[]
+  skill?: SkillInfo[]
 }
 
 type Data = {
   session: {
-    info: Record<string, SessionV2Info>
+    info: Record<string, SessionInfo>
     message: Record<string, SessionMessage[]>
-    permission: Record<string, PermissionV2Request[]>
-    question: Record<string, QuestionV2Request[]>
+    permission: Record<string, PermissionRequest2[]>
+    question: Record<string, QuestionRequest2[]>
   }
   project: {
     permission: Record<string, PermissionSavedInfo[]>

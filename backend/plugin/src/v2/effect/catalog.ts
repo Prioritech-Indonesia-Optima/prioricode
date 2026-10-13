@@ -1,4 +1,4 @@
-import type { ModelV2Info as ModelInfo, ProviderV2Info as ProviderInfo } from "@prioricode/sdk/v2/types"
+import type { ModelInfo, ProviderInfo } from "@prioricode/sdk/v2/types"
 import type { Hooks } from "./registration.js"
 
 export interface CatalogProviderRecord {

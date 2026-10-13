@@ -148,5 +148,8 @@ await Bun.write(sseTypesPath, sseTypesPatched)
 await $`bun prettier --write src/gen`
 await $`bun prettier --write src/v2`
 await $`rm -rf dist`
+// Force a full tsc emit: a stale tsbuildinfo makes `bun tsc` skip output
+// (composite incremental build), leaving `dist` missing on re-runs.
+await $`rm -f tsconfig.tsbuildinfo`
 await $`bun tsc`
 await $`rm openapi.json`

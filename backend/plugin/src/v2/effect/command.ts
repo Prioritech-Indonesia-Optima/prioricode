@@ -1,4 +1,4 @@
-import type { CommandV2Info as CommandInfo } from "@prioricode/sdk/v2/types"
+import type { CommandInfo } from "@prioricode/sdk/v2/types"
 import type { Hooks } from "./registration.js"
 
 export interface CommandDraft {

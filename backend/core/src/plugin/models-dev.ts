@@ -1,5 +1,5 @@
 import { define } from "./internal"
-import type { ModelV2Info as ModelInfo } from "@prioricode/sdk/v2/types"
+import type { ModelInfo } from "@prioricode/sdk/v2/types"
 import { Effect, Stream } from "effect"
 import { EventBus } from "../event"
 import { ModelsDev } from "../models-dev"
