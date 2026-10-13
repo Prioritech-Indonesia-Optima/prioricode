@@ -12,8 +12,8 @@ import { RuntimeFlags } from "../../src/effect/runtime-flags"
 import { provideInstance, provideTmpdirInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { TestConfig } from "../fixture/config"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
@@ -85,8 +85,8 @@ function loaded(filepath: string): SessionV1.WithParts[] {
         time: { created: 0 },
         agent: "build",
         model: {
-          providerID: ProviderV2.ID.make("anthropic"),
-          modelID: ModelV2.ID.make("claude-sonnet-4-20250514"),
+          providerID: Provider.ID.make("anthropic"),
+          modelID: Model.ID.make("claude-sonnet-4-20250514"),
         },
       },
       parts: [

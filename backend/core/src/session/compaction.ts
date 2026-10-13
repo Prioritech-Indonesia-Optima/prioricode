@@ -3,7 +3,7 @@ export * as SessionCompaction from "./compaction"
 import { LLM, LLMError, LLMEvent, Message, type LLMRequest, type Model } from "@prioricode/llm"
 import { DateTime, Effect, Stream } from "effect"
 import type { Config } from "../config"
-import type { EventV2 } from "../event"
+import type { EventBus as Event } from "../event"
 import { SessionEvent } from "./event"
 import { SessionMessage } from "./message"
 import { SessionSchema } from "./schema"
@@ -76,7 +76,7 @@ export type Settings = {
 }
 
 type Dependencies = {
-  readonly events: EventV2.Interface
+  readonly events: Event.Interface
   readonly llm: {
     readonly stream: (request: LLMRequest) => Stream.Stream<LLMEvent, LLMError>
   }

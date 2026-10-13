@@ -2,8 +2,8 @@ import { Workspace } from "@/control-plane/workspace"
 import * as InstanceState from "@/effect/instance-state"
 import { Session } from "@/session/session"
 import { Database } from "@prioricode/core/database/database"
-import { EventV2 } from "@prioricode/core/event"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBus } from "@prioricode/core/event"
+import { EventBridge } from "@/event-v2-bridge"
 import { EventTable } from "@prioricode/core/event/sql"
 import { asc } from "drizzle-orm"
 import { and } from "drizzle-orm"
@@ -21,7 +21,7 @@ export const syncHandlers = HttpApiBuilder.group(InstanceHttpApi, "sync", (handl
     const workspace = yield* Workspace.Service
     const session = yield* Session.Service
     const scope = yield* Scope.Scope
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const { db } = yield* Database.Service
 
     const start = Effect.fn("SyncHttpApi.start")(function* () {
@@ -32,7 +32,7 @@ export const syncHandlers = HttpApiBuilder.group(InstanceHttpApi, "sync", (handl
     })
 
     const replay = Effect.fn("SyncHttpApi.replay")(function* (ctx: { payload: typeof ReplayPayload.Type }) {
-      const payload: EventV2.SerializedEvent[] = ctx.payload.events.map((event) => ({
+      const payload: EventBus.SerializedEvent[] = ctx.payload.events.map((event) => ({
         id: event.id,
         aggregateID: event.aggregateID,
         seq: event.seq,

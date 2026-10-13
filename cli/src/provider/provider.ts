@@ -26,8 +26,8 @@ import { FSUtil } from "@prioricode/core/fs-util"
 import { isRecord } from "@/util/record"
 import { optional } from "@prioricode/core/schema"
 import { ProviderTransform } from "./transform"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { ModelStatus } from "./model-status"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { ProviderError } from "./error"
@@ -139,9 +139,9 @@ const BUNDLED_PROVIDERS: Record<string, () => Promise<(opts: any) => BundledSDK>
   "venice-ai-sdk-provider": () => import("venice-ai-sdk-provider").then((m) => m.createVenice),
 }
 
-type CustomModelLoader = (sdk: any, modelID: string, options?: Record<string, any>, model?: Model) => Promise<any>
+type CustomModelLoader = (sdk: any, modelID: string, options?: Record<string, any>, model?: ProviderModel) => Promise<any>
 type CustomVarsLoader = (options: Record<string, any>) => Record<string, string>
-type CustomDiscoverModels = () => Promise<Record<string, Model>>
+type CustomDiscoverModels = () => Promise<Record<string, ProviderModel>>
 type CustomLoader = (provider: Info) => Effect.Effect<{
   autoload: boolean
   getModel?: CustomModelLoader
@@ -231,7 +231,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
     "github-copilot": () =>
       Effect.succeed({
         autoload: false,
-        async getModel(sdk: any, modelID: string, _options?: Record<string, any>, model?: Model) {
+        async getModel(sdk: any, modelID: string, _options?: Record<string, any>, model?: ProviderModel) {
           if (sdk.responses === undefined && sdk.chat === undefined) return sdk.languageModel(modelID)
           if (model && "endpoint" in model.api) {
             if (model.api.endpoint === "responses" && sdk.responses) return sdk.responses(modelID)
@@ -371,7 +371,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
         vars(options: Record<string, any>) {
           return { AWS_REGION: options.region ?? defaultRegion }
         },
-        async getModel(sdk: any, modelID: string, options?: Record<string, any>, model?: Model) {
+        async getModel(sdk: any, modelID: string, options?: Record<string, any>, model?: ProviderModel) {
           if (model?.api.npm === "@ai-sdk/amazon-bedrock/mantle") return selectBedrockMantleLanguageModel(sdk, modelID)
 
           // Skip region prefixing if model already has a cross-region inference profile prefix
@@ -668,7 +668,7 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
             featureFlags,
           })
         },
-        async discoverModels(): Promise<Record<string, Model>> {
+        async discoverModels(): Promise<Record<string, ProviderModel>> {
           if (!apiKey) {
             return {}
           }
@@ -684,12 +684,12 @@ function custom(dep: CustomDep): Record<string, CustomLoader> {
               return {}
             }
 
-            const models: Record<string, Model> = {}
+            const models: Record<string, ProviderModel> = {}
             for (const m of result.models) {
               if (!input.models[m.id]) {
                 models[m.id] = {
-                  id: ModelV2.ID.make(m.id),
-                  providerID: ProviderV2.ID.make("gitlab"),
+                  id: Model.ID.make(m.id),
+                  providerID: Provider.ID.make("gitlab"),
                   name: `Agent Platform (${m.name})`,
                   family: "",
                   api: {
@@ -1075,9 +1075,12 @@ const ProviderLimit = Schema.Struct({
   output: Schema.Finite,
 })
 
-export const Model = Schema.Struct({
-  id: ModelV2.ID,
-  providerID: ProviderV2.ID,
+export const ID = Provider.ID
+export type ID = typeof ID.Type
+
+export const ProviderModel = Schema.Struct({
+  id: Model.ID,
+  providerID: Provider.ID,
   api: ProviderApiInfo,
   name: Schema.String,
   family: optional(Schema.String),
@@ -1090,16 +1093,16 @@ export const Model = Schema.Struct({
   release_date: Schema.String,
   variants: optional(Schema.Record(Schema.String, Schema.Record(Schema.String, Schema.Any))),
 }).annotate({ identifier: "Model" })
-export type Model = Types.DeepMutable<Schema.Schema.Type<typeof Model>>
+export type ProviderModel = Types.DeepMutable<Schema.Schema.Type<typeof ProviderModel>>
 
 export const Info = Schema.Struct({
-  id: ProviderV2.ID,
+  id: Provider.ID,
   name: Schema.String,
   source: Schema.Literals(["env", "config", "custom", "api"]),
   env: Schema.Array(Schema.String),
   key: optional(Schema.String),
   options: Schema.Record(Schema.String, Schema.Any),
-  models: Schema.Record(Schema.String, Model),
+  models: Schema.Record(Schema.String, ProviderModel),
 }).annotate({ identifier: "Provider" })
 export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
 
@@ -1123,7 +1126,7 @@ export function toPublicInfo(provider: Info): Info {
     JSON.stringify(
       {
         ...provider,
-        models: Object.fromEntries(Object.entries(provider.models).filter(([, model]) => Schema.is(Model)(model))),
+        models: Object.fromEntries(Object.entries(provider.models).filter(([, model]) => Schema.is(ProviderModel)(model))),
       },
       (_, value) => {
         if (typeof value === "function" || typeof value === "symbol" || value === undefined) return undefined
@@ -1139,8 +1142,8 @@ export function defaultModelIDs<T extends { models: Record<string, { id: string 
 }
 
 export class ModelNotFoundError extends Schema.TaggedErrorClass<ModelNotFoundError>()("ProviderModelNotFoundError", {
-  providerID: ProviderV2.ID,
-  modelID: ModelV2.ID,
+  providerID: Provider.ID,
+  modelID: Model.ID,
   suggestions: Schema.optional(Schema.Array(Schema.String)),
   cause: Schema.optional(Schema.Defect()),
 }) {
@@ -1155,7 +1158,7 @@ export class ModelNotFoundError extends Schema.TaggedErrorClass<ModelNotFoundErr
 }
 
 export class InitError extends Schema.TaggedErrorClass<InitError>()("ProviderInitError", {
-  providerID: ProviderV2.ID,
+  providerID: Provider.ID,
   cause: Schema.optional(Schema.Defect()),
 }) {
   override get message() {
@@ -1178,7 +1181,7 @@ export class NoProvidersError extends Schema.TaggedErrorClass<NoProvidersError>(
 }
 
 export class NoModelsError extends Schema.TaggedErrorClass<NoModelsError>()("ProviderNoModelsError", {
-  providerID: ProviderV2.ID,
+  providerID: Provider.ID,
 }) {
   override get message() {
     return `No models are available for provider: ${this.providerID}`
@@ -1193,22 +1196,22 @@ export type DefaultModelError = ModelNotFoundError | NoProvidersError | NoModels
 export type Error = ModelNotFoundError | InitError | NoProvidersError | NoModelsError
 
 export interface Interface {
-  readonly list: () => Effect.Effect<Record<ProviderV2.ID, Info>>
-  readonly getProvider: (providerID: ProviderV2.ID) => Effect.Effect<Info>
-  readonly getModel: (providerID: ProviderV2.ID, modelID: ModelV2.ID) => Effect.Effect<Model, ModelNotFoundError>
-  readonly getLanguage: (model: Model) => Effect.Effect<LanguageModelV3, ModelNotFoundError>
+  readonly list: () => Effect.Effect<Record<Provider.ID, Info>>
+  readonly getProvider: (providerID: Provider.ID) => Effect.Effect<Info>
+  readonly getModel: (providerID: Provider.ID, modelID: Model.ID) => Effect.Effect<ProviderModel, ModelNotFoundError>
+  readonly getLanguage: (model: ProviderModel) => Effect.Effect<LanguageModelV3, ModelNotFoundError>
   readonly closest: (
-    providerID: ProviderV2.ID,
+    providerID: Provider.ID,
     query: string[],
-  ) => Effect.Effect<{ providerID: ProviderV2.ID; modelID: string } | undefined>
-  readonly getSmallModel: (providerID: ProviderV2.ID) => Effect.Effect<Model | undefined>
-  readonly defaultModel: () => Effect.Effect<{ providerID: ProviderV2.ID; modelID: ModelV2.ID }, DefaultModelError>
+  ) => Effect.Effect<{ providerID: Provider.ID; modelID: string } | undefined>
+  readonly getSmallModel: (providerID: Provider.ID) => Effect.Effect<ProviderModel | undefined>
+  readonly defaultModel: () => Effect.Effect<{ providerID: Provider.ID; modelID: Model.ID }, DefaultModelError>
 }
 
 interface State {
   models: Map<string, LanguageModelV3>
-  providers: Record<ProviderV2.ID, Info>
-  catalog: Record<ProviderV2.ID, Info>
+  providers: Record<Provider.ID, Info>
+  catalog: Record<Provider.ID, Info>
   sdk: Map<string, BundledSDK>
   modelLoaders: Record<string, CustomModelLoader>
   varsLoaders: Record<string, CustomVarsLoader>
@@ -1218,8 +1221,8 @@ export class Service extends Context.Service<Service, Interface>()("@prioricode/
 
 export const use = serviceUse(Service)
 
-function cost(c: ModelsDev.Model["cost"]): Model["cost"] {
-  const result: Model["cost"] = {
+function cost(c: ModelsDev.Model["cost"]): ProviderModel["cost"] {
+  const result: ProviderModel["cost"] = {
     input: c?.input ?? 0,
     output: c?.output ?? 0,
     cache: {
@@ -1262,10 +1265,10 @@ function cloudflareGatewayNpm(providerID: string, modelID: string) {
   return undefined
 }
 
-function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model): Model {
-  const base: Model = {
-    id: ModelV2.ID.make(model.id),
-    providerID: ProviderV2.ID.make(provider.id),
+function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model): ProviderModel {
+  const base: ProviderModel = {
+    id: Model.ID.make(model.id),
+    providerID: Provider.ID.make(provider.id),
     name: model.name,
     family: model.family,
     api: {
@@ -1320,7 +1323,7 @@ function fromModelsDevModel(provider: ModelsDev.Provider, model: ModelsDev.Model
 }
 
 export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
-  const models: Record<string, Model> = {}
+  const models: Record<string, ProviderModel> = {}
   for (const [key, model] of Object.entries(provider.models)) {
     models[key] = fromModelsDevModel(provider, model)
     for (const [mode, opts] of Object.entries(model.experimental?.modes ?? {})) {
@@ -1328,7 +1331,7 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
       const base = fromModelsDevModel(provider, model)
       models[id] = {
         ...base,
-        id: ModelV2.ID.make(id),
+        id: Model.ID.make(id),
         name: `${model.name} ${mode[0].toUpperCase()}${mode.slice(1)}`,
         cost: opts.cost ? mergeDeep(base.cost, cost(opts.cost)) : base.cost,
         options: modeOptions(base, opts.provider?.body),
@@ -1337,7 +1340,7 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
     }
   }
   return {
-    id: ProviderV2.ID.make(provider.id),
+    id: Provider.ID.make(provider.id),
     source: "custom",
     name: provider.name,
     env: [...(provider.env ?? [])],
@@ -1346,7 +1349,7 @@ export function fromModelsDevProvider(provider: ModelsDev.Provider): Info {
   }
 }
 
-function modeOptions(model: Model, body: Record<string, unknown> | undefined) {
+function modeOptions(model: ProviderModel, body: Record<string, unknown> | undefined) {
   if (!body) return model.options
   const options = Object.fromEntries(
     Object.entries(body).map(([key, value]) => [key.replace(/_([a-z])/g, (_, char) => char.toUpperCase()), value]),
@@ -1357,7 +1360,7 @@ function modeOptions(model: Model, body: Record<string, unknown> | undefined) {
   return { ...rest, reasoningMode: reasoning.mode }
 }
 
-function modelSuggestions(provider: Info | undefined, modelID: ModelV2.ID, enableExperimentalModels: boolean) {
+function modelSuggestions(provider: Info | undefined, modelID: Model.ID, enableExperimentalModels: boolean) {
   const available = provider
     ? Object.keys(provider.models).filter((id) => {
         const model = provider.models[id]
@@ -1405,7 +1408,7 @@ const layer = Layer.effect(
         const catalog = mapValues(modelsDev, fromModelsDevProvider)
         const database = mapValues(catalog, toPublicInfo)
 
-        const providers: Record<ProviderV2.ID, Info> = {} as Record<ProviderV2.ID, Info>
+        const providers: Record<Provider.ID, Info> = {} as Record<Provider.ID, Info>
         const languages = new Map<string, LanguageModelV3>()
         const modelLoaders: {
           [providerID: string]: CustomModelLoader
@@ -1424,7 +1427,7 @@ const layer = Layer.effect(
           get: (key: string) => env.get(key),
         }
 
-        function mergeProvider(providerID: ProviderV2.ID, provider: Partial<Info>) {
+        function mergeProvider(providerID: Provider.ID, provider: Partial<Info>) {
           const existing = providers[providerID]
           if (existing) {
             // @ts-expect-error
@@ -1445,7 +1448,7 @@ const layer = Layer.effect(
         const disabled = new Set(cfg.disabled_providers ?? [])
         const enabled = cfg.enabled_providers ? new Set(cfg.enabled_providers) : null
 
-        function isProviderAllowed(providerID: ProviderV2.ID): boolean {
+        function isProviderAllowed(providerID: Provider.ID): boolean {
           if (enabled && !enabled.has(providerID)) return false
           if (disabled.has(providerID)) return false
           return true
@@ -1456,7 +1459,7 @@ const layer = Layer.effect(
           const models = p?.models
           if (!p || !models) continue
 
-          const providerID = ProviderV2.ID.make(p.id)
+          const providerID = Provider.ID.make(p.id)
           if (disabled.has(providerID)) continue
 
           const provider = database[providerID]
@@ -1470,7 +1473,7 @@ const layer = Layer.effect(
                 id,
                 {
                   ...model,
-                  id: ModelV2.ID.make(id),
+                  id: Model.ID.make(id),
                   providerID,
                 },
               ]),
@@ -1482,7 +1485,7 @@ const layer = Layer.effect(
         for (const [providerID, provider] of configProviders) {
           const existing = database[providerID]
           const parsed: Info = {
-            id: ProviderV2.ID.make(providerID),
+            id: Provider.ID.make(providerID),
             name: provider.name ?? existing?.name ?? providerID,
             env: provider.env ?? existing?.env ?? [],
             options: mergeDeep(existing?.options ?? {}, provider.options ?? {}),
@@ -1507,8 +1510,8 @@ const layer = Layer.effect(
               if (model.id && model.id !== modelID) return modelID
               return existingModel?.name ?? modelID
             })
-            const parsedModel: Model = {
-              id: ModelV2.ID.make(modelID),
+            const parsedModel: ProviderModel = {
+              id: Model.ID.make(modelID),
               api: {
                 id: apiID,
                 npm: apiNpm,
@@ -1516,7 +1519,7 @@ const layer = Layer.effect(
               },
               status: model.status ?? existingModel?.status ?? "active",
               name,
-              providerID: ProviderV2.ID.make(providerID),
+              providerID: Provider.ID.make(providerID),
               capabilities: {
                 temperature: model.temperature ?? existingModel?.capabilities.temperature ?? false,
                 reasoning: model.reasoning ?? existingModel?.capabilities.reasoning ?? false,
@@ -1582,7 +1585,7 @@ const layer = Layer.effect(
         // load env
         const envs = yield* env.all()
         for (const [id, provider] of Object.entries(database)) {
-          const providerID = ProviderV2.ID.make(id)
+          const providerID = Provider.ID.make(id)
           if (disabled.has(providerID)) continue
           const apiKey = provider.env.map((item) => envs[item]).find(Boolean)
           if (!apiKey) continue
@@ -1595,7 +1598,7 @@ const layer = Layer.effect(
         // load apikeys
         const auths = yield* auth.all().pipe(Effect.orDie)
         for (const [id, provider] of Object.entries(auths)) {
-          const providerID = ProviderV2.ID.make(id)
+          const providerID = Provider.ID.make(id)
           if (disabled.has(providerID)) continue
           if (provider.type === "api") {
             mergeProvider(providerID, {
@@ -1608,7 +1611,7 @@ const layer = Layer.effect(
         // plugin auth loader - database now has entries for config providers
         for (const plugin of plugins) {
           if (!plugin.auth) continue
-          const providerID = ProviderV2.ID.make(plugin.auth.provider)
+          const providerID = Provider.ID.make(plugin.auth.provider)
           if (disabled.has(providerID)) continue
 
           const stored = yield* auth.get(providerID).pipe(Effect.orDie)
@@ -1627,7 +1630,7 @@ const layer = Layer.effect(
         }
 
         for (const [id, fn] of Object.entries(custom(dep))) {
-          const providerID = ProviderV2.ID.make(id)
+          const providerID = Provider.ID.make(id)
           if (disabled.has(providerID)) continue
           const data = database[providerID]
           if (!data) {
@@ -1646,7 +1649,7 @@ const layer = Layer.effect(
 
         // load config - re-apply with updated data
         for (const [id, provider] of configProviders) {
-          const providerID = ProviderV2.ID.make(id)
+          const providerID = Provider.ID.make(id)
           const partial: Partial<Info> = { source: "config" }
           if (provider.env) partial.env = provider.env
           if (provider.name) partial.name = provider.name
@@ -1654,7 +1657,7 @@ const layer = Layer.effect(
           mergeProvider(providerID, partial)
         }
 
-        const gitlab = ProviderV2.ID.make("gitlab")
+        const gitlab = Provider.ID.make("gitlab")
         if (discoveryLoaders[gitlab] && providers[gitlab] && isProviderAllowed(gitlab)) {
           yield* Effect.promise(async () => {
             try {
@@ -1669,7 +1672,7 @@ const layer = Layer.effect(
         }
 
         for (const [id, provider] of Object.entries(providers)) {
-          const providerID = ProviderV2.ID.make(id)
+          const providerID = Provider.ID.make(id)
           if (!isProviderAllowed(providerID)) {
             delete providers[providerID]
             continue
@@ -1684,10 +1687,10 @@ const layer = Layer.effect(
               // These chat aliases are invalid for the special handling in the
               // built-in providers below, but custom providers may support them.
               (modelID === "gpt-5-chat-latest" &&
-                (providerID === ProviderV2.ID.openai ||
-                  providerID === ProviderV2.ID.githubCopilot ||
-                  providerID === ProviderV2.ID.openrouter)) ||
-              (providerID === ProviderV2.ID.openrouter && modelID === "openai/gpt-5-chat")
+                (providerID === Provider.ID.openai ||
+                  providerID === Provider.ID.githubCopilot ||
+                  providerID === Provider.ID.openrouter)) ||
+              (providerID === Provider.ID.openrouter && modelID === "openai/gpt-5-chat")
             )
               delete provider.models[modelID]
             if (model.status === "alpha" && !runtimeFlags.enableExperimentalModels) delete provider.models[modelID]
@@ -1731,7 +1734,7 @@ const layer = Layer.effect(
 
     const list = Effect.fn("Provider.list")(() => InstanceState.use(state, (s) => s.providers))
 
-    async function resolveSDK(model: Model, s: State, envs: Record<string, string | undefined>) {
+    async function resolveSDK(model: ProviderModel, s: State, envs: Record<string, string | undefined>) {
       try {
         const provider = s.providers[model.providerID]
         const options = { ...provider.options }
@@ -1865,11 +1868,11 @@ const layer = Layer.effect(
       }
     }
 
-    const getProvider = Effect.fn("Provider.getProvider")((providerID: ProviderV2.ID) =>
+    const getProvider = Effect.fn("Provider.getProvider")((providerID: Provider.ID) =>
       InstanceState.use(state, (s) => s.providers[providerID]),
     )
 
-    const getModel = Effect.fn("Provider.getModel")(function* (providerID: ProviderV2.ID, modelID: ModelV2.ID) {
+    const getModel = Effect.fn("Provider.getModel")(function* (providerID: Provider.ID, modelID: Model.ID) {
       const s = yield* InstanceState.get(state)
       const provider = s.providers[providerID]
       if (!provider) {
@@ -1893,7 +1896,7 @@ const layer = Layer.effect(
       return info
     })
 
-    const getLanguage = Effect.fn("Provider.getLanguage")(function* (model: Model) {
+    const getLanguage = Effect.fn("Provider.getLanguage")(function* (model: ProviderModel) {
       const s = yield* InstanceState.get(state)
       const envs = yield* env.all()
       const key = `${model.providerID}/${model.id}`
@@ -1924,7 +1927,7 @@ const layer = Layer.effect(
       )
     })
 
-    const closest = Effect.fn("Provider.closest")(function* (providerID: ProviderV2.ID, query: string[]) {
+    const closest = Effect.fn("Provider.closest")(function* (providerID: Provider.ID, query: string[]) {
       const s = yield* InstanceState.get(state)
       const provider = s.providers[providerID]
       if (!provider) return undefined
@@ -1936,7 +1939,7 @@ const layer = Layer.effect(
       return undefined
     })
 
-    const getSmallModel = Effect.fn("Provider.getSmallModel")(function* (providerID: ProviderV2.ID) {
+    const getSmallModel = Effect.fn("Provider.getSmallModel")(function* (providerID: Provider.ID) {
       const cfg = yield* config.get()
 
       if (cfg.small_model) {
@@ -1958,13 +1961,13 @@ const layer = Layer.effect(
       if (experimental.model) {
         return {
           ...experimental.model,
-          id: ModelV2.ID.make(experimental.model.id),
-          providerID: ProviderV2.ID.make(experimental.model.providerID),
+          id: Model.ID.make(experimental.model.id),
+          providerID: Provider.ID.make(experimental.model.providerID),
         }
       }
 
       // TODO: Remove these provider-specific assumptions once model syncing reliably reports available deployments.
-      if (providerID === ProviderV2.ID.azure || providerID === ProviderV2.ID.make("azure-cognitive-services")) {
+      if (providerID === Provider.ID.azure || providerID === Provider.ID.make("azure-cognitive-services")) {
         return undefined
       }
 
@@ -1980,8 +1983,8 @@ const layer = Layer.effect(
       )
       for (const family of priority) {
         const candidates = models.filter((model) => model.family === family)
-        if (providerID === ProviderV2.ID.amazonBedrock) {
-          const crossRegionPrefixes = ["global.", "us.", "eu."]
+        if (providerID === Provider.ID.amazonBedrock) {
+          const crossRegionPrefixes = ["global.", "us.", "eu.", "jp.", "apac.", "au."]
 
           const globalMatch = candidates.find((model) => model.id.startsWith("global."))
           if (globalMatch) return globalMatch
@@ -2011,16 +2014,16 @@ const layer = Layer.effect(
 
       const s = yield* InstanceState.get(state)
       const recent = yield* fs.readJson(path.join(Global.Path.state, "model.json")).pipe(
-        Effect.map((x): { providerID: ProviderV2.ID; modelID: ModelV2.ID }[] => {
+        Effect.map((x): { providerID: Provider.ID; modelID: Model.ID }[] => {
           if (!isRecord(x) || !Array.isArray(x.recent)) return []
           return x.recent.flatMap((item) => {
             if (!isRecord(item)) return []
             if (typeof item.providerID !== "string") return []
             if (typeof item.modelID !== "string") return []
-            return [{ providerID: ProviderV2.ID.make(item.providerID), modelID: ModelV2.ID.make(item.modelID) }]
+            return [{ providerID: Provider.ID.make(item.providerID), modelID: Model.ID.make(item.modelID) }]
           })
         }),
-        Effect.catch(() => Effect.succeed([] as { providerID: ProviderV2.ID; modelID: ModelV2.ID }[])),
+        Effect.catch(() => Effect.succeed([] as { providerID: Provider.ID; modelID: Model.ID }[])),
       )
       for (const entry of recent) {
         const provider = s.providers[entry.providerID]
@@ -2058,8 +2061,8 @@ export function sort<T extends { id: string }>(models: T[]) {
 export function parseModel(model: string) {
   const [providerID, ...rest] = model.split("/")
   return {
-    providerID: ProviderV2.ID.make(providerID),
-    modelID: ModelV2.ID.make(rest.join("/")),
+    providerID: Provider.ID.make(providerID),
+    modelID: Model.ID.make(rest.join("/")),
   }
 }
 

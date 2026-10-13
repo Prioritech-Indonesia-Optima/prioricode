@@ -28,8 +28,8 @@ import { MessageID, PartID, SessionID, type SessionID as SessionIDType } from ".
 import { Database } from "@prioricode/core/database/database"
 import { SessionInputTable, SessionMessageTable, SessionTable } from "@prioricode/core/session/sql"
 import { SessionMessage } from "@prioricode/core/session/message"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
 import * as DateTime from "effect/DateTime"
 import { eq } from "drizzle-orm"
 import { resetDatabase } from "../fixture/db"
@@ -77,7 +77,7 @@ function createTextMessage(sessionID: SessionIDType, text: string) {
       role: "user",
       sessionID,
       agent: "build",
-      model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test") },
+      model: { providerID: Provider.ID.make("test"), modelID: Model.ID.make("test") },
       time: { created: Date.now() },
     })
     const part = yield* svc.updatePart({
@@ -125,9 +125,9 @@ const insertLegacyAssistantMessage = (sessionID: SessionIDType, seq = 1, time = 
       type: "assistant",
       agent: "build",
       model: {
-        id: ModelV2.ID.make("model"),
-        providerID: ProviderV2.ID.make("provider"),
-        variant: ModelV2.VariantID.make("default"),
+        id: Model.ID.make("model"),
+        providerID: Provider.ID.make("provider"),
+        variant: Model.VariantID.make("default"),
       },
       time: { created: DateTime.makeUnsafe(time) },
       content: [],

@@ -1,20 +1,20 @@
 import { describe, expect } from "bun:test"
 import { LLMClient, LLMEvent, Model, type LLMClientShape, type LLMRequest } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { Config } from "@prioricode/core/config"
 import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { EventTable } from "@prioricode/core/event/sql"
 import { Location } from "@prioricode/core/location"
-import { PermissionV2 } from "@prioricode/core/permission"
+import { Permission } from "@prioricode/core/permission"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionGoal } from "@prioricode/core/session/goal"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { SessionRunner } from "@prioricode/core/session/runner"
@@ -54,8 +54,8 @@ const client = Layer.succeed(
 )
 
 const permission = Layer.succeed(
-  PermissionV2.Service,
-  PermissionV2.Service.of({
+  Permission.Service,
+  Permission.Service.of({
     assert: () => Effect.void,
     ask: () => Effect.die("unused"),
     reply: () => Effect.die("unused"),
@@ -86,14 +86,14 @@ const runnerLayer = AppNodeBuilder.build(SessionRunnerLLM.node, [
   [Location.node, location],
   [SkillGuidance.node, skillGuidance],
   [ReferenceGuidance.node, referenceGuidance],
-  [PermissionV2.node, permission],
+  [Permission.node, permission],
   [Config.node, config],
 ])
 const execution = Layer.effect(
   SessionExecution.Service,
   Effect.gen(function* () {
     const sessionRunner = yield* SessionRunner.Service
-    const coordinator = yield* SessionRunCoordinator.make<SessionV2.ID, SessionRunner.RunError>({
+    const coordinator = yield* SessionRunCoordinator.make<Session.ID, SessionRunner.RunError>({
       drain: (sessionID, force) => sessionRunner.run({ sessionID, force }),
     })
     return SessionExecution.Service.of({
@@ -110,10 +110,10 @@ const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([
       Database.node,
-      EventV2.node,
+      EventBus.node,
       SessionProjector.node,
       SessionStore.node,
-      AgentV2.node,
+      Agent.node,
       ToolRegistry.node,
       ToolRegistry.toolsNode,
       GoalTool.node,
@@ -121,11 +121,11 @@ const it = testEffect(
       Snapshot.node,
       SessionRunnerLLM.node,
       SessionExecution.node,
-      SessionV2.node,
+      Session.node,
     ]),
     [
       [LayerNodePlatform.llmClient, client],
-      [PermissionV2.node, permission],
+      [Permission.node, permission],
       [SessionRunnerModel.node, models],
       [Location.node, location],
       [SkillGuidance.node, skillGuidance],
@@ -137,8 +137,8 @@ const it = testEffect(
   ),
 )
 
-const sessionID = SessionV2.ID.make("ses_goal_test")
-const otherID = SessionV2.ID.make("ses_goal_other")
+const sessionID = Session.ID.make("ses_goal_test")
+const otherID = Session.ID.make("ses_goal_other")
 
 const setup = Effect.gen(function* () {
   responses = []
@@ -164,7 +164,7 @@ const systemTexts = (request: LLMRequest) =>
   ((request as unknown as { readonly system?: ReadonlyArray<{ readonly text?: string }> }).system ?? []).flatMap(
     (part) => (part.text === undefined ? [] : [part.text]),
   )
-const goalEventCount = (id: SessionV2.ID) =>
+const goalEventCount = (id: Session.ID) =>
   Effect.gen(function* () {
     const { db } = yield* Database.Service
     const rows = yield* db.select().from(EventTable).where(eq(EventTable.aggregate_id, id)).all().pipe(Effect.orDie)
@@ -175,7 +175,7 @@ describe("session goal", () => {
   it.live("a goal set before the drain is anchored into the baseline system context", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.setGoal({ sessionID, goal: "Ship phase 4 with green tests" })
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Work" }), resume: false })
       responses = [
@@ -198,7 +198,7 @@ describe("session goal", () => {
   it.live("setGoal with the same value is a no-op; empty value clears", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.setGoal({ sessionID, goal: "Alpha" })
       const info = yield* session.get(sessionID)
       expect(info.goal).toBe("Alpha")
@@ -214,7 +214,7 @@ describe("session goal", () => {
     Effect.gen(function* () {
       yield* setup
       const registry = yield* ToolRegistry.Service
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const shown = yield* executeTool(registry, {
         sessionID,
         ...toolIdentity,
@@ -247,7 +247,7 @@ describe("session goal", () => {
   it.live("a mid-drain goal update reaches the next provider turn as chronological context", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Set a goal" }), resume: false })
       responses = [
         [
@@ -276,8 +276,8 @@ describe("session goal", () => {
   it.effect("GoalSet replays decode and rebuild the durable column and message rows", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
-      const events = yield* EventV2.Service
+      const session = yield* Session.Service
+      const events = yield* EventBus.Service
       const { db } = yield* Database.Service
       yield* session.setGoal({ sessionID, goal: "Replay me" })
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "ignored" }), resume: false })
@@ -338,8 +338,8 @@ describe("session goal", () => {
   it.effect("setGoal on an unknown session fails with NotFound and leaves no event", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
-      const exit = yield* session.setGoal({ sessionID: SessionV2.ID.make("ses_missing"), goal: "x" }).pipe(Effect.exit)
+      const session = yield* Session.Service
+      const exit = yield* session.setGoal({ sessionID: Session.ID.make("ses_missing"), goal: "x" }).pipe(Effect.exit)
       expect(exit._tag).toBe("Failure")
       const found = yield* session.get(sessionID)
       expect(found.goal).toBeUndefined()

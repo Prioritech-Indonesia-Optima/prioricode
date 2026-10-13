@@ -48,18 +48,15 @@ import { InstanceState } from "@/effect/instance-state"
 import { TaskTool, type TaskPromptOps } from "@/tool/task"
 import { SessionRunState } from "./run-state"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Hook } from "@/hook"
 import { Database } from "@prioricode/core/database/database"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { eq } from "drizzle-orm"
-import { SessionTable } from "@prioricode/core/session/sql"
+import { Model } from "@prioricode/core/model"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
 import { SessionReminders } from "./reminders"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@prioricode/llm"
-import { triggerPoint } from "./overflow"
-import { Token } from "@/util/token"
+
 import { SessionRetry } from "./retry"
 import { isMedia } from "@/util/media"
 
@@ -84,14 +81,12 @@ const historyHasMedia = (msgs: SessionV1.WithParts[]) =>
       return part.state.status === "completed" && (part.state.attachments ?? []).some((a) => isMedia(a.mime))
     }),
   )
-const MAX_MCP_RESOURCE_BLOB_BYTES = 10 * 1024 * 1024
-const SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES = new Set([
-  "application/pdf",
-  "image/gif",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-])
+import {
+  MAX_MCP_RESOURCE_BLOB_BYTES,
+  SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES,
+  mcpResourceBase64Size,
+  formatMcpResourceBytes,
+} from "@/mcp/resource"
 
 const STRUCTURED_OUTPUT_DESCRIPTION = `Use this tool to return your final response in the requested structured format.
 
@@ -103,17 +98,7 @@ IMPORTANT:
 
 const STRUCTURED_OUTPUT_SYSTEM_PROMPT = `IMPORTANT: The user has requested structured output. You MUST use the StructuredOutput tool to provide your final response. Do NOT respond with plain text - you MUST call the StructuredOutput tool with your answer formatted according to the schema.`
 
-function mcpResourceBase64Size(value: string) {
-  const trimmed = value.replace(/\s/g, "")
-  const padding = trimmed.endsWith("==") ? 2 : trimmed.endsWith("=") ? 1 : 0
-  return Math.max(0, Math.floor((trimmed.length * 3) / 4) - padding)
-}
 
-function formatMcpResourceBytes(value: number) {
-  if (value < 1024) return `${value} B`
-  if (value < 1024 * 1024) return `${Math.ceil(value / 1024)} KB`
-  return `${Math.ceil(value / (1024 * 1024))} MB`
-}
 
 function isOrphanedInterruptedTool(part: SessionV1.ToolPart) {
   // cleanup() marks abandoned tool_use blocks this way after retries/aborts.
@@ -161,7 +146,7 @@ const layer = Layer.effect(
     const summary = yield* SessionSummary.Service
     const sys = yield* SystemPrompt.Service
     const llm = yield* LLM.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const flags = yield* RuntimeFlags.Service
     const database = yield* Database.Service
     const { db } = database
@@ -217,8 +202,8 @@ const layer = Layer.effect(
     const title = Effect.fn("SessionPrompt.ensureTitle")(function* (input: {
       session: Session.Info
       history: SessionV1.WithParts[]
-      providerID: ProviderV2.ID
-      modelID: ModelV2.ID
+      providerID: ProviderSchema.ID
+      modelID: Model.ID
     }) {
       if (input.session.parentID) return
       if (!Session.isDefaultTitle(input.session.title)) return
@@ -278,7 +263,7 @@ const layer = Layer.effect(
 
     const handleSubtask = Effect.fn("SessionPrompt.handleSubtask")(function* (input: {
       task: SessionV1.SubtaskPart
-      model: Provider.Model
+      model: Provider.ProviderModel
       lastUser: SessionV1.User
       sessionID: SessionID
       session: Session.Info
@@ -618,8 +603,8 @@ const layer = Layer.effect(
     })
 
     const getModel = Effect.fn("SessionPrompt.getModel")(function* (
-      providerID: ProviderV2.ID,
-      modelID: ModelV2.ID,
+      providerID: ProviderSchema.ID,
+      modelID: Model.ID,
       sessionID: SessionID,
     ) {
       const exit = yield* provider.getModel(providerID, modelID).pipe(Effect.exit)
@@ -638,17 +623,12 @@ const layer = Layer.effect(
     })
 
     const currentModel = Effect.fnUntraced(function* (sessionID: SessionID) {
-      const current = yield* db
-        .select({ model: SessionTable.model })
-        .from(SessionTable)
-        .where(eq(SessionTable.id, sessionID))
-        .get()
-        .pipe(Effect.orDie)
-      if (current?.model) {
+      const session = yield* sessions.get(sessionID).pipe(Effect.orDie)
+      if (session.model) {
         return {
-          providerID: ProviderV2.ID.make(current.model.providerID),
-          modelID: ModelV2.ID.make(current.model.id),
-          ...(current.model.variant && current.model.variant !== "default" ? { variant: current.model.variant } : {}),
+          providerID: session.model.providerID,
+          modelID: session.model.id,
+          ...(session.model.variant && session.model.variant !== "default" ? { variant: session.model.variant } : {}),
         }
       }
       const match = yield* sessions
@@ -1248,23 +1228,22 @@ const layer = Layer.effect(
             continue
           }
 
+          // Safety net: the processor checks isOverflow at every step-finish, but if the
+          // stream was interrupted before the final step-finish, this catches it here.
           if (
             lastFinished &&
             lastFinished.summary !== true &&
             (yield* compaction.isOverflow({ tokens: lastFinished.tokens, model }))
           ) {
+            yield* Effect.logInfo("compaction triggered by isOverflow", {
+              "session.id": sessionID,
+              messageID: lastFinished.id,
+              tokens: lastFinished.tokens,
+              model: model.id,
+              "model.limit.context": model.limit.context,
+            })
             yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
             continue
-          }
-
-          const cfg = yield* config.get()
-          if (cfg.compaction?.threshold !== undefined && cfg.compaction?.auto !== false) {
-            const estimated = Token.estimate(JSON.stringify(msgs))
-            const trigger = triggerPoint({ cfg, model, outputTokenMax: flags.outputTokenMax })
-            if (trigger > 0 && estimated >= trigger) {
-              yield* compaction.create({ sessionID, agent: lastUser.agent, model: lastUser.model, auto: true })
-              continue
-            }
           }
 
           const agent = yield* agents.get(lastUser.agent)
@@ -1676,8 +1655,8 @@ const layer = Layer.effect(
 )
 
 const ModelRef = Schema.Struct({
-  providerID: ProviderV2.ID,
-  modelID: ModelV2.ID,
+  providerID: ProviderSchema.ID,
+  modelID: Model.ID,
 })
 
 export const PromptInput = Schema.Struct({
@@ -1806,7 +1785,7 @@ export const node = LayerNode.make({
     SessionSummary.node,
     SystemPrompt.node,
     LLM.node,
-    EventV2Bridge.node,
+    EventBridge.node,
     Hook.node,
     RuntimeFlags.node,
     Database.node,

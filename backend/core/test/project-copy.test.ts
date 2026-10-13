@@ -9,7 +9,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { Git } from "@prioricode/core/git"
 import { Database } from "@prioricode/core/database/database"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Project } from "@prioricode/core/project"
 import { ProjectDirectoryTable, ProjectTable } from "@prioricode/core/project/sql"
 import { ProjectCopy } from "@prioricode/core/project/copy"
@@ -18,7 +18,7 @@ import { tmpdir } from "./fixture/tmpdir"
 import { testEffect } from "./lib/effect"
 
 const it = testEffect(
-  AppNodeBuilder.build(LayerNode.group([ProjectCopy.node, Database.node, EventV2.node, ProjectDirectories.node])),
+  AppNodeBuilder.build(LayerNode.group([ProjectCopy.node, Database.node, EventBus.node, ProjectDirectories.node])),
 )
 
 function abs(input: string) {
@@ -116,7 +116,7 @@ describe("ProjectCopy", () => {
     Effect.gen(function* () {
       const input = yield* setup()
       const copy = yield* ProjectCopy.Service
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
       const temp = yield* Effect.promise(() => fs.realpath(path.dirname(input.root.path)))
       const parent = abs(path.join(temp, path.basename(input.root.path) + "-copy-created"))
       const target = abs(path.join(parent, "copy"))
@@ -278,7 +278,7 @@ describe("ProjectCopy", () => {
     Effect.gen(function* () {
       const input = yield* setup()
       const copy = yield* ProjectCopy.Service
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
       const event = yield* events.subscribe(ProjectCopy.Event.Updated).pipe(
         Stream.take(1),
         Stream.runCollect,
@@ -300,7 +300,7 @@ describe("ProjectCopy", () => {
     Effect.gen(function* () {
       const input = yield* setup()
       const copy = yield* ProjectCopy.Service
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
       const target = abs(`${input.root.path}-copy-external`)
       yield* Effect.addFinalizer(() =>
         Effect.promise(() => fs.rm(target, { recursive: true, force: true })).pipe(Effect.ignore),

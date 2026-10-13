@@ -5,7 +5,7 @@ import * as Tool from "./tool"
 import { LSP } from "@/lsp/lsp"
 import { createTwoFilesPatch } from "diff"
 import DESCRIPTION from "./write.txt"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { FileSystem } from "@prioricode/core/filesystem"
 import { Watcher } from "@prioricode/core/filesystem/watcher"
 import { Format } from "../format"
@@ -14,9 +14,8 @@ import { InstanceState } from "@/effect/instance-state"
 import { FileCollision } from "./file-collision"
 import { trimDiff } from "./edit"
 import { assertExternalDirectoryEffect } from "./external-directory"
+import { MAX_PROJECT_DIAGNOSTICS_FILES } from "./lsp-diagnostics"
 import * as Bom from "@/util/bom"
-
-const MAX_PROJECT_DIAGNOSTICS_FILES = 5
 
 export const Parameters = Schema.Struct({
   content: Schema.String.annotate({ description: "The content to write to the file" }),
@@ -30,7 +29,7 @@ export const WriteTool = Tool.define(
   Effect.gen(function* () {
     const lsp = yield* LSP.Service
     const fs = yield* FSUtil.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const format = yield* Format.Service
     const collision = yield* FileCollision.Service
 

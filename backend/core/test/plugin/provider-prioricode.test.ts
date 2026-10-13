@@ -3,26 +3,26 @@ import { Effect } from "effect"
 import { HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { Catalog } from "@prioricode/core/catalog"
 import { Credential } from "@prioricode/core/credential"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Integration } from "@prioricode/core/integration"
-import { ModelV2 } from "@prioricode/core/model"
-import { PluginV2 } from "@prioricode/core/plugin"
+import { Model } from "@prioricode/core/model"
+import { Plugin } from "@prioricode/core/plugin"
 import { PluginHost } from "@prioricode/core/plugin/host"
 import { PrioricodePlugin } from "@prioricode/core/plugin/provider/prioricode"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider } from "@prioricode/core/provider"
 import { testEffect } from "../lib/effect"
 import { PluginTestLayer } from "./fixture"
 
 const it = testEffect(PluginTestLayer)
 
 const addPlugin = Effect.fn(function* (http?: HttpClient.HttpClient) {
-  const plugin = yield* PluginV2.Service
+  const plugin = yield* Plugin.Service
   const host = yield* PluginHost.make(plugin)
-  const events = yield* EventV2.Service
+  const events = yield* EventBus.Service
   const integration = yield* Integration.Service
   const client = yield* HttpClient.HttpClient
   yield* PrioricodePlugin.effect(host).pipe(
-    Effect.provideService(EventV2.Service, events),
+    Effect.provideService(EventBus.Service, events),
     Effect.provideService(Integration.Service, integration),
     Effect.provideService(HttpClient.HttpClient, http ?? client),
   )
@@ -197,8 +197,8 @@ describe("PrioricodePlugin", () => {
           const credentials = yield* Credential.Service
           const catalog = yield* Catalog.Service
           yield* catalog.transform((draft) => {
-            draft.provider.update(ProviderV2.ID.make("remote"), () => {})
-            draft.model.update(ProviderV2.ID.make("remote"), ModelV2.ID.make("stale"), () => {})
+            draft.provider.update(Provider.ID.make("remote"), () => {})
+            draft.model.update(Provider.ID.make("remote"), Model.ID.make("stale"), () => {})
           })
           yield* credentials.create({
             integrationID: Integration.ID.make("prioricode"),
@@ -215,7 +215,7 @@ describe("PrioricodePlugin", () => {
 
           const provider = required(
             yield* eventually(
-              catalog.provider.get(ProviderV2.ID.make("remote")),
+              catalog.provider.get(Provider.ID.make("remote")),
               (item) => item?.integrationID === Integration.ID.make("prioricode"),
             ),
           )
@@ -231,7 +231,7 @@ describe("PrioricodePlugin", () => {
           expect(provider.request).toEqual({ headers: { "x-org-id": "org" }, body: { custom: "value" } })
           expect(yield* (yield* Integration.Service).get(Integration.ID.make("remote"))).toBeUndefined()
 
-          const model = required(yield* catalog.model.get(ProviderV2.ID.make("remote"), ModelV2.ID.make("model")))
+          const model = required(yield* catalog.model.get(Provider.ID.make("remote"), Model.ID.make("model")))
           expect(model).toMatchObject({
             name: "Remote Model",
             family: "remote",
@@ -242,15 +242,15 @@ describe("PrioricodePlugin", () => {
           expect(model.request.body).toEqual({ custom: "value", temperature: 0.5 })
           expect(model.variants).toEqual([
             {
-              id: ModelV2.VariantID.make("high"),
+              id: Model.VariantID.make("high"),
               headers: {},
               body: { temperature: 0.2 },
             },
           ])
           expect(
-            required(yield* catalog.model.get(ProviderV2.ID.make("remote"), ModelV2.ID.make("disabled"))).enabled,
+            required(yield* catalog.model.get(Provider.ID.make("remote"), Model.ID.make("disabled"))).enabled,
           ).toBe(false)
-          expect(yield* catalog.model.get(ProviderV2.ID.make("remote"), ModelV2.ID.make("stale"))).toBeDefined()
+          expect(yield* catalog.model.get(Provider.ID.make("remote"), Model.ID.make("stale"))).toBeDefined()
           expect(authorization).toContain("Bearer secret")
         }),
       ({ server }) => Effect.promise(() => server.stop(true)),
@@ -262,13 +262,13 @@ describe("PrioricodePlugin", () => {
       Effect.gen(function* () {
         const catalog = yield* Catalog.Service
         yield* catalog.transform((catalog) => {
-          const provider = ProviderV2.Info.make({
-            ...ProviderV2.Info.empty(ProviderV2.ID.prioricode),
+          const provider = Provider.Info.make({
+            ...Provider.Info.empty(Provider.ID.prioricode),
             api: { type: "aisdk", package: "test-provider" },
           })
-          const model = ModelV2.Info.make({
-            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("paid")),
-            api: { id: ModelV2.ID.make("paid"), type: "aisdk", package: "test-provider" },
+          const model = Model.Info.make({
+            ...Model.Info.empty(provider.id, Model.ID.make("paid")),
+            api: { id: Model.ID.make("paid"), type: "aisdk", package: "test-provider" },
             cost: cost(1),
           })
           catalog.provider.update(provider.id, () => {})
@@ -277,8 +277,8 @@ describe("PrioricodePlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.prioricode)).request.body.apiKey).toBe("public")
-        expect(required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("paid"))).enabled).toBe(
+        expect(required(yield* catalog.provider.get(Provider.ID.prioricode)).request.body.apiKey).toBe("public")
+        expect(required(yield* catalog.model.get(Provider.ID.prioricode, Model.ID.make("paid"))).enabled).toBe(
           false,
         )
       }),
@@ -290,13 +290,13 @@ describe("PrioricodePlugin", () => {
       Effect.gen(function* () {
         const catalog = yield* Catalog.Service
         yield* catalog.transform((catalog) => {
-          const provider = ProviderV2.Info.make({
-            ...ProviderV2.Info.empty(ProviderV2.ID.prioricode),
+          const provider = Provider.Info.make({
+            ...Provider.Info.empty(Provider.ID.prioricode),
             api: { type: "aisdk", package: "test-provider" },
           })
-          const model = ModelV2.Info.make({
-            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("free")),
-            api: { id: ModelV2.ID.make("free"), type: "aisdk", package: "test-provider" },
+          const model = Model.Info.make({
+            ...Model.Info.empty(provider.id, Model.ID.make("free")),
+            api: { id: Model.ID.make("free"), type: "aisdk", package: "test-provider" },
             cost: cost(0),
           })
           catalog.provider.update(provider.id, () => {})
@@ -305,8 +305,8 @@ describe("PrioricodePlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.prioricode)).request.body.apiKey).toBe("public")
-        expect(required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("free"))).enabled).toBe(true)
+        expect(required(yield* catalog.provider.get(Provider.ID.prioricode)).request.body.apiKey).toBe("public")
+        expect(required(yield* catalog.model.get(Provider.ID.prioricode, Model.ID.make("free"))).enabled).toBe(true)
       }),
     ),
   )
@@ -316,13 +316,13 @@ describe("PrioricodePlugin", () => {
       Effect.gen(function* () {
         const catalog = yield* Catalog.Service
         yield* catalog.transform((catalog) => {
-          const provider = ProviderV2.Info.make({
-            ...ProviderV2.Info.empty(ProviderV2.ID.prioricode),
+          const provider = Provider.Info.make({
+            ...Provider.Info.empty(Provider.ID.prioricode),
             api: { type: "aisdk", package: "test-provider" },
           })
-          const model = ModelV2.Info.make({
-            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("output-only")),
-            api: { id: ModelV2.ID.make("output-only"), type: "aisdk", package: "test-provider" },
+          const model = Model.Info.make({
+            ...Model.Info.empty(provider.id, Model.ID.make("output-only")),
+            api: { id: Model.ID.make("output-only"), type: "aisdk", package: "test-provider" },
             cost: cost(0, 1),
           })
           catalog.provider.update(provider.id, () => {})
@@ -331,9 +331,9 @@ describe("PrioricodePlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.prioricode)).request.body.apiKey).toBe("public")
+        expect(required(yield* catalog.provider.get(Provider.ID.prioricode)).request.body.apiKey).toBe("public")
         expect(
-          required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("output-only"))).enabled,
+          required(yield* catalog.model.get(Provider.ID.prioricode, Model.ID.make("output-only"))).enabled,
         ).toBe(true)
       }),
     ),
@@ -344,13 +344,13 @@ describe("PrioricodePlugin", () => {
       Effect.gen(function* () {
         const catalog = yield* Catalog.Service
         yield* catalog.transform((catalog) => {
-          const provider = ProviderV2.Info.make({
-            ...ProviderV2.Info.empty(ProviderV2.ID.prioricode),
+          const provider = Provider.Info.make({
+            ...Provider.Info.empty(Provider.ID.prioricode),
             api: { type: "aisdk", package: "test-provider" },
           })
-          const model = ModelV2.Info.make({
-            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("paid")),
-            api: { id: ModelV2.ID.make("paid"), type: "aisdk", package: "test-provider" },
+          const model = Model.Info.make({
+            ...Model.Info.empty(provider.id, Model.ID.make("paid")),
+            api: { id: Model.ID.make("paid"), type: "aisdk", package: "test-provider" },
             cost: cost(1),
           })
           catalog.provider.update(provider.id, () => {})
@@ -359,8 +359,8 @@ describe("PrioricodePlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.prioricode)).request.body.apiKey).toBeUndefined()
-        expect(required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("paid"))).enabled).toBe(true)
+        expect(required(yield* catalog.provider.get(Provider.ID.prioricode)).request.body.apiKey).toBeUndefined()
+        expect(required(yield* catalog.model.get(Provider.ID.prioricode, Model.ID.make("paid"))).enabled).toBe(true)
       }),
     ),
   )
@@ -377,13 +377,13 @@ describe("PrioricodePlugin", () => {
           })
         })
         yield* catalog.transform((catalog) => {
-          const provider = ProviderV2.Info.make({
-            ...ProviderV2.Info.empty(ProviderV2.ID.prioricode),
+          const provider = Provider.Info.make({
+            ...Provider.Info.empty(Provider.ID.prioricode),
             api: { type: "aisdk", package: "test-provider" },
           })
-          const model = ModelV2.Info.make({
-            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("paid")),
-            api: { id: ModelV2.ID.make("paid"), type: "aisdk", package: "test-provider" },
+          const model = Model.Info.make({
+            ...Model.Info.empty(provider.id, Model.ID.make("paid")),
+            api: { id: Model.ID.make("paid"), type: "aisdk", package: "test-provider" },
             cost: cost(1),
           })
           catalog.provider.update(provider.id, () => {})
@@ -392,8 +392,8 @@ describe("PrioricodePlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.prioricode)).request.body.apiKey).toBeUndefined()
-        expect(required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("paid"))).enabled).toBe(true)
+        expect(required(yield* catalog.provider.get(Provider.ID.prioricode)).request.body.apiKey).toBeUndefined()
+        expect(required(yield* catalog.model.get(Provider.ID.prioricode, Model.ID.make("paid"))).enabled).toBe(true)
       }),
     ),
   )
@@ -403,17 +403,17 @@ describe("PrioricodePlugin", () => {
       Effect.gen(function* () {
         const catalog = yield* Catalog.Service
         yield* catalog.transform((catalog) => {
-          const provider = ProviderV2.Info.make({
-            ...ProviderV2.Info.empty(ProviderV2.ID.prioricode),
+          const provider = Provider.Info.make({
+            ...Provider.Info.empty(Provider.ID.prioricode),
             api: { type: "aisdk", package: "test-provider" },
             request: {
               headers: {},
               body: { apiKey: "configured" },
             },
           })
-          const model = ModelV2.Info.make({
-            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("paid")),
-            api: { id: ModelV2.ID.make("paid"), type: "aisdk", package: "test-provider" },
+          const model = Model.Info.make({
+            ...Model.Info.empty(provider.id, Model.ID.make("paid")),
+            api: { id: Model.ID.make("paid"), type: "aisdk", package: "test-provider" },
             cost: cost(1),
           })
           catalog.provider.update(provider.id, (draft) => {
@@ -424,8 +424,8 @@ describe("PrioricodePlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.prioricode)).request.body.apiKey).toBe("configured")
-        expect(required(yield* catalog.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("paid"))).enabled).toBe(true)
+        expect(required(yield* catalog.provider.get(Provider.ID.prioricode)).request.body.apiKey).toBe("configured")
+        expect(required(yield* catalog.model.get(Provider.ID.prioricode, Model.ID.make("paid"))).enabled).toBe(true)
       }),
     ),
   )
@@ -435,13 +435,13 @@ describe("PrioricodePlugin", () => {
       Effect.gen(function* () {
         const catalog = yield* Catalog.Service
         yield* catalog.transform((catalog) => {
-          const provider = ProviderV2.Info.make({
-            ...ProviderV2.Info.empty(ProviderV2.ID.openai),
+          const provider = Provider.Info.make({
+            ...Provider.Info.empty(Provider.ID.openai),
             api: { type: "aisdk", package: "test-provider" },
           })
-          const model = ModelV2.Info.make({
-            ...ModelV2.Info.empty(provider.id, ModelV2.ID.make("paid")),
-            api: { id: ModelV2.ID.make("paid"), type: "aisdk", package: "test-provider" },
+          const model = Model.Info.make({
+            ...Model.Info.empty(provider.id, Model.ID.make("paid")),
+            api: { id: Model.ID.make("paid"), type: "aisdk", package: "test-provider" },
             cost: cost(1),
           })
           catalog.provider.update(provider.id, () => {})
@@ -450,8 +450,8 @@ describe("PrioricodePlugin", () => {
           })
         })
         yield* addPlugin()
-        expect(required(yield* catalog.provider.get(ProviderV2.ID.openai)).request.body.apiKey).toBeUndefined()
-        expect(required(yield* catalog.model.get(ProviderV2.ID.openai, ModelV2.ID.make("paid"))).enabled).toBe(true)
+        expect(required(yield* catalog.provider.get(Provider.ID.openai)).request.body.apiKey).toBeUndefined()
+        expect(required(yield* catalog.model.get(Provider.ID.openai, Model.ID.make("paid"))).enabled).toBe(true)
       }),
     ),
   )
@@ -459,17 +459,17 @@ describe("PrioricodePlugin", () => {
   it.effect("prefers gpt-5-nano as the prioricode small model", () =>
     Effect.gen(function* () {
       const catalog = yield* Catalog.Service
-      const providerID = ProviderV2.ID.prioricode
+      const providerID = Provider.ID.prioricode
 
       yield* catalog.transform((catalog) => {
         catalog.provider.update(providerID, () => {})
-        catalog.model.update(providerID, ModelV2.ID.make("cheap-mini"), (model) => {
+        catalog.model.update(providerID, Model.ID.make("cheap-mini"), (model) => {
           model.capabilities.input = ["text"]
           model.capabilities.output = ["text"]
           model.cost = [...cost(1, 1)]
           model.time.released = Date.now()
         })
-        catalog.model.update(providerID, ModelV2.ID.make("gpt-5-nano"), (model) => {
+        catalog.model.update(providerID, Model.ID.make("gpt-5-nano"), (model) => {
           model.capabilities.input = ["text"]
           model.capabilities.output = ["text"]
           model.cost = [...cost(10, 10)]
@@ -479,7 +479,7 @@ describe("PrioricodePlugin", () => {
 
       const selected = yield* catalog.model.small(providerID)
 
-      expect(selected?.id).toBe(ModelV2.ID.make("gpt-5-nano"))
+      expect(selected?.id).toBe(Model.ID.make("gpt-5-nano"))
     }),
   )
 })

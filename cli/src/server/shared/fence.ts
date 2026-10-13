@@ -2,7 +2,6 @@ import { Database } from "@prioricode/core/database/database"
 import { inArray } from "drizzle-orm"
 import { EventSequenceTable } from "@prioricode/core/event/sql"
 import { Workspace } from "@/control-plane/workspace"
-import type { WorkspaceV2 } from "@prioricode/core/workspace"
 import { Effect } from "effect"
 
 export const HEADER = "x-prioricode-sync"
@@ -51,7 +50,7 @@ export function parse(headers: Headers): State | undefined {
   )
 }
 
-export function wait(workspaceID: WorkspaceV2.ID, state: State, signal?: AbortSignal) {
+export function wait(workspaceID: Workspace.ID, state: State, signal?: AbortSignal) {
   return Effect.gen(function* () {
     yield* Effect.logInfo("waiting for state", { workspaceID, state })
     yield* Workspace.Service.use((workspace) => workspace.waitForSync(workspaceID, state, signal))

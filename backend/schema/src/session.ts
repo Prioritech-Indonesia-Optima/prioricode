@@ -44,7 +44,7 @@ export const Info = Schema.Struct({
   subpath: RelativePath.pipe(optional),
   revert: Revert.State.pipe(optional),
   permissionMode: Permission.Mode.pipe(optional),
-}).annotate({ identifier: "SessionV2.Info" })
+}).annotate({ identifier: "Session.Info" })
 
 export const ListAnchor = Schema.Struct({
   id: ID,

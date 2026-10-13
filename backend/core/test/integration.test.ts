@@ -4,11 +4,11 @@ import * as TestClock from "effect/testing/TestClock"
 import { Credential } from "@prioricode/core/credential"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Integration } from "@prioricode/core/integration"
 import { testEffect } from "./lib/effect"
 
-const it = testEffect(AppNodeBuilder.build(LayerNode.group([Integration.node, Credential.node, EventV2.node])))
+const it = testEffect(AppNodeBuilder.build(LayerNode.group([Integration.node, Credential.node, EventBus.node])))
 
 describe("Integration", () => {
   it.effect("registers integrations through the editor", () =>
@@ -102,7 +102,7 @@ describe("Integration", () => {
     Effect.gen(function* () {
       const integrations = yield* Integration.Service
       const credentials = yield* Credential.Service
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
       const integrationID = Integration.ID.make("openai")
       yield* integrations.transform((editor) =>
         editor.method.update({

@@ -4,7 +4,7 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql } from
 import { Database } from "@prioricode/core/database/database"
 import { CoordinationTable, type CoordinationKind } from "@prioricode/core/session/coordination.sql"
 import { Identifier } from "@prioricode/core/id/id"
-import { ProjectV2 } from "@prioricode/core/project"
+import { Project } from "@prioricode/core/project"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { SessionID } from "./schema"
 
@@ -37,7 +37,7 @@ export const CLAIM_LIMIT = 12
 
 export interface Info {
   readonly id: string
-  readonly projectID: ProjectV2.ID
+  readonly projectID: Project.ID
   readonly kind: CoordinationKind
   readonly fromSession: SessionID
   readonly toSession?: SessionID
@@ -55,7 +55,7 @@ export interface Info {
 
 export interface PostInput {
   readonly id?: string
-  readonly projectID: ProjectV2.ID
+  readonly projectID: Project.ID
   readonly kind: CoordinationKind
   readonly fromSession: SessionID
   readonly toSession?: SessionID
@@ -199,7 +199,7 @@ export interface Interface {
   readonly thread: (threadID: string) => Effect.Effect<Info[]>
   readonly responsesTo: (requestID: string) => Effect.Effect<Info[]>
   readonly get: (id: string) => Effect.Effect<Info | undefined>
-  readonly claims: (input: { projectID: ProjectV2.ID; exceptSession?: SessionID }) => Effect.Effect<Info[]>
+  readonly claims: (input: { projectID: Project.ID; exceptSession?: SessionID }) => Effect.Effect<Info[]>
   readonly myClaims: (sessionID: SessionID) => Effect.Effect<Info[]>
   readonly releaseClaims: (input: { sessionID: SessionID; paths: ReadonlyArray<string> }) => Effect.Effect<void>
   readonly clearClaims: (sessionID: SessionID) => Effect.Effect<void>
@@ -882,7 +882,7 @@ const layer = Layer.effect(
     })
 
     const claims = Effect.fn("Coordination.claims")(function* (input: {
-      projectID: ProjectV2.ID
+      projectID: Project.ID
       exceptSession?: SessionID
     }) {
       const rows = yield* db

@@ -1,18 +1,18 @@
-export * as AgentV2 from "./agent"
+export * as Agent from "./agent"
 
 import { makeLocationNode } from "./effect/app-node"
 import { Array, Context, Effect, Layer, Types } from "effect"
-import { Agent } from "@prioricode/schema/agent"
+import { Agent as AgentSchema } from "@prioricode/schema/agent"
 import { State } from "./state"
 
-export const ID = Agent.ID
+export const ID = AgentSchema.ID
 export type ID = typeof ID.Type
 export const defaultID = ID.make("build")
 
-export const Color = Agent.Color
+export const Color = AgentSchema.Color
 
-export const Info = Agent.Info
-export type Info = Agent.Info
+export const Info = AgentSchema.Info
+export type Info = AgentSchema.Info
 
 export interface Selection {
   readonly id: ID
@@ -40,7 +40,7 @@ export interface Interface extends State.Transformable<Draft> {
   readonly all: () => Effect.Effect<Info[]>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/Agent") {}
+export class Service extends Context.Service<Service, Interface>()("@prioricode/Agent") {}
 
 const layer = Layer.effect(
   Service,
@@ -81,17 +81,17 @@ const layer = Layer.effect(
     return Service.of({
       transform: state.transform,
       reload: state.reload,
-      get: Effect.fn("AgentV2.get")(function* (id) {
+      get: Effect.fn("Agent.get")(function* (id) {
         return state.get().agents.get(id)
       }),
-      default: Effect.fn("AgentV2.default")(function* () {
+      default: Effect.fn("Agent.default")(function* () {
         return selectedDefault()
       }),
-      resolve: Effect.fn("AgentV2.resolve")(function* (id) {
+      resolve: Effect.fn("Agent.resolve")(function* (id) {
         if (id !== undefined) return state.get().agents.get(ID.make(id))
         return selectedDefault()
       }),
-      select: Effect.fn("AgentV2.select")(function* (id) {
+      select: Effect.fn("Agent.select")(function* (id) {
         if (id !== undefined) {
           const selected = ID.make(id)
           return { id: selected, info: state.get().agents.get(selected) }
@@ -99,7 +99,7 @@ const layer = Layer.effect(
         const info = selectedDefault()
         return { id: info?.id ?? defaultID, info }
       }),
-      all: Effect.fn("AgentV2.all")(function* () {
+      all: Effect.fn("Agent.all")(function* () {
         return Array.fromIterable(state.get().agents.values())
       }),
     })

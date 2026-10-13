@@ -3,7 +3,7 @@
  * durable question flow, then switches the Session agent and admits a synthetic
  * steering instruction so the model sees the transition as user-approved.
  *
- * These tools write through leaf services only. The SessionV2 facade layer
+ * These tools write through leaf services only. The Session facade layer
  * resolves the LocationServiceMap, and the map in turn builds this Location's
  * tool graph, so capturing the facade here would construct a real layer cycle
  * (and tsgo flags the type recursion). The same durable operations are
@@ -13,9 +13,9 @@
 import { DateTime, Effect, Layer, Schema } from "effect"
 import { ToolFailure } from "@prioricode/llm"
 import { Database } from "../database/database"
-import { EventV2 } from "../event"
+import { EventBus } from "../event"
 import { makeLocationNode } from "../effect/app-node"
-import { QuestionV2 } from "../question"
+import { Question } from "../question"
 import { SessionEvent } from "../session/event"
 import { SessionInput } from "../session/input"
 import { SessionMessage } from "../session/message"
@@ -39,7 +39,7 @@ const EXIT_DESCRIPTION = `Use this tool when you have finished planning and the 
 After presenting the plan, ask the user to approve switching to the build agent before writing any code. Do not call this tool without first describing the plan to the user.`
 
 const transition = Effect.fnUntraced(function* (
-  question: QuestionV2.Interface,
+  question: Question.Interface,
   write: (sessionID: SessionSchema.ID, agent: string, instruction: string) => Effect.Effect<void, ToolFailure>,
   request: {
     readonly sessionID: SessionSchema.ID
@@ -47,7 +47,7 @@ const transition = Effect.fnUntraced(function* (
     readonly toolCallID: string
   },
   agent: string,
-  prompt: QuestionV2.Prompt,
+  prompt: Question.Prompt,
   declinedMessage: string,
   approvedMessage: string,
   instruction: string,
@@ -59,7 +59,7 @@ const transition = Effect.fnUntraced(function* (
       tool: { messageID: request.assistantMessageID, callID: request.toolCallID },
     })
     .pipe(
-      Effect.catchTag("QuestionV2.RejectedError", () =>
+      Effect.catchTag("Question.RejectedError", () =>
         Effect.fail(
           new ToolFailure({
             message:
@@ -79,8 +79,8 @@ const output = Schema.Struct({ approved: Schema.Boolean, message: Schema.String 
 const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
-    const question = yield* QuestionV2.Service
-    const events = yield* EventV2.Service
+    const question = yield* Question.Service
+    const events = yield* EventBus.Service
     const store = yield* SessionStore.Service
     const { db } = yield* Database.Service
 
@@ -162,5 +162,5 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/plan",
   layer,
-  deps: [ToolRegistry.node, QuestionV2.node, EventV2.node, Database.node, SessionStore.node],
+  deps: [ToolRegistry.node, Question.node, EventBus.node, Database.node, SessionStore.node],
 })

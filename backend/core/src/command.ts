@@ -1,12 +1,12 @@
-export * as CommandV2 from "./command"
+export * as Command from "./command"
 
 import { makeLocationNode } from "./effect/app-node"
 import { Context, Effect, Layer, Types } from "effect"
-import { Command } from "@prioricode/schema/command"
+import { Command as CommandSchema } from "@prioricode/schema/command"
 import { State } from "./state"
 
-export const Info = Command.Info
-export type Info = Command.Info
+export const Info = CommandSchema.Info
+export type Info = CommandSchema.Info
 
 export type Data = {
   commands: Map<string, Types.DeepMutable<Info>>
@@ -24,7 +24,7 @@ export interface Interface extends State.Transformable<Draft> {
   readonly list: () => Effect.Effect<Info[]>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/Command") {}
+export class Service extends Context.Service<Service, Interface>()("@prioricode/Command") {}
 
 const layer = Layer.effect(
   Service,

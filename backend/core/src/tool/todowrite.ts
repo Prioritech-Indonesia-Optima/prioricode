@@ -2,7 +2,7 @@ export * as TodoWriteTool from "./todowrite"
 
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
-import { PermissionV2 } from "../permission"
+import { Permission } from "../permission"
 import { PermissionFailure } from "./permission-failure"
 import { SessionTodo } from "../session/todo"
 import { ToolRegistry } from "./registry"
@@ -26,7 +26,7 @@ const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const todos = yield* SessionTodo.Service
-    const permission = yield* PermissionV2.Service
+    const permission = yield* Permission.Service
 
     yield* tools
       .register({
@@ -64,5 +64,5 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/todowrite",
   layer,
-  deps: [ToolRegistry.node, PermissionV2.node, SessionTodo.node],
+  deps: [ToolRegistry.node, Permission.node, SessionTodo.node],
 })

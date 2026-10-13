@@ -41,8 +41,8 @@ import { ACPEvent } from "./event"
 import { ACPSession } from "./session"
 import { UsageService } from "./usage"
 import { ACPProfile } from "./profile"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { Provider } from "@/provider/provider"
 import type { Command } from "@/command"
 
@@ -627,7 +627,7 @@ function makeUsageService(sdk: PrioricodeClient) {
         .then((response) => {
           const providers = Object.fromEntries(
             (response.data?.providers ?? []).map((provider) => [provider.id, provider]),
-          ) as Record<ProviderV2.ID, Provider.Info>
+          ) as Record<ProviderSchema.ID, Provider.Info>
           return UsageService.findContextLimit(providers, params.providerID, params.modelID)
         })
         .catch(() => undefined)
@@ -660,8 +660,8 @@ function makeUsageService(sdk: PrioricodeClient) {
 
     const size = yield* contextLimit({
       directory: params.directory,
-      providerID: ProviderV2.ID.make(message.providerID),
-      modelID: ModelV2.ID.make(message.modelID),
+      providerID: ProviderSchema.ID.make(message.providerID),
+      modelID: Model.ID.make(message.modelID),
     })
     if (!size) return
 
@@ -760,7 +760,7 @@ async function loadDirectorySnapshot(sdk: PrioricodeClient, directory: string) {
     const commandsData = commandsResponse.data!
     const skills = skillsResponse.data!
     const providers = Object.fromEntries(providersData.providers.map((provider) => [provider.id, provider])) as Record<
-      ProviderV2.ID,
+      ProviderSchema.ID,
       Provider.Info
     >
     const defaultModelStarted = performance.now()
@@ -799,7 +799,7 @@ async function loadDirectorySnapshot(sdk: PrioricodeClient, directory: string) {
 
 function defaultModelFromConfig(
   configuredModel: string | undefined,
-  providers: Record<ProviderV2.ID, Provider.Info>,
+  providers: Record<ProviderSchema.ID, Provider.Info>,
 ): Directory.DefaultModel | undefined {
   const configured = configuredModel ? Provider.parseModel(configuredModel) : undefined
   if (configured && providers[configured.providerID]?.models[configured.modelID]) return configured
@@ -807,7 +807,7 @@ function defaultModelFromConfig(
   // First-session ACP startup must not scan historical sessions just to infer
   // a default. Configured model, prioricode provider, then sorted best model keep
   // the protocol response deterministic without extra session/message reads.
-  const prioricodeProvider = providers[ProviderV2.ID.make("prioricode")]
+  const prioricodeProvider = providers[ProviderSchema.ID.make("prioricode")]
   const prioricodeModel = prioricodeProvider ? Provider.sort(Object.values(prioricodeProvider.models))[0] : undefined
   if (prioricodeProvider && prioricodeModel) return { providerID: prioricodeProvider.id, modelID: prioricodeModel.id }
 
@@ -820,7 +820,7 @@ function selectDefaultModel(snapshot: Directory.Snapshot) {
   if (snapshot.defaultModel) return snapshot.defaultModel
   const model = snapshot.modelOptions[0]
   if (model) return { providerID: model.providerID, modelID: model.modelID }
-  return { providerID: "unknown" as ProviderV2.ID, modelID: "unknown" as ModelV2.ID }
+  return { providerID: "unknown" as ProviderSchema.ID, modelID: "unknown" as Model.ID }
 }
 
 function detectSlashCommand(parts: ReturnType<typeof promptContentToParts>) {
@@ -963,8 +963,8 @@ function sendConfigOptionUpdate(
 
 function parseSelectedModel(snapshot: Directory.Snapshot, modelId: string) {
   const selected = parseModelSelection(modelId, Object.values(snapshot.providers))
-  const provider = snapshot.providers[ProviderV2.ID.make(selected.model.providerID)]
-  const model = provider?.models[ModelV2.ID.make(selected.model.modelID)]
+  const provider = snapshot.providers[ProviderSchema.ID.make(selected.model.providerID)]
+  const model = provider?.models[Model.ID.make(selected.model.modelID)]
   if (!model) {
     return Effect.fail(
       new ACPError.InvalidModelError({
@@ -1105,8 +1105,8 @@ function restoreDurableModel(model: Session["model"] | undefined) {
   if (!model) return {}
   return {
     model: {
-      providerID: ProviderV2.ID.make(model.providerID),
-      modelID: ModelV2.ID.make(model.id),
+      providerID: ProviderSchema.ID.make(model.providerID),
+      modelID: Model.ID.make(model.id),
     },
     variant: model.variant,
   }
@@ -1161,7 +1161,7 @@ function restoreFromMessages(messages: readonly MessageInfo[]) {
   )
   if (user?.model?.providerID && user.model.modelID) {
     return {
-      model: { providerID: user.model.providerID as ProviderV2.ID, modelID: user.model.modelID as ModelV2.ID },
+      model: { providerID: user.model.providerID as ProviderSchema.ID, modelID: user.model.modelID as Model.ID },
       variant: user.model.variant,
       modeId: user.agent,
     }
@@ -1170,7 +1170,7 @@ function restoreFromMessages(messages: readonly MessageInfo[]) {
   const assistant = messages.findLast((message) => message.providerID && message.modelID)
   if (assistant?.providerID && assistant.modelID) {
     return {
-      model: { providerID: assistant.providerID as ProviderV2.ID, modelID: assistant.modelID as ModelV2.ID },
+      model: { providerID: assistant.providerID as ProviderSchema.ID, modelID: assistant.modelID as Model.ID },
       variant: assistant.variant,
       modeId: assistant.mode ?? assistant.agent,
     }

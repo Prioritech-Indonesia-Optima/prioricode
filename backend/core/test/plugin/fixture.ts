@@ -1,20 +1,20 @@
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { AISDK } from "@prioricode/core/aisdk"
 import { Catalog } from "@prioricode/core/catalog"
-import { CommandV2 } from "@prioricode/core/command"
+import { Command } from "@prioricode/core/command"
 import { Credential } from "@prioricode/core/credential"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { FileSystem } from "@prioricode/core/filesystem"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Integration } from "@prioricode/core/integration"
 import { Location } from "@prioricode/core/location"
 import { Npm } from "@prioricode/core/npm"
-import { PluginV2 } from "@prioricode/core/plugin"
+import { Plugin } from "@prioricode/core/plugin"
 import { Reference } from "@prioricode/core/reference"
-import { SkillV2 } from "@prioricode/core/skill"
+import { Skill } from "@prioricode/core/skill"
 import { Effect, Layer } from "effect"
 import { tempLocationLayer } from "../fixture/location"
 
@@ -34,16 +34,16 @@ export const PluginTestLayer = AppNodeBuilder.build(
     Location.node,
     Npm.node,
     Credential.node,
-    EventV2.node,
+    EventBus.node,
     LayerNodePlatform.httpClient,
-    PluginV2.node,
-    AgentV2.node,
+    Plugin.node,
+    Agent.node,
     AISDK.node,
     Catalog.node,
-    CommandV2.node,
+    Command.node,
     Integration.node,
     Reference.node,
-    SkillV2.node,
+    Skill.node,
   ]),
   [
     [Location.node, tempLocationLayer],

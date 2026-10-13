@@ -3,7 +3,7 @@ import { ConfigV1 } from "@prioricode/core/v1/config/config"
 import { Provider } from "@/provider/provider"
 import { usable, triggerPoint, isOverflow } from "@/session/overflow"
 
-function model(opts: { context: number; output: number; input?: number }): Provider.Model {
+function model(opts: { context: number; output: number; input?: number }): Provider.ProviderModel {
   return {
     id: "test-model",
     providerID: "test",
@@ -20,7 +20,7 @@ function model(opts: { context: number; output: number; input?: number }): Provi
     },
     api: { npm: "@ai-sdk/anthropic" },
     options: {},
-  } as Provider.Model
+  } as Provider.ProviderModel
 }
 
 function tokens(count: number) {

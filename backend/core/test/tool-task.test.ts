@@ -1,19 +1,19 @@
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { eq } from "drizzle-orm"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { BackgroundJob } from "@prioricode/core/background-job"
 import { SessionSchema } from "@prioricode/core/session/schema"
 import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { Location } from "@prioricode/core/location"
-import { PermissionV2 } from "@prioricode/core/permission"
+import { Permission } from "@prioricode/core/permission"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { SessionInput } from "@prioricode/core/session/input"
 import { SessionProjector } from "@prioricode/core/session/projector"
@@ -25,16 +25,16 @@ import { location } from "./fixture/location"
 import { testEffect } from "./lib/effect"
 import { toolIdentity, executeTool } from "./lib/tool"
 
-const parentSessionID = SessionV2.ID.make("ses_task_parent")
+const parentSessionID = Session.ID.make("ses_task_parent")
 
-const resumed: SessionV2.ID[] = []
-const interrupted: SessionV2.ID[] = []
+const resumed: Session.ID[] = []
+const interrupted: Session.ID[] = []
 const startedJobs: string[] = []
 
 const execution = Layer.succeed(
   SessionExecution.Service,
   SessionExecution.Service.of({
-    active: Effect.succeed(new Set<SessionV2.ID>()),
+    active: Effect.succeed(new Set<Session.ID>()),
     resume: (sessionID) =>
       Effect.sync(() => {
         resumed.push(sessionID)
@@ -51,8 +51,8 @@ const execution = Layer.succeed(
   }),
 )
 
-const general: AgentV2.Info = {
-  id: AgentV2.ID.make("general"),
+const general: Agent.Info = {
+  id: Agent.ID.make("general"),
   mode: "subagent",
   hidden: false,
   permissions: [],
@@ -60,14 +60,14 @@ const general: AgentV2.Info = {
 }
 
 const agents = Layer.succeed(
-  AgentV2.Service,
-  AgentV2.Service.of({
+  Agent.Service,
+  Agent.Service.of({
     transform: () => Effect.succeed({ dispose: Effect.void, remove: () => Effect.void }),
     reload: () => Effect.void,
     get: (id) => Effect.succeed(id === "general" ? general : undefined),
     default: () => Effect.succeed(general),
     resolve: (id) => Effect.succeed(id === undefined || id === "general" ? general : undefined),
-    select: () => Effect.succeed({ id: AgentV2.ID.make("build"), info: undefined }),
+    select: () => Effect.succeed({ id: Agent.ID.make("build"), info: undefined }),
     all: () => Effect.succeed([general]),
   }),
 )
@@ -105,8 +105,8 @@ const reset = () => {
 }
 
 const permission = Layer.succeed(
-  PermissionV2.Service,
-  PermissionV2.Service.of({
+  Permission.Service,
+  Permission.Service.of({
     assert: () => Effect.void,
     ask: () => Effect.die("unused"),
     reply: () => Effect.die("unused"),
@@ -129,26 +129,26 @@ const withTask = <A, E, R>(body: (registry: ToolRegistry.Interface) => Effect.Ef
       AppNodeBuilder.build(
         LayerNode.group([
           Database.node,
-          EventV2.node,
+          EventBus.node,
           SessionProjector.node,
           SessionStore.node,
-          SessionV2.node,
+          Session.node,
           ToolRegistry.node,
           ToolRegistry.toolsNode,
           TaskTool.node,
         ]),
         [
           [SessionExecution.node, execution],
-          [AgentV2.node, agents],
+          [Agent.node, agents],
           [BackgroundJob.node, background],
-          [PermissionV2.node, permission],
+          [Permission.node, permission],
           [Location.node, activeLocation],
         ],
       ),
     ),
   )
 
-const insertSession = (id: SessionV2.ID, parentID?: SessionV2.ID) =>
+const insertSession = (id: Session.ID, parentID?: Session.ID) =>
   Effect.gen(function* () {
     const { db } = yield* Database.Service
     yield* db
@@ -202,7 +202,7 @@ describe("TaskTool", () => {
         )
         expect(output.sessionID).toStartWith("ses_")
         expect(output.text).toContain('state="error"')
-        expect(resumed).toEqual([output.sessionID as SessionV2.ID])
+        expect(resumed).toEqual([output.sessionID as Session.ID])
 
         const { db } = yield* Database.Service
         const child = yield* db
@@ -214,7 +214,7 @@ describe("TaskTool", () => {
         expect(child?.parent_id).toBe(parentSessionID)
         expect(child?.agent).toBe("general")
         expect(child?.title).toBe("Research auth (@general subagent)")
-        expect(yield* SessionInput.hasPending(db, output.sessionID as SessionV2.ID, "queue")).toBe(true)
+        expect(yield* SessionInput.hasPending(db, output.sessionID as Session.ID, "queue")).toBe(true)
       }),
     ),
   )
@@ -223,7 +223,7 @@ describe("TaskTool", () => {
     withTask((registry) =>
       Effect.gen(function* () {
         reset()
-        const childID = SessionV2.ID.make("ses_task_existing_child")
+        const childID = Session.ID.make("ses_task_existing_child")
         yield* insertSession(parentSessionID)
         yield* insertSession(childID, parentSessionID)
         const result = yield* executeTool(
@@ -240,7 +240,7 @@ describe("TaskTool", () => {
     withTask((registry) =>
       Effect.gen(function* () {
         reset()
-        const strangerID = SessionV2.ID.make("ses_task_stranger")
+        const strangerID = Session.ID.make("ses_task_stranger")
         yield* insertSession(parentSessionID)
         yield* insertSession(strangerID)
         const result = yield* executeTool(registry, call({ description: "Hijack", prompt: "x", task_id: strangerID }))
@@ -253,7 +253,7 @@ describe("TaskTool", () => {
     withTask((registry) =>
       Effect.gen(function* () {
         reset()
-        const childID = SessionV2.ID.make("ses_task_nested")
+        const childID = Session.ID.make("ses_task_nested")
         yield* insertSession(parentSessionID)
         yield* insertSession(childID, parentSessionID)
         const nested = yield* executeTool(registry, call({ description: "Nested", prompt: "go" }, childID))

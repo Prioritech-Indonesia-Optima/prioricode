@@ -4,14 +4,14 @@ import { streamText } from "ai"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { CrossSpawnSpawner } from "@prioricode/core/cross-spawn-spawner"
 import { Effect } from "effect"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 import { disposeAllInstances, provideTmpdirInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { testProviderConfig } from "../lib/test-provider"
 import { Env } from "@/env"
 import { Plugin } from "@/plugin"
-import { Provider } from "@/provider/provider"
 import { ProviderError } from "@/provider/error"
 import { MessageV2 } from "@/session/message-v2"
 import { SessionRetry } from "@/session/retry"
@@ -21,7 +21,7 @@ afterEach(async () => {
 })
 
 const it = testEffect(
-  LayerNode.compile(LayerNode.group([Provider.node, Env.node, Plugin.node, CrossSpawnSpawner.node])),
+  LayerNode.compile(LayerNode.group([ProviderCli.node, Env.node, Plugin.node, CrossSpawnSpawner.node])),
 )
 
 it.live("headerTimeout does not abort delayed SSE body after headers arrive", () =>
@@ -34,8 +34,8 @@ it.live("headerTimeout does not abort delayed SSE body after headers arrive", ()
     yield* provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const provider = yield* Provider.Service
-          const model = yield* provider.getModel(ProviderV2.ID.make("test"), ModelV2.ID.make("test-model"))
+          const provider = yield* ProviderCli.Service
+          const model = yield* provider.getModel(Provider.ID.make("test"), Model.ID.make("test-model"))
           const result = streamText({
             model: yield* provider.getLanguage(model),
             messages: [{ role: "user", content: "hello" }],
@@ -59,14 +59,14 @@ for (const timeout of ["chunkTimeout", "headerTimeout"] as const) {
       yield* provideTmpdirInstance(
         () =>
           Effect.gen(function* () {
-            const provider = yield* Provider.Service
-            const configured = yield* provider.getProvider(ProviderV2.ID.make("test"))
+            const provider = yield* ProviderCli.Service
+            const configured = yield* provider.getProvider(Provider.ID.make("test"))
             const signals: (AbortSignal | null | undefined)[] = []
             configured.options.fetch = (input: RequestInfo | URL, init?: RequestInit) => {
               signals.push(init?.signal)
               return fetch(input, init)
             }
-            const model = yield* provider.getModel(ProviderV2.ID.make("test"), ModelV2.ID.make("test-model"))
+            const model = yield* provider.getModel(Provider.ID.make("test"), Model.ID.make("test-model"))
             const language = yield* provider.getLanguage(model)
             yield* Effect.acquireRelease(
               Effect.promise(() =>
@@ -99,8 +99,8 @@ it.live("configured chunkTimeout raises a retryable response stream error when S
     yield* provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const provider = yield* Provider.Service
-          const model = yield* provider.getModel(ProviderV2.ID.make("test"), ModelV2.ID.make("test-model"))
+          const provider = yield* ProviderCli.Service
+          const model = yield* provider.getModel(Provider.ID.make("test"), Model.ID.make("test-model"))
           const result = streamText({
             model: yield* provider.getLanguage(model),
             onError() {},
@@ -136,10 +136,10 @@ it.live("chunkTimeout can be disabled with false", () =>
     yield* provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const provider = yield* Provider.Service
-          const configured = yield* provider.getProvider(ProviderV2.ID.make("test"))
+          const provider = yield* ProviderCli.Service
+          const configured = yield* provider.getProvider(Provider.ID.make("test"))
           expect(configured.options.chunkTimeout).toBe(false)
-          const model = yield* provider.getModel(ProviderV2.ID.make("test"), ModelV2.ID.make("test-model"))
+          const model = yield* provider.getModel(Provider.ID.make("test"), Model.ID.make("test-model"))
           const result = streamText({
             model: yield* provider.getLanguage(model),
             messages: [{ role: "user", content: "hello" }],
@@ -162,8 +162,8 @@ it.live("headerTimeout aborts when response headers do not arrive", () =>
     yield* provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const provider = yield* Provider.Service
-          const model = yield* provider.getModel(ProviderV2.ID.make("test"), ModelV2.ID.make("test-model"))
+          const provider = yield* ProviderCli.Service
+          const model = yield* provider.getModel(Provider.ID.make("test"), Model.ID.make("test-model"))
           const result = streamText({
             model: yield* provider.getLanguage(model),
             onError() {},
@@ -194,8 +194,8 @@ it.live("headerTimeout can be disabled with false for non-OpenAI providers", () 
     yield* provideTmpdirInstance(
       () =>
         Effect.gen(function* () {
-          const provider = yield* Provider.Service
-          const model = yield* provider.getModel(ProviderV2.ID.make("test"), ModelV2.ID.make("test-model"))
+          const provider = yield* ProviderCli.Service
+          const model = yield* provider.getModel(Provider.ID.make("test"), Model.ID.make("test-model"))
           const result = streamText({
             model: yield* provider.getLanguage(model),
             messages: [{ role: "user", content: "hello" }],
@@ -215,8 +215,8 @@ it.live("OpenAI Codex header and chunk timeout defaults can be disabled by confi
         yield* provideTmpdirInstance(
           () =>
             Effect.gen(function* () {
-              const provider = yield* Provider.Service
-              const openai = yield* provider.getProvider(ProviderV2.ID.openai)
+              const provider = yield* ProviderCli.Service
+              const openai = yield* provider.getProvider(Provider.ID.openai)
               expect(openai.options.headerTimeout).toBe(false)
               expect(openai.options.chunkTimeout).toBe(false)
             }),
@@ -233,8 +233,8 @@ it.live("OpenAI API auth gets default headerTimeout", () =>
       Effect.gen(function* () {
         yield* provideTmpdirInstance(() =>
           Effect.gen(function* () {
-            const provider = yield* Provider.Service
-            const openai = yield* provider.getProvider(ProviderV2.ID.openai)
+            const provider = yield* ProviderCli.Service
+            const openai = yield* provider.getProvider(Provider.ID.openai)
             expect(openai.options.headerTimeout).toBe(300_000)
           }),
         )

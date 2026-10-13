@@ -26,7 +26,7 @@ export function sanitizeSurrogates(content: string) {
   return content.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "\uFFFD")
 }
 
-function isKimiFamily(model: Provider.Model) {
+function isKimiFamily(model: Provider.ProviderModel) {
   if (
     [model.providerID, model.api.id].some((id) => {
       const value = id.toLowerCase()
@@ -100,7 +100,7 @@ function sdkKey(npm: string): string | undefined {
 // TODO: fix this stupid inefficient dogshit function
 function normalizeMessages(
   msgs: ModelMessage[],
-  model: Provider.Model,
+  model: Provider.ProviderModel,
   _options: Record<string, unknown>,
 ): ModelMessage[] {
   const sanitizeToolResultOutput = (content: ToolResultPart) => {
@@ -355,7 +355,7 @@ function normalizeMessages(
   return msgs
 }
 
-function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
+function applyCaching(msgs: ModelMessage[], model: Provider.ProviderModel): ModelMessage[] {
   const system = msgs.filter((msg) => msg.role === "system").slice(0, 2)
   const final = msgs.filter((msg) => msg.role !== "system").slice(-2)
 
@@ -406,7 +406,7 @@ function applyCaching(msgs: ModelMessage[], model: Provider.Model): ModelMessage
   return msgs
 }
 
-function unsupportedParts(msgs: ModelMessage[], model: Provider.Model): ModelMessage[] {
+function unsupportedParts(msgs: ModelMessage[], model: Provider.ProviderModel): ModelMessage[] {
   return msgs.map((msg) => {
     if (msg.role !== "user" || !Array.isArray(msg.content)) return msg
 
@@ -462,7 +462,7 @@ function mapProviderOptions(
   })
 }
 
-export function message(msgs: ModelMessage[], model: Provider.Model, options: Record<string, unknown>) {
+export function message(msgs: ModelMessage[], model: Provider.ProviderModel, options: Record<string, unknown>) {
   msgs = unsupportedParts(msgs, model)
   msgs = normalizeMessages(msgs, model, options)
   const usesAnthropicAutomaticCaching =
@@ -524,7 +524,7 @@ const GEMINI_MODELS_WITH_SAMPLING_DEFAULTS = [
   /gemini-3[.-]5-flash(?!-lite)(?:[.-]|$)/,
 ]
 
-export function temperature(model: Provider.Model) {
+export function temperature(model: Provider.ProviderModel) {
   const id = model.api.id.toLowerCase()
   if (id.includes("north-mini-code")) return 1.0
   if (id.includes("claude")) return undefined
@@ -543,7 +543,7 @@ export function temperature(model: Provider.Model) {
   return undefined
 }
 
-export function topP(model: Provider.Model) {
+export function topP(model: Provider.ProviderModel) {
   const id = model.api.id.toLowerCase()
   if (id.includes("gemini"))
     return GEMINI_MODELS_WITH_SAMPLING_DEFAULTS.some((model) => model.test(id)) ? 0.95 : undefined
@@ -559,7 +559,7 @@ export function topP(model: Provider.Model) {
   return undefined
 }
 
-export function topK(model: Provider.Model) {
+export function topK(model: Provider.ProviderModel) {
   const id = model.api.id.toLowerCase()
   if (id.includes("minimax-m2")) {
     if (["m2.", "m25", "m21"].some((s) => id.includes(s))) return 40
@@ -705,7 +705,7 @@ function anthropicBindsThinking(apiId: string) {
 // The patched AI SDK adds the thinking-binding-controls beta whenever it is set.
 const ANTHROPIC_BLOCK_BINDING = { prefixMismatchBehavior: "drop_block" }
 
-function anthropicBlockBinding(model: Provider.Model, options: { [x: string]: any }) {
+function anthropicBlockBinding(model: Provider.ProviderModel, options: { [x: string]: any }) {
   const sdk = sdkKey(model.api.npm)
   const key = sdk === "bedrock" ? "reasoningConfig" : sdk === "anthropic" ? "thinking" : undefined
   // Consume the PrioriCode-only opt-out even on models outside the default scope.
@@ -756,7 +756,7 @@ function wrapInSapModelParams(variants: Record<string, Record<string, any>>): Re
   return Object.fromEntries(Object.entries(variants).map(([k, v]) => [k, { modelParams: v }]))
 }
 
-function googleThinkingVariants(model: Provider.Model): Record<string, Record<string, any>> {
+function googleThinkingVariants(model: Provider.ProviderModel): Record<string, Record<string, any>> {
   const id = model.api.id.toLowerCase()
   if (id.includes("2.5")) {
     return {
@@ -774,7 +774,7 @@ function googleThinkingVariants(model: Provider.Model): Record<string, Record<st
   )
 }
 
-export function variants(model: Provider.Model): Record<string, Record<string, any>> {
+export function variants(model: Provider.ProviderModel): Record<string, Record<string, any>> {
   if (!model.capabilities.reasoning) return {}
 
   const id = model.id.toLowerCase()
@@ -1205,7 +1205,7 @@ export function variants(model: Provider.Model): Record<string, Record<string, a
 }
 
 export function options(input: {
-  model: Provider.Model
+  model: Provider.ProviderModel
   sessionID: string
   providerOptions?: Record<string, any>
 }): Record<string, any> {
@@ -1374,7 +1374,7 @@ export function options(input: {
   return result
 }
 
-export function smallOptions(model: Provider.Model) {
+export function smallOptions(model: Provider.ProviderModel) {
   const small = Object.values(model.variants ?? {})[0] ?? {}
   if (
     model.providerID === "openai" ||
@@ -1405,7 +1405,7 @@ const SLUG_OVERRIDES: Record<string, string> = {
   amazon: "bedrock",
 }
 
-export function providerOptions(model: Provider.Model, options: { [x: string]: any }) {
+export function providerOptions(model: Provider.ProviderModel, options: { [x: string]: any }) {
   const usesOpenAIReasoningGate =
     model.api.npm === "@ai-sdk/openai" ||
     model.api.npm === "@ai-sdk/azure" ||
@@ -1465,7 +1465,7 @@ export function providerOptions(model: Provider.Model, options: { [x: string]: a
   return { [key]: normalized }
 }
 
-export function maxOutputTokens(model: Provider.Model, outputTokenMax = OUTPUT_TOKEN_MAX): number {
+export function maxOutputTokens(model: Provider.ProviderModel, outputTokenMax = OUTPUT_TOKEN_MAX): number {
   return Math.min(model.limit.output, outputTokenMax) || outputTokenMax
 }
 
@@ -1559,7 +1559,7 @@ function sanitizeOpenAISchema(value: unknown): unknown {
   return result
 }
 
-export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 {
+export function schema(model: Provider.ProviderModel, schema: JSONSchema7): JSONSchema7 {
   /*
   if (["openai", "azure"].includes(providerID)) {
     if (schema.type === "object" && schema.properties) {
@@ -1701,7 +1701,7 @@ export function schema(model: Provider.Model, schema: JSONSchema7): JSONSchema7 
   return schema
 }
 
-export function reasoningVariants(model: ModelsDev.Model, target: Provider.Model): Provider.Model["variants"] {
+export function reasoningVariants(model: ModelsDev.Model, target: Provider.ProviderModel): Provider.ProviderModel["variants"] {
   const options = model.reasoning_options
   if (options === undefined) return
   if (options.length === 0) return {}
@@ -1719,7 +1719,7 @@ export function reasoningVariants(model: ModelsDev.Model, target: Provider.Model
   })
 }
 
-function effortVariants(model: Provider.Model, values: readonly unknown[]) {
+function effortVariants(model: Provider.ProviderModel, values: readonly unknown[]) {
   return Object.fromEntries(
     values.flatMap((value) => {
       const id = (() => {
@@ -1733,7 +1733,7 @@ function effortVariants(model: Provider.Model, values: readonly unknown[]) {
   )
 }
 
-function budgetVariants(model: Provider.Model, min?: number, max?: number) {
+function budgetVariants(model: Provider.ProviderModel, min?: number, max?: number) {
   const maximum = Math.min(max ?? OUTPUT_TOKEN_MAX - 1, model.limit.output - 1, OUTPUT_TOKEN_MAX - 1)
   if (maximum <= 0) return {}
   const high = Math.min(Math.max(min ?? 0, Math.floor((maximum + 1) / 2)), maximum)
@@ -1748,11 +1748,11 @@ function budgetVariants(model: Provider.Model, min?: number, max?: number) {
   )
 }
 
-function nonEmptyVariants(variants: NonNullable<Provider.Model["variants"]>): Provider.Model["variants"] {
+function nonEmptyVariants(variants: NonNullable<Provider.ProviderModel["variants"]>): Provider.ProviderModel["variants"] {
   return Object.keys(variants).length > 0 ? variants : undefined
 }
 
-function reasoningToggle(model: Provider.Model): NonNullable<Provider.Model["variants"]> {
+function reasoningToggle(model: Provider.ProviderModel): NonNullable<Provider.ProviderModel["variants"]> {
   if (model.api.npm === "@ai-sdk/alibaba")
     return {
       none: { enableThinking: false },
@@ -1766,7 +1766,7 @@ function reasoningToggle(model: Provider.Model): NonNullable<Provider.Model["var
   return {}
 }
 
-function reasoningEffort(model: Provider.Model, effort: string) {
+function reasoningEffort(model: Provider.ProviderModel, effort: string) {
   switch (model.api.npm) {
     case "@openrouter/ai-sdk-provider":
       return { reasoning: { effort } }
@@ -1836,7 +1836,7 @@ function reasoningEffort(model: Provider.Model, effort: string) {
   }
 }
 
-function anthropicEffort(model: Provider.Model, effort: string) {
+function anthropicEffort(model: Provider.ProviderModel, effort: string) {
   if (anthropicOpus45(model.api.id)) return anthropicOpus45Effort(model, effort)
   // Kimi defaults to omitting adaptive thinking text unless summarized display is requested.
   if (isKimiFamily(model)) return { thinking: { type: "adaptive", display: "summarized" }, effort }
@@ -1850,7 +1850,7 @@ function anthropicEffort(model: Provider.Model, effort: string) {
   }
 }
 
-function anthropicOpus45Effort(model: Provider.Model, effort: string) {
+function anthropicOpus45Effort(model: Provider.ProviderModel, effort: string) {
   return {
     thinking: {
       type: "enabled",
@@ -1860,7 +1860,7 @@ function anthropicOpus45Effort(model: Provider.Model, effort: string) {
   }
 }
 
-function reasoningBudget(model: Provider.Model, budget: number) {
+function reasoningBudget(model: Provider.ProviderModel, budget: number) {
   switch (model.api.npm) {
     case "@openrouter/ai-sdk-provider":
       return { reasoning: { max_tokens: budget } }

@@ -36,7 +36,7 @@ import fs from "fs/promises"
 import os from "os"
 import { pathToFileURL } from "url"
 import { Global } from "@prioricode/core/global"
-import { ProjectV2 } from "@prioricode/core/project"
+import { Project } from "@prioricode/core/project"
 import { Filesystem } from "@/util/filesystem"
 import { ConfigPlugin } from "@/config/plugin"
 import { ConfigPluginV1 } from "@prioricode/core/v1/config/plugin"
@@ -279,7 +279,7 @@ async function check(map: (dir: string) => string) {
         const cfg = await load(ctx)
         expect(cfg.snapshot).toBe(true)
         expect(ctx.directory).toBe(Filesystem.resolve(tmp.path))
-        expect(ctx.project.id).not.toBe(ProjectV2.ID.global)
+        expect(ctx.project.id).not.toBe(Project.ID.global)
       },
     })
   } finally {

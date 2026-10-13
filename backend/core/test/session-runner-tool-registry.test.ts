@@ -1,11 +1,11 @@
 import { describe, expect } from "bun:test"
 import { Tool } from "@prioricode/core/tool/tool"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { ApplicationTools } from "@prioricode/core/tool/application-tools"
-import { PermissionV2 } from "@prioricode/core/permission"
-import { SessionV2 } from "@prioricode/core/session"
+import { Permission } from "@prioricode/core/permission"
+import { Session } from "@prioricode/core/session"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { ToolOutputStore } from "@prioricode/core/tool-output-store"
 import { ToolRegistry } from "@prioricode/core/tool/registry"
@@ -38,10 +38,10 @@ const integrated = testEffect(
   ]),
 )
 const identity = {
-  agent: AgentV2.ID.make("build"),
+  agent: Agent.ID.make("build"),
   assistantMessageID: SessionMessage.ID.make("msg_registry"),
 }
-const sessionID = SessionV2.ID.make("ses_registry")
+const sessionID = Session.ID.make("ses_registry")
 const call = (name: string, id = `call-${name}`): ToolRegistry.ExecuteInput => ({
   sessionID,
   ...identity,
@@ -239,7 +239,7 @@ describe("ToolRegistry", () => {
           input: Schema.Struct({}),
           output: Schema.Struct({ ok: Schema.Boolean }),
           execute: () =>
-            Effect.fail(new PermissionV2.CorrectedError({ feedback: "use double quotes" })).pipe(
+            Effect.fail(new Permission.CorrectedError({ feedback: "use double quotes" })).pipe(
               Effect.mapError((error) => Tool.failure("Unable to edit src/a.ts", error)),
             ),
         }),

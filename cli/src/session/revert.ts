@@ -1,11 +1,10 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Effect, Layer, Context, Schema } from "effect"
 import { SessionV1 } from "@prioricode/core/v1/session"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Snapshot } from "../snapshot"
 import { Storage } from "@/storage/storage"
 import { Session } from "./session"
-import { MessageV2 } from "./message-v2"
 import { SessionID, MessageID, PartID } from "./schema"
 import { SessionRunState } from "./run-state"
 import { SessionSummary } from "./summary"
@@ -31,7 +30,7 @@ const layer = Layer.effect(
     const sessions = yield* Session.Service
     const snap = yield* Snapshot.Service
     const storage = yield* Storage.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const summary = yield* SessionSummary.Service
     const state = yield* SessionRunState.Service
 
@@ -130,7 +129,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [Session.node, Snapshot.node, Storage.node, EventV2Bridge.node, SessionSummary.node, SessionRunState.node],
+  deps: [Session.node, Snapshot.node, Storage.node, EventBridge.node, SessionSummary.node, SessionRunState.node],
 })
 
 export * as SessionRevert from "./revert"

@@ -1,5 +1,5 @@
 import { ConfigV1 } from "@prioricode/core/v1/config/config"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { EventManifest } from "@/event-manifest"
 import { InstanceDisposed } from "@/server/event"
 import "@prioricode/core/account"
@@ -20,10 +20,10 @@ const SyncEventSchemas = EventManifest.Latest.values()
     return [
       Schema.Struct({
         type: Schema.Literal("sync"),
-        id: EventV2.ID,
+        id: EventBus.ID,
         syncEvent: Schema.Struct({
-          type: Schema.Literal(EventV2.versionedType(definition.type, definition.durable.version)),
-          id: EventV2.ID,
+          type: Schema.Literal(EventBus.versionedType(definition.type, definition.durable.version)),
+          id: EventBus.ID,
           seq: Schema.Finite,
           aggregateID: Schema.String,
           data: definition.data,
@@ -40,7 +40,7 @@ const GlobalEventSchema = Schema.Struct({
   payload: Schema.Union([
     ...EventManifest.Latest.values()
       .map((definition) =>
-        Schema.Struct({ id: EventV2.ID, type: Schema.Literal(definition.type), properties: definition.data }),
+        Schema.Struct({ id: EventBus.ID, type: Schema.Literal(definition.type), properties: definition.data }),
       )
       .toArray(),
     InstanceDisposed,

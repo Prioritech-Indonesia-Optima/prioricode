@@ -16,9 +16,9 @@ import { createUnified } from "ai-gateway-provider/providers/unified"
 import { createOpenAI } from "ai-gateway-provider/providers/openai"
 import { createAnthropic } from "ai-gateway-provider/providers/anthropic"
 import { ProviderTransform } from "@/provider/transform"
-import type * as Provider from "@/provider/provider"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 
 type Captured = { url: string; outerBody: unknown; headers: Record<string, string> }
 type ProviderOptions = Record<string, Record<string, JSONValue>>
@@ -120,9 +120,9 @@ const cfNpm = (apiId: string) => {
   return "ai-gateway-provider"
 }
 
-const cfModel = (apiId: string, releaseDate = "2026-03-05"): Provider.Model => ({
-  id: ModelV2.ID.make(`cloudflare-ai-gateway/${apiId}`),
-  providerID: ProviderV2.ID.make("cloudflare-ai-gateway"),
+const cfModel = (apiId: string, releaseDate = "2026-03-05"): ProviderCli.ProviderModel => ({
+  id: Model.ID.make(`cloudflare-ai-gateway/${apiId}`),
+  providerID: Provider.ID.make("cloudflare-ai-gateway"),
   name: apiId,
   api: { id: apiId, url: "https://gateway.ai.cloudflare.com/v1/compat", npm: cfNpm(apiId) },
   capabilities: {

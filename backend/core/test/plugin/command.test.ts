@@ -1,6 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
-import { CommandV2 } from "@prioricode/core/command"
+import { Command } from "@prioricode/core/command"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { Location } from "@prioricode/core/location"
 import { CommandPlugin } from "@prioricode/core/plugin/command"
@@ -15,12 +15,12 @@ const locationLayer = Layer.succeed(
   Location.Service,
   Location.Service.of(location({ directory }, { projectDirectory: project })),
 )
-const it = testEffect(AppNodeBuilder.build(CommandV2.node, [[Location.node, locationLayer]]))
+const it = testEffect(AppNodeBuilder.build(Command.node, [[Location.node, locationLayer]]))
 
 describe("CommandPlugin.Plugin", () => {
   it.effect("registers built-in init and review commands", () =>
     Effect.gen(function* () {
-      const command = yield* CommandV2.Service
+      const command = yield* Command.Service
       yield* CommandPlugin.Plugin.effect(
         host({
           command: { transform: command.transform, reload: command.reload },

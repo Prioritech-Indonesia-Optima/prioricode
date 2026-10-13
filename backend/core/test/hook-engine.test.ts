@@ -10,7 +10,7 @@ import { Hook } from "@prioricode/core/hook/index"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Location } from "@prioricode/core/location"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { location } from "./fixture/location"
 import { testEffect } from "./lib/effect"
 
@@ -21,7 +21,7 @@ const locationLayer = Layer.succeed(
     location({ directory: AbsolutePath.make(directory) }, { projectDirectory: AbsolutePath.make(directory) }),
   ),
 )
-const sessionID = SessionV2.ID.make("ses_hook_engine_test")
+const sessionID = Session.ID.make("ses_hook_engine_test")
 
 const command = (event: string, script: string) =>
   new ConfigHooks.HookCommand({ command: [process.execPath, "-e", readStdin(event, script)] })

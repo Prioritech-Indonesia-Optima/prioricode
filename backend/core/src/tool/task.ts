@@ -7,7 +7,7 @@
  * Like every Location-scoped tool this layer must stay a leaf of the
  * LocationServiceMap graph: it therefore uses the shared durable Session
  * operations (database, event log, projector-backed store, execution
- * coordinator) directly instead of the SessionV2 facade, whose own layer
+ * coordinator) directly instead of the Session facade, whose own layer
  * resolves the map.
  */
 export * as TaskTool from "./task"
@@ -15,11 +15,11 @@ export * as TaskTool from "./task"
 import { ToolFailure } from "@prioricode/llm"
 import { Effect, Exit, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
-import { AgentV2 } from "../agent"
+import { Agent } from "../agent"
 import { BackgroundJob } from "../background-job"
 import { Database } from "../database/database"
-import { EventV2 } from "../event"
-import { ProjectV2 } from "../project"
+import { EventBus } from "../event"
+import { Project } from "../project"
 import { SessionExecution } from "../session/execution"
 import { SessionMessage } from "../session/message"
 import { makeSessionOperations } from "../session/operations"
@@ -105,10 +105,10 @@ function finalAnswer(messages: ReadonlyArray<SessionMessage.Message>) {
 const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
-    const agents = yield* AgentV2.Service
+    const agents = yield* Agent.Service
     const background = yield* BackgroundJob.Service
-    const events = yield* EventV2.Service
-    const projects = yield* ProjectV2.Service
+    const events = yield* EventBus.Service
+    const projects = yield* Project.Service
     const store = yield* SessionStore.Service
     const execution = yield* SessionExecution.Service
     const { db } = yield* Database.Service
@@ -153,7 +153,7 @@ const layer = Layer.effectDiscard(
               if (parent.parentID !== undefined)
                 return yield* new ToolFailure({ message: "Subagent Sessions cannot launch further subagents." })
 
-              const subagentID = AgentV2.ID.make(input.subagent_type ?? "general")
+              const subagentID = Agent.ID.make(input.subagent_type ?? "general")
               const info = yield* agents.resolve(subagentID)
               if (info === undefined || info.mode === "primary") {
                 const subagents = (yield* agents.all())
@@ -257,11 +257,11 @@ export const node = makeLocationNode({
   layer,
   deps: [
     ToolRegistry.node,
-    AgentV2.node,
+    Agent.node,
     BackgroundJob.node,
     Database.node,
-    EventV2.node,
-    ProjectV2.node,
+    EventBus.node,
+    Project.node,
     SessionStore.node,
     SessionExecution.node,
   ],

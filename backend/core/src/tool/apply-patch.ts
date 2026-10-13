@@ -10,7 +10,7 @@ import { FileMutation } from "../file-mutation"
 import { FSUtil } from "../fs-util"
 import { LocationMutation } from "../location-mutation"
 import { Patch } from "../patch"
-import { PermissionV2 } from "../permission"
+import { Permission } from "../permission"
 import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
@@ -70,7 +70,7 @@ const layer = Layer.effectDiscard(
     const mutation = yield* LocationMutation.Service
     const files = yield* FileMutation.Service
     const fs = yield* FSUtil.Service
-    const permission = yield* PermissionV2.Service
+    const permission = yield* Permission.Service
     const observer = yield* EditObserver.Service
 
     yield* tools
@@ -245,7 +245,7 @@ export const node = makeLocationNode({
     LocationMutation.node,
     FileMutation.node,
     FSUtil.node,
-    PermissionV2.node,
+    Permission.node,
     EditObserver.node,
   ],
 })

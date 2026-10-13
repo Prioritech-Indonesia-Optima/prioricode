@@ -3,10 +3,10 @@ import { Auth } from "@/auth"
 import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiError, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { described } from "./metadata"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider } from "@prioricode/core/provider"
 
 const AuthParams = Schema.Struct({
-  providerID: ProviderV2.ID,
+  providerID: Provider.ID,
 })
 
 const LogQuery = Schema.Struct({

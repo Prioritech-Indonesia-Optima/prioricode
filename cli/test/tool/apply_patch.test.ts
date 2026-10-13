@@ -10,7 +10,7 @@ import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Format } from "../../src/format"
 import { Agent } from "../../src/agent/agent"
-import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { EventBridge } from "../../src/event-v2-bridge"
 import { Truncate } from "@/tool/truncate"
 import { TestInstance } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
@@ -22,7 +22,7 @@ const it = testEffect(
       LSP.node,
       FSUtil.node,
       Format.node,
-      EventV2Bridge.node,
+      EventBridge.node,
       Truncate.node,
       Agent.node,
       FileCollision.node,

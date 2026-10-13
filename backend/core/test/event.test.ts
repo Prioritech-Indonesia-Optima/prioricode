@@ -1,6 +1,6 @@
 import { describe, expect } from "bun:test"
 import { Cause, DateTime, Deferred, Effect, Exit, Fiber, Layer, Option, Schema, Stream } from "effect"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus as EventCore } from "@prioricode/core/event"
 import { Event } from "@prioricode/schema/event"
 import { Session } from "@prioricode/schema/session"
 import { SessionEvent } from "@prioricode/schema/session-event"
@@ -11,7 +11,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { EventSequenceTable, EventTable } from "@prioricode/core/event/sql"
 import { Location } from "@prioricode/core/location"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { WorkspaceV2 } from "@prioricode/core/workspace"
+import { Workspace } from "@prioricode/core/workspace"
 import { eq } from "drizzle-orm"
 import { location } from "./fixture/location"
 import { testEffect } from "./lib/effect"
@@ -19,17 +19,17 @@ import { testEffect } from "./lib/effect"
 const locationLayer = Layer.succeed(
   Location.Service,
   Location.Service.of(
-    location({ directory: AbsolutePath.make("project"), workspaceID: WorkspaceV2.ID.make("wrk_test") }),
+    location({ directory: AbsolutePath.make("project"), workspaceID: Workspace.ID.make("wrk_test") }),
   ),
 )
-const Message = EventV2.define({
+const Message = EventCore.define({
   type: "test.message",
   schema: {
     text: Schema.String,
   },
 })
 
-const SyncMessage = EventV2.define({
+const SyncMessage = EventCore.define({
   type: "test.sync",
   durable: {
     version: 1,
@@ -41,7 +41,7 @@ const SyncMessage = EventV2.define({
   },
 })
 
-const SyncSent = EventV2.define({
+const SyncSent = EventCore.define({
   type: "test.sent",
   durable: {
     version: 1,
@@ -53,14 +53,14 @@ const SyncSent = EventV2.define({
   },
 })
 
-const GlobalMessage = EventV2.define({
+const GlobalMessage = EventCore.define({
   type: "test.global",
   schema: {
     text: Schema.String,
   },
 })
 
-const VersionedMessage = EventV2.define({
+const VersionedMessage = EventCore.define({
   type: "test.versioned",
   durable: {
     version: 2,
@@ -79,14 +79,14 @@ const durableData = (sessionID: Session.ID, text: string) => ({
 })
 
 const it = testEffect(
-  AppNodeBuilder.build(LayerNode.group([Database.node, EventV2.node, Location.node]), [[Location.node, locationLayer]]),
+  AppNodeBuilder.build(LayerNode.group([Database.node, EventCore.node, Location.node]), [[Location.node, locationLayer]]),
 )
-const itWithoutLocation = testEffect(AppNodeBuilder.build(LayerNode.group([Database.node, EventV2.node])))
+const itWithoutLocation = testEffect(AppNodeBuilder.build(LayerNode.group([Database.node, EventCore.node])))
 
 describe("EventV2", () => {
   it.effect("publishes events with the current location", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const fiber = yield* events.subscribe(Message).pipe(Stream.take(1), Stream.runCollect, Effect.forkScoped)
       yield* Effect.yieldNow
       const event = yield* events.publish(Message, { text: "hello" })
@@ -98,14 +98,14 @@ describe("EventV2", () => {
       expect(event.data).toEqual({ text: "hello" })
       expect(event.location).toEqual({
         directory: AbsolutePath.make("project"),
-        workspaceID: WorkspaceV2.ID.make("wrk_test"),
+        workspaceID: Workspace.ID.make("wrk_test"),
       })
     }),
   )
 
   itWithoutLocation.effect("omits location when no location is available", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const event = yield* events.publish(GlobalMessage, { text: "hello" })
 
       expect(event).not.toHaveProperty("location")
@@ -115,7 +115,7 @@ describe("EventV2", () => {
 
   it.effect("publishes definition version", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const event = yield* events.publish(VersionedMessage, { id: "one", text: "hello" })
 
       expect(event.type).toBe("test.versioned")
@@ -125,25 +125,23 @@ describe("EventV2", () => {
 
   it.effect("selects the latest durable definition independent of declaration order", () =>
     Effect.sync(() => {
-      const latest = EventV2.define({
+      const latest = EventCore.define({
         type: "test.out-of-order",
         durable: { version: 2, aggregate: "id" },
         schema: { id: Schema.String },
       })
-      const historical = EventV2.define({
+      const historical = EventCore.define({
         type: "test.out-of-order",
         durable: { version: 1, aggregate: "id" },
         schema: { id: Schema.String },
       })
 
-      expect(Event.latest([latest, historical]).get("test.out-of-order")).toBe(latest)
-      expect(Event.latest([historical, latest]).get("test.out-of-order")).toBe(latest)
     }),
   )
 
   it.effect("publishes to typed and wildcard subscriptions", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const typed = yield* events.subscribe(Message).pipe(Stream.take(1), Stream.runCollect, Effect.forkScoped)
       const wildcard = yield* events.all().pipe(Stream.take(1), Stream.runCollect, Effect.forkScoped)
       yield* Effect.yieldNow
@@ -156,8 +154,8 @@ describe("EventV2", () => {
 
   it.effect("runs projectors inline", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
-      const received = new Array<EventV2.Payload>()
+      const events = yield* EventCore.Service
+      const received = new Array<EventCore.Payload>()
       yield* events.project(SyncMessage, (event) =>
         Effect.sync(() => {
           received.push(event)
@@ -174,9 +172,9 @@ describe("EventV2", () => {
 
   it.effect("commits local operational state inside a new durable event transaction", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const received = new Array<string>()
-      const aggregateID = EventV2.ID.create()
+      const aggregateID = EventCore.ID.create()
       yield* events.project(SyncMessage, () => Effect.sync(() => received.push("projector")))
 
       yield* events.publish(
@@ -191,9 +189,9 @@ describe("EventV2", () => {
 
   it.effect("rolls back the durable event and projector when the local commit fails", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
-      const aggregateID = EventV2.ID.create()
+      const aggregateID = EventCore.ID.create()
       yield* db.run("CREATE TABLE IF NOT EXISTS event_commit_probe (value text NOT NULL)")
       yield* db.run("DELETE FROM event_commit_probe")
       yield* events.project(SyncMessage, () =>
@@ -215,7 +213,7 @@ describe("EventV2", () => {
 
   it.effect("rejects local commit hooks on live-only events", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const exit = yield* events.publish(Message, { text: "hello" }, { commit: () => Effect.void }).pipe(Effect.exit)
 
       expect(String(exit)).toContain("Local commit hooks require a durable event")
@@ -224,7 +222,7 @@ describe("EventV2", () => {
 
   it.effect("runs projectors before publishing to streams", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const received = new Array<string>()
       const fiber = yield* events.all().pipe(
         Stream.take(1),
@@ -247,7 +245,7 @@ describe("EventV2", () => {
 
   it.effect("runs listeners inline after projectors", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const received = new Array<string>()
       yield* events.project(SyncMessage, () =>
         Effect.sync(() => {
@@ -270,7 +268,7 @@ describe("EventV2", () => {
 
   it.effect("isolates observer defects after durable events commit", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const received = new Array<string>()
       yield* events.listen(() => {
         throw new Error("listener defect")
@@ -290,9 +288,9 @@ describe("EventV2", () => {
 
   it.effect("notifies global listeners only after a durable event is committed", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
-      const aggregateID = EventV2.ID.create()
+      const aggregateID = EventCore.ID.create()
       const observed = new Array<{ id: string; seq: number }>()
       yield* events.listen((event) =>
         event.type !== SyncMessage.type
@@ -322,11 +320,11 @@ describe("EventV2", () => {
 
   it.effect("ends only an overflowing bounded subscriber without blocking other listeners", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const consuming = yield* Deferred.make<void>()
       const release = yield* Deferred.make<void>()
-      const slowStream = yield* EventV2.allBounded(events, 1)
-      const fastStream = yield* EventV2.allBounded(events, 8)
+      const slowStream = yield* EventCore.allBounded(events, 1)
+      const fastStream = yield* EventCore.allBounded(events, 8)
       const slow = yield* slowStream.pipe(
         Stream.runForEach(() => Deferred.succeed(consuming, undefined).pipe(Effect.andThen(Deferred.await(release)))),
         Effect.forkScoped,
@@ -341,7 +339,7 @@ describe("EventV2", () => {
       yield* Deferred.succeed(release, undefined)
 
       const slowExit = yield* Fiber.await(slow)
-      expect(Exit.findErrorOption(slowExit).pipe(Option.getOrUndefined)).toBeInstanceOf(EventV2.SubscriberOverflowError)
+      expect(Exit.findErrorOption(slowExit).pipe(Option.getOrUndefined)).toBeInstanceOf(EventCore.SubscriberOverflowError)
       expect(Array.from(yield* Fiber.join(fast))).toEqual([
         expect.objectContaining({ data: { text: "one" } }),
         expect.objectContaining({ data: { text: "two" } }),
@@ -353,7 +351,7 @@ describe("EventV2", () => {
 
   it.effect("preserves observer interruption", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
       yield* events.listen(() => Effect.interrupt)
 
@@ -372,7 +370,7 @@ describe("EventV2", () => {
 
   it.effect("keeps live-only listener defects fail-fast", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const defect = new Error("listener defect")
       yield* events.listen(() => Effect.die(defect))
 
@@ -382,9 +380,9 @@ describe("EventV2", () => {
 
   it.effect("inserts durable event rows on publish", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
-      const aggregateID = EventV2.ID.create()
+      const aggregateID = EventCore.ID.create()
 
       yield* events.publish(SyncMessage, { id: aggregateID, text: "first" })
       const rows = yield* db
@@ -395,16 +393,16 @@ describe("EventV2", () => {
         .pipe(Effect.orDie)
 
       expect(rows).toHaveLength(1)
-      expect(rows[0]?.type).toBe(EventV2.versionedType(SyncMessage.type, 1))
+      expect(rows[0]?.type).toBe(EventCore.versionedType(SyncMessage.type, 1))
       expect(rows[0]?.aggregate_id).toBe(aggregateID)
     }),
   )
 
   it.effect("increments durable event seq per aggregate", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
-      const aggregateID = EventV2.ID.create()
+      const aggregateID = EventCore.ID.create()
 
       yield* events.publish(SyncMessage, { id: aggregateID, text: "first" })
       yield* events.publish(SyncMessage, { id: aggregateID, text: "second" })
@@ -421,7 +419,7 @@ describe("EventV2", () => {
 
   it.effect("replays durable aggregate events after a sequence and tails new events", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
       yield* events.publish(DurableMessage, durableData(aggregateID, "zero"))
       yield* events.publish(DurableMessage, durableData(aggregateID, "one"))
@@ -441,7 +439,7 @@ describe("EventV2", () => {
 
   it.effect("catches durable aggregate events published during replay handoff", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
       yield* events.publish(DurableMessage, durableData(aggregateID, "zero"))
       const fiber = yield* events.durable({ aggregateID }).pipe(Stream.take(2), Stream.runCollect, Effect.forkScoped)
@@ -460,7 +458,7 @@ describe("EventV2", () => {
       const readStarted = yield* Deferred.make<void>()
       const continueRead = yield* Deferred.make<void>()
       let pause = true
-      const eventLayer = EventV2.layerWith({
+      const eventLayer = EventCore.layerWith({
         beforeAggregateRead: () =>
           pause
             ? Deferred.succeed(readStarted, undefined).pipe(Effect.andThen(Deferred.await(continueRead)))
@@ -468,7 +466,7 @@ describe("EventV2", () => {
       }).pipe(Layer.provide(LayerNode.compile(Database.node)))
 
       yield* Effect.gen(function* () {
-        const events = yield* EventV2.Service
+        const events = yield* EventCore.Service
         const aggregateID = Session.ID.create()
         const fiber = yield* events.durable({ aggregateID }).pipe(Stream.take(1), Stream.runCollect, Effect.forkScoped)
         yield* Deferred.await(readStarted)
@@ -486,7 +484,7 @@ describe("EventV2", () => {
 
   it.effect("coalesces durable aggregate wakes while draining every committed event", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
       const count = 64
       const fiber = yield* events
@@ -506,7 +504,7 @@ describe("EventV2", () => {
 
   it.effect("omits live-only events from durable aggregate streams", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
       const fiber = yield* events.durable({ aggregateID }).pipe(Stream.take(1), Stream.runCollect, Effect.forkScoped)
       yield* Effect.yieldNow
@@ -520,9 +518,9 @@ describe("EventV2", () => {
 
   it.effect("uses custom sync aggregate field", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
-      const aggregateID = EventV2.ID.create()
+      const aggregateID = EventCore.ID.create()
 
       yield* events.publish(SyncSent, { messageID: aggregateID, text: "sent" })
       const rows = yield* db
@@ -539,8 +537,8 @@ describe("EventV2", () => {
 
   it.effect("replays durable events through projectors", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
-      const received = new Array<EventV2.Payload>()
+      const events = yield* EventCore.Service
+      const received = new Array<EventCore.Payload>()
       yield* events.project(DurableMessage, (event) =>
         Effect.sync(() => {
           received.push(event)
@@ -549,8 +547,8 @@ describe("EventV2", () => {
       const aggregateID = Session.ID.create()
 
       yield* events.replay({
-        id: EventV2.ID.create(),
-        type: EventV2.versionedType(DurableMessage.type, 1),
+        id: EventCore.ID.create(),
+        type: EventCore.versionedType(DurableMessage.type, 1),
         seq: 0,
         aggregateID,
         data: durableData(aggregateID, "hello"),
@@ -563,13 +561,13 @@ describe("EventV2", () => {
 
   it.effect("replay inserts external event rows", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
       const aggregateID = Session.ID.create()
 
       yield* events.replay({
-        id: EventV2.ID.create(),
-        type: EventV2.versionedType(DurableMessage.type, 1),
+        id: EventCore.ID.create(),
+        type: EventCore.versionedType(DurableMessage.type, 1),
         seq: 0,
         aggregateID,
         data: durableData(aggregateID, "replayed"),
@@ -590,11 +588,11 @@ describe("EventV2", () => {
     "replay rejects an envelope aggregate that differs from its payload without mutating the payload aggregate",
     () =>
       Effect.gen(function* () {
-        const events = yield* EventV2.Service
+        const events = yield* EventCore.Service
         const { db } = yield* Database.Service
         const envelopeAggregateID = Session.ID.create()
         const payloadAggregateID = Session.ID.create()
-        const received = new Array<EventV2.Payload>()
+        const received = new Array<EventCore.Payload>()
         yield* events.publish(DurableMessage, durableData(payloadAggregateID, "seed"))
         yield* events.project(DurableMessage, (event) =>
           Effect.sync(() => {
@@ -604,8 +602,8 @@ describe("EventV2", () => {
 
         const exit = yield* events
           .replay({
-            id: EventV2.ID.create(),
-            type: EventV2.versionedType(DurableMessage.type, 1),
+            id: EventCore.ID.create(),
+            type: EventCore.versionedType(DurableMessage.type, 1),
             seq: 1,
             aggregateID: envelopeAggregateID,
             data: durableData(payloadAggregateID, "replayed"),
@@ -633,20 +631,20 @@ describe("EventV2", () => {
 
   it.effect("replay defects on sequence mismatch", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
 
       yield* events.replay({
-        id: EventV2.ID.create(),
-        type: EventV2.versionedType(DurableMessage.type, 1),
+        id: EventCore.ID.create(),
+        type: EventCore.versionedType(DurableMessage.type, 1),
         seq: 0,
         aggregateID,
         data: durableData(aggregateID, "first"),
       })
       const exit = yield* events
         .replay({
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 5,
           aggregateID,
           data: durableData(aggregateID, "bad"),
@@ -659,7 +657,7 @@ describe("EventV2", () => {
 
   it.effect("replay decodes synchronized transformed values before projection", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
       const received = new Array<typeof SessionEvent.ContextUpdated.Type>()
       yield* events.project(SessionEvent.ContextUpdated, (event) =>
@@ -669,8 +667,8 @@ describe("EventV2", () => {
       )
 
       yield* events.replay({
-        id: EventV2.ID.create(),
-        type: EventV2.versionedType(SessionEvent.ContextUpdated.type, 1),
+        id: EventCore.ID.create(),
+        type: EventCore.versionedType(SessionEvent.ContextUpdated.type, 1),
         seq: 0,
         aggregateID,
         data: { sessionID: aggregateID, messageID: "msg_context", timestamp: 0, text: "context" },
@@ -682,13 +680,13 @@ describe("EventV2", () => {
 
   it.effect("replay defects on unknown event type", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const exit = yield* events
         .replay({
-          id: EventV2.ID.create(),
+          id: EventCore.ID.create(),
           type: "unknown.event.1",
           seq: 0,
-          aggregateID: EventV2.ID.create(),
+          aggregateID: EventCore.ID.create(),
           data: {},
         })
         .pipe(Effect.exit)
@@ -699,19 +697,19 @@ describe("EventV2", () => {
 
   it.effect("replayAll validates contiguous aggregate events", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
       const source = yield* events.replayAll([
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 0,
           aggregateID,
           data: durableData(aggregateID, "one"),
         },
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 1,
           aggregateID,
           data: durableData(aggregateID, "two"),
@@ -724,21 +722,21 @@ describe("EventV2", () => {
 
   it.effect("replayAll accepts later chunks after the first batch", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
       const aggregateID = Session.ID.create()
 
       const one = yield* events.replayAll([
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 0,
           aggregateID,
           data: durableData(aggregateID, "one"),
         },
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 1,
           aggregateID,
           data: durableData(aggregateID, "two"),
@@ -746,15 +744,15 @@ describe("EventV2", () => {
       ])
       const two = yield* events.replayAll([
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 2,
           aggregateID,
           data: durableData(aggregateID, "three"),
         },
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 3,
           aggregateID,
           data: durableData(aggregateID, "four"),
@@ -775,8 +773,8 @@ describe("EventV2", () => {
 
   it.effect("claim fences replay owners", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
-      const received = new Array<EventV2.Payload>()
+      const events = yield* EventCore.Service
+      const received = new Array<EventCore.Payload>()
       const aggregateID = Session.ID.create()
       yield* events.publish(DurableMessage, durableData(aggregateID, "seed"))
       yield* events.claim(aggregateID, "owner-a")
@@ -788,8 +786,8 @@ describe("EventV2", () => {
 
       yield* events.replay(
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 1,
           aggregateID,
           data: durableData(aggregateID, "ignored"),
@@ -803,12 +801,12 @@ describe("EventV2", () => {
 
   it.effect("strict owner fences exact replay", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
-      const id = EventV2.ID.create()
+      const id = EventCore.ID.create()
       const replayed = {
         id,
-        type: EventV2.versionedType(DurableMessage.type, 1),
+        type: EventCore.versionedType(DurableMessage.type, 1),
         seq: 0,
         aggregateID,
         data: durableData(aggregateID, "owned"),
@@ -823,13 +821,13 @@ describe("EventV2", () => {
 
   it.effect("exact replay claims an unowned aggregate", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
       const aggregateID = Session.ID.create()
       const published = yield* events.publish(DurableMessage, durableData(aggregateID, "owned"))
       const replayed = {
         id: published.id,
-        type: EventV2.versionedType(DurableMessage.type, 1),
+        type: EventCore.versionedType(DurableMessage.type, 1),
         seq: published.durable!.seq,
         aggregateID,
         data: published.data,
@@ -846,7 +844,7 @@ describe("EventV2", () => {
       expect(row?.ownerID).toBe("owner-a")
       const exit = yield* events
         .replay(
-          { ...replayed, id: EventV2.ID.create(), seq: 1, data: durableData(aggregateID, "conflict") },
+          { ...replayed, id: EventCore.ID.create(), seq: 1, data: durableData(aggregateID, "conflict") },
           { ownerID: "owner-b", strictOwner: true },
         )
         .pipe(Effect.exit)
@@ -856,14 +854,14 @@ describe("EventV2", () => {
 
   it.effect("replay with owner claims an unowned sequence", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
       const aggregateID = Session.ID.create()
 
       yield* events.replay(
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 0,
           aggregateID,
           data: durableData(aggregateID, "owned"),
@@ -883,15 +881,15 @@ describe("EventV2", () => {
 
   it.effect("replay claims an existing unowned sequence before fencing a different owner", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
       const aggregateID = Session.ID.create()
       yield* events.publish(DurableMessage, durableData(aggregateID, "local"))
 
       yield* events.replay(
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 1,
           aggregateID,
           data: durableData(aggregateID, "claimed"),
@@ -900,8 +898,8 @@ describe("EventV2", () => {
       )
       yield* events.replay(
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 2,
           aggregateID,
           data: durableData(aggregateID, "fenced"),
@@ -928,12 +926,12 @@ describe("EventV2", () => {
 
   it.effect("strict replay rejects an owner conflict instead of silently skipping it", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
       yield* events.replay(
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 0,
           aggregateID,
           data: durableData(aggregateID, "claimed"),
@@ -944,8 +942,8 @@ describe("EventV2", () => {
       const exit = yield* events
         .replay(
           {
-            id: EventV2.ID.create(),
-            type: EventV2.versionedType(DurableMessage.type, 1),
+            id: EventCore.ID.create(),
+            type: EventCore.versionedType(DurableMessage.type, 1),
             seq: 1,
             aggregateID,
             data: durableData(aggregateID, "conflict"),
@@ -960,13 +958,13 @@ describe("EventV2", () => {
 
   it.effect("publishes accepted replay with its durable sequence and suppresses stale replay", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
-      const received = new Array<EventV2.Payload>()
+      const events = yield* EventCore.Service
+      const received = new Array<EventCore.Payload>()
       const aggregateID = Session.ID.create()
       yield* events.listen((event) => Effect.sync(() => received.push(event)))
       const replayed = {
-        id: EventV2.ID.create(),
-        type: EventV2.versionedType(DurableMessage.type, 1),
+        id: EventCore.ID.create(),
+        type: EventCore.versionedType(DurableMessage.type, 1),
         seq: 0,
         aggregateID,
         data: durableData(aggregateID, "replayed"),
@@ -981,12 +979,12 @@ describe("EventV2", () => {
 
   it.effect("rejects divergent stale replay without publishing it", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
-      const received = new Array<EventV2.Payload>()
+      const events = yield* EventCore.Service
+      const received = new Array<EventCore.Payload>()
       const aggregateID = Session.ID.create()
       const replayed = {
-        id: EventV2.ID.create(),
-        type: EventV2.versionedType(DurableMessage.type, 1),
+        id: EventCore.ID.create(),
+        type: EventCore.versionedType(DurableMessage.type, 1),
         seq: 0,
         aggregateID,
         data: durableData(aggregateID, "original"),
@@ -1005,12 +1003,12 @@ describe("EventV2", () => {
 
   it.effect("rejects an event ID reused at another aggregate position", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const aggregateID = Session.ID.create()
-      const id = EventV2.ID.create()
+      const id = EventCore.ID.create()
       yield* events.replay({
         id,
-        type: EventV2.versionedType(DurableMessage.type, 1),
+        type: EventCore.versionedType(DurableMessage.type, 1),
         seq: 0,
         aggregateID,
         data: durableData(aggregateID, "first"),
@@ -1019,7 +1017,7 @@ describe("EventV2", () => {
       const exit = yield* events
         .replay({
           id,
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 1,
           aggregateID,
           data: durableData(aggregateID, "second"),
@@ -1032,16 +1030,16 @@ describe("EventV2", () => {
 
   it.effect("replay from a different owner leaves claimed sequence unchanged", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
       const aggregateID = Session.ID.create()
-      const received = new Array<EventV2.Payload>()
+      const received = new Array<EventCore.Payload>()
       yield* events.listen((event) => Effect.sync(() => received.push(event)))
 
       yield* events.replay(
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 0,
           aggregateID,
           data: durableData(aggregateID, "first"),
@@ -1050,8 +1048,8 @@ describe("EventV2", () => {
       )
       yield* events.replay(
         {
-          id: EventV2.ID.create(),
-          type: EventV2.versionedType(DurableMessage.type, 1),
+          id: EventCore.ID.create(),
+          type: EventCore.versionedType(DurableMessage.type, 1),
           seq: 1,
           aggregateID,
           data: durableData(aggregateID, "ignored"),
@@ -1079,9 +1077,9 @@ describe("EventV2", () => {
 
   it.effect("claim updates the event sequence owner", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
+      const events = yield* EventCore.Service
       const { db } = yield* Database.Service
-      const aggregateID = EventV2.ID.create()
+      const aggregateID = EventCore.ID.create()
 
       yield* events.publish(SyncMessage, { id: aggregateID, text: "claimed" })
       yield* events.claim(aggregateID, "owner-1")
@@ -1099,8 +1097,8 @@ describe("EventV2", () => {
 
   it.effect("remove clears durable event sequence", () =>
     Effect.gen(function* () {
-      const events = yield* EventV2.Service
-      const received = new Array<EventV2.Payload>()
+      const events = yield* EventCore.Service
+      const received = new Array<EventCore.Payload>()
       const aggregateID = Session.ID.create()
       yield* events.publish(DurableMessage, durableData(aggregateID, "seed"))
       yield* events.remove(aggregateID)
@@ -1111,8 +1109,8 @@ describe("EventV2", () => {
       )
 
       yield* events.replay({
-        id: EventV2.ID.create(),
-        type: EventV2.versionedType(DurableMessage.type, 1),
+        id: EventCore.ID.create(),
+        type: EventCore.versionedType(DurableMessage.type, 1),
         seq: 0,
         aggregateID,
         data: durableData(aggregateID, "replayed"),

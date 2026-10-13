@@ -6,7 +6,7 @@ import { Parser } from "htmlparser2"
 import TurndownService from "turndown"
 import { makeLocationNode } from "../effect/app-node"
 import { LayerNodePlatform } from "../effect/app-node-platform"
-import { PermissionV2 } from "../permission"
+import { Permission } from "../permission"
 import { PermissionFailure } from "./permission-failure"
 import { collectBoundedResponseBody } from "./http-body"
 import { ToolRegistry } from "./registry"
@@ -119,7 +119,7 @@ const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const http = yield* HttpClient.HttpClient
-    const permission = yield* PermissionV2.Service
+    const permission = yield* Permission.Service
 
     yield* tools
       .register({
@@ -189,7 +189,7 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/webfetch",
   layer,
-  deps: [ToolRegistry.node, PermissionV2.node, LayerNodePlatform.httpClient],
+  deps: [ToolRegistry.node, Permission.node, LayerNodePlatform.httpClient],
 })
 
 export function extractTextFromHTML(html: string) {

@@ -4,10 +4,10 @@ import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { Location } from "@prioricode/core/location"
 import { Project } from "@prioricode/core/project"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { WorkspaceV2 } from "@prioricode/core/workspace"
+import { Workspace } from "@prioricode/core/workspace"
 import { testEffect } from "./lib/effect"
 
-const workspaceID = WorkspaceV2.ID.make("wrk_test")
+const workspaceID = Workspace.ID.make("wrk_test")
 const ref = { directory: AbsolutePath.make("/repo/packages/app"), workspaceID }
 const projectLayer = Layer.succeed(
   Project.Service,

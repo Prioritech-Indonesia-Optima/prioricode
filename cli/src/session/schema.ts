@@ -1,10 +1,10 @@
 import { Schema } from "effect"
 
 import { Identifier } from "@/id/id"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { statics } from "@prioricode/core/schema"
 
-export const SessionID = SessionV2.ID
+export const SessionID = Session.ID
 export type SessionID = Schema.Schema.Type<typeof SessionID>
 
 export const MessageID = Schema.String.check(Schema.isStartsWith("msg")).pipe(

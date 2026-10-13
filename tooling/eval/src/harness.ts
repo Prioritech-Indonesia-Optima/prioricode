@@ -12,11 +12,11 @@ import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Database } from "@prioricode/core/database/database"
-import { EventV2 } from "@prioricode/core/event"
-import { PermissionV2 } from "@prioricode/core/permission"
-import { ProjectV2 } from "@prioricode/core/project"
+import { EventBus } from "@prioricode/core/event"
+import { Permission } from "@prioricode/core/permission"
+import { Project } from "@prioricode/core/project"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionSchema } from "@prioricode/core/session/schema"
 import { Prompt } from "@prioricode/core/session/prompt"
 import { SessionExecution } from "@prioricode/core/session/execution"
@@ -32,7 +32,7 @@ import { Config } from "@prioricode/core/config"
 import { ConfigCompaction } from "@prioricode/core/config/compaction"
 import { ConfigLoop } from "@prioricode/core/config/loop"
 import { ConfigVerify } from "@prioricode/core/config/verify"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { Location } from "@prioricode/core/location"
 import { Snapshot } from "@prioricode/core/snapshot"
 import { SystemContext } from "@prioricode/core/system-context"
@@ -40,7 +40,7 @@ import { SystemContextRegistry } from "@prioricode/core/system-context/registry"
 import { SkillGuidance } from "@prioricode/core/skill/guidance"
 import { ReferenceGuidance } from "@prioricode/core/reference/guidance"
 
-export { LLMEvent, Effect, Layer, SessionV2, type Prompt }
+export { LLMEvent, Effect, Layer, Session, type Prompt }
 
 export const model = Model.make({ id: "fake-model", provider: "fake", route: OpenAIChat.route })
 
@@ -81,8 +81,8 @@ export type ScenarioConfig = {
   readonly verify?: ConfigVerify.Info
 }
 
-const agent: AgentV2.Info = {
-  id: AgentV2.ID.make("build"),
+const agent: Agent.Info = {
+  id: Agent.ID.make("build"),
   mode: "primary",
   hidden: false,
   permissions: [],
@@ -91,7 +91,7 @@ const agent: AgentV2.Info = {
 
 export const provideHarness = <A, E, R>(
   config: ScenarioConfig,
-  use: (harness: Harness, sessions: SessionV2.Interface, sessionID: SessionSchema.ID) => Effect.Effect<A, E, R>,
+  use: (harness: Harness, sessions: Session.Interface, sessionID: SessionSchema.ID) => Effect.Effect<A, E, R>,
 ) =>
   Effect.scoped(
     Effect.gen(function* () {
@@ -150,8 +150,8 @@ export const provideHarness = <A, E, R>(
         }),
       )
       const permission = Layer.succeed(
-        PermissionV2.Service,
-        PermissionV2.Service.of({
+        Permission.Service,
+        Permission.Service.of({
           assert: () => Effect.void,
           ask: () => Effect.die("unused"),
           reply: () => Effect.die("unused"),
@@ -161,11 +161,11 @@ export const provideHarness = <A, E, R>(
         }),
       )
       const agents = Layer.succeed(
-        AgentV2.Service,
-        AgentV2.Service.of({
+        Agent.Service,
+        Agent.Service.of({
           transform: () => Effect.succeed({ dispose: Effect.void, remove: () => Effect.void }),
           reload: () => Effect.void,
-          get: (id: AgentV2.ID) => Effect.succeed(id === agent.id ? agent : undefined),
+          get: (id: Agent.ID) => Effect.succeed(id === agent.id ? agent : undefined),
           default: () => Effect.succeed(agent),
           resolve: () => Effect.succeed(agent),
           select: () => Effect.succeed({ id: agent.id, info: agent }),
@@ -197,8 +197,8 @@ export const provideHarness = <A, E, R>(
       const overrides: LayerNode.Replacements = [
         [LayerNodePlatform.llmClient, client],
         [SessionRunnerModel.node, models],
-        [PermissionV2.node, permission],
-        [AgentV2.node, agents],
+        [Permission.node, permission],
+        [Agent.node, agents],
         [Config.node, configLayer],
         [Snapshot.node, Snapshot.noopLayer],
         [Location.node, location],
@@ -231,7 +231,7 @@ export const provideHarness = <A, E, R>(
       const appLayer = AppNodeBuilder.build(
         LayerNode.group([
           Database.node,
-          EventV2.node,
+          EventBus.node,
           SessionProjector.node,
           SessionStore.node,
           ToolRegistry.node,
@@ -243,16 +243,16 @@ export const provideHarness = <A, E, R>(
           ReferenceGuidance.node,
           Config.node,
           Snapshot.node,
-          AgentV2.node,
-          PermissionV2.node,
+          Agent.node,
+          Permission.node,
           SessionRunnerLLM.node,
           SessionExecution.node,
-          SessionV2.node,
+          Session.node,
         ]),
         [...overrides, [SessionExecution.node, execution]],
       )
       const program = Effect.gen(function* () {
-        const sessions = yield* SessionV2.Service
+        const sessions = yield* Session.Service
         const created = yield* sessions.create({
           location: { directory: AbsolutePath.make(config.directory) },
         })

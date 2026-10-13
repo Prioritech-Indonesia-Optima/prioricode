@@ -1,26 +1,26 @@
 import { expect, test } from "bun:test"
 import { Effect, Schema, Stream } from "effect"
 import { LLMEvent } from "@prioricode/llm"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { SessionEvent } from "@prioricode/core/session/event"
 import { SessionMessage } from "@prioricode/core/session/message"
-import { SessionV2 } from "@prioricode/core/session"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Session } from "@prioricode/core/session"
+import { Model } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
 import { createLLMEventPublisher } from "@prioricode/core/session/runner/publish-llm-event"
 
-const sessionID = SessionV2.ID.make("ses_tool_event_test")
+const sessionID = Session.ID.make("ses_tool_event_test")
 const base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAAB"
 
 const capture = () => {
   const published: Array<{ readonly type: string; readonly data: unknown }> = []
-  const events = EventV2.Service.of({
+  const events = EventBus.Service.of({
     publish: (definition, data) =>
       Effect.sync(() => {
-        const event = { id: EventV2.ID.create(), type: definition.type, data } as EventV2.Payload<typeof definition>
+        const event = { id: EventBus.ID.create(), type: definition.type, data } as EventBus.Payload<typeof definition>
         published.push({
           type: definition.durable
-            ? EventV2.versionedType(definition.type, definition.durable.version)
+            ? EventBus.versionedType(definition.type, definition.durable.version)
             : definition.type,
           data,
         })
@@ -42,8 +42,8 @@ const capture = () => {
       sessionID,
       agent: "build",
       model: {
-        id: ModelV2.ID.make("model"),
-        providerID: ProviderV2.ID.make("provider"),
+        id: Model.ID.make("model"),
+        providerID: Provider.ID.make("provider"),
       },
     }),
   }

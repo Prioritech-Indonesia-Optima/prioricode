@@ -8,7 +8,7 @@ import { Cause, Context, Effect, Layer } from "effect"
 import { FileSystemWatcher } from "@prioricode/schema/filesystem-watcher"
 import path from "path"
 import { Config } from "../config"
-import { EventV2 } from "../event"
+import { EventBus } from "../event"
 import { Flag } from "../flag/flag"
 import { FSUtil } from "../fs-util"
 import { Git } from "../git"
@@ -73,7 +73,7 @@ const layer = Layer.effect(
     if (!w) return Service.of({})
 
     yield* Effect.logInfo("watcher backend", { directory: location.directory, platform: process.platform, backend })
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     const fs = yield* FSUtil.Service
     const git = yield* Git.Service
     const context = yield* Effect.context()
@@ -136,5 +136,5 @@ const layer = Layer.effect(
 export const node = makeLocationNode({
   service: Service,
   layer,
-  deps: [FSUtil.node, Location.node, Config.node, Git.node, EventV2.node],
+  deps: [FSUtil.node, Location.node, Config.node, Git.node, EventBus.node],
 })

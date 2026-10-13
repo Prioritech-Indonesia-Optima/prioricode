@@ -14,19 +14,19 @@ import { NotFoundError } from "@/storage/storage"
 
 import { Effect, Layer, Context } from "effect"
 import { InstanceState } from "@/effect/instance-state"
-import { isOverflow as overflow, usable, effectiveContext } from "./overflow"
+import { isOverflow as overflow, usable, effectiveContext, triggerPoint as triggerPointFn } from "./overflow"
 import { serviceUse } from "@prioricode/core/effect/service-use"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { EventV2Bridge } from "@/event-v2-bridge"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { EventBridge } from "@/event-v2-bridge"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { buildPrompt } from "@prioricode/core/session/compaction"
 import { SessionCompactionEvent } from "@prioricode/schema/session-compaction-event"
 
 export const Event = SessionCompactionEvent
 
-export const PRUNE_MINIMUM = 20_000
-export const PRUNE_PROTECT = 40_000
+const PRUNE_MINIMUM = 20_000
+const PRUNE_PROTECT = 40_000
 const TOOL_OUTPUT_MAX_CHARS = 2_000
 const PRUNE_PROTECTED_TOOLS = ["skill"]
 const MIN_PRESERVE_RECENT_TOKENS = 2_000
@@ -119,7 +119,7 @@ function completedCompactions(messages: SessionV1.WithParts[]) {
   })
 }
 
-function preserveRecentBudget(input: { cfg: ConfigV1.Info; model: Provider.Model }) {
+function preserveRecentBudget(input: { cfg: ConfigV1.Info; model: Provider.ProviderModel }) {
   return (
     input.cfg.compaction?.preserve_recent_tokens ??
     Math.min(MAX_PRESERVE_RECENT_TOKENS, Math.max(MIN_PRESERVE_RECENT_TOKENS, Math.floor(usable(input) * 0.25)))
@@ -147,9 +147,9 @@ function turns(messages: SessionV1.WithParts[]) {
 function splitTurn(input: {
   messages: SessionV1.WithParts[]
   turn: Turn
-  model: Provider.Model
+  model: Provider.ProviderModel
   budget: number
-  estimate: (input: { messages: SessionV1.WithParts[]; model: Provider.Model }) => Effect.Effect<number>
+  estimate: (input: { messages: SessionV1.WithParts[]; model: Provider.ProviderModel }) => Effect.Effect<number>
 }) {
   return Effect.gen(function* () {
     if (input.budget <= 0) return undefined
@@ -172,7 +172,7 @@ function splitTurn(input: {
 export interface Interface {
   readonly isOverflow: (input: {
     tokens: SessionV1.Assistant["tokens"]
-    model: Provider.Model
+    model: Provider.ProviderModel
   }) => Effect.Effect<boolean>
   readonly prune: (input: { sessionID: SessionID }) => Effect.Effect<void>
   readonly process: (input: {
@@ -185,7 +185,7 @@ export interface Interface {
   readonly create: (input: {
     sessionID: SessionID
     agent: string
-    model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
+    model: { providerID: ProviderSchema.ID; modelID: Model.ID }
     auto: boolean
     overflow?: boolean
   }) => Effect.Effect<void>
@@ -204,24 +204,44 @@ const layer = Layer.effect(
     const plugin = yield* Plugin.Service
     const processors = yield* SessionProcessor.Service
     const provider = yield* Provider.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const flags = yield* RuntimeFlags.Service
 
     const isOverflow = Effect.fn("SessionCompaction.isOverflow")(function* (input: {
       tokens: SessionV1.Assistant["tokens"]
-      model: Provider.Model
+      model: Provider.ProviderModel
     }) {
-      return overflow({
-        cfg: yield* config.get(),
+      const cfg = yield* config.get()
+      const result = overflow({
+        cfg,
         tokens: input.tokens,
         model: input.model,
         outputTokenMax: flags.outputTokenMax,
       })
+      const context = effectiveContext(cfg, input.model)
+      const trigger = triggerPointFn({ cfg, model: input.model, outputTokenMax: flags.outputTokenMax })
+      yield* Effect.logDebug("isOverflow check", {
+        model: input.model.id,
+        "model.limit.context": input.model.limit.context,
+        "model.limit.input": input.model.limit.input,
+        "model.limit.output": input.model.limit.output,
+        "tokens.total": input.tokens.total,
+        "tokens.input": input.tokens.input,
+        "tokens.output": input.tokens.output,
+        "tokens.cache.read": input.tokens.cache.read,
+        "tokens.cache.write": input.tokens.cache.write,
+        context,
+        trigger,
+        threshold: cfg.compaction?.threshold,
+        "compaction.auto": cfg.compaction?.auto,
+        result,
+      })
+      return result
     })
 
     const estimate = Effect.fn("SessionCompaction.estimate")(function* (input: {
       messages: SessionV1.WithParts[]
-      model: Provider.Model
+      model: Provider.ProviderModel
     }) {
       const msgs = yield* MessageV2.toModelMessagesEffect(input.messages, input.model)
       return Token.estimate(JSON.stringify(msgs))
@@ -230,7 +250,7 @@ const layer = Layer.effect(
     const select = Effect.fn("SessionCompaction.select")(function* (input: {
       messages: SessionV1.WithParts[]
       cfg: ConfigV1.Info
-      model: Provider.Model
+      model: Provider.ProviderModel
     }) {
       const limit = input.cfg.compaction?.tail_turns
       if (limit !== undefined && limit <= 0) return { head: input.messages, tail_start_id: undefined }
@@ -282,7 +302,7 @@ const layer = Layer.effect(
     const shrinkHeadToFit = Effect.fn("SessionCompaction.shrinkHeadToFit")(function* (input: {
       head: SessionV1.WithParts[]
       cfg: ConfigV1.Info
-      model: Provider.Model
+      model: Provider.ProviderModel
       previousSummary: string | undefined
     }) {
       const render = (head: SessionV1.WithParts[]) => head.map(serialize).filter(Boolean).join("\n\n")
@@ -611,7 +631,7 @@ const layer = Layer.effect(
     const create = Effect.fn("SessionCompaction.create")(function* (input: {
       sessionID: SessionID
       agent: string
-      model: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
+      model: { providerID: ProviderSchema.ID; modelID: Model.ID }
       auto: boolean
       overflow?: boolean
     }) {
@@ -652,7 +672,7 @@ export const node = LayerNode.make({
     Plugin.node,
     SessionProcessor.node,
     Provider.node,
-    EventV2Bridge.node,
+    EventBridge.node,
     RuntimeFlags.node,
   ],
 })

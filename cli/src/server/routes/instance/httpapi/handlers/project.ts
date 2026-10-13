@@ -1,6 +1,6 @@
 import * as InstanceState from "@/effect/instance-state"
 import { Project } from "@/project/project"
-import { ProjectV2 } from "@prioricode/core/project"
+import { Project as ProjectCore } from "@prioricode/core/project"
 import { Effect } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
@@ -10,7 +10,7 @@ import { markInstanceForReload } from "../lifecycle"
 export const projectHandlers = HttpApiBuilder.group(InstanceHttpApi, "project", (handlers) =>
   Effect.gen(function* () {
     const svc = yield* Project.Service
-    const project = yield* ProjectV2.Service
+    const project = yield* ProjectCore.Service
 
     const list = Effect.fn("ProjectHttpApi.list")(function* () {
       return yield* svc.list()
@@ -34,7 +34,7 @@ export const projectHandlers = HttpApiBuilder.group(InstanceHttpApi, "project", 
     })
 
     const update = Effect.fn("ProjectHttpApi.update")(function* (ctx: {
-      params: { projectID: ProjectV2.ID }
+      params: { projectID: Project.ID }
       payload: Project.UpdatePayload
     }) {
       return yield* svc.update({ ...ctx.payload, projectID: ctx.params.projectID }).pipe(
@@ -49,7 +49,7 @@ export const projectHandlers = HttpApiBuilder.group(InstanceHttpApi, "project", 
       )
     })
 
-    const directories = Effect.fn("ProjectHttpApi.directories")((ctx: { params: { projectID: ProjectV2.ID } }) =>
+    const directories = Effect.fn("ProjectHttpApi.directories")((ctx: { params: { projectID: Project.ID } }) =>
       project.directories({ projectID: ctx.params.projectID }),
     )
 

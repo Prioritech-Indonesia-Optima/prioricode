@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test"
 import { Message, Model } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Model as ModelCore } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { AgentAttachment, FileAttachment } from "@prioricode/core/session/prompt"
 import { toLLMMessages } from "@prioricode/core/session/runner/to-llm-message"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { DateTime } from "effect"
 
 const created = DateTime.makeUnsafe(0)
@@ -20,7 +20,7 @@ describe("toLLMMessages", () => {
         id: id(value),
         type: "assistant",
         agent: "build",
-        model: { id: ModelV2.ID.make("model"), providerID: ProviderV2.ID.make("provider") },
+        model: { id: ModelCore.ID.make("model"), providerID: Provider.ID.make("provider") },
         content,
         time: { created, completed: created },
       })
@@ -60,7 +60,7 @@ describe("toLLMMessages", () => {
         SessionMessage.ModelSwitched.make({
           id: id("model"),
           type: "model-switched",
-          model: { id: ModelV2.ID.make("model"), providerID: ProviderV2.ID.make("provider") },
+          model: { id: ModelCore.ID.make("model"), providerID: Provider.ID.make("provider") },
           time: { created },
         }),
         SessionMessage.System.make({
@@ -80,7 +80,7 @@ describe("toLLMMessages", () => {
         SessionMessage.Synthetic.make({
           id: id("synthetic"),
           type: "synthetic",
-          sessionID: SessionV2.ID.make("ses_translate"),
+          sessionID: Session.ID.make("ses_translate"),
           text: "Synthetic context",
           time: { created },
         }),
@@ -146,7 +146,7 @@ Recent work
           id: id("assistant"),
           type: "assistant",
           agent: "build",
-          model: { id: ModelV2.ID.make("model"), providerID: ProviderV2.ID.make("provider") },
+          model: { id: ModelCore.ID.make("model"), providerID: Provider.ID.make("provider") },
           content: [
             SessionMessage.AssistantText.make({ type: "text", id: "text-1", text: "Checking" }),
             SessionMessage.AssistantReasoning.make({
@@ -325,7 +325,7 @@ Recent work
           id: id("assistant-openai-reasoning"),
           type: "assistant",
           agent: "build",
-          model: { id: ModelV2.ID.make("model"), providerID: ProviderV2.ID.make("provider") },
+          model: { id: ModelCore.ID.make("model"), providerID: Provider.ID.make("provider") },
           content: [
             SessionMessage.AssistantReasoning.make({
               type: "reasoning",
@@ -356,7 +356,7 @@ Recent work
           id: id("assistant-failed"),
           type: "assistant",
           agent: "build",
-          model: { id: ModelV2.ID.make("model"), providerID: ProviderV2.ID.make("provider") },
+          model: { id: ModelCore.ID.make("model"), providerID: Provider.ID.make("provider") },
           content: [
             SessionMessage.AssistantReasoning.make({
               type: "reasoning",
@@ -428,7 +428,7 @@ Recent work
           id: id("assistant-old-model"),
           type: "assistant",
           agent: "build",
-          model: { id: ModelV2.ID.make("old-model"), providerID: ProviderV2.ID.make("provider") },
+          model: { id: ModelCore.ID.make("old-model"), providerID: Provider.ID.make("provider") },
           content: [
             SessionMessage.AssistantReasoning.make({
               type: "reasoning",

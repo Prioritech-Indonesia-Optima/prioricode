@@ -3,12 +3,12 @@ import { Effect, Layer } from "effect"
 import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
-import { PermissionV2 } from "@prioricode/core/permission"
+import { EventBus } from "@prioricode/core/event"
+import { Permission } from "@prioricode/core/permission"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionTable } from "@prioricode/core/session/sql"
 import { SessionTodo } from "@prioricode/core/session/todo"
 import { TodoWriteTool } from "@prioricode/core/tool/todowrite"
@@ -17,16 +17,16 @@ import { ToolOutputStore } from "@prioricode/core/tool-output-store"
 import { testEffect } from "./lib/effect"
 import { toolIdentity, executeTool, settleTool, toolDefinitions } from "./lib/tool"
 
-const sessionID = SessionV2.ID.make("ses_todowrite_tool_test")
-const assertions: PermissionV2.AssertInput[] = []
+const sessionID = Session.ID.make("ses_todowrite_tool_test")
+const assertions: Permission.AssertInput[] = []
 let deny = false
 
 const permission = Layer.succeed(
-  PermissionV2.Service,
-  PermissionV2.Service.of({
+  Permission.Service,
+  Permission.Service.of({
     assert: (input) =>
       Effect.sync(() => assertions.push(input)).pipe(
-        Effect.andThen(deny ? Effect.fail(new PermissionV2.BlockedError({ rules: [] })) : Effect.void),
+        Effect.andThen(deny ? Effect.fail(new Permission.BlockedError({ rules: [] })) : Effect.void),
       ),
     ask: () => Effect.die("unused"),
     reply: () => Effect.die("unused"),
@@ -39,14 +39,14 @@ const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([
       Database.node,
-      EventV2.node,
+      EventBus.node,
       SessionTodo.node,
       ToolRegistry.node,
       ToolRegistry.toolsNode,
       TodoWriteTool.node,
     ]),
     [
-      [PermissionV2.node, permission],
+      [Permission.node, permission],
       [ToolOutputStore.node, ToolOutputStore.nodeWithoutConfig],
     ],
   ),

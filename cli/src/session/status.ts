@@ -2,7 +2,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "./schema"
 import { Effect, Layer, Context } from "effect"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { SessionPresence } from "./presence"
 import { SessionStatusEvent } from "@prioricode/schema/session-status-event"
 
@@ -22,7 +22,7 @@ export class Service extends Context.Service<Service, Interface>()("@prioricode/
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const presence = yield* SessionPresence.Service
 
     const state = yield* InstanceState.make(
@@ -59,7 +59,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [EventV2Bridge.node, SessionPresence.node],
+  deps: [EventBridge.node, SessionPresence.node],
 })
 
 export * as SessionStatus from "./status"

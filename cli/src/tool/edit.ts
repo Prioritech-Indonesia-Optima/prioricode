@@ -11,12 +11,13 @@ import { createTwoFilesPatch, diffLines } from "diff"
 import DESCRIPTION from "./edit.txt"
 import { FileSystem } from "@prioricode/core/filesystem"
 import { Watcher } from "@prioricode/core/filesystem/watcher"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Format } from "../format"
 import { FileCollision } from "./file-collision"
 import { InstanceState } from "@/effect/instance-state"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectoryEffect } from "./external-directory"
+import { LspDiagnostics } from "./lsp-diagnostics"
 import { FSUtil } from "@prioricode/core/fs-util"
 import * as Bom from "@/util/bom"
 
@@ -62,7 +63,7 @@ export const EditTool = Tool.define(
     const lsp = yield* LSP.Service
     const afs = yield* FSUtil.Service
     const format = yield* Format.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const collision = yield* FileCollision.Service
 
     return {
@@ -208,11 +209,8 @@ export const EditTool = Tool.define(
 
           let output = "Edit applied successfully."
           if (collisionNotice) output = `${collisionNotice}\n\n${output}`
-          yield* lsp.touchFile(filePath, "document")
-          const diagnostics = yield* lsp.diagnostics()
-          const normalizedFilePath = FSUtil.normalizePath(filePath)
-          const block = LSP.Diagnostic.report(filePath, diagnostics[normalizedFilePath] ?? [])
-          if (block) output += `\n\nLSP errors detected in this file, please fix:\n${block}`
+          const { output: lspOutput, diagnostics } = yield* LspDiagnostics.reportDiagnosticsForFiles(lsp, [filePath])
+          if (lspOutput) output += `\n\n${lspOutput}`
 
           return {
             metadata: {

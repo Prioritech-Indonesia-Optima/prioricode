@@ -1,13 +1,13 @@
 import { expect } from "bun:test"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { Provider } from "../../src/provider/provider"
 
 import { Effect } from "effect"
 import { testEffect } from "../lib/effect"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
 
-const DIGITALOCEAN = ProviderV2.ID.make("digitalocean")
-const it = testEffect(LayerNode.compile(Provider.node))
+const DIGITALOCEAN = Provider.ID.make("digitalocean")
+const it = testEffect(LayerNode.compile(ProviderCli.node))
 
 const withEnv = <A, E, R>(values: Record<string, string>, effect: Effect.Effect<A, E, R>) =>
   Effect.acquireUseRelease(
@@ -46,7 +46,7 @@ it.instance(
     withEnv(
       { DIGITALOCEAN_ACCESS_TOKEN: "test-token" },
       Effect.gen(function* () {
-        const provider = yield* Provider.Service
+        const provider = yield* ProviderCli.Service
         const providers = yield* provider.list()
         expect(providers[DIGITALOCEAN]).toBeDefined()
         expect(providers[DIGITALOCEAN].source).toBe("env")
@@ -74,7 +74,7 @@ it.instance(
         oauth_expires: String(Date.now() + 60 * 60 * 1000),
       },
       Effect.gen(function* () {
-        const provider = yield* Provider.Service
+        const provider = yield* ProviderCli.Service
         const providers = yield* provider.list()
         const models = providers[DIGITALOCEAN].models
         expect(models["router:my-router"]).toBeDefined()
@@ -98,7 +98,7 @@ it.instance(
         oauth_expires: "1",
       },
       Effect.gen(function* () {
-        const provider = yield* Provider.Service
+        const provider = yield* ProviderCli.Service
         const providers = yield* provider.list()
         const models = providers[DIGITALOCEAN].models
         expect(models["router:stale-router"]).toBeDefined()
@@ -113,7 +113,7 @@ it.instance(
     withEnv(
       { DIGITALOCEAN_ACCESS_TOKEN: "test-token" },
       Effect.gen(function* () {
-        const provider = yield* Provider.Service
+        const provider = yield* ProviderCli.Service
         const providers = yield* provider.list()
         const models = providers[DIGITALOCEAN].models
         expect(Object.keys(models).length).toBeGreaterThan(0)

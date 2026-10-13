@@ -32,7 +32,7 @@ import { WriteTool } from "./write"
  * LayerMap body (a detected layer cycle). It is registered through the future
  * Session-scoped canonical tool registration designed in specs/v2/tools.md and
  * tool/AGENTS.md "Current Gaps". PlanTool is not affected: its durable writes
- * go through map-free leaves (Database, EventV2, SessionStore, QuestionV2), so
+ * go through map-free leaves (Database, Event, SessionStore, Question), so
  * it registers normally here.
  */
 export const node = makeLocationNode({

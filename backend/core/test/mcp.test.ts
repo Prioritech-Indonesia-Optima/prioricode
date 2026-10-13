@@ -8,7 +8,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { Location } from "@prioricode/core/location"
 import { MCPv2 } from "@prioricode/core/mcp/mcp"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { ToolRegistry } from "@prioricode/core/tool/registry"
 import { ToolOutputStore } from "@prioricode/core/tool-output-store"
 import { location } from "./fixture/location"
@@ -51,7 +51,7 @@ const it = testEffect(
   ]),
 )
 
-const sessionID = SessionV2.ID.make("ses_mcp_test")
+const sessionID = Session.ID.make("ses_mcp_test")
 
 describe("MCPv2", () => {
   it.effect("connects configured stdio servers and exposes their tools as canonical registrations", () =>

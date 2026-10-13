@@ -1,6 +1,6 @@
-export * as WorkspaceV2 from "./workspace"
+export * as Workspace from "./workspace"
 
-import { Workspace } from "@prioricode/schema/workspace"
+import { Workspace as WorkspaceSchema } from "@prioricode/schema/workspace"
 
-export const ID = Workspace.ID
+export const ID = WorkspaceSchema.ID
 export type ID = typeof ID.Type

@@ -1,5 +1,5 @@
 /**
- * Shared durable Session operations used by the SessionV2 facade and by
+ * Shared durable Session operations used by the Session facade and by
  * Location-scoped fleet tools. Implementations depend only on leaf services
  * (database, event log, projector-backed store, project resolution, execution
  * coordinator), never on the LocationServiceMap: Location-scoped producers are
@@ -9,17 +9,17 @@ import { DateTime, Effect } from "effect"
 import path from "path"
 import { and, desc, eq } from "drizzle-orm"
 import { PromptInput } from "@prioricode/schema/prompt-input"
-import { AgentV2 } from "../agent"
+import { Agent } from "../agent"
 import type { Database } from "../database/database"
-import { EventV2 } from "../event"
+import { EventBus } from "../event"
 import { FSUtil } from "../fs-util"
 import { InstallationVersion } from "../installation/version"
 import { Location } from "../location"
-import { ModelV2 } from "../model"
-import { ProjectV2 } from "../project"
+import { Model } from "../model"
+import { Project } from "../project"
 import { ProjectTable } from "../project/sql"
 import { Slug } from "../util/slug"
-import { WorkspaceV2 } from "../workspace"
+import { Workspace } from "../workspace"
 import { SessionV1 } from "../v1/session"
 import { Prompt } from "./prompt"
 import { NotFoundError, PromptConflictError } from "./error"
@@ -33,16 +33,16 @@ import { SessionStore } from "./store"
 
 export type SessionOperationsDeps = {
   readonly db: Database.Interface["db"]
-  readonly events: EventV2.Interface
-  readonly projects: ProjectV2.Interface
+  readonly events: EventBus.Interface
+  readonly projects: Project.Interface
   readonly store: SessionStore.Interface
   readonly execution: SessionExecution.Interface
 }
 
 export type SessionCreateInput = {
   id?: SessionSchema.ID
-  agent?: AgentV2.ID
-  model?: ModelV2.Ref
+  agent?: Agent.ID
+  model?: Model.Ref
   location: Location.Ref
   parentID?: SessionSchema.ID
   title?: string
@@ -90,13 +90,13 @@ export const makeSessionOperations = (deps: SessionOperationsDeps) => {
       projectID: project.id,
       directory: input.location.directory,
       path: path.relative(project.directory, input.location.directory).replaceAll("\\", "/"),
-      workspaceID: input.location.workspaceID ? WorkspaceV2.ID.make(input.location.workspaceID) : undefined,
+      workspaceID: input.location.workspaceID ? Workspace.ID.make(input.location.workspaceID) : undefined,
       title: input.title ?? `New session - ${new Date(now).toISOString()}`,
       agent: input.agent,
       parentID: input.parentID,
       model: input.model
         ? {
-            id: ModelV2.ID.make(input.model.id),
+            id: Model.ID.make(input.model.id),
             providerID: input.model.providerID,
             variant: input.model.variant,
           }
@@ -171,7 +171,7 @@ export const makeSessionOperations = (deps: SessionOperationsDeps) => {
 
   const switchModel = Effect.fn("V2Session.switchModel")(function* (input: {
     sessionID: SessionSchema.ID
-    model: ModelV2.Ref
+    model: Model.Ref
   }) {
     const session = yield* get(input.sessionID)
     if (

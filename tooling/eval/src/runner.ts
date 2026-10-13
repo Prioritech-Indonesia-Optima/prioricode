@@ -4,12 +4,12 @@ import type { LLMError } from "@prioricode/llm"
 import type { ConfigLoop } from "@prioricode/core/config/loop"
 import type { ConfigVerify } from "@prioricode/core/config/verify"
 import type { SessionSchema } from "@prioricode/core/session/schema"
-import type { SessionV2 } from "@prioricode/core/session"
+import type { Session } from "@prioricode/core/session"
 import { provideHarness, type Harness } from "./harness"
 
 export type ScenarioContext = {
   readonly harness: Harness
-  readonly sessions: SessionV2.Interface
+  readonly sessions: Session.Interface
   readonly sessionID: SessionSchema.ID
 }
 

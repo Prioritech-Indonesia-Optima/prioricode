@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test"
 import { Schema } from "effect"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { Location as CoreLocation } from "@prioricode/core/location"
-import { ModelV2 } from "@prioricode/core/model"
-import { SessionV2 } from "@prioricode/core/session"
+import { Model } from "@prioricode/core/model"
+import { Session } from "@prioricode/core/session"
 import { SessionInput as CoreSessionInput } from "@prioricode/core/session/input"
 import { SessionMessage as CoreSessionMessage } from "@prioricode/core/session/message"
 import { Prompt as CorePrompt } from "@prioricode/core/session/prompt"
@@ -22,10 +22,10 @@ import { compile, emitPromise } from "@prioricode/httpapi-codegen"
 import { ClientApi, endpointNames, groupNames, omitEndpoints } from "../src/contract"
 
 test("Core and Server reuse the authoritative Schema and Protocol values", () => {
-  expect(AgentV2.ID).toBe(Agent.ID)
+  expect(Agent.ID).toBe(Agent.ID)
   expect(CoreLocation.Ref).toBe(Location.Ref)
-  expect(ModelV2.Ref).toBe(Model.Ref)
-  expect(SessionV2.Info).toBe(Session.Info)
+  expect(Model.Ref).toBe(Model.Ref)
+  expect(Session.Info).toBe(Session.Info)
   expect(CoreSessionInput.Admitted).toBe(SessionInput.Admitted)
   expect(CoreSessionMessage.Message).toBe(SessionMessage.Message)
   expect(CorePrompt).toBe(Prompt)

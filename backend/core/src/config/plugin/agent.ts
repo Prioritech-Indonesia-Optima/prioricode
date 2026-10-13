@@ -3,16 +3,16 @@ export * as ConfigAgentPlugin from "./agent"
 import { define } from "../../plugin/internal"
 import path from "path"
 import { Effect, Option, Schema } from "effect"
-import { AgentV2 } from "../../agent"
+import { Agent } from "../../agent"
 import { Config } from "../../config"
 import { ConfigAgent } from "../agent"
 import { ConfigMarkdown } from "../markdown"
 import { FSUtil } from "../../fs-util"
-import { ModelV2 } from "../../model"
+import { Model } from "../../model"
 import { ConfigAgentV1 } from "../../v1/config/agent"
 import { ConfigMigrateV1 } from "../../v1/config/migrate"
 import { Global } from "../../global"
-import { PermissionV2 } from "../../permission"
+import { Permission } from "../../permission"
 import type { LocationMutation } from "../../location-mutation"
 import type { ReadTool } from "../../tool/read"
 import type { EditTool } from "../../tool/edit"
@@ -72,14 +72,14 @@ export const Plugin = define({
           global.home,
         )
         const configuredDefault = Config.latest(documents, "default_agent")
-        if (configuredDefault !== undefined) draft.default(AgentV2.ID.make(configuredDefault))
+        if (configuredDefault !== undefined) draft.default(Agent.ID.make(configuredDefault))
         for (const current of draft.list()) {
           draft.update(current.id, (agent) => agent.permissions.push(...permissions))
         }
 
         for (const document of documents) {
           for (const [id, item] of Object.entries(document.info.agents ?? {})) {
-            const agentID = AgentV2.ID.make(id)
+            const agentID = Agent.ID.make(id)
             if (item.disabled) {
               draft.remove(agentID)
               continue
@@ -89,11 +89,11 @@ export const Plugin = define({
             draft.update(agentID, (agent) => {
               if (!exists) agent.permissions.push(...permissions)
               if (item.model !== undefined) {
-                const model = ModelV2.parse(item.model)
+                const model = Model.parse(item.model)
                 agent.model = { id: model.modelID, providerID: model.providerID, variant: agent.model?.variant }
               }
               if (item.variant !== undefined && agent.model !== undefined) {
-                agent.model.variant = ModelV2.VariantID.make(item.variant)
+                agent.model.variant = Model.VariantID.make(item.variant)
               }
               if (item.request !== undefined) {
                 Object.assign(agent.request.headers, item.request.headers ?? {})
@@ -116,7 +116,7 @@ export const Plugin = define({
   }),
 })
 
-function expandPermissions(rules: PermissionV2.Ruleset, home: string): PermissionV2.Ruleset {
+function expandPermissions(rules: Permission.Ruleset, home: string): Permission.Ruleset {
   // Expand only resources tools resolve as filesystem paths. Bash resources are raw shell text:
   // rewriting `$HOME/private/**` would miss `$HOME/private/key`, and safe expansion needs shell-aware parsing.
   return rules.map((rule) =>

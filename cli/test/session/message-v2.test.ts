@@ -3,17 +3,17 @@ import { SessionV1 } from "@prioricode/core/v1/session"
 import { APICallError } from "ai"
 import { MessageV2 } from "../../src/session/message-v2"
 import { ProviderTransform } from "@/provider/transform"
-import type { Provider } from "@/provider/provider"
 
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
 import { Question } from "../../src/question"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 
 const sessionID = SessionID.make("session")
-const providerID = ProviderV2.ID.make("test")
-const model: Provider.Model = {
-  id: ModelV2.ID.make("test-model"),
+const providerID = Provider.ID.make("test")
+const model: ProviderCli.ProviderModel = {
+  id: Model.ID.make("test-model"),
   providerID,
   api: {
     id: "test-model",
@@ -68,7 +68,7 @@ function userInfo(id: string): SessionV1.User {
     role: "user",
     time: { created: 0 },
     agent: "user",
-    model: { providerID, modelID: ModelV2.ID.make("test") },
+    model: { providerID, modelID: Model.ID.make("test") },
     tools: {},
     mode: "",
   } as unknown as SessionV1.User
@@ -412,10 +412,10 @@ describe("session.message-v2.toModelMessage", () => {
   })
 
   test("preserves jpeg tool-result media for anthropic models", async () => {
-    const anthropicModel: Provider.Model = {
+    const anthropicModel: ProviderCli.ProviderModel = {
       ...model,
-      id: ModelV2.ID.make("anthropic/claude-opus-4-7"),
-      providerID: ProviderV2.ID.make("anthropic"),
+      id: Model.ID.make("anthropic/claude-opus-4-7"),
+      providerID: Provider.ID.make("anthropic"),
       api: {
         id: "claude-opus-4-7-20250805",
         url: "https://api.anthropic.com",
@@ -495,10 +495,10 @@ describe("session.message-v2.toModelMessage", () => {
   })
 
   test("moves bedrock pdf tool-result media into a separate user message", async () => {
-    const bedrockModel: Provider.Model = {
+    const bedrockModel: ProviderCli.ProviderModel = {
       ...model,
-      id: ModelV2.ID.make("amazon-bedrock/anthropic.claude-sonnet-4-6"),
-      providerID: ProviderV2.ID.make("amazon-bedrock"),
+      id: Model.ID.make("amazon-bedrock/anthropic.claude-sonnet-4-6"),
+      providerID: Provider.ID.make("amazon-bedrock"),
       api: {
         id: "anthropic.claude-sonnet-4-6",
         url: "https://bedrock-runtime.us-east-1.amazonaws.com",
@@ -1043,10 +1043,10 @@ describe("session.message-v2.toModelMessage", () => {
 
   test("preserves OpenRouter reasoning details through provider transform", async () => {
     const assistantID = "m-assistant"
-    const openrouterModel: Provider.Model = {
+    const openrouterModel: ProviderCli.ProviderModel = {
       ...model,
-      id: ModelV2.ID.make("deepseek/deepseek-v4-pro"),
-      providerID: ProviderV2.ID.make("openrouter"),
+      id: Model.ID.make("deepseek/deepseek-v4-pro"),
+      providerID: Provider.ID.make("openrouter"),
       api: {
         id: "deepseek/deepseek-v4-pro",
         url: "https://openrouter.ai/api/v1",

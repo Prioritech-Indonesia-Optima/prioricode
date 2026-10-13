@@ -7,12 +7,12 @@ import { FSUtil } from "@prioricode/core/fs-util"
 import { Global } from "@prioricode/core/global"
 import { Config } from "@prioricode/core/config"
 import { ConfigToolOutput } from "@prioricode/core/config/tool-output"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { ToolOutputStore } from "@prioricode/core/tool-output-store"
 import { testEffect } from "./lib/effect"
 import { tmpdir } from "./fixture/tmpdir"
 
-const sessionID = SessionV2.ID.make("ses_tool_output_store")
+const sessionID = Session.ID.make("ses_tool_output_store")
 
 const withStore = <A, E, R>(
   body: (input: { root: string; store: ToolOutputStore.Interface; fs: FSUtil.Interface }) => Effect.Effect<A, E, R>,

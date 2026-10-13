@@ -1,11 +1,11 @@
 import { expect } from "bun:test"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
 import { SessionV1 } from "@prioricode/core/v1/session"
 import { Agent } from "@/agent/agent"
 import { MCP } from "@/mcp"
 import { Permission } from "@/permission"
-import { Provider } from "@/provider/provider"
 import { Session } from "@/session/session"
 import { MessageID, PartID, SessionID } from "@/session/schema"
 import { SessionProcessor } from "@/session/processor"
@@ -32,9 +32,9 @@ const agent: Agent.Info = {
 }
 
 const model = {
-  providerID: ProviderV2.ID.make("test"),
+  providerID: Provider.ID.make("test"),
   api: { id: "test-model" },
-} as Provider.Model
+} as ProviderCli.ProviderModel
 
 function fakeMcp() {
   return MCP.Service.of({
@@ -130,8 +130,8 @@ it.effect("preserves running tool start time across metadata updates", () =>
         path: { cwd: "/tmp", root: "/tmp" },
         cost: 0,
         tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
-        modelID: ModelV2.ID.make("test-model"),
-        providerID: ProviderV2.ID.make("test"),
+        modelID: Model.ID.make("test-model"),
+        providerID: Provider.ID.make("test"),
         time: { created: 1 },
       } satisfies SessionV1.Assistant,
       updateToolCall: (_toolCallID, update) =>

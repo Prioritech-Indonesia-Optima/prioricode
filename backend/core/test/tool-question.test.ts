@@ -2,27 +2,27 @@ import { describe, expect } from "bun:test"
 import { Effect, Exit, Fiber, Layer } from "effect"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { PermissionV2 } from "@prioricode/core/permission"
-import { QuestionV2 } from "@prioricode/core/question"
-import { SessionV2 } from "@prioricode/core/session"
+import { Permission } from "@prioricode/core/permission"
+import { Question } from "@prioricode/core/question"
+import { Session } from "@prioricode/core/session"
 import { ToolRegistry } from "@prioricode/core/tool/registry"
 import { QuestionTool } from "@prioricode/core/tool/question"
 import { ToolOutputStore } from "@prioricode/core/tool-output-store"
 import { testEffect } from "./lib/effect"
 import { toolIdentity, executeTool, settleTool, toolDefinitions } from "./lib/tool"
 
-const sessionID = SessionV2.ID.make("ses_question_tool_test")
-const assertions: PermissionV2.AssertInput[] = []
-let captured: QuestionV2.AskInput | undefined
+const sessionID = Session.ID.make("ses_question_tool_test")
+const assertions: Permission.AssertInput[] = []
+let captured: Question.AskInput | undefined
 let reject = false
 let deny = false
 const capturedInput = () => captured
 const permission = Layer.succeed(
-  PermissionV2.Service,
-  PermissionV2.Service.of({
+  Permission.Service,
+  Permission.Service.of({
     assert: (input) =>
       Effect.sync(() => assertions.push(input)).pipe(
-        Effect.andThen(deny ? Effect.fail(new PermissionV2.BlockedError({ rules: [] })) : Effect.void),
+        Effect.andThen(deny ? Effect.fail(new Permission.BlockedError({ rules: [] })) : Effect.void),
       ),
     ask: () => Effect.die("unused"),
     reply: () => Effect.die("unused"),
@@ -32,12 +32,12 @@ const permission = Layer.succeed(
   }),
 )
 const question = Layer.succeed(
-  QuestionV2.Service,
-  QuestionV2.Service.of({
-    ask: (input: QuestionV2.AskInput) =>
+  Question.Service,
+  Question.Service.of({
+    ask: (input: Question.AskInput) =>
       Effect.sync(() => {
         captured = input
-      }).pipe(Effect.andThen(reject ? Effect.fail(new QuestionV2.RejectedError()) : Effect.succeed([["Build"], []]))),
+      }).pipe(Effect.andThen(reject ? Effect.fail(new Question.RejectedError()) : Effect.succeed([["Build"], []]))),
     reply: () => Effect.die("unused"),
     reject: () => Effect.die("unused"),
     list: () => Effect.die("unused"),
@@ -45,8 +45,8 @@ const question = Layer.succeed(
 )
 const it = testEffect(
   AppNodeBuilder.build(LayerNode.group([ToolRegistry.node, ToolRegistry.toolsNode, QuestionTool.node]), [
-    [PermissionV2.node, permission],
-    [QuestionV2.node, question],
+    [Permission.node, permission],
+    [Question.node, question],
     [ToolOutputStore.node, ToolOutputStore.nodeWithoutConfig],
   ]),
 )

@@ -10,13 +10,13 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { AppProcess } from "@prioricode/core/process"
 import { ConfigGoal } from "@prioricode/core/config/goal"
 import { Database } from "@prioricode/core/database/database"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { ProjectV2 } from "@prioricode/core/project"
+import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { SessionInputTable } from "@prioricode/core/session/sql"
 import { asc, eq } from "drizzle-orm"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { SessionInput } from "@prioricode/core/session/input"
 import { SessionProjector } from "@prioricode/core/session/projector"
@@ -55,20 +55,20 @@ const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([
       Database.node,
-      EventV2.node,
+      EventBus.node,
       SessionProjector.node,
       SessionStore.node,
-      SessionV2.node,
+      Session.node,
       AppProcess.node,
     ]),
     [
       [SessionExecution.node, SessionExecution.noopLayer],
       [
-        ProjectV2.node,
+        Project.node,
         Layer.succeed(
-          ProjectV2.Service,
-          ProjectV2.Service.of({
-            resolve: (directory) => Effect.succeed({ id: ProjectV2.ID.global, directory }),
+          Project.Service,
+          Project.Service.of({
+            resolve: (directory) => Effect.succeed({ id: Project.ID.global, directory }),
             directories: () => Effect.succeed([]),
             commit: () => Effect.void,
           }),
@@ -84,13 +84,13 @@ const gateFor = Effect.fn("test.gateFor")(function* (
   goal: string,
 ) {
   const { db } = yield* Database.Service
-  const events = yield* EventV2.Service
+  const events = yield* EventBus.Service
   const store = yield* SessionStore.Service
   const appProcess = yield* AppProcess.Service
-  const sessions = yield* SessionV2.Service
+  const sessions = yield* Session.Service
   yield* db
     .insert(ProjectTable)
-    .values({ id: ProjectV2.ID.global, worktree: AbsolutePath.make(directory), sandboxes: [] })
+    .values({ id: Project.ID.global, worktree: AbsolutePath.make(directory), sandboxes: [] })
     .onConflictDoNothing()
     .run()
     .pipe(Effect.orDie)
@@ -112,7 +112,7 @@ const gateFor = Effect.fn("test.gateFor")(function* (
 
 const info = (input: Partial<ConstructorParameters<typeof ConfigGoal.Info>[0]>) => new ConfigGoal.Info(input)
 
-const steerTexts = (db: Database.Interface["db"], sessionID: SessionV2.ID) =>
+const steerTexts = (db: Database.Interface["db"], sessionID: Session.ID) =>
   Effect.gen(function* () {
     const rows = yield* db
       .select()

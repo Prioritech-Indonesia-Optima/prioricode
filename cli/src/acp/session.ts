@@ -1,14 +1,14 @@
 import type { McpServer } from "@agentclientprotocol/sdk"
 import type { Message, Part } from "@prioricode/sdk/v2"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { Context, Effect, Layer, Ref } from "effect"
 import * as ACPError from "./error"
 
 export type SelectedModel = {
-  providerID: ProviderV2.ID
-  modelID: ModelV2.ID
+  providerID: Provider.ID
+  modelID: Model.ID
 }
 
 export type KnownMessagePartMetadata = {

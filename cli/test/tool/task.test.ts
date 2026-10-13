@@ -6,7 +6,7 @@ import { SessionProjector } from "@prioricode/core/session/projector"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { Agent } from "../../src/agent/agent"
 import { BackgroundJob } from "@/background/job"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Config } from "@/config/config"
 import { CrossSpawnSpawner } from "@prioricode/core/cross-spawn-spawner"
 import { Ripgrep } from "@prioricode/core/ripgrep"
@@ -22,16 +22,16 @@ import { ToolRegistry } from "@/tool/registry"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { disposeAllInstances } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 
 afterEach(async () => {
   await disposeAllInstances()
 })
 
 const ref = {
-  providerID: ProviderV2.ID.make("test"),
-  modelID: ModelV2.ID.make("test-model"),
+  providerID: Provider.ID.make("test"),
+  modelID: Model.ID.make("test-model"),
 }
 
 const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
@@ -39,7 +39,7 @@ const layer = (flags: Partial<RuntimeFlags.Info> = {}) =>
     LayerNode.group([
       Agent.node,
       BackgroundJob.node,
-      EventV2Bridge.node,
+      EventBridge.node,
       Config.node,
       CrossSpawnSpawner.node,
       Session.node,

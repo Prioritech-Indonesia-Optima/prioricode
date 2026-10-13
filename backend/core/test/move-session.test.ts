@@ -8,12 +8,12 @@ import { MoveSession } from "@prioricode/core/control-plane/move-session"
 import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { ProjectDirectories } from "@prioricode/core/project/directories"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { SessionTable } from "@prioricode/core/session/sql"
 import { SessionStore } from "@prioricode/core/session/store"
@@ -25,7 +25,7 @@ const it = testEffect(
     LayerNode.group([
       MoveSession.node,
       Database.node,
-      EventV2.node,
+      EventBus.node,
       ProjectDirectories.node,
       Project.node,
       SessionProjector.node,
@@ -69,7 +69,7 @@ describe("MoveSession", () => {
       yield* Effect.promise(() => fs.writeFile(path.join(source, "untracked.txt"), "new\n"))
 
       const projectID = (yield* Project.Service.use((service) => service.resolve(source))).id
-      const sessionID = SessionV2.ID.make("ses_move")
+      const sessionID = Session.ID.make("ses_move")
       const { db } = yield* Database.Service
       yield* db
         .insert(ProjectTable)
@@ -123,7 +123,7 @@ describe("MoveSession", () => {
       yield* Effect.promise(() => fs.writeFile(path.join(source, "untracked.txt"), "new\n"))
 
       const projectID = (yield* Project.Service.use((service) => service.resolve(source))).id
-      const sessionID = SessionV2.ID.make("ses_move_nested")
+      const sessionID = Session.ID.make("ses_move_nested")
       const { db } = yield* Database.Service
       yield* db
         .insert(ProjectTable)
@@ -189,7 +189,7 @@ describe("MoveSession", () => {
       yield* Effect.promise(() => fs.writeFile(path.join(source, "untracked.txt"), "unrelated\n"))
 
       const projectID = (yield* Project.Service.use((service) => service.resolve(source))).id
-      const sessionID = SessionV2.ID.make("ses_move_nested_checkout")
+      const sessionID = Session.ID.make("ses_move_nested_checkout")
       const { db } = yield* Database.Service
       yield* db
         .insert(ProjectTable)

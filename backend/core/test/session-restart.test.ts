@@ -4,19 +4,19 @@ import { Deferred, Effect, Fiber, Layer, Schema, Stream } from "effect"
 import { LLMClient, LLMEvent, type LLMClientShape } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
 import { Model } from "@prioricode/llm"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Config } from "@prioricode/core/config"
 import { Database } from "@prioricode/core/database/database"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { Location } from "@prioricode/core/location"
-import { PermissionV2 } from "@prioricode/core/permission"
-import { ProjectV2 } from "@prioricode/core/project"
+import { Permission } from "@prioricode/core/permission"
+import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { SessionRunner } from "@prioricode/core/session/runner"
@@ -36,8 +36,8 @@ import { testEffect } from "./lib/effect"
 
 const directory = AbsolutePath.make("/restart-test")
 const model = Model.make({ id: "fake-model", provider: "fake", route: OpenAIChat.route })
-const agent: AgentV2.Info = {
-  id: AgentV2.ID.make("build"),
+const agent: Agent.Info = {
+  id: Agent.ID.make("build"),
   mode: "primary",
   hidden: false,
   permissions: [],
@@ -85,34 +85,34 @@ const appLayer = (file: string) =>
   AppNodeBuilder.build(
     LayerNode.group([
       Database.node,
-      EventV2.node,
+      EventBus.node,
       SessionProjector.node,
       SessionStore.node,
       ToolRegistry.node,
       ToolRegistry.toolsNode,
       toolsNode,
-      AgentV2.node,
+      Agent.node,
       Config.node,
-      ProjectV2.node,
+      Project.node,
       Snapshot.node,
       SessionRunnerModel.node,
       SystemContextRegistry.node,
       SkillGuidance.node,
       ReferenceGuidance.node,
-      PermissionV2.node,
+      Permission.node,
       SessionRunnerLLM.node,
       SessionExecution.node,
-      SessionV2.node,
+      Session.node,
     ]),
     [
       [Database.node, Database.layerFromPath(file)],
       [LayerNodePlatform.llmClient, client],
       [SessionRunnerModel.node, SessionRunnerModel.layerWith(() => Effect.succeed(model))],
       [
-        PermissionV2.node,
+        Permission.node,
         Layer.succeed(
-          PermissionV2.Service,
-          PermissionV2.Service.of({
+          Permission.Service,
+          Permission.Service.of({
             assert: () => Effect.void,
             ask: () => Effect.die("unused"),
             reply: () => Effect.die("unused"),
@@ -123,13 +123,13 @@ const appLayer = (file: string) =>
         ),
       ],
       [
-        AgentV2.node,
+        Agent.node,
         Layer.succeed(
-          AgentV2.Service,
-          AgentV2.Service.of({
+          Agent.Service,
+          Agent.Service.of({
             transform: () => Effect.succeed({ dispose: Effect.void, remove: () => Effect.void }),
             reload: () => Effect.void,
-            get: (id: AgentV2.ID) => Effect.succeed(id === agent.id ? agent : undefined),
+            get: (id: Agent.ID) => Effect.succeed(id === agent.id ? agent : undefined),
             default: () => Effect.succeed(agent),
             resolve: () => Effect.succeed(agent),
             select: () => Effect.succeed({ id: agent.id, info: agent }),
@@ -139,11 +139,11 @@ const appLayer = (file: string) =>
       ],
       [Config.node, Layer.succeed(Config.Service, Config.Service.of({ entries: () => Effect.succeed([]) }))],
       [
-        ProjectV2.node,
+        Project.node,
         Layer.succeed(
-          ProjectV2.Service,
-          ProjectV2.Service.of({
-            resolve: (value: AbsolutePath) => Effect.succeed({ id: ProjectV2.ID.global, directory: value }),
+          Project.Service,
+          Project.Service.of({
+            resolve: (value: AbsolutePath) => Effect.succeed({ id: Project.ID.global, directory: value }),
             directories: () => Effect.succeed([]),
             commit: () => Effect.void,
           }),
@@ -171,7 +171,7 @@ const appLayer = (file: string) =>
         Layer.succeed(
           SessionExecution.Service,
           SessionExecution.Service.of({
-            active: Effect.succeed(new Set<SessionV2.ID>()),
+            active: Effect.succeed(new Set<Session.ID>()),
             resume: () => Effect.void,
             wake: () => Effect.void,
             interrupt: () => Effect.void,
@@ -205,11 +205,11 @@ const lifetime1 = Effect.gen(function* () {
   const { db } = yield* Database.Service
   yield* db
     .insert(ProjectTable)
-    .values({ id: ProjectV2.ID.global, worktree: directory, sandboxes: [] })
+    .values({ id: Project.ID.global, worktree: directory, sandboxes: [] })
     .onConflictDoNothing()
     .run()
     .pipe(Effect.orDie)
-  const sessions = yield* SessionV2.Service
+  const sessions = yield* Session.Service
   const runner = yield* SessionRunner.Service
   const created = yield* sessions.create({ location: { directory } })
   yield* sessions.prompt({
@@ -226,9 +226,9 @@ const lifetime1 = Effect.gen(function* () {
   return created.id
 })
 
-const lifetime2 = (sessionID: SessionV2.ID) =>
+const lifetime2 = (sessionID: Session.ID) =>
   Effect.gen(function* () {
-    const sessions = yield* SessionV2.Service
+    const sessions = yield* Session.Service
     const runner = yield* SessionRunner.Service
     turns = [recoveryTurn]
     providerTurns = 0
@@ -255,7 +255,7 @@ const lifetime2 = (sessionID: SessionV2.ID) =>
     expect(settled === undefined).toBe(false)
   })
 
-describe("SessionV2 continuation across process loss", () => {
+describe("Session continuation across process loss", () => {
   it.effect("an unsettled tool from a lost drain settles on the next drain and the Session completes", () =>
     Effect.gen(function* () {
       const tmp = yield* Effect.acquireRelease(

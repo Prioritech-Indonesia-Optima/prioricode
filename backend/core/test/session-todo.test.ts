@@ -4,17 +4,17 @@ import { Effect } from "effect"
 import { Database } from "@prioricode/core/database/database"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionTable, TodoTable } from "@prioricode/core/session/sql"
 import { SessionTodo } from "@prioricode/core/session/todo"
 import { testEffect } from "./lib/effect"
 
-const it = testEffect(AppNodeBuilder.build(LayerNode.group([Database.node, EventV2.node, SessionTodo.node])))
-const sessionID = SessionV2.ID.make("ses_todo_test")
+const it = testEffect(AppNodeBuilder.build(LayerNode.group([Database.node, EventBus.node, SessionTodo.node])))
+const sessionID = Session.ID.make("ses_todo_test")
 
 const setup = Effect.gen(function* () {
   const { db } = yield* Database.Service
@@ -42,9 +42,9 @@ describe("SessionTodo", () => {
     Effect.gen(function* () {
       yield* setup
       const { db } = yield* Database.Service
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
       const todos = yield* SessionTodo.Service
-      const published = new Array<EventV2.Payload>()
+      const published = new Array<EventBus.Payload>()
       const unsubscribe = yield* events.listen((event) =>
         Effect.sync(() => {
           if (event.type === SessionTodo.Event.Updated.type) published.push(event)

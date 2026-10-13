@@ -8,7 +8,7 @@ import { Question } from "@/question"
 import { Session } from "@/session/session"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceBootstrap } from "@/project/bootstrap"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { pollWithTimeout, testEffect } from "../lib/effect"
 
@@ -17,7 +17,7 @@ const it = testEffect(
     LayerNode.group([
       Question.node,
       Session.node,
-      EventV2Bridge.node,
+      EventBridge.node,
       SessionProjector.node,
       CrossSpawnSpawner.node,
       InstanceStore.node,

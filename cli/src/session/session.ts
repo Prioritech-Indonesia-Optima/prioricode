@@ -10,11 +10,7 @@ import { Decimal } from "decimal.js"
 import type { ProviderMetadata, Usage } from "@prioricode/llm"
 import { InstallationVersion } from "@prioricode/core/installation/version"
 import { Database } from "@prioricode/core/database/database"
-import { EventV2Bridge } from "@/event-v2-bridge"
-import { SessionV2 } from "@prioricode/core/session"
-import * as SessionExecutionLocal from "@prioricode/core/session/execution/local"
-import { locationServiceMapLayer } from "@prioricode/core/location-services"
-
+import { EventBridge } from "@/event-v2-bridge"
 import { NotFoundError } from "@/storage/storage"
 import { eq } from "drizzle-orm"
 import { and } from "drizzle-orm"
@@ -33,18 +29,19 @@ import { MessageV2 } from "./message-v2"
 import type { InstanceContext } from "../project/instance-context"
 import { InstanceState } from "@/effect/instance-state"
 import { Snapshot } from "@/snapshot"
-import { ProjectV2 } from "@prioricode/core/project"
-import { WorkspaceV2 } from "@prioricode/core/workspace"
+import { Project } from "@prioricode/core/project"
+import { Workspace } from "@prioricode/core/workspace"
 import { SessionID, MessageID, PartID } from "./schema"
 
 import type { Provider } from "@/provider/provider"
 import { Global } from "@prioricode/core/global"
-import { Effect, Layer, Option, Context, Schema, Types } from "effect"
+import { Cause, Effect, Layer, Option, Context, Schema, Types } from "effect"
 import { NonNegativeInt, optional } from "@prioricode/core/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { SessionMessage } from "@prioricode/schema/session-message"
+import { cancelBackgroundJobs } from "./run-state"
 
 const parentTitlePrefix = "New session - "
 const childTitlePrefix = "Child session - "
@@ -88,8 +85,8 @@ export function fromRow(row: SessionRow): Info {
     agent: row.agent ?? undefined,
     model: row.model
       ? {
-          id: ModelV2.ID.make(row.model.id),
-          providerID: ProviderV2.ID.make(row.model.providerID),
+          id: Model.ID.make(row.model.id),
+          providerID: ProviderSchema.ID.make(row.model.providerID),
           variant: row.model.variant,
         }
       : undefined,
@@ -216,9 +213,9 @@ const Revert = Schema.Struct({
   diff: optional(Schema.String),
 })
 
-const Model = Schema.Struct({
-  id: ModelV2.ID,
-  providerID: ProviderV2.ID,
+const SessionModel = Schema.Struct({
+  id: Model.ID,
+  providerID: ProviderSchema.ID,
   variant: optional(Schema.String),
 })
 
@@ -227,8 +224,8 @@ export const Metadata = Schema.Record(Schema.String, Schema.Any)
 export const Info = Schema.Struct({
   id: SessionID,
   slug: Schema.String,
-  projectID: ProjectV2.ID,
-  workspaceID: optional(WorkspaceV2.ID),
+  projectID: Project.ID,
+  workspaceID: optional(Workspace.ID),
   directory: Schema.String,
   path: optional(Schema.String),
   parentID: optional(SessionID),
@@ -238,7 +235,7 @@ export const Info = Schema.Struct({
   share: optional(Share),
   title: Schema.String,
   agent: optional(Schema.String),
-  model: optional(Model),
+  model: optional(SessionModel),
   version: Schema.String,
   metadata: optional(Metadata),
   time: Time,
@@ -249,7 +246,7 @@ export const Info = Schema.Struct({
 export type Info = Types.DeepMutable<Schema.Schema.Type<typeof Info>>
 
 export const ProjectInfo = Schema.Struct({
-  id: ProjectV2.ID,
+  id: Project.ID,
   name: optional(Schema.String),
   worktree: Schema.String,
 }).annotate({ identifier: "ProjectSummary" })
@@ -266,10 +263,10 @@ export const CreateInput = Schema.optional(
     parentID: Schema.optional(SessionID),
     title: Schema.optional(Schema.String),
     agent: Schema.optional(Schema.String),
-    model: Schema.optional(Model),
+    model: Schema.optional(SessionModel),
     metadata: Schema.optional(Metadata),
     permission: Schema.optional(PermissionV1.Ruleset),
-    workspaceID: Schema.optional(WorkspaceV2.ID),
+    workspaceID: Schema.optional(Workspace.ID),
   }),
 )
 export type CreateInput = Types.DeepMutable<Schema.Schema.Type<typeof CreateInput>>
@@ -307,7 +304,7 @@ export type ListInput = {
   directory?: string
   scope?: "project"
   path?: string
-  workspaceID?: WorkspaceV2.ID
+  workspaceID?: Workspace.ID
   roots?: boolean
   start?: number
   search?: string
@@ -339,7 +336,7 @@ export function plan(input: { slug: string; time: { created: number } }, instanc
   return path.join(base, [input.time.created, input.slug].join("-") + ".md")
 }
 
-export const getUsage = (input: { model: Provider.Model; usage: Usage; metadata?: ProviderMetadata }) => {
+export const getUsage = (input: { model: Provider.ProviderModel; usage: Usage; metadata?: ProviderMetadata }) => {
   const finite = (value: number) => (Number.isFinite(value) ? value : 0)
   const safe = (value: number) => Math.max(0, finite(value))
   const inputTokens = safe(input.usage.inputTokens ?? 0)
@@ -367,7 +364,7 @@ export const getUsage = (input: { model: Provider.Model; usage: Usage; metadata?
   // tokens to get the non-cached input count for separate cost calculation.
   const adjustedInputTokens = safe(inputTokens - cacheReadInputTokens - cacheWriteInputTokens)
 
-  const total = input.usage.totalTokens
+  const total = safe(input.usage.totalTokens ?? 0)
 
   const tokens = {
     total,
@@ -421,11 +418,11 @@ export interface Interface {
     parentID?: SessionID
     title?: string
     agent?: string
-    model?: Schema.Schema.Type<typeof Model>
+    model?: Schema.Schema.Type<typeof SessionModel>
     metadata?: typeof Metadata.Type
     permission?: PermissionV1.Ruleset
     permissionMode?: Permission.Mode
-    workspaceID?: WorkspaceV2.ID
+    workspaceID?: Workspace.ID
   }) => Effect.Effect<Info>
   /**
    * The permission mode that governs this Session. Child (subagent) Sessions
@@ -506,23 +503,23 @@ export type Patch = Omit<Partial<Info>, "time" | "share" | "summary" | "revert" 
 const layer: Layer.Layer<
   Service,
   never,
-  BackgroundJob.Service | RuntimeFlags.Service | Database.Service | EventV2Bridge.Service
+  BackgroundJob.Service | RuntimeFlags.Service | Database.Service | EventBridge.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
     const { db } = yield* Database.Service
     const database = yield* Database.Service
     const background = yield* BackgroundJob.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const flags = yield* RuntimeFlags.Service
 
     const createNext = Effect.fn("Session.createNext")(function* (input: {
       id?: SessionID
       title?: string
       agent?: string
-      model?: Schema.Schema.Type<typeof Model>
+      model?: Schema.Schema.Type<typeof SessionModel>
       parentID?: SessionID
-      workspaceID?: WorkspaceV2.ID
+      workspaceID?: Workspace.ID
       directory: string
       path?: string
       metadata?: typeof Metadata.Type
@@ -665,9 +662,9 @@ const layer: Layer.Layer<
 
     const remove: Interface["remove"] = Effect.fnUntraced(function* (sessionID: SessionID) {
       const session = yield* get(sessionID)
-      try {
-        // `remove` needs to work in all cases, such as broken sessions that
-        // run cleanup without instance state.
+      // `remove` needs to work in all cases, such as broken sessions that
+      // run cleanup without instance state.
+      yield* Effect.gen(function* () {
         const hasInstance = yield* InstanceState.directory.pipe(
           Effect.as(true),
           Effect.catchCause(() => Effect.succeed(false)),
@@ -681,9 +678,9 @@ const layer: Layer.Layer<
 
         yield* events.publish(SessionV1.Event.Deleted, { sessionID, info: session })
         yield* events.remove(sessionID)
-      } catch (error) {
-        yield* Effect.logError("failed to remove session", { sessionID, error })
-      }
+      }).pipe(
+        Effect.catchCause((cause) => Effect.logError("failed to remove session", { sessionID, error: Cause.squash(cause) })),
+      )
     })
 
     const updateMessage = <T extends SessionV1.Info>(msg: T): Effect.Effect<T> =>
@@ -752,11 +749,11 @@ const layer: Layer.Layer<
       parentID?: SessionID
       title?: string
       agent?: string
-      model?: Schema.Schema.Type<typeof Model>
+      model?: Schema.Schema.Type<typeof SessionModel>
       metadata?: typeof Metadata.Type
       permission?: PermissionV1.Ruleset
       permissionMode?: Permission.Mode
-      workspaceID?: WorkspaceV2.ID
+      workspaceID?: Workspace.ID
     }) {
       const ctx = yield* InstanceState.context
       const workspace = yield* InstanceState.workspaceID
@@ -929,21 +926,9 @@ const layer: Layer.Layer<
         )).items
       }
 
-      const size = 50
-      const result = [] as SessionV1.WithParts[]
-      let before: string | undefined
-      while (true) {
-        const page = yield* MessageV2.page({ sessionID: input.sessionID, limit: size, before }).pipe(
-          Effect.provideService(Database.Service, database),
-        )
-        if (page.items.length === 0) break
-        for (let i = page.items.length - 1; i >= 0; i--) {
-          const item = page.items[i]
-          if (item) result.push(item)
-        }
-        if (!page.more || !page.cursor) break
-        before = page.cursor
-      }
+      const result = yield* MessageV2.fetchAll(input.sessionID).pipe(
+        Effect.provideService(Database.Service, database),
+      )
       return result.reverse()
     })
 
@@ -1035,27 +1020,12 @@ const layer: Layer.Layer<
   }),
 )
 
-const cancelBackgroundJobs = Effect.fn("Session.cancelBackgroundJobs")(function* (
-  background: BackgroundJob.Interface,
-  sessionID: SessionID,
-) {
-  const jobs = yield* background.list()
-  yield* Effect.forEach(
-    jobs.filter((job) => {
-      if (job.status !== "running") return false
-      if (job.id === sessionID) return true
-      if (job.metadata?.sessionId === sessionID) return true
-      return job.metadata?.parentSessionId === sessionID
-    }),
-    (job) => background.cancel(job.id),
-    { concurrency: "unbounded", discard: true },
-  )
-})
+
 
 function listByProject(
   db: Database.Interface["db"],
   input: ListInput & {
-    projectID: ProjectV2.ID
+    projectID: Project.ID
     experimentalWorkspaces: boolean
   },
 ) {
@@ -1110,7 +1080,7 @@ function listByProject(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [BackgroundJob.node, RuntimeFlags.node, Database.node, EventV2Bridge.node],
+  deps: [BackgroundJob.node, RuntimeFlags.node, Database.node, EventBridge.node],
 })
 
 export * as Session from "./session"

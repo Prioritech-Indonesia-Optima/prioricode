@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test"
 import { Model } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
 import { DateTime } from "effect"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Model as ModelCore } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
 import { SessionCompaction, type Entry, type Settings } from "@prioricode/core/session/compaction"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { Token } from "@prioricode/core/util/token"
@@ -36,7 +36,7 @@ const assistant = (seq: number, text: string): Entry => ({
     id: SessionMessage.ID.create(),
     type: "assistant",
     agent: "build",
-    model: { id: ModelV2.ID.make("m"), providerID: ProviderV2.ID.make("p") },
+    model: { id: ModelCore.ID.make("m"), providerID: Provider.ID.make("p") },
     content: [{ type: "text", id: "t", text }],
     time: { created: now },
   } as SessionMessage.Message,

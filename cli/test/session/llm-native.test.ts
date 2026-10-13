@@ -6,16 +6,16 @@ import { Effect, Fiber, Layer, Stream } from "effect"
 import { FetchHttpClient } from "effect/unstable/http"
 import { LLMNative } from "@/session/llm/native-request"
 import { LLMNativeRuntime } from "@/session/llm/native-runtime"
-import type { Provider } from "@/provider/provider"
 
 import { OAUTH_DUMMY_KEY } from "@/auth"
 import { testEffect } from "../lib/effect"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 
-const baseModel: Provider.Model = {
-  id: ModelV2.ID.make("gpt-5-mini"),
-  providerID: ProviderV2.ID.make("openai"),
+const baseModel: ProviderCli.ProviderModel = {
+  id: Model.ID.make("gpt-5-mini"),
+  providerID: Provider.ID.make("openai"),
   api: {
     id: "gpt-5-mini",
     url: "https://api.openai.com/v1",
@@ -64,8 +64,8 @@ const baseModel: Provider.Model = {
   release_date: "2026-01-01",
 }
 
-const providerInfo: Provider.Info = {
-  id: ProviderV2.ID.make("openai"),
+const providerInfo: ProviderCli.Info = {
+  id: Provider.ID.make("openai"),
   name: "OpenAI",
   source: "config",
   env: ["OPENAI_API_KEY"],
@@ -360,7 +360,7 @@ describe("session.llm-native.request", () => {
     const compatible = LLMNative.model({
       model: {
         ...baseModel,
-        providerID: ProviderV2.ID.make("prioricode"),
+        providerID: Provider.ID.make("prioricode"),
         api: { ...baseModel.api, url: "https://ai.example.test/v1", npm: "@ai-sdk/openai-compatible" },
       },
       apiKey: "test-key",
@@ -394,8 +394,8 @@ describe("session.llm-native.request", () => {
     })
     expect(
       LLMNativeRuntime.status({
-        model: { ...baseModel, providerID: ProviderV2.ID.make("prioricode") },
-        provider: { ...providerInfo, id: ProviderV2.ID.make("prioricode") },
+        model: { ...baseModel, providerID: Provider.ID.make("prioricode") },
+        provider: { ...providerInfo, id: Provider.ID.make("prioricode") },
         auth: undefined,
       }),
     ).toMatchObject({
@@ -406,10 +406,10 @@ describe("session.llm-native.request", () => {
       LLMNativeRuntime.status({
         model: {
           ...baseModel,
-          providerID: ProviderV2.ID.make("prioricode"),
+          providerID: Provider.ID.make("prioricode"),
           api: { ...baseModel.api, npm: "@ai-sdk/openai-compatible" },
         },
-        provider: { ...providerInfo, id: ProviderV2.ID.make("prioricode") },
+        provider: { ...providerInfo, id: Provider.ID.make("prioricode") },
         auth: undefined,
       }),
     ).toMatchObject({
@@ -418,8 +418,8 @@ describe("session.llm-native.request", () => {
     })
     expect(
       LLMNativeRuntime.status({
-        model: { ...baseModel, providerID: ProviderV2.ID.make("google") },
-        provider: { ...providerInfo, id: ProviderV2.ID.make("google") },
+        model: { ...baseModel, providerID: Provider.ID.make("google") },
+        provider: { ...providerInfo, id: Provider.ID.make("google") },
         auth: undefined,
       }),
     ).toEqual({ type: "unsupported", reason: "provider is not openai, prioricode, or anthropic" })
@@ -460,12 +460,12 @@ describe("session.llm-native.request", () => {
       LLMNativeRuntime.status({
         model: {
           ...baseModel,
-          providerID: ProviderV2.ID.make("anthropic"),
+          providerID: Provider.ID.make("anthropic"),
           api: { ...baseModel.api, npm: "@ai-sdk/anthropic", url: "https://api.anthropic.com/v1" },
         },
         provider: {
           ...providerInfo,
-          id: ProviderV2.ID.make("anthropic"),
+          id: Provider.ID.make("anthropic"),
           name: "Anthropic",
           env: ["ANTHROPIC_API_KEY"],
           options: { apiKey: "test-anthropic-key" },
@@ -478,10 +478,10 @@ describe("session.llm-native.request", () => {
   test("prefers console provider api key over stored prioricode auth", () => {
     expect(
       LLMNativeRuntime.status({
-        model: { ...baseModel, providerID: ProviderV2.ID.make("prioricode") },
+        model: { ...baseModel, providerID: Provider.ID.make("prioricode") },
         provider: {
           ...providerInfo,
-          id: ProviderV2.ID.make("prioricode"),
+          id: Provider.ID.make("prioricode"),
           options: { apiKey: "console-token" },
           key: "zen-token",
         },

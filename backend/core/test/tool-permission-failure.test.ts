@@ -3,9 +3,9 @@ import { Effect, Layer } from "effect"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Location } from "@prioricode/core/location"
-import { PermissionV2 } from "@prioricode/core/permission"
+import { Permission } from "@prioricode/core/permission"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { GlobTool } from "@prioricode/core/tool/glob"
 import { PermissionFailure } from "@prioricode/core/tool/permission-failure"
 import { ToolRegistry } from "@prioricode/core/tool/registry"
@@ -15,13 +15,13 @@ import { location } from "./fixture/location"
 import { testEffect } from "./lib/effect"
 import { toolIdentity, settleTool } from "./lib/tool"
 
-const sessionID = SessionV2.ID.make("ses_permission_failure_test")
+const sessionID = Session.ID.make("ses_permission_failure_test")
 
 const it = testEffect(Layer.empty)
 
 describe("Tool.failure cause rendering", () => {
   test("keeps payload fields of message-less typed errors visible", () => {
-    const failure = Tool.failure("Unable to edit src/a.ts", new PermissionV2.CorrectedError({ feedback: "use tabs" }))
+    const failure = Tool.failure("Unable to edit src/a.ts", new Permission.CorrectedError({ feedback: "use tabs" }))
     expect(failure.message).toContain("use tabs")
   })
 
@@ -38,36 +38,36 @@ describe("Tool.failure cause rendering", () => {
 
 describe("PermissionFailure.fromError", () => {
   test("carries the user's correction feedback verbatim", () => {
-    const failure = PermissionFailure.fromError(new PermissionV2.CorrectedError({ feedback: "match our lint rules" }))
+    const failure = PermissionFailure.fromError(new Permission.CorrectedError({ feedback: "match our lint rules" }))
     expect(failure.message).toContain("match our lint rules")
     expect(failure.message).toContain("Address the feedback before retrying")
   })
 
   test("names the blocking rules", () => {
     const failure = PermissionFailure.fromError(
-      new PermissionV2.BlockedError({ rules: [{ action: "bash", resource: "git push *", effect: "deny" }] }),
+      new Permission.BlockedError({ rules: [{ action: "bash", resource: "git push *", effect: "deny" }] }),
     )
     expect(failure.message).toContain("bash git push * (deny)")
     expect(failure.message).toContain("Do not retry this action")
   })
 
   test("falls back to the active policy when no matching rules were captured", () => {
-    const failure = PermissionFailure.fromError(new PermissionV2.BlockedError({ rules: [] }))
+    const failure = PermissionFailure.fromError(new Permission.BlockedError({ rules: [] }))
     expect(failure.message).toContain("the active permission policy")
   })
 
   test("reports a missing Session for the permission check", () => {
-    const failure = PermissionFailure.fromError(new SessionV2.NotFoundError({ sessionID }))
+    const failure = PermissionFailure.fromError(new Session.NotFoundError({ sessionID }))
     expect(failure.message).toContain(sessionID)
     expect(failure.message).toContain("no longer exists")
   })
 })
 
 describe("permission feedback survives real settlement", () => {
-  const runWithDeniedPermission = (failure: PermissionV2.Error | SessionV2.NotFoundError) => {
+  const runWithDeniedPermission = (failure: Permission.Error | Session.NotFoundError) => {
     const permission = Layer.succeed(
-      PermissionV2.Service,
-      PermissionV2.Service.of({
+      Permission.Service,
+      Permission.Service.of({
         assert: () => Effect.fail(failure),
         ask: () => Effect.die("unused"),
         reply: () => Effect.die("unused"),
@@ -94,7 +94,7 @@ describe("permission feedback survives real settlement", () => {
               Location.Service.of(location({ directory: AbsolutePath.make("/permission-failure-test") })),
             ),
           ],
-          [PermissionV2.node, permission],
+          [Permission.node, permission],
           [ToolOutputStore.node, ToolOutputStore.nodeWithoutConfig],
         ]),
       ),
@@ -103,7 +103,7 @@ describe("permission feedback survives real settlement", () => {
 
   it.effect("a corrected permission decision reaches the model as the user's feedback, not the error tag", () =>
     Effect.gen(function* () {
-      const result = yield* runWithDeniedPermission(new PermissionV2.CorrectedError({ feedback: "search src only" }))
+      const result = yield* runWithDeniedPermission(new Permission.CorrectedError({ feedback: "search src only" }))
       expect(result).toEqual({
         type: "error",
         value:
@@ -115,7 +115,7 @@ describe("permission feedback survives real settlement", () => {
   it.effect("a blocked permission decision reaches the model with the governing rules", () =>
     Effect.gen(function* () {
       const result = yield* runWithDeniedPermission(
-        new PermissionV2.BlockedError({ rules: [{ action: "glob", resource: "src/**", effect: "deny" }] }),
+        new Permission.BlockedError({ rules: [{ action: "glob", resource: "src/**", effect: "deny" }] }),
       )
       expect(result).toEqual({
         type: "error",

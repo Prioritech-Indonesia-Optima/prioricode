@@ -2,7 +2,7 @@ import { afterEach, describe, expect, mock, test } from "bun:test"
 import { ConfigV1 } from "@prioricode/core/v1/config/config"
 import { SessionV1 } from "@prioricode/core/v1/session"
 import { Database } from "@prioricode/core/database/database"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { APICallError } from "ai"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer, Schema } from "effect"
 import * as Stream from "effect/Stream"
@@ -17,11 +17,10 @@ import { MessageV2 } from "../../src/session/message-v2"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { SessionProjector } from "@prioricode/core/session/projector"
 
-import { Provider } from "@/provider/provider"
 import * as SessionProcessorModule from "../../src/session/processor"
 import { ProviderTest } from "../fake/provider"
 import { testEffect } from "../lib/effect"
@@ -29,8 +28,9 @@ import { CrossSpawnSpawner } from "@prioricode/core/cross-spawn-spawner"
 import { TestConfig } from "../fixture/config"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { LLMEvent, Usage } from "@prioricode/llm"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 
@@ -44,8 +44,8 @@ const summary = Layer.succeed(
 )
 
 const ref = {
-  providerID: ProviderV2.ID.make("test"),
-  modelID: ModelV2.ID.make("test-model"),
+  providerID: Provider.ID.make("test"),
+  modelID: Model.ID.make("test-model"),
 }
 
 const usage = (input: ConstructorParameters<typeof Usage>[0]) => new Usage(input)
@@ -60,9 +60,9 @@ function createModel(opts: {
   context: number
   output: number
   input?: number
-  cost?: Provider.Model["cost"]
+  cost?: ProviderCli.ProviderModel["cost"]
   npm?: string
-}): Provider.Model {
+}): ProviderCli.ProviderModel {
   return {
     id: "test-model",
     providerID: "test",
@@ -83,7 +83,7 @@ function createModel(opts: {
     },
     api: { npm: opts.npm ?? "@ai-sdk/anthropic" },
     options: {},
-  } as Provider.Model
+  } as ProviderCli.ProviderModel
 }
 
 const wide = () => ProviderTest.fake({ model: createModel({ context: 100_000, output: 32_000 }) })
@@ -228,11 +228,11 @@ const compactionTestNode = LayerNode.group([
   SessionNs.node,
   SessionProjector.node,
   Database.node,
-  EventV2Bridge.node,
+  EventBridge.node,
   CrossSpawnSpawner.node,
 ])
 const env = AppNodeBuilder.build(compactionTestNode, [
-  [Provider.node, defaultProvider.layer],
+  [ProviderCli.node, defaultProvider.layer],
   [SessionProcessorModule.SessionProcessor.node, processorLayer("continue")],
   [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
 ])
@@ -240,7 +240,7 @@ const env = AppNodeBuilder.build(compactionTestNode, [
 const it = testEffect(env)
 
 const compactionEnv = AppNodeBuilder.build(
-  LayerNode.group([SessionNs.node, SessionProjector.node, Database.node, EventV2Bridge.node, CrossSpawnSpawner.node]),
+  LayerNode.group([SessionNs.node, SessionProjector.node, Database.node, EventBridge.node, CrossSpawnSpawner.node]),
 )
 const itCompaction = testEffect(compactionEnv)
 
@@ -258,7 +258,7 @@ function withCompaction(options?: CompactionProcessOptions) {
 
 function compactionProcessLayer(options?: CompactionProcessOptions) {
   const replacements: LayerNode.Replacements = [
-    [Provider.node, (options?.provider ?? wide()).layer],
+    [ProviderCli.node, (options?.provider ?? wide()).layer],
     [RuntimeFlags.node, RuntimeFlags.layer({ experimentalEventSystem: true })],
     [SessionSummary.node, summary],
   ]
@@ -616,8 +616,8 @@ describe("session.compaction.create", () => {
           overflow: true,
         })
 
-        const v2 = yield* SessionV2.Service.use((svc) => svc.messages({ sessionID: info.id })).pipe(
-          Effect.provide(AppNodeBuilder.build(SessionV2.node, [[SessionExecution.node, SessionExecution.noopLayer]])),
+        const v2 = yield* Session.Service.use((svc) => svc.messages({ sessionID: info.id })).pipe(
+          Effect.provide(AppNodeBuilder.build(Session.node, [[SessionExecution.node, SessionExecution.noopLayer]])),
         )
         expect(v2.at(-1)).toMatchObject({
           type: "compaction",
@@ -851,7 +851,7 @@ describe("session.compaction.process", () => {
   it.instance(
     "publishes compacted event on continue",
     Effect.gen(function* () {
-      const events = yield* EventV2Bridge.Service
+      const events = yield* EventBridge.Service
       const ssn = yield* SessionNs.Service
       const session = yield* ssn.create({})
       const msg = yield* createUserMessage(session.id, "hello")
@@ -1231,7 +1231,7 @@ describe("session.compaction.process", () => {
 
       return Effect.gen(function* () {
         const ssn = yield* SessionNs.Service
-        const events = yield* EventV2Bridge.Service
+        const events = yield* EventBridge.Service
         const ready = yield* Deferred.make<void>()
         const session = yield* ssn.create({})
         const msg = yield* createUserMessage(session.id, "hello")

@@ -3,9 +3,9 @@ import { Catalog } from "@prioricode/core/catalog"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Location } from "@prioricode/core/location"
-import { ModelV2 } from "@prioricode/core/model"
+import { Model } from "@prioricode/core/model"
 import { VariantPlugin } from "@prioricode/core/plugin/variant"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider } from "@prioricode/core/provider"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { Effect, Layer } from "effect"
 import { location } from "../fixture/location"
@@ -23,12 +23,12 @@ describe("VariantPlugin", () => {
     Effect.gen(function* () {
       const service = yield* Catalog.Service
       yield* service.transform((catalog) => {
-        catalog.provider.update(ProviderV2.ID.prioricode, (provider) => {
+        catalog.provider.update(Provider.ID.prioricode, (provider) => {
           provider.api = { type: "aisdk", package: "@ai-sdk/openai-compatible" }
         })
-        catalog.model.update(ProviderV2.ID.prioricode, ModelV2.ID.make("glm-5.2"), (model) => {
+        catalog.model.update(Provider.ID.prioricode, Model.ID.make("glm-5.2"), (model) => {
           model.api = {
-            id: ModelV2.ID.make("glm-5.2"),
+            id: Model.ID.make("glm-5.2"),
             type: "aisdk",
             package: "@ai-sdk/openai-compatible",
           }
@@ -36,7 +36,7 @@ describe("VariantPlugin", () => {
       })
       yield* VariantPlugin.Plugin.effect(host({ catalog: catalogHost(service) }))
 
-      expect((yield* service.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("glm-5.2")))?.variants).toEqual([
+      expect((yield* service.model.get(Provider.ID.prioricode, Model.ID.make("glm-5.2")))?.variants).toEqual([
         expect.objectContaining({ id: "high", body: { reasoning_effort: "high" } }),
         expect.objectContaining({ id: "max", body: { reasoning_effort: "max" } }),
       ])
@@ -47,18 +47,18 @@ describe("VariantPlugin", () => {
     Effect.gen(function* () {
       const service = yield* Catalog.Service
       yield* service.transform((catalog) => {
-        catalog.model.update(ProviderV2.ID.prioricode, ModelV2.ID.make("glm-5.2"), (model) => {
+        catalog.model.update(Provider.ID.prioricode, Model.ID.make("glm-5.2"), (model) => {
           model.api = {
-            id: ModelV2.ID.make("glm-5.2"),
+            id: Model.ID.make("glm-5.2"),
             type: "aisdk",
             package: "@ai-sdk/openai-compatible",
           }
-          model.variants = [{ id: ModelV2.VariantID.make("high"), headers: { custom: "true" }, body: {} }]
+          model.variants = [{ id: Model.VariantID.make("high"), headers: { custom: "true" }, body: {} }]
         })
       })
       yield* VariantPlugin.Plugin.effect(host({ catalog: catalogHost(service) }))
 
-      expect((yield* service.model.get(ProviderV2.ID.prioricode, ModelV2.ID.make("glm-5.2")))?.variants).toEqual([
+      expect((yield* service.model.get(Provider.ID.prioricode, Model.ID.make("glm-5.2")))?.variants).toEqual([
         expect.objectContaining({ id: "high", headers: { custom: "true" } }),
         expect.objectContaining({ id: "max", body: { reasoning_effort: "max" } }),
       ])

@@ -5,7 +5,7 @@ import { Hook } from "@/hook"
 import { Session as SessionNs } from "@/session/session"
 import { SessionStatus } from "@/session/status"
 import { SessionID } from "@/session/schema"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { CrossSpawnSpawner } from "@prioricode/core/cross-spawn-spawner"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { InstanceStore } from "@/project/instance-store"
@@ -23,7 +23,7 @@ const it = testEffect(
       Hook.node,
       SessionNs.node,
       SessionStatus.node,
-      EventV2Bridge.node,
+      EventBridge.node,
       SessionProjector.node,
       CrossSpawnSpawner.node,
       InstanceStore.node,
@@ -96,7 +96,7 @@ describe("hook PreToolUse", () => {
       "crashing or timing-out hooks never block and publish hook.failed",
       () =>
         Effect.gen(function* () {
-          const events = yield* EventV2Bridge.Service
+          const events = yield* EventBridge.Service
           const received = yield* Deferred.make<unknown>()
           const seen: string[] = []
           const unsub = yield* events.listen((event) => {
@@ -199,7 +199,7 @@ describe("hook lifecycle", () => {
           const test = yield* TestInstance
           const hooks = yield* Hook.Service
           yield* hooks.init()
-          const events = yield* EventV2Bridge.Service
+          const events = yield* EventBridge.Service
           yield* events.publish(PermissionV1.Event.Asked, {
             id: PermissionV1.ID.make("per_test1"),
             sessionID: SessionID.make("ses_hook_test"),

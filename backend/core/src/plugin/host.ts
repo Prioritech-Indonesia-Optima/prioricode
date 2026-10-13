@@ -2,29 +2,29 @@ export * as PluginHost from "./host"
 
 import type { PluginContext as Interface } from "@prioricode/plugin/v2/effect"
 import { Effect, Schema } from "effect"
-import { AgentV2 } from "../agent"
+import { Agent } from "../agent"
 import { AISDK } from "../aisdk"
 import { Catalog } from "../catalog"
-import { CommandV2 } from "../command"
+import { Command } from "../command"
 import { Credential } from "../credential"
 import { Integration } from "../integration"
-import { ModelV2 } from "../model"
-import { PluginV2 } from "../plugin"
-import { ProviderV2 } from "../provider"
+import { Model } from "../model"
+import { Plugin } from "../plugin"
+import { Provider } from "../provider"
 import { Reference } from "../reference"
 import type { DeepMutable } from "../schema"
-import { SkillV2 } from "../skill"
+import { Skill } from "../skill"
 
 const mutable = <T>(value: T) => value as DeepMutable<T>
 
-export const make = Effect.fn("PluginHost.make")(function* (plugin: PluginV2.Interface) {
-  const agents = yield* AgentV2.Service
+export const make = Effect.fn("PluginHost.make")(function* (plugin: Plugin.Interface) {
+  const agents = yield* Agent.Service
   const aisdk = yield* AISDK.Service
   const catalog = yield* Catalog.Service
-  const commands = yield* CommandV2.Service
+  const commands = yield* Command.Service
   const integration = yield* Integration.Service
   const reference = yield* Reference.Service
-  const skill = yield* SkillV2.Service
+  const skill = yield* Skill.Service
 
   return {
     options: {},
@@ -34,10 +34,10 @@ export const make = Effect.fn("PluginHost.make")(function* (plugin: PluginV2.Int
         agents.transform((draft) =>
           callback({
             list: () => mutable(draft.list()),
-            get: (id) => mutable(draft.get(AgentV2.ID.make(id))),
-            default: (id) => draft.default(id === undefined ? undefined : AgentV2.ID.make(id)),
-            update: (id, update) => draft.update(AgentV2.ID.make(id), update),
-            remove: (id) => draft.remove(AgentV2.ID.make(id)),
+            get: (id) => mutable(draft.get(Agent.ID.make(id))),
+            default: (id) => draft.default(id === undefined ? undefined : Agent.ID.make(id)),
+            update: (id, update) => draft.update(Agent.ID.make(id), update),
+            remove: (id) => draft.remove(Agent.ID.make(id)),
           }),
         ),
     },
@@ -76,21 +76,21 @@ export const make = Effect.fn("PluginHost.make")(function* (plugin: PluginV2.Int
           callback({
             provider: {
               list: () => mutable(draft.provider.list()),
-              get: (id) => mutable(draft.provider.get(ProviderV2.ID.make(id))),
-              update: (id, update) => draft.provider.update(ProviderV2.ID.make(id), update),
-              remove: (id) => draft.provider.remove(ProviderV2.ID.make(id)),
+              get: (id) => mutable(draft.provider.get(Provider.ID.make(id))),
+              update: (id, update) => draft.provider.update(Provider.ID.make(id), update),
+              remove: (id) => draft.provider.remove(Provider.ID.make(id)),
             },
             model: {
               get: (providerID, modelID) =>
-                mutable(draft.model.get(ProviderV2.ID.make(providerID), ModelV2.ID.make(modelID))),
+                mutable(draft.model.get(Provider.ID.make(providerID), Model.ID.make(modelID))),
               update: (providerID, modelID, update) =>
-                draft.model.update(ProviderV2.ID.make(providerID), ModelV2.ID.make(modelID), update),
+                draft.model.update(Provider.ID.make(providerID), Model.ID.make(modelID), update),
               remove: (providerID, modelID) =>
-                draft.model.remove(ProviderV2.ID.make(providerID), ModelV2.ID.make(modelID)),
+                draft.model.remove(Provider.ID.make(providerID), Model.ID.make(modelID)),
               default: {
                 get: draft.model.default.get,
                 set: (providerID, modelID) =>
-                  draft.model.default.set(ProviderV2.ID.make(providerID), ModelV2.ID.make(modelID)),
+                  draft.model.default.set(Provider.ID.make(providerID), Model.ID.make(modelID)),
               },
             },
           }),
@@ -191,8 +191,8 @@ export const make = Effect.fn("PluginHost.make")(function* (plugin: PluginV2.Int
         ),
     },
     plugin: {
-      add: (input) => plugin.add(PluginV2.ID.make(input.id), input.effect),
-      remove: (id) => plugin.remove(PluginV2.ID.make(id)),
+      add: (input) => plugin.add(Plugin.ID.make(input.id), input.effect),
+      remove: (id) => plugin.remove(Plugin.ID.make(id)),
     },
     reference: {
       reload: reference.reload,
@@ -210,7 +210,7 @@ export const make = Effect.fn("PluginHost.make")(function* (plugin: PluginV2.Int
       transform: (callback) =>
         skill.transform((draft) =>
           callback({
-            source: (source) => draft.source(Schema.decodeUnknownSync(SkillV2.Source)(source)),
+            source: (source) => draft.source(Schema.decodeUnknownSync(Skill.Source)(source)),
             list: draft.list,
           }),
         ),

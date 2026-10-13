@@ -3,7 +3,7 @@ import { Effect } from "effect"
 import { ModelsDev } from "@prioricode/core/models-dev"
 import { effectCmd, fail } from "../effect-cmd"
 import { UI } from "../ui"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider } from "@prioricode/core/provider"
 
 export const ModelsCommand = effectCmd({
   command: "models [provider]",
@@ -24,16 +24,16 @@ export const ModelsCommand = effectCmd({
         type: "boolean",
       }),
   handler: Effect.fn("Cli.models")(function* (args) {
-    const { Provider } = yield* Effect.promise(() => import("@/provider/provider"))
+    const { Provider: ProviderCli } = yield* Effect.promise(() => import("@/provider/provider"))
     if (args.refresh) {
       yield* ModelsDev.Service.use((s) => s.refresh(true))
       UI.println(UI.Style.TEXT_SUCCESS_BOLD + "Models cache refreshed" + UI.Style.TEXT_NORMAL)
     }
 
-    const provider = yield* Provider.Service
+    const provider = yield* ProviderCli.Service
     const providers = yield* provider.list()
 
-    const print = (providerID: ProviderV2.ID, verbose?: boolean) => {
+    const print = (providerID: Provider.ID, verbose?: boolean) => {
       const p = providers[providerID]
       const sorted = Object.entries(p.models).sort(([a], [b]) => a.localeCompare(b))
       for (const [modelID, model] of sorted) {
@@ -47,7 +47,7 @@ export const ModelsCommand = effectCmd({
     }
 
     if (args.provider) {
-      const providerID = ProviderV2.ID.make(args.provider)
+      const providerID = Provider.ID.make(args.provider)
       if (!providers[providerID]) return yield* fail(`Provider not found: ${args.provider}`)
       print(providerID, args.verbose)
       return
@@ -61,6 +61,6 @@ export const ModelsCommand = effectCmd({
       return a.localeCompare(b)
     })
 
-    for (const providerID of ids) print(ProviderV2.ID.make(providerID), args.verbose)
+    for (const providerID of ids) print(Provider.ID.make(providerID), args.verbose)
   }),
 })

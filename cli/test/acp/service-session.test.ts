@@ -11,18 +11,18 @@ import type {
   SetSessionConfigOptionResponse,
 } from "@agentclientprotocol/sdk"
 import type { AssistantMessage, Event, PrioricodeClient } from "@prioricode/sdk/v2"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 import { Effect } from "effect"
 import * as ACPService from "@/acp/service"
 import * as ACPError from "@/acp/error"
 import { UsageService } from "@/acp/usage"
-import type { Provider } from "@/provider/provider"
 
-const providerID = ProviderV2.ID.make("test")
-const modelID = ModelV2.ID.make("test-model")
-const configuredModelID = ModelV2.ID.make("configured-model")
-const secondModelID = ModelV2.ID.make("second-model")
+const providerID = Provider.ID.make("test")
+const modelID = Model.ID.make("test-model")
+const configuredModelID = Model.ID.make("configured-model")
+const secondModelID = Model.ID.make("second-model")
 
 function createEventStream() {
   const queue: Event[] = []
@@ -72,7 +72,7 @@ function deferred<A>() {
   }
 }
 
-const provider: Provider.Info = {
+const provider: ProviderCli.Info = {
   id: providerID,
   name: "Test",
   source: "config",

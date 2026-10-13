@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm"
 import { Effect } from "effect"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Database } from "@prioricode/core/database/database"
-import { ProjectV2 } from "@prioricode/core/project"
+import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { FSUtil } from "@prioricode/core/fs-util"
@@ -24,7 +24,7 @@ const peer = SessionID.make("ses_fc_peer")
 // Ensure the instance's project row exists so claim FKs hold, without failing if
 // the instance store already created it.
 const ensureProject = Effect.fn("FileCollisionTest.ensureProject")(function* (
-  projectID: ProjectV2.ID,
+  projectID: Project.ID,
   directory: string,
 ) {
   const { db } = yield* Database.Service

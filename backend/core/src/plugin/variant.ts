@@ -1,6 +1,6 @@
 export * as VariantPlugin from "./variant"
 
-import type { ModelV2Info } from "@prioricode/sdk/v2/types"
+import type { ModelV2Info as ModelInfo } from "@prioricode/sdk/v2/types"
 import { Effect } from "effect"
 import { define } from "./internal"
 
@@ -27,7 +27,7 @@ export const Plugin = define({
   }),
 })
 
-export function generate(model: ModelV2Info): ModelV2Info["variants"] {
+export function generate(model: ModelInfo): ModelInfo["variants"] {
   if (model.api.type !== "aisdk" || model.api.package !== "@ai-sdk/openai-compatible") return []
   const ids = `${model.id} ${model.api.id}`.toLowerCase()
   if (!["glm-5.2", "glm-5-2", "glm-5p2"].some((name) => ids.includes(name))) return []

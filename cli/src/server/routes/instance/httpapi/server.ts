@@ -12,7 +12,7 @@ import { Command } from "@/command"
 import { Config } from "@/config/config"
 import { Workspace } from "@/control-plane/workspace"
 import { Env } from "@/env"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Format } from "@/format"
 import { Git } from "@/git"
 import { Installation } from "@/installation"
@@ -23,7 +23,6 @@ import { Permission } from "@/permission"
 import { Plugin } from "@/plugin"
 import { PluginPtyEnvironment } from "@/plugin/pty-environment"
 import { InstanceStore } from "@/project/instance-store"
-import { Project } from "@/project/project"
 import { Vcs } from "@/project/vcs"
 import { ProviderAuth } from "@/provider/auth"
 import { Provider } from "@/provider/provider"
@@ -55,16 +54,17 @@ import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilderV1 } from "@/effect/app-node-builder-v1"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { httpClient } from "@prioricode/core/effect/app-node-platform"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { ModelsDev } from "@prioricode/core/models-dev"
 import { Npm } from "@prioricode/core/npm"
 import { PermissionSaved } from "@prioricode/core/permission/saved"
-import { ProjectV2 } from "@prioricode/core/project"
+import { Project as ProjectCli } from "@/project/project"
+import { Project } from "@prioricode/core/project"
 import { ProjectCopy } from "@prioricode/core/project/copy"
 import { PtyTicket } from "@prioricode/core/pty/ticket"
 import { Ripgrep } from "@prioricode/core/ripgrep"
 import { SessionProjector } from "@prioricode/core/session/projector"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session as SessionCore } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import * as SessionExecutionLocal from "@prioricode/core/session/execution/local"
 import { lazy } from "@/util/lazy"
@@ -239,7 +239,7 @@ const app = LayerNode.group([
   Coordination.node,
   BackgroundJob.node,
   RuntimeFlags.node,
-  EventV2Bridge.node,
+  EventBridge.node,
   SessionRunState.node,
   SessionProcessor.node,
   SessionCompaction.node,
@@ -264,8 +264,9 @@ const app = LayerNode.group([
   SessionShare.node,
   InstanceStore.node,
   httpClient,
-  EventV2.node,
-  ProjectV2.node,
+  EventBus.node,
+  Project.node,
+  ProjectCli.node,
   ProjectCopy.node,
   PtyTicket.node,
 ])
@@ -298,7 +299,7 @@ export function createRoutes(
     Layer.provide(locationLayer),
     Layer.provide(PtyEnvironment.layer),
     Layer.provide(
-      AppNodeBuilderV1.build(SessionV2.node, [
+      AppNodeBuilderV1.build(SessionCore.node, [
         [LocationServiceMap.node, locationServiceMapV2],
         [SessionExecution.node, SessionExecutionLocal.node],
       ]),

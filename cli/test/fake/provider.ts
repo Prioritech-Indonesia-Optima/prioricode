@@ -1,12 +1,12 @@
 import { Effect, Layer } from "effect"
-import { Provider } from "@/provider/provider"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 
 export namespace ProviderTest {
-  export function model(override: Partial<Provider.Model> = {}): Provider.Model {
-    const id = override.id ?? ModelV2.ID.make("gpt-5.2")
-    const providerID = override.providerID ?? ProviderV2.ID.make("openai")
+  export function model(override: Partial<ProviderCli.ProviderModel> = {}): ProviderCli.ProviderModel {
+    const id = override.id ?? Model.ID.make("gpt-5.2")
+    const providerID = override.providerID ?? Provider.ID.make("openai")
     return {
       id,
       providerID,
@@ -31,7 +31,7 @@ export namespace ProviderTest {
     }
   }
 
-  export function info(override: Partial<Provider.Info> = {}, mdl = model()): Provider.Info {
+  export function info(override: Partial<ProviderCli.Info> = {}, mdl = model()): ProviderCli.Info {
     const id = override.id ?? mdl.providerID
     return {
       id,
@@ -44,15 +44,15 @@ export namespace ProviderTest {
     }
   }
 
-  export function fake(override: Partial<Provider.Interface> & { model?: Provider.Model; info?: Provider.Info } = {}) {
+  export function fake(override: Partial<ProviderCli.Interface> & { model?: ProviderCli.ProviderModel; info?: ProviderCli.Info } = {}) {
     const mdl = override.model ?? model()
     const row = override.info ?? info({}, mdl)
     return {
       model: mdl,
       info: row,
       layer: Layer.succeed(
-        Provider.Service,
-        Provider.Service.of({
+        ProviderCli.Service,
+        ProviderCli.Service.of({
           list: Effect.fn("TestProvider.list")(() => Effect.succeed({ [row.id]: row })),
           getProvider: Effect.fn("TestProvider.getProvider")((providerID) => {
             if (providerID === row.id) return Effect.succeed(row)

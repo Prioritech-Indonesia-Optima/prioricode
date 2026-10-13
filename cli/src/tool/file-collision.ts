@@ -1,5 +1,5 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { ProjectV2 } from "@prioricode/core/project"
+import { Project } from "@prioricode/core/project"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Context, Effect, Layer, Option } from "effect"
 import * as path from "path"
@@ -33,7 +33,7 @@ export interface Interface {
    * observed. Returns model-facing notice text when the file changed (or was
    * deleted) since then, or undefined when unchanged or never observed.
    */
-  readonly check: (filepath: string, sessionID: SessionID, projectID: ProjectV2.ID) => Effect.Effect<string | undefined>
+  readonly check: (filepath: string, sessionID: SessionID, projectID: Project.ID) => Effect.Effect<string | undefined>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/FileCollision") {}
@@ -64,7 +64,7 @@ const layer = Layer.effect(
     const check = Effect.fn("FileCollision.check")(function* (
       filepath: string,
       sessionID: SessionID,
-      projectID: ProjectV2.ID,
+      projectID: Project.ID,
     ) {
       const store = yield* InstanceState.get(state)
       const prev = store.get(keyFor(sessionID, filepath))
@@ -79,7 +79,7 @@ const layer = Layer.effect(
     })
 
     const claimers = Effect.fn("FileCollision.claimers")(function* (
-      projectID: ProjectV2.ID,
+      projectID: Project.ID,
       sessionID: SessionID,
       filepath: string,
     ) {
