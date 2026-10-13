@@ -177,6 +177,7 @@ describe("tool.write", () => {
   describe("file permissions", () => {
     it.instance("sets file permissions when writing sensitive data", () =>
       Effect.gen(function* () {
+        if (process.platform !== "win32") process.umask(0o022)
         const test = yield* TestInstance
         const filepath = path.join(test.directory, "sensitive.json")
         yield* run({ filePath: filepath, content: JSON.stringify({ secret: "data" }) })
