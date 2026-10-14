@@ -9,7 +9,7 @@ export * as GoalTool from "./goal"
 
 import { DateTime, Effect, Layer, Schema } from "effect"
 import { ToolFailure } from "@prioricode/llm"
-import { EventV2 } from "../event"
+import { EventBus } from "../event"
 import { makeLocationNode } from "../effect/app-node"
 import { SessionEvent } from "../session/event"
 import { SessionMessage } from "../session/message"
@@ -34,7 +34,7 @@ const output = Schema.Struct({ active: Schema.Boolean, goal: Schema.String, mess
 const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     const store = yield* SessionStore.Service
 
     const publish = (sessionID: SessionSchema.ID, goal: string) =>
@@ -98,5 +98,5 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/goal",
   layer,
-  deps: [ToolRegistry.node, EventV2.node, SessionStore.node],
+  deps: [ToolRegistry.node, EventBus.node, SessionStore.node],
 })

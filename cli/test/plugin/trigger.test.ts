@@ -14,8 +14,8 @@ import { testEffect } from "../lib/effect"
 import { AccountTest } from "../fake/account"
 import { AuthTest } from "../fake/auth"
 import { NpmTest } from "../fake/npm"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 
@@ -63,8 +63,8 @@ const triggerSystemTransform = Effect.fn("PluginTriggerTest.triggerSystemTransfo
     systemHook,
     {
       model: {
-        providerID: ProviderV2.ID.anthropic,
-        modelID: ModelV2.ID.make("claude-sonnet-4-6"),
+        providerID: Provider.ID.anthropic,
+        modelID: Model.ID.make("claude-sonnet-4-6"),
       },
     },
     out,

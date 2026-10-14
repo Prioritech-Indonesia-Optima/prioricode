@@ -7,7 +7,7 @@ import os from "os"
 import { PermissionV1 } from "@prioricode/core/v1/permission"
 import { Permission } from "@prioricode/schema/permission"
 import { DestructiveCommand } from "@prioricode/core/permission/destructive"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 
 export const Event = PermissionV1.Event
 
@@ -72,7 +72,7 @@ export class Service extends Context.Service<Service, Interface>()("@prioricode/
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const state = yield* InstanceState.make<State>(
       Effect.fn("Permission.state")(function* (ctx) {
         void ctx
@@ -253,6 +253,6 @@ export function visibleTools<T>(tools: Record<string, T>, ruleset: PermissionV1.
   return Object.fromEntries(Object.entries(tools).filter(([name]) => !hidden.has(name)))
 }
 
-export const node = LayerNode.make({ service: Service, layer: layer, deps: [EventV2Bridge.node] })
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [EventBridge.node] })
 
 export * as Permission from "."

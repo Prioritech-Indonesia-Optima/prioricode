@@ -1,7 +1,7 @@
 import { sqliteTable, text, integer, index, uniqueIndex } from "drizzle-orm/sqlite-core"
 import { sql } from "drizzle-orm"
 import { ProjectTable } from "../project/sql"
-import { ProjectV2 } from "../project"
+import { Project } from "../project"
 import { Timestamps } from "../database/schema.sql"
 
 export type CoordinationKind = "message" | "request" | "response" | "claim" | "record" | "notify"
@@ -26,7 +26,7 @@ export const CoordinationTable = sqliteTable(
   {
     id: text().primaryKey(),
     project_id: text()
-      .$type<ProjectV2.ID>()
+      .$type<Project.ID>()
       .notNull()
       .references(() => ProjectTable.id, { onDelete: "cascade" }),
     kind: text().$type<CoordinationKind>().notNull(),

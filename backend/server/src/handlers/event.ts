@@ -1,4 +1,4 @@
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { PrioriCodeEvent } from "@prioricode/protocol/groups/event"
 import { Effect, Schema, Stream } from "effect"
 import { HttpServerResponse } from "effect/unstable/http"
@@ -19,18 +19,18 @@ function eventData(data: unknown): Sse.Event {
 
 export const EventHandler = HttpApiBuilder.group(Api, "server.event", (handlers) =>
   Effect.gen(function* () {
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     return handlers.handleRaw("event.subscribe", () =>
       Effect.gen(function* () {
         const connected = {
-          id: EventV2.ID.create(),
+          id: EventBus.ID.create(),
           type: "server.connected",
           data: {},
         }
         const output = Stream.unwrap(
           Effect.gen(function* () {
             // Acquiring the bounded stream installs its listener before readiness is observable.
-            const live = yield* EventV2.allBounded(events, subscriberCapacity)
+            const live = yield* EventBus.allBounded(events, subscriberCapacity)
             return Stream.make(connected).pipe(Stream.concat(live))
           }),
         ).pipe(Stream.map(eventData), Stream.pipeThroughChannel(Sse.encode()))

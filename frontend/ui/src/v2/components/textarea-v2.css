@@ -4,15 +4,17 @@
   flex-direction: column;
   align-items: stretch;
   padding: 0 2px 2px 0;
-  width: 280px;
+  width: 100%;
+  min-width: 0;
+  max-width: 280px;
   min-height: 80px;
   border: 0;
-  border-radius: 8px;
+  border-radius: 6px;
   outline: 1px solid transparent;
   outline-offset: 0;
   background: linear-gradient(180deg, var(--pc-alpha-light-2) 0%, var(--pc-alpha-light-0) 100%), var(--pc-bg-base);
   box-shadow: var(--pc-elevation-button-neutral);
-  flex: none;
+  flex: 1 1 auto;
   align-self: stretch;
   transition:
     background 85ms ease-out,

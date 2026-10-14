@@ -4,10 +4,10 @@ import { describe, expect } from "bun:test"
 import { Effect, Layer } from "effect"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { PermissionV2 } from "@prioricode/core/permission"
+import { Permission } from "@prioricode/core/permission"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
-import { SkillV2 } from "@prioricode/core/skill"
+import { Session } from "@prioricode/core/session"
+import { Skill } from "@prioricode/core/skill"
 import { SkillTool } from "@prioricode/core/tool/skill"
 import { ToolRegistry } from "@prioricode/core/tool/registry"
 import { ToolOutputStore } from "@prioricode/core/tool-output-store"
@@ -15,7 +15,7 @@ import { tmpdir } from "./fixture/tmpdir"
 import { it } from "./lib/effect"
 import { toolIdentity, executeTool, settleTool, toolDefinitions } from "./lib/tool"
 
-const sessionID = SessionV2.ID.make("ses_skill_tool_test")
+const sessionID = Session.ID.make("ses_skill_tool_test")
 
 describe("SkillTool", () => {
   it.live("lists available skills, authorizes the selected name, and loads model-facing content", () =>
@@ -33,21 +33,21 @@ describe("SkillTool", () => {
             Promise.all([fs.writeFile(location, "unused"), fs.writeFile(reference, "reference")]),
           )
 
-          const info: SkillV2.Info = {
+          const info: Skill.Info = {
             name: "effect",
             description: "Use Effect",
             location: AbsolutePath.make(location),
             content: "# Effect\n\nGuidance",
           }
           let current = [info]
-          const assertions: PermissionV2.AssertInput[] = []
+          const assertions: Permission.AssertInput[] = []
           let deny = false
           const permission = Layer.succeed(
-            PermissionV2.Service,
-            PermissionV2.Service.of({
+            Permission.Service,
+            Permission.Service.of({
               assert: (input) =>
                 Effect.sync(() => assertions.push(input)).pipe(
-                  Effect.andThen(deny ? Effect.fail(new PermissionV2.BlockedError({ rules: [] })) : Effect.void),
+                  Effect.andThen(deny ? Effect.fail(new Permission.BlockedError({ rules: [] })) : Effect.void),
                 ),
               ask: () => Effect.die("unused"),
               reply: () => Effect.die("unused"),
@@ -57,8 +57,8 @@ describe("SkillTool", () => {
             }),
           )
           const skills = Layer.succeed(
-            SkillV2.Service,
-            SkillV2.Service.of({
+            Skill.Service,
+            Skill.Service.of({
               transform: (_transform) => Effect.die("unused"),
               reload: () => Effect.die("unused"),
               sources: () => Effect.die("unused"),
@@ -68,8 +68,8 @@ describe("SkillTool", () => {
           const skillToolLayer = AppNodeBuilder.build(
             LayerNode.group([ToolRegistry.node, ToolRegistry.toolsNode, SkillTool.node]),
             [
-              [PermissionV2.node, permission],
-              [SkillV2.node, skills],
+              [Permission.node, permission],
+              [Skill.node, skills],
               [ToolOutputStore.node, ToolOutputStore.nodeWithoutConfig],
             ],
           )
@@ -121,7 +121,7 @@ describe("SkillTool", () => {
               }),
             ).toEqual({ type: "error", value: expect.stringContaining("Blocked by permission rules") })
             deny = false
-            const flat = SkillV2.Info.make({
+            const flat = Skill.Info.make({
               name: "public",
               description: "Public guidance",
               location: AbsolutePath.make(path.join(tmp.path, "public.md")),

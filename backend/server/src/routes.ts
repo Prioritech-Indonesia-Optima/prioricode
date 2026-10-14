@@ -2,11 +2,11 @@ import { Database } from "@prioricode/core/database/database"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { httpClient } from "@prioricode/core/effect/app-node-platform"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Credential } from "@prioricode/core/credential"
 import { PermissionSaved } from "@prioricode/core/permission/saved"
 import { PtyTicket } from "@prioricode/core/pty/ticket"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { LocationServiceMap } from "@prioricode/core/location-service-map"
 import { SessionExecutionLocal } from "@prioricode/core/session/execution/local"
@@ -25,10 +25,10 @@ import { sessionLocationLayer } from "./middleware/session-location"
 
 const applicationServices = LayerNode.group([
   Database.node,
-  EventV2.node,
+  EventBus.node,
   httpClient,
   ToolOutputStore.cleanupNode,
-  SessionV2.node,
+  Session.node,
   PermissionSaved.node,
   PtyTicket.node,
   Credential.node,

@@ -64,7 +64,13 @@ import LegacyLayout from "@/pages/layout"
 import NewLayout from "@/pages/layout-new"
 import { ErrorPage } from "./pages/error"
 import { useCheckServerHealth } from "./utils/server-health"
-import { legacySessionHref, legacySessionServer, serverKeyFromSegment, serverKeyLabel, sessionHref } from "./utils/session-route"
+import {
+  legacySessionHref,
+  legacySessionServer,
+  serverKeyFromSegment,
+  serverKeyLabel,
+  sessionHref,
+} from "./utils/session-route"
 import { createSessionLineage } from "@/pages/session/session-lineage"
 
 import { SessionPage, SessionRouteErrorBoundary, TargetSessionRouteContent } from "@/pages/session"

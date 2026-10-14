@@ -4,16 +4,16 @@ import { InstanceRef } from "@/effect/instance-ref"
 import { InstanceBootstrap } from "@/project/bootstrap"
 import { InstanceStore } from "@/project/instance-store"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { Provider } from "@/provider/provider"
 import { Context, Effect, Layer, SynchronizedRef } from "effect"
 import type * as ACPError from "./error"
 
 export type ModelOption = {
-  readonly providerID: ProviderV2.ID
+  readonly providerID: ProviderSchema.ID
   readonly providerName: string
-  readonly modelID: ModelV2.ID
+  readonly modelID: Model.ID
   readonly modelName: string
 }
 
@@ -23,16 +23,16 @@ export type ModeOption = {
   readonly description?: string
 }
 
-export type ModelVariants = NonNullable<Provider.Model["variants"]>
+export type ModelVariants = NonNullable<Provider.ProviderModel["variants"]>
 
 export type DefaultModel = {
-  readonly providerID: ProviderV2.ID
-  readonly modelID: ModelV2.ID
+  readonly providerID: ProviderSchema.ID
+  readonly modelID: Model.ID
 }
 
 export type Snapshot = {
   readonly directory: string
-  readonly providers: Record<ProviderV2.ID, Provider.Info>
+  readonly providers: Record<ProviderSchema.ID, Provider.Info>
   readonly modelOptions: readonly ModelOption[]
   readonly variantsByModel: Readonly<Record<string, ModelVariants>>
   readonly availableModes: readonly ModeOption[]
@@ -61,7 +61,7 @@ export const variants = (snapshot: Snapshot, model: DefaultModel) => snapshot.va
 
 export const build = (input: {
   readonly directory: string
-  readonly providers: Record<ProviderV2.ID, Provider.Info>
+  readonly providers: Record<ProviderSchema.ID, Provider.Info>
   readonly modes: readonly ModeOption[]
   readonly defaultModeID: string
   readonly commands: readonly Command.Info[]

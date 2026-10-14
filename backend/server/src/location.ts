@@ -1,7 +1,7 @@
 import { Location } from "@prioricode/core/location"
 import { LocationServiceMap } from "@prioricode/core/location-services"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { WorkspaceV2 } from "@prioricode/core/workspace"
+import { Workspace } from "@prioricode/core/workspace"
 import { Effect, Layer } from "effect"
 import { HttpServerRequest } from "effect/unstable/http"
 import { HttpApiMiddleware } from "effect/unstable/httpapi"
@@ -34,7 +34,7 @@ function ref(request: HttpServerRequest.HttpServerRequest): Location.Ref {
     (request.headers["x-prioricode-directory"] ? decode(request.headers["x-prioricode-directory"]) : process.cwd())
   return Location.Ref.make({
     directory: AbsolutePath.make(directory),
-    workspaceID: workspaceID ? WorkspaceV2.ID.make(workspaceID) : undefined,
+    workspaceID: workspaceID ? Workspace.ID.make(workspaceID) : undefined,
   })
 }
 

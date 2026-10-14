@@ -1,14 +1,13 @@
 import { SessionV1 } from "@prioricode/core/v1/session"
 import { Database } from "@prioricode/core/database/database"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { expect } from "bun:test"
 import { tool } from "ai"
 import { Cause, Effect, Exit, Fiber, Layer, Stream } from "effect"
 import path from "path"
 import z from "zod"
 import type { Agent } from "../../src/agent/agent"
-import { Provider } from "@/provider/provider"
 
 import { Session } from "@/session/session"
 import { LLM } from "../../src/session/llm"
@@ -22,8 +21,9 @@ import { provideTmpdirInstance, provideTmpdirServer } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { raw, reply, TestLLMServer } from "../lib/llm-server"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { LLMEvent } from "@prioricode/llm"
 
@@ -37,8 +37,8 @@ const summary = Layer.succeed(
 )
 
 const ref = {
-  providerID: ProviderV2.ID.make("test"),
-  modelID: ModelV2.ID.make("test-model"),
+  providerID: Provider.ID.make("test"),
+  modelID: Model.ID.make("test-model"),
 }
 
 const cfg = {
@@ -169,9 +169,9 @@ const root = LayerNode.group([
   SessionProcessor.node,
   Session.node,
   SessionProjector.node,
-  Provider.node,
+  ProviderCli.node,
   Database.node,
-  EventV2Bridge.node,
+  EventBridge.node,
   SessionStatus.node,
   CrossSpawnSpawner.node,
 ])
@@ -229,7 +229,7 @@ const itFragmentFailure = testEffect(fragmentFailureEnv)
 const boot = Effect.fn("test.boot")(function* () {
   const processors = yield* SessionProcessor.Service
   const session = yield* Session.Service
-  const provider = yield* Provider.Service
+  const provider = yield* ProviderCli.Service
   return { processors, session, provider }
 })
 
@@ -713,7 +713,7 @@ it.live("session.processor effect tests publish retry status updates", () =>
     ({ dir, llm }) =>
       Effect.gen(function* () {
         const { processors, session, provider } = yield* boot()
-        const events = yield* EventV2Bridge.Service
+        const events = yield* EventBridge.Service
 
         yield* llm.error(503, { error: "boom" })
         yield* llm.text("")
@@ -944,7 +944,7 @@ it.live("session.processor effect tests record aborted errors and idle state", (
       Effect.gen(function* () {
         const seen = defer<void>()
         const { processors, session, provider } = yield* boot()
-        const events = yield* EventV2Bridge.Service
+        const events = yield* EventBridge.Service
         const sts = yield* SessionStatus.Service
 
         yield* llm.hang
@@ -1074,7 +1074,7 @@ itProviderError.live("session.processor effect tests fail provider-executed erro
     (dir) =>
       Effect.gen(function* () {
         const { processors, session, provider } = yield* boot()
-        const events = yield* EventV2Bridge.Service
+        const events = yield* EventBridge.Service
 
         const chat = yield* session.create({})
         const parent = yield* user(chat.id, "provider tool error")
@@ -1122,7 +1122,7 @@ itFragmentFailure.live("session.processor effect tests retain partial legacy par
     (dir) =>
       Effect.gen(function* () {
         const { processors, session, provider } = yield* boot()
-        const events = yield* EventV2Bridge.Service
+        const events = yield* EventBridge.Service
 
         const chat = yield* session.create({})
         const parent = yield* user(chat.id, "provider failure")

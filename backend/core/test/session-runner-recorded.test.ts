@@ -6,15 +6,15 @@ import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { EventTable } from "@prioricode/core/event/sql"
-import { PermissionV2 } from "@prioricode/core/permission"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Permission } from "@prioricode/core/permission"
+import { Agent } from "@prioricode/core/agent"
 import { Config } from "@prioricode/core/config"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { Snapshot } from "@prioricode/core/snapshot"
 import { Prompt } from "@prioricode/core/session/prompt"
 import { SessionProjector } from "@prioricode/core/session/projector"
@@ -50,8 +50,8 @@ const cassette =
 const executor = RequestExecutor.layer.pipe(Layer.provide(cassette))
 const client = LLMClient.layer.pipe(Layer.provide(executor))
 const permission = Layer.succeed(
-  PermissionV2.Service,
-  PermissionV2.Service.of({
+  Permission.Service,
+  Permission.Service.of({
     assert: () => Effect.die("unused"),
     ask: () => Effect.die("unused"),
     reply: () => Effect.die("unused"),
@@ -81,14 +81,14 @@ const runnerLayer = AppNodeBuilder.build(SessionRunnerLLM.node, [
   [SkillGuidance.node, skillGuidance],
   [ReferenceGuidance.node, referenceGuidance],
   [Config.node, config],
-  [PermissionV2.node, permission],
+  [Permission.node, permission],
   [ToolOutputStore.node, ToolOutputStore.nodeWithoutConfig],
 ])
 const execution = Layer.effect(
   SessionExecution.Service,
   Effect.gen(function* () {
     const sessionRunner = yield* SessionRunner.Service
-    const coordinator = yield* SessionRunCoordinator.make<SessionV2.ID, SessionRunner.RunError>({
+    const coordinator = yield* SessionRunCoordinator.make<Session.ID, SessionRunner.RunError>({
       drain: (sessionID, force) => sessionRunner.run({ sessionID, force }),
     })
     return SessionExecution.Service.of({
@@ -104,10 +104,10 @@ const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([
       Database.node,
-      EventV2.node,
+      EventBus.node,
       SessionProjector.node,
       SessionStore.node,
-      AgentV2.node,
+      Agent.node,
       ToolRegistry.node,
       SessionRunnerModel.node,
       SystemContextRegistry.node,
@@ -116,11 +116,11 @@ const it = testEffect(
       Config.node,
       Snapshot.node,
       SessionRunnerLLM.node,
-      SessionV2.node,
+      Session.node,
     ]),
     [
       [LayerNodePlatform.llmClient, client],
-      [PermissionV2.node, permission],
+      [Permission.node, permission],
       [ToolOutputStore.node, ToolOutputStore.nodeWithoutConfig],
       [SessionRunnerModel.node, models],
       [SystemContextRegistry.node, systemContext],
@@ -133,7 +133,7 @@ const it = testEffect(
     ],
   ),
 )
-const sessionID = SessionV2.ID.make("ses_runner_recorded")
+const sessionID = Session.ID.make("ses_runner_recorded")
 
 describe("SessionRunnerLLM recorded", () => {
   it.effect("executes one recorded V2 prompt through the recorded HTTP transport", () =>
@@ -158,7 +158,7 @@ describe("SessionRunnerLLM recorded", () => {
         .onConflictDoNothing()
         .run()
         .pipe(Effect.orDie)
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const prompt = yield* session.prompt({
         sessionID,
         prompt: Prompt.make({ text: "Say hello in one short sentence." }),

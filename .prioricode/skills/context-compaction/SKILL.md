@@ -21,7 +21,7 @@ Compaction keeps a long session inside the model window by summarizing old turns
 | `compaction.keep.turns`      | —                    | verbatim tail budget in turns (legacy `tail_turns`)                                                                                |
 | `compaction.buffer`          | `20000`              | headroom reserved for output + summary (legacy `reserved`)                                                                         |
 | `compaction.threshold`       | —                    | percent trigger 1–100; overrides the buffer math                                                                                   |
-| `compaction.default_context` | `128000`             | fallback window for models without a declared limit; `0` disables compaction for them                                              |
+| `compaction.default_context` | `256000`             | fallback window for models without a declared limit; `0` disables compaction for them                                              |
 | `prune.*`                    | `70` / `15` / `8000` | top-level pressure-gated tool-output elision (`pressure_percent`, `keep_recent_steps`, `min_bytes`) — **not** part of `compaction` |
 
 Trigger: `threshold` set → `floor(context * min(threshold,100) / 100)`; otherwise `context - max(output, buffer)`.

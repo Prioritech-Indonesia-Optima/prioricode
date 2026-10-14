@@ -7,6 +7,8 @@ import { tmpdir } from "../fixture/fixture"
 import { createTuiResolvedConfig } from "../fixture/tui-runtime"
 import { TestTuiContexts } from "../fixture/tui-environment"
 
+import { BLOCK_CHAR } from "../../src/logo"
+
 const TAGLINE = "the open source AI coding agent"
 
 async function harness(width: number) {
@@ -53,10 +55,10 @@ test("home hero mounts through the real renderer and paints the block wordmark",
     for (let i = 0; i < 120; i++) {
       await app.renderOnce()
       frame = app.captureCharFrame()
-      if (frame.includes("█") && frame.includes(TAGLINE)) break
+      if (frame.includes(BLOCK_CHAR) && frame.includes(TAGLINE)) break
       await Bun.sleep(25)
     }
-    expect(frame).toContain("█")
+    expect(frame).toContain(BLOCK_CHAR)
     expect(frame).toContain(TAGLINE)
   } finally {
     app.renderer.destroy()

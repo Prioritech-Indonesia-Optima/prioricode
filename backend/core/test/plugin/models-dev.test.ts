@@ -5,13 +5,13 @@ import { Catalog } from "@prioricode/core/catalog"
 import { Integration } from "@prioricode/core/integration"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Flag } from "@prioricode/core/flag/flag"
 import { Location } from "@prioricode/core/location"
-import { ModelV2 } from "@prioricode/core/model"
+import { Model } from "@prioricode/core/model"
 import { ModelsDev } from "@prioricode/core/models-dev"
 import { ModelsDevPlugin } from "@prioricode/core/plugin/models-dev"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider } from "@prioricode/core/provider"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { location } from "../fixture/location"
 import { testEffect } from "../lib/effect"
@@ -21,7 +21,7 @@ const locationLayer = Layer.succeed(
   Location.Service,
   Location.Service.of(location({ directory: AbsolutePath.make(import.meta.dir) })),
 )
-const layer = AppNodeBuilder.build(LayerNode.group([Catalog.node, Integration.node, EventV2.node]), [
+const layer = AppNodeBuilder.build(LayerNode.group([Catalog.node, Integration.node, EventBus.node]), [
   [Location.node, locationLayer],
 ])
 const it = testEffect(layer)
@@ -89,9 +89,9 @@ describe("ModelsDevPlugin", () => {
         }),
       ).pipe(Effect.provideService(ModelsDev.Service, models))
 
-      const providerID = ProviderV2.ID.make("acme")
-      const base = yield* catalog.model.get(providerID, ModelV2.ID.make("gpt-5.4"))
-      const fast = yield* catalog.model.get(providerID, ModelV2.ID.make("gpt-5.4-fast"))
+      const providerID = Provider.ID.make("acme")
+      const base = yield* catalog.model.get(providerID, Model.ID.make("gpt-5.4"))
+      const fast = yield* catalog.model.get(providerID, Model.ID.make("gpt-5.4-fast"))
 
       expect(base?.variants).toEqual([])
       expect(base?.request.body).toEqual({})

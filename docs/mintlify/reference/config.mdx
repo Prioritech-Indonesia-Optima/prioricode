@@ -111,7 +111,7 @@ Full behavior on the [MCP page](/extending/mcp).
 | `compaction.keep.turns`                     | —         | verbatim tail budget in turns (legacy `tail_turns`)                                   |
 | `compaction.buffer`                         | `20000`   | reserved for output + summary (legacy `reserved`)                                     |
 | `compaction.threshold`                      | —         | percent trigger 1–100; overrides the buffer math                                      |
-| `compaction.default_context`                | `128000`  | fallback window for models without a declared limit; `0` disables compaction for them |
+| `compaction.default_context`                | `256000`  | fallback window for models without a declared limit; `0` disables compaction for them |
 | `prune.pressure_percent`                    | `70`      | start eliding stale tool output at this % of the window                               |
 | `prune.keep_recent_steps`                   | `15`      | trailing steps whose tool output is never elided                                      |
 | `prune.min_bytes`                           | `8000`    | tool results below this are never elided                                              |

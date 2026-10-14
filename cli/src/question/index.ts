@@ -5,7 +5,7 @@ import { LLMEvent } from "@prioricode/llm"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "@/session/schema"
 import { QuestionID } from "./schema"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { QuestionV1 } from "@prioricode/schema/question-v1"
 import { SessionV1 } from "@prioricode/core/v1/session"
 import { Session } from "@/session/session"
@@ -72,7 +72,7 @@ export class Service extends Context.Service<Service, Interface>()("@prioricode/
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const sessions = yield* Session.Service
     const provider = yield* Provider.Service
     const agents = yield* Agent.Service
@@ -243,7 +243,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [EventV2Bridge.node, Session.node, Provider.node, Agent.node, LLM.node],
+  deps: [EventBridge.node, Session.node, Provider.node, Agent.node, LLM.node],
 })
 
 export * as Question from "."

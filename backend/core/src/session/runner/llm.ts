@@ -11,7 +11,7 @@ import {
   type ToolResultValue,
 } from "@prioricode/llm"
 import { Cause, DateTime, Duration, Effect, FiberSet, Layer, Option, Semaphore, Stream } from "effect"
-import { AgentV2 } from "../../agent"
+import { Agent } from "../../agent"
 import { Config } from "../../config"
 import { Hook } from "../../hook"
 import { Database } from "../../database/database"
@@ -22,12 +22,12 @@ import { SessionGate } from "./gate"
 import { Token } from "../../util/token"
 import { SessionGoalGate } from "./goal-gate"
 import { SessionReviewGate } from "./review-gate"
-import { EventV2 } from "../../event"
+import { EventBus } from "../../event"
 import { Location } from "../../location"
-import { ModelV2 } from "../../model"
-import { PermissionV2 } from "../../permission"
-import { ProviderV2 } from "../../provider"
-import { QuestionV2 } from "../../question"
+import { Model } from "../../model"
+import { Permission } from "../../permission"
+import { Provider } from "../../provider"
+import { Question } from "../../question"
 import { SystemContext } from "../../system-context/index"
 import { SystemContextBudget } from "../../system-context/budget"
 import { SystemContextRegistry } from "../../system-context/registry"
@@ -110,9 +110,9 @@ import { llmClient } from "../../effect/app-node-platform"
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     const llm = yield* LLMClient.Service
-    const agents = yield* AgentV2.Service
+    const agents = yield* Agent.Service
     const tools = yield* ToolRegistry.Service
     const models = yield* SessionRunnerModel.Service
     const store = yield* SessionStore.Service
@@ -125,7 +125,7 @@ const layer = Layer.effect(
     const fs = yield* FSUtil.Service
     const appProcess = yield* AppProcess.Service
     const hooks = yield* Hook.Service
-    const permissions = yield* PermissionV2.Service
+    const permissions = yield* Permission.Service
     const db = (yield* Database.Service).db
     const compaction = SessionCompaction.make({ events, llm, config: yield* config.entries() })
     const getSession = Effect.fn("SessionRunner.getSession")(function* (sessionID: SessionSchema.ID) {
@@ -167,7 +167,7 @@ const layer = Layer.effect(
       cause.reasons.some(
         (reason) =>
           Cause.isDieReason(reason) &&
-          (reason.defect instanceof PermissionV2.DeclinedError || reason.defect instanceof QuestionV2.RejectedError),
+          (reason.defect instanceof Permission.DeclinedError || reason.defect instanceof Question.RejectedError),
       )
 
     type TurnTransition =
@@ -208,7 +208,7 @@ const layer = Layer.effect(
     const retryProviderTurn = (step: number, attempt: number, delayMs: number) =>
       new TurnTransitionError({ _tag: "RetryProviderTurn", step, attempt, delayMs })
 
-    const loadSystemContext = (sessionID: SessionSchema.ID, agent: AgentV2.Selection, usagePercent: number) =>
+    const loadSystemContext = (sessionID: SessionSchema.ID, agent: Agent.Selection, usagePercent: number) =>
       Effect.all([systemContext.load(), skillGuidance.load(agent), referenceGuidance.load(), store.get(sessionID)], {
         concurrency: "unbounded",
       }).pipe(
@@ -270,7 +270,7 @@ const layer = Layer.effect(
       let needsContinuation = false
       let currentStep = step
       if (promotion) {
-        const cutoff = yield* EventV2.latestSequence(db, session.id)
+        const cutoff = yield* EventBus.latestSequence(db, session.id)
         let promoted = 0
         if (promotion === "steer") promoted = yield* SessionInput.promoteSteers(db, events, session.id, cutoff)
         if (promotion === "queue") {
@@ -341,8 +341,8 @@ const layer = Layer.effect(
         sessionID: session.id,
         agent: agent.id,
         model: {
-          id: ModelV2.ID.make(model.id),
-          providerID: ProviderV2.ID.make(model.provider),
+          id: Model.ID.make(model.id),
+          providerID: Provider.ID.make(model.provider),
           ...(session.model?.variant === undefined ? {} : { variant: session.model.variant }),
         },
         snapshot: startSnapshot,
@@ -733,9 +733,9 @@ export const node = makeLocationNode({
   service: Service,
   layer,
   deps: [
-    EventV2.node,
+    EventBus.node,
     llmClient,
-    AgentV2.node,
+    Agent.node,
     ToolRegistry.node,
     SessionRunnerModel.node,
     SessionStore.node,
@@ -749,6 +749,6 @@ export const node = makeLocationNode({
     FSUtil.node,
     AppProcess.node,
     Hook.node,
-    PermissionV2.node,
+    Permission.node,
   ],
 })

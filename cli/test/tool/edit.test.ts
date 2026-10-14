@@ -10,7 +10,7 @@ import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Format } from "../../src/format"
 import { Agent } from "../../src/agent/agent"
-import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { EventBridge } from "../../src/event-v2-bridge"
 import { Truncate } from "@/tool/truncate"
 import { SessionID, MessageID } from "../../src/session/schema"
 import * as Tool from "../../src/tool/tool"
@@ -37,7 +37,7 @@ const layer = LayerNode.compile(
     LSP.node,
     FSUtil.node,
     Format.node,
-    EventV2Bridge.node,
+    EventBridge.node,
     Truncate.node,
     Agent.node,
     FileCollision.node,
@@ -88,7 +88,7 @@ const makeDirectory = Effect.fn("EditToolTest.makeDirectory")(function* (p: stri
 })
 
 const onceBus = Effect.fn("EditToolTest.onceBus")(function* (def: typeof Watcher.Event.Updated) {
-  const events = yield* EventV2Bridge.Service
+  const events = yield* EventBridge.Service
   const deferred = yield* Deferred.make<void>()
   const unsub = yield* events.listen((event) => {
     if (event.type === def.type) Deferred.doneUnsafe(deferred, Effect.void)

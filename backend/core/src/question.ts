@@ -1,44 +1,44 @@
-export * as QuestionV2 from "./question"
+export * as Question from "./question"
 
 import { makeLocationNode } from "./effect/app-node"
 import { Context, Deferred, Effect, Layer, Schema } from "effect"
-import { Question } from "@prioricode/schema/question"
-import { EventV2 } from "./event"
+import { Question as QuestionSchema } from "@prioricode/schema/question"
+import { EventBus } from "./event"
 import { SessionSchema } from "./session/schema"
 
-export const ID = Question.ID
+export const ID = QuestionSchema.ID
 export type ID = typeof ID.Type
 
-export const Option = Question.Option
+export const Option = QuestionSchema.Option
 export type Option = typeof Option.Type
 
-export const Info = Question.Info
+export const Info = QuestionSchema.Info
 export type Info = typeof Info.Type
 
-export const Prompt = Question.Prompt
+export const Prompt = QuestionSchema.Prompt
 export type Prompt = typeof Prompt.Type
 
-export const Tool = Question.Tool
+export const Tool = QuestionSchema.Tool
 export type Tool = typeof Tool.Type
 
-export const Request = Question.Request
+export const Request = QuestionSchema.Request
 export type Request = typeof Request.Type
 
-export const Answer = Question.Answer
+export const Answer = QuestionSchema.Answer
 export type Answer = typeof Answer.Type
 
-export const Reply = Question.Reply
+export const Reply = QuestionSchema.Reply
 export type Reply = typeof Reply.Type
 
-export const Event = Question.Event
+export const Event = QuestionSchema.Event
 
-export class RejectedError extends Schema.TaggedErrorClass<RejectedError>()("QuestionV2.RejectedError", {}) {
+export class RejectedError extends Schema.TaggedErrorClass<RejectedError>()("Question.RejectedError", {}) {
   override get message() {
     return "The user dismissed this question"
   }
 }
 
-export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("QuestionV2.NotFoundError", {
+export class NotFoundError extends Schema.TaggedErrorClass<NotFoundError>()("Question.NotFoundError", {
   requestID: ID,
 }) {}
 
@@ -60,7 +60,7 @@ export interface Interface {
   readonly list: () => Effect.Effect<ReadonlyArray<Request>>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/Question") {}
+export class Service extends Context.Service<Service, Interface>()("@prioricode/Question") {}
 
 interface Pending {
   readonly request: Request
@@ -75,7 +75,7 @@ interface Pending {
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     const pending = new Map<ID, Pending>()
 
     yield* Effect.addFinalizer(() =>
@@ -90,7 +90,7 @@ const layer = Layer.effect(
       ),
     )
 
-    const ask = Effect.fn("QuestionV2.ask")((input: AskInput) =>
+    const ask = Effect.fn("Question.ask")((input: AskInput) =>
       Effect.uninterruptibleMask((restore) =>
         Effect.gen(function* () {
           const id = ID.ascending()
@@ -109,7 +109,7 @@ const layer = Layer.effect(
       ),
     )
 
-    const reply = Effect.fn("QuestionV2.reply")((input: ReplyInput) =>
+    const reply = Effect.fn("Question.reply")((input: ReplyInput) =>
       Effect.uninterruptible(
         Effect.gen(function* () {
           const existing = pending.get(input.requestID)
@@ -125,7 +125,7 @@ const layer = Layer.effect(
       ),
     )
 
-    const reject = Effect.fn("QuestionV2.reject")((requestID: ID) =>
+    const reject = Effect.fn("Question.reject")((requestID: ID) =>
       Effect.uninterruptible(
         Effect.gen(function* () {
           const existing = pending.get(requestID)
@@ -140,7 +140,7 @@ const layer = Layer.effect(
       ),
     )
 
-    const list = Effect.fn("QuestionV2.list")(function* () {
+    const list = Effect.fn("Question.list")(function* () {
       return Array.from(pending.values(), (item) => item.request)
     })
 
@@ -150,4 +150,4 @@ const layer = Layer.effect(
 
 export const locationLayer = layer
 
-export const node = makeLocationNode({ service: Service, layer, deps: [EventV2.node] })
+export const node = makeLocationNode({ service: Service, layer, deps: [EventBus.node] })

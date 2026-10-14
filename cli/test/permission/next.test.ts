@@ -2,7 +2,7 @@ import { PermissionV1 } from "@prioricode/core/v1/permission"
 import { test, expect } from "bun:test"
 import os from "os"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
-import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { EventBridge } from "../../src/event-v2-bridge"
 import { CrossSpawnSpawner } from "@prioricode/core/cross-spawn-spawner"
 import { Permission } from "../../src/permission"
 import { InstanceBootstrap } from "../../src/project/bootstrap"
@@ -15,7 +15,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 
 const noopBootstrap = Layer.succeed(InstanceBootstrap.Service, InstanceBootstrap.Service.of({ run: Effect.void }))
 const env = AppNodeBuilder.build(
-  LayerNode.group([Permission.node, EventV2Bridge.node, CrossSpawnSpawner.node, InstanceStore.node]),
+  LayerNode.group([Permission.node, EventBridge.node, CrossSpawnSpawner.node, InstanceStore.node]),
   [[InstanceStore.bootstrapNode, noopBootstrap]],
 )
 const it = testEffect(env)
@@ -652,7 +652,7 @@ it.instance(
   "ask - publishes asked event",
   () =>
     Effect.gen(function* () {
-      const events = yield* EventV2Bridge.Service
+      const events = yield* EventBridge.Service
       const seen = yield* Deferred.make<PermissionV1.Request>()
       const unsub = yield* events.listen((event) => {
         if (event.type === Permission.Event.Asked.type)
@@ -914,7 +914,7 @@ it.instance(
   "reply - publishes replied event",
   () =>
     Effect.gen(function* () {
-      const events = yield* EventV2Bridge.Service
+      const events = yield* EventBridge.Service
       const seen = yield* Deferred.make<{
         sessionID: SessionID
         requestID: PermissionV1.ID

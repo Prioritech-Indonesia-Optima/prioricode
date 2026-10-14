@@ -4,13 +4,13 @@ import { eq } from "drizzle-orm"
 import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { EventTable } from "@prioricode/core/event/sql"
 import { SessionEvent } from "@prioricode/core/session/event"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { Prompt } from "@prioricode/core/session/prompt"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { SessionProjector } from "@prioricode/core/session/projector"
@@ -20,10 +20,10 @@ import { SessionInputTable, SessionMessageTable, SessionTable } from "@prioricod
 import { SessionStore } from "@prioricode/core/session/store"
 import { testEffect } from "./lib/effect"
 
-const executionCalls: SessionV2.ID[] = []
-const interruptCalls: SessionV2.ID[] = []
-const wakeCalls: SessionV2.ID[] = []
-const activeSessions = new Set<SessionV2.ID>()
+const executionCalls: Session.ID[] = []
+const interruptCalls: Session.ID[] = []
+const wakeCalls: Session.ID[] = []
+const activeSessions = new Set<Session.ID>()
 const execution = Layer.succeed(
   SessionExecution.Service,
   SessionExecution.Service.of({
@@ -45,11 +45,11 @@ const execution = Layer.succeed(
 )
 const it = testEffect(
   AppNodeBuilder.build(
-    LayerNode.group([Database.node, EventV2.node, SessionProjector.node, SessionStore.node, SessionV2.node]),
+    LayerNode.group([Database.node, EventBus.node, SessionProjector.node, SessionStore.node, Session.node]),
     [[SessionExecution.node, execution]],
   ),
 )
-const sessionID = SessionV2.ID.make("ses_prompt_test")
+const sessionID = Session.ID.make("ses_prompt_test")
 const messageID = SessionMessage.ID.create()
 
 const setup = Effect.gen(function* () {
@@ -99,18 +99,18 @@ const eventCount = (type: string) =>
       ),
   )
 
-describe("SessionV2.prompt", () => {
+describe("Session.prompt", () => {
   it.effect("exposes the execution registry", () =>
     Effect.gen(function* () {
       activeSessions.add(sessionID)
-      expect(Array.from(yield* (yield* SessionV2.Service).active)).toEqual([sessionID])
+      expect(Array.from(yield* (yield* Session.Service).active)).toEqual([sessionID])
     }).pipe(Effect.ensuring(Effect.sync(() => activeSessions.clear()))),
   )
 
   it.effect("delegates execution continuation through SessionExecution", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       executionCalls.length = 0
       wakeCalls.length = 0
       yield* session.resume(sessionID)
@@ -122,7 +122,7 @@ describe("SessionV2.prompt", () => {
   it.effect("delegates process-local interruption through SessionExecution", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       interruptCalls.length = 0
 
       yield* session.interrupt(sessionID)
@@ -133,18 +133,18 @@ describe("SessionV2.prompt", () => {
 
   it.effect("delegates interruption without requiring a recorded Session", () =>
     Effect.gen(function* () {
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       interruptCalls.length = 0
 
-      yield* session.interrupt(SessionV2.ID.make("ses_missing"))
-      expect(interruptCalls).toEqual([SessionV2.ID.make("ses_missing")])
+      yield* session.interrupt(Session.ID.make("ses_missing"))
+      expect(interruptCalls).toEqual([Session.ID.make("ses_missing")])
     }),
   )
 
   it.effect("durably admits one user message before transcript promotion", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
 
       const message = yield* session.prompt({
         sessionID,
@@ -166,7 +166,7 @@ describe("SessionV2.prompt", () => {
   it.effect("resolves attachment MIME before admission", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
 
       const message = yield* session.prompt({
         sessionID,
@@ -187,8 +187,8 @@ describe("SessionV2.prompt", () => {
   it.effect("streams durable Session events after an aggregate sequence", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
-      const events = yield* EventV2.Service
+      const session = yield* Session.Service
+      const events = yield* EventBus.Service
       const { db } = yield* Database.Service
       const fiber = yield* session.events({ sessionID }).pipe(Stream.take(4), Stream.runCollect, Effect.forkScoped)
       yield* Effect.yieldNow
@@ -217,7 +217,7 @@ describe("SessionV2.prompt", () => {
   it.effect("resumes through a recorded message without appending another prompt", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const message = yield* session.prompt({
         sessionID,
         prompt: Prompt.make({ text: "Fix the failing tests" }),
@@ -238,7 +238,7 @@ describe("SessionV2.prompt", () => {
   it.effect("records distinct messages when the ID is omitted", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const input = { sessionID, prompt: Prompt.make({ text: "Fix the failing tests" }), resume: false }
 
       const first = yield* session.prompt(input)
@@ -253,7 +253,7 @@ describe("SessionV2.prompt", () => {
   it.effect("returns the original recorded message when the ID is retried", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const input = {
         sessionID,
         id: messageID,
@@ -273,7 +273,7 @@ describe("SessionV2.prompt", () => {
   it.effect("wakes execution when an exact prompt retry recovers a committed message", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const input = {
         sessionID,
         id: messageID,
@@ -293,7 +293,7 @@ describe("SessionV2.prompt", () => {
   it.effect("rejects reuse of one ID with a different prompt", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
 
       yield* session.prompt({
         sessionID,
@@ -318,7 +318,7 @@ describe("SessionV2.prompt", () => {
   it.effect("rejects reuse of one ID with a different delivery mode", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
 
       yield* session.prompt({
         id: messageID,
@@ -343,7 +343,7 @@ describe("SessionV2.prompt", () => {
   it.effect("returns one recorded message to concurrent exact retries", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const input = {
         sessionID,
         id: messageID,
@@ -356,7 +356,7 @@ describe("SessionV2.prompt", () => {
       expect(messages[1]).toEqual(messages[0])
       expect(yield* session.messages({ sessionID })).toEqual([])
       expect(yield* admittedCount).toBe(1)
-      expect(yield* eventCount(EventV2.versionedType(SessionEvent.PromptAdmitted.type, 1))).toBe(1)
+      expect(yield* eventCount(EventBus.versionedType(SessionEvent.PromptAdmitted.type, 1))).toBe(1)
     }),
   )
 
@@ -364,8 +364,8 @@ describe("SessionV2.prompt", () => {
     Effect.gen(function* () {
       yield* setup
       const { db } = yield* Database.Service
-      const session = yield* SessionV2.Service
-      const events = yield* EventV2.Service
+      const session = yield* Session.Service
+      const events = yield* EventBus.Service
       yield* session.prompt({ id: messageID, sessionID, prompt: Prompt.make({ text: "Promote once" }), resume: false })
 
       yield* Effect.all(
@@ -376,7 +376,7 @@ describe("SessionV2.prompt", () => {
         { concurrency: "unbounded" },
       )
 
-      expect(yield* eventCount(EventV2.versionedType(SessionEvent.Prompted.type, 1))).toBe(1)
+      expect(yield* eventCount(EventBus.versionedType(SessionEvent.Prompted.type, 1))).toBe(1)
       expect(yield* admitted(messageID)).toMatchObject({ promotedSeq: 1 })
       expect(yield* session.messages({ sessionID })).toMatchObject([
         { id: messageID, type: "user", text: "Promote once" },
@@ -388,8 +388,8 @@ describe("SessionV2.prompt", () => {
     Effect.gen(function* () {
       yield* setup
       const { db } = yield* Database.Service
-      const session = yield* SessionV2.Service
-      const events = yield* EventV2.Service
+      const session = yield* Session.Service
+      const events = yield* EventBus.Service
       const first = yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Before cutoff" }), resume: false })
       const cutoff = first.admittedSeq
       const second = yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "After cutoff" }), resume: false })
@@ -405,8 +405,8 @@ describe("SessionV2.prompt", () => {
     Effect.gen(function* () {
       yield* setup
       const { db } = yield* Database.Service
-      const session = yield* SessionV2.Service
-      const events = yield* EventV2.Service
+      const session = yield* Session.Service
+      const events = yield* EventBus.Service
       wakeCalls.length = 0
       yield* session.prompt({
         id: messageID,
@@ -447,8 +447,8 @@ describe("SessionV2.prompt", () => {
   it.effect("returns an exact retry of a legacy projected prompt", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
-      const events = yield* EventV2.Service
+      const session = yield* Session.Service
+      const events = yield* EventBus.Service
       const prompt = Prompt.make({ text: "Historical prompt" })
       yield* events.publish(SessionEvent.Prompted, {
         sessionID,
@@ -468,8 +468,8 @@ describe("SessionV2.prompt", () => {
   it.effect("returns an exact retry of a legacy projected queued prompt", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
-      const events = yield* EventV2.Service
+      const session = yield* Session.Service
+      const events = yield* EventBus.Service
       const prompt = Prompt.make({ text: "Historical queued prompt" })
       yield* events.publish(SessionEvent.Prompted, {
         sessionID,
@@ -490,8 +490,8 @@ describe("SessionV2.prompt", () => {
     Effect.gen(function* () {
       yield* setup
       const { db } = yield* Database.Service
-      const session = yield* SessionV2.Service
-      const other = SessionV2.ID.make("ses_prompt_other")
+      const session = yield* Session.Service
+      const other = Session.ID.make("ses_prompt_other")
       yield* db
         .insert(SessionTable)
         .values({
@@ -519,8 +519,8 @@ describe("SessionV2.prompt", () => {
   it.effect("rejects a prompt ID already used by visible Session history", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
-      const events = yield* EventV2.Service
+      const session = yield* Session.Service
+      const events = yield* EventBus.Service
       yield* events.publish(SessionEvent.Synthetic, {
         sessionID,
         messageID,
@@ -540,7 +540,7 @@ describe("SessionV2.prompt", () => {
   it.effect("starts execution by default after recording the prompt", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       executionCalls.length = 0
       wakeCalls.length = 0
 
@@ -554,7 +554,7 @@ describe("SessionV2.prompt", () => {
   it.effect("starts execution when resume is explicitly true", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       executionCalls.length = 0
       wakeCalls.length = 0
 
@@ -572,7 +572,7 @@ describe("SessionV2.prompt", () => {
   it.effect("only records the prompt when resume is false", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       executionCalls.length = 0
       wakeCalls.length = 0
 

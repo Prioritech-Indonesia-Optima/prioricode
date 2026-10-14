@@ -153,11 +153,11 @@ function applyThemeCss(theme: DesktopTheme, themeId: string, mode: "light" | "da
   ensureThemeStyleElement().textContent = fullCss
   document.documentElement.dataset.theme = themeId
   document.documentElement.dataset.colorScheme = mode
-  document.documentElement.style.backgroundColor = isDark ? "#100f0d" : "#f7f6ef"
+  document.documentElement.style.backgroundColor = isDark ? "#1a1a1a" : "#f7f6ef"
 
   // Update theme-color meta tag to match light/dark mode
   const meta = document.querySelector('meta[name="theme-color"]')
-  if (meta) meta.setAttribute("content", isDark ? "#100f0d" : "#f7f6ef")
+  if (meta) meta.setAttribute("content", isDark ? "#1a1a1a" : "#f7f6ef")
 }
 
 function cacheThemeVariants(theme: DesktopTheme, themeId: string) {

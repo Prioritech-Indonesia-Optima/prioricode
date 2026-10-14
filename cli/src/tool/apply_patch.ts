@@ -1,7 +1,7 @@
 import * as path from "path"
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Watcher } from "@prioricode/core/filesystem/watcher"
 import { InstanceState } from "@/effect/instance-state"
 import { Patch } from "../patch"
@@ -10,6 +10,7 @@ import { assertExternalDirectoryEffect } from "./external-directory"
 import { FileCollision } from "./file-collision"
 import { trimDiff } from "./edit"
 import { LSP } from "@/lsp/lsp"
+import { LspDiagnostics } from "./lsp-diagnostics"
 import { FSUtil } from "@prioricode/core/fs-util"
 import DESCRIPTION from "./apply_patch.txt"
 import { FileSystem } from "@prioricode/core/filesystem"
@@ -26,7 +27,7 @@ export const ApplyPatchTool = Tool.define(
     const lsp = yield* LSP.Service
     const afs = yield* FSUtil.Service
     const format = yield* Format.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const collision = yield* FileCollision.Service
 
     const run = Effect.fn("ApplyPatchTool.execute")(function* (
@@ -276,14 +277,6 @@ export const ApplyPatchTool = Tool.define(
         yield* events.publish(Watcher.Event.Updated, update)
       }
 
-      // Notify LSP of file changes and collect diagnostics
-      for (const change of fileChanges) {
-        if (change.type === "delete") continue
-        const target = change.movePath ?? change.filePath
-        yield* lsp.touchFile(target, "document")
-      }
-      const diagnostics = yield* lsp.diagnostics()
-
       // Generate output summary
       const summaryLines = fileChanges.map((change) => {
         if (change.type === "add") {
@@ -298,14 +291,15 @@ export const ApplyPatchTool = Tool.define(
       let output = `Success. Updated the following files:\n${summaryLines.join("\n")}`
       if (collisionNotices.length > 0) output = `${collisionNotices.join("\n")}\n\n${output}`
 
-      for (const change of fileChanges) {
-        if (change.type === "delete") continue
-        const target = change.movePath ?? change.filePath
-        const block = LSP.Diagnostic.report(target, diagnostics[FSUtil.normalizePath(target)] ?? [])
-        if (!block) continue
-        const rel = path.relative(instance.worktree, target).replaceAll("\\", "/")
-        output += `\n\nLSP errors detected in ${rel}, please fix:\n${block}`
-      }
+      const changedFiles = fileChanges
+        .filter((change) => change.type !== "delete")
+        .map((change) => change.movePath ?? change.filePath)
+      const { output: lspOutput, diagnostics } = yield* LspDiagnostics.reportDiagnosticsForFiles(
+        lsp,
+        changedFiles,
+        instance.worktree,
+      )
+      if (lspOutput) output += `\n\n${lspOutput}`
 
       return {
         title: output,

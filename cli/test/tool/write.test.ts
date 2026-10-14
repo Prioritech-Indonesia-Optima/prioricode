@@ -7,7 +7,7 @@ import { WriteTool } from "../../src/tool/write"
 import { FileCollision } from "../../src/tool/file-collision"
 import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
-import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { EventBridge } from "../../src/event-v2-bridge"
 import { Format } from "../../src/format"
 import { Truncate } from "@/tool/truncate"
 import { Tool } from "@/tool/tool"
@@ -37,7 +37,7 @@ const it = testEffect(
     LayerNode.group([
       LSP.node,
       FSUtil.node,
-      EventV2Bridge.node,
+      EventBridge.node,
       Format.node,
       CrossSpawnSpawner.node,
       Truncate.node,
@@ -177,6 +177,7 @@ describe("tool.write", () => {
   describe("file permissions", () => {
     it.instance("sets file permissions when writing sensitive data", () =>
       Effect.gen(function* () {
+        if (process.platform !== "win32") process.umask(0o022)
         const test = yield* TestInstance
         const filepath = path.join(test.directory, "sensitive.json")
         yield* run({ filePath: filepath, content: JSON.stringify({ secret: "data" }) })

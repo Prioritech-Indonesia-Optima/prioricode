@@ -14,7 +14,7 @@ export * as SessionGoalGate from "./goal-gate"
 import { DateTime, Duration, Effect, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { LLM, LLMEvent, Message, type LLMRequest, type Model } from "@prioricode/llm"
-import { EventV2 } from "../../event"
+import { EventBus } from "../../event"
 import { Database } from "../../database/database"
 import { AppProcess } from "../../process"
 import type { ConfigGoal } from "../../config/goal"
@@ -38,7 +38,7 @@ type Verdict = { readonly done: boolean; readonly reason: string }
 
 export interface Dependencies {
   readonly db: Database.Interface["db"]
-  readonly events: EventV2.Interface
+  readonly events: EventBus.Interface
   readonly store: SessionStore.Interface
   readonly process: AppProcess.Interface
   readonly judge: (request: LLMRequest) => Stream.Stream<LLMEvent, unknown>

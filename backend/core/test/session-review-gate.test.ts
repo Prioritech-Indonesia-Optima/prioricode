@@ -3,11 +3,11 @@ import { LLMEvent, type LLMRequest } from "@prioricode/llm"
 import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { CommandBuiltIns } from "@prioricode/core/command/builtins"
-import { CommandV2 } from "@prioricode/core/command"
+import { Command } from "@prioricode/core/command"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { SessionInput } from "@prioricode/core/session/input"
 import { SessionProjector } from "@prioricode/core/session/projector"
@@ -49,11 +49,11 @@ const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([
       Database.node,
-      EventV2.node,
+      EventBus.node,
       SessionProjector.node,
       SessionStore.node,
-      SessionV2.node,
-      CommandV2.node,
+      Session.node,
+      Command.node,
       CommandBuiltIns.node,
     ]),
     [
@@ -75,9 +75,9 @@ const it = testEffect(
 
 const gateFor = Effect.fn("test.reviewGateFor")(function* (enabled: boolean, goal: string) {
   const { db } = yield* Database.Service
-  const events = yield* EventV2.Service
+  const events = yield* EventBus.Service
   const store = yield* SessionStore.Service
-  const sessions = yield* SessionV2.Service
+  const sessions = yield* Session.Service
   yield* db
     .insert(ProjectTable)
     .values({ id: Project.ID.global, worktree: AbsolutePath.make(directory), sandboxes: [] })
@@ -98,7 +98,7 @@ const gateFor = Effect.fn("test.reviewGateFor")(function* (enabled: boolean, goa
   return { gate, sessionID: created.id, db }
 })
 
-const steerTexts = (db: Database.Interface["db"], sessionID: SessionV2.ID) =>
+const steerTexts = (db: Database.Interface["db"], sessionID: Session.ID) =>
   Effect.gen(function* () {
     const rows = yield* db
       .select()
@@ -168,7 +168,7 @@ describe("review gate", () => {
 describe("spec command", () => {
   it.effect("/spec is registered with the interview-to-goal template", () =>
     Effect.gen(function* () {
-      const commands = yield* CommandV2.Service
+      const commands = yield* Command.Service
       const spec = yield* commands.get("spec")
       expect(spec).toBeDefined()
       expect(spec?.description).toContain("SPEC.md")

@@ -4,18 +4,18 @@ import { describe, expect } from "bun:test"
 import { DateTime, Effect, Equal, Hash, Schema } from "effect"
 import { Tool } from "@prioricode/core/tool/tool"
 import { define } from "@prioricode/plugin/v2/effect"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { Catalog } from "@prioricode/core/catalog"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { LocationServiceMap } from "@prioricode/core/location-services"
 import { Location } from "@prioricode/core/location"
-import { PluginV2 } from "@prioricode/core/plugin"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProjectV2 } from "@prioricode/core/project"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Plugin } from "@prioricode/core/plugin"
+import { Model } from "@prioricode/core/model"
+import { Project } from "@prioricode/core/project"
+import { Provider } from "@prioricode/core/provider"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionRunnerModel } from "@prioricode/core/session/runner/model"
 import { tmpdir } from "./fixture/tmpdir"
 import { testEffect } from "./lib/effect"
@@ -23,17 +23,16 @@ import { toolDefinitions } from "./lib/tool"
 import { FSUtil } from "../src/fs-util"
 import { Credential } from "../src/credential"
 import { Database } from "../src/database/database"
-import { EventV2 } from "../src/event"
+import { EventBus } from "../src/event"
 import { Global } from "../src/global"
 import { ModelsDev } from "../src/models-dev"
 import { Npm } from "../src/npm"
-import { Project } from "../src/project"
 import { Reference } from "../src/reference"
 import { ToolRegistry } from "../src/tool/registry"
 import { ApplicationTools } from "../src/tool/application-tools"
 
 const it = testEffect(
-  AppNodeBuilder.build(LayerNode.group([ApplicationTools.node, Database.node, EventV2.node, LocationServiceMap.node])),
+  AppNodeBuilder.build(LayerNode.group([ApplicationTools.node, Database.node, EventBus.node, LocationServiceMap.node])),
 )
 
 describe("LocationServiceMap", () => {
@@ -89,7 +88,7 @@ describe("LocationServiceMap", () => {
             Effect.gen(function* () {
               yield* Reference.Service
               const catalog = yield* Catalog.Service
-              yield* catalog.transform((editor) => editor.provider.update(ProviderV2.ID.make("test"), () => {}))
+              yield* catalog.transform((editor) => editor.provider.update(Provider.ID.make("test"), () => {}))
               return {
                 providers: yield* catalog.provider.all(),
                 tools: yield* toolDefinitions(yield* ToolRegistry.Service),
@@ -102,7 +101,7 @@ describe("LocationServiceMap", () => {
             )
 
           const blockedState = yield* update(blocked.path)
-          expect(blockedState.providers.some((provider) => provider.id === ProviderV2.ID.make("test"))).toBe(false)
+          expect(blockedState.providers.some((provider) => provider.id === Provider.ID.make("test"))).toBe(false)
           expect(blockedState.tools.map((tool) => tool.name).sort()).toEqual([
             "application_context",
             "apply_patch",
@@ -122,7 +121,7 @@ describe("LocationServiceMap", () => {
             "write",
           ])
           const allowedState = yield* update(allowed.path)
-          expect(allowedState.providers.some((provider) => provider.id === ProviderV2.ID.make("test"))).toBe(true)
+          expect(allowedState.providers.some((provider) => provider.id === Provider.ID.make("test"))).toBe(true)
           expect(allowedState.tools.map((tool) => tool.name).sort()).toEqual([
             "application_context",
             "apply_patch",
@@ -170,13 +169,13 @@ describe("LocationServiceMap", () => {
           )
           const failure = yield* SessionRunnerModel.Service.use((models) =>
             models.resolve(
-              SessionV2.Info.make({
-                id: SessionV2.ID.make("ses_unavailable_model"),
-                projectID: ProjectV2.ID.global,
+              Session.Info.make({
+                id: Session.ID.make("ses_unavailable_model"),
+                projectID: Project.ID.global,
                 title: "test",
                 model: {
-                  id: ModelV2.ID.make("chat"),
-                  providerID: ProviderV2.ID.make("unavailable"),
+                  id: Model.ID.make("chat"),
+                  providerID: Provider.ID.make("unavailable"),
                 },
                 cost: 0,
                 tokens: { input: 0, output: 0, reasoning: 0, cache: { read: 0, write: 0 } },
@@ -203,7 +202,7 @@ describe("LocationServiceMap", () => {
     ).pipe(
       Effect.flatMap((dir) =>
         Effect.gen(function* () {
-          const plugins = yield* PluginV2.Service
+          const plugins = yield* Plugin.Service
           const reviewer = define({
             id: "reviewer",
             effect: (ctx) =>
@@ -216,9 +215,9 @@ describe("LocationServiceMap", () => {
                 })
                 .pipe(Effect.asVoid),
           })
-          yield* plugins.add(PluginV2.ID.make(reviewer.id), reviewer.effect)
+          yield* plugins.add(Plugin.ID.make(reviewer.id), reviewer.effect)
 
-          expect(yield* (yield* AgentV2.Service).get(AgentV2.ID.make("reviewer"))).toMatchObject({
+          expect(yield* (yield* Agent.Service).get(Agent.ID.make("reviewer"))).toMatchObject({
             description: "Reviews code",
             mode: "subagent",
           })

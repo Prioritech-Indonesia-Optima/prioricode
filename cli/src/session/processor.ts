@@ -22,7 +22,7 @@ import type { Provider } from "@/provider/provider"
 import { Question } from "@/question"
 import { errorMessage } from "@/util/error"
 import { isRecord } from "@/util/record"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Database } from "@prioricode/core/database/database"
 import { Usage, type LLMEvent } from "@prioricode/llm"
 
@@ -50,7 +50,7 @@ export interface Handle {
 type Input = {
   assistantMessage: SessionV1.Assistant
   sessionID: SessionID
-  model: Provider.Model
+  model: Provider.ProviderModel
 }
 
 export interface Interface {
@@ -92,7 +92,7 @@ const layer = Layer.effect(
     const scope = yield* Scope.Scope
     const status = yield* SessionStatus.Service
     const image = yield* Image.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const database = yield* Database.Service
 
     const create = Effect.fn("SessionProcessor.create")(function* (input: Input) {
@@ -490,6 +490,19 @@ const layer = Layer.effect(
                 messageID: ctx.assistantMessage.parentID,
               })
               .pipe(Effect.ignore, Effect.forkIn(scope))
+            yield* Effect.logDebug("processor: step-finish token usage", {
+              "session.id": ctx.sessionID,
+              messageID: ctx.assistantMessage.id,
+              "tokens.total": usage.tokens.total,
+              "tokens.input": usage.tokens.input,
+              "tokens.output": usage.tokens.output,
+              "tokens.cache.read": usage.tokens.cache.read,
+              "tokens.cache.write": usage.tokens.cache.write,
+              model: ctx.model.id,
+              "model.limit.context": ctx.model.limit.context,
+              "model.limit.input": ctx.model.limit.input,
+              "model.limit.output": ctx.model.limit.output,
+            })
             if (
               !ctx.assistantMessage.summary &&
               isOverflow({ cfg: yield* config.get(), tokens: usage.tokens, model: ctx.model })
@@ -621,7 +634,14 @@ const layer = Layer.effect(
         })
         const error = parse(e)
         if (SessionV1.ContextOverflowError.isInstance(error)) {
-          if ((yield* config.get()).compaction?.auto === false && !ctx.assistantMessage.summary) {
+          yield* Effect.logInfo("processor: ContextOverflowError from provider — triggering compaction", {
+            "session.id": ctx.sessionID,
+            messageID: ctx.assistantMessage.id,
+            model: ctx.model.id,
+            "model.limit.context": ctx.model.limit.context,
+            error: errorMessage(e),
+          })
+          if ((yield* config.get()).compaction?.auto === false) {
             ctx.assistantMessage.error = error
             ctx.assistantMessage.finish = "error"
             yield* events.publish(Session.Event.Error, { sessionID: ctx.sessionID, error })
@@ -726,7 +746,7 @@ export const node = LayerNode.make({
     SessionSummary.node,
     SessionStatus.node,
     Image.node,
-    EventV2Bridge.node,
+    EventBridge.node,
     Database.node,
   ],
 })

@@ -5,7 +5,7 @@ import { selectWebSearchProvider, webSearchModelName, webSearchProviderLabel } f
 
 import { webSearchEnabled } from "../../src/tool/registry"
 import { it } from "../lib/effect"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider } from "@prioricode/core/provider"
 
 const SESSION_ID = "ses_0196aabbccddeeff001122334455"
 
@@ -38,11 +38,11 @@ describe("websearch provider", () => {
   })
 
   test("is enabled for PrioriCode providers or explicit websearch provider flags", () => {
-    expect(webSearchEnabled(ProviderV2.ID.prioricode, { exa: false, parallel: false })).toBe(true)
-    expect(webSearchEnabled(ProviderV2.ID.make("prioricode-go"), { exa: false, parallel: false })).toBe(true)
-    expect(webSearchEnabled(ProviderV2.ID.openai, { exa: false, parallel: false })).toBe(false)
-    expect(webSearchEnabled(ProviderV2.ID.openai, { exa: true, parallel: false })).toBe(true)
-    expect(webSearchEnabled(ProviderV2.ID.openai, { exa: false, parallel: true })).toBe(true)
+    expect(webSearchEnabled(Provider.ID.prioricode, { exa: false, parallel: false })).toBe(true)
+    expect(webSearchEnabled(Provider.ID.make("prioricode-go"), { exa: false, parallel: false })).toBe(true)
+    expect(webSearchEnabled(Provider.ID.openai, { exa: false, parallel: false })).toBe(false)
+    expect(webSearchEnabled(Provider.ID.openai, { exa: true, parallel: false })).toBe(true)
+    expect(webSearchEnabled(Provider.ID.openai, { exa: false, parallel: true })).toBe(true)
   })
 
   test("uses branded labels", () => {

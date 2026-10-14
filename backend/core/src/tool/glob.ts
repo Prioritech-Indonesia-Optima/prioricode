@@ -7,7 +7,7 @@ import { FileSystem } from "../filesystem"
 import { Location } from "../location"
 import { Ripgrep } from "../ripgrep"
 import { RelativePath } from "../schema"
-import { PermissionV2 } from "../permission"
+import { Permission } from "../permission"
 import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
@@ -40,7 +40,7 @@ const layer = Layer.effectDiscard(
     const tools = yield* Tools.Service
     const ripgrep = yield* Ripgrep.Service
     const location = yield* Location.Service
-    const permission = yield* PermissionV2.Service
+    const permission = yield* Permission.Service
 
     yield* tools
       .register({
@@ -108,5 +108,5 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/glob",
   layer,
-  deps: [ToolRegistry.node, Ripgrep.node, Location.node, PermissionV2.node],
+  deps: [ToolRegistry.node, Ripgrep.node, Location.node, Permission.node],
 })

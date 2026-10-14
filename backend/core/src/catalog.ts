@@ -3,59 +3,59 @@ export * as Catalog from "./catalog"
 import { makeLocationNode } from "./effect/app-node"
 import { Array, Context, Effect, Layer, Option, Order, pipe, Schema } from "effect"
 import { Catalog } from "@prioricode/schema/catalog"
-import { ModelV2 } from "./model"
-import { ProviderV2 } from "./provider"
-import { EventV2 } from "./event"
+import { Model } from "./model"
+import { Provider } from "./provider"
+import { EventBus } from "./event"
 import { Policy } from "./policy"
 import { State } from "./state"
 import { Integration } from "./integration"
 
 export type ProviderRecord = {
-  provider: ProviderV2.MutableInfo
-  models: Map<ModelV2.ID, ModelV2.MutableInfo>
+  provider: Provider.MutableInfo
+  models: Map<Model.ID, Model.MutableInfo>
 }
 
-export type DefaultModel = { providerID: ProviderV2.ID; modelID: ModelV2.ID }
+export type DefaultModel = { providerID: Provider.ID; modelID: Model.ID }
 
 export const PolicyActions = Schema.Literals(["provider.use"])
 
 export const Event = Catalog.Event
 
 type Data = {
-  providers: Map<ProviderV2.ID, ProviderRecord>
+  providers: Map<Provider.ID, ProviderRecord>
   defaultModel?: DefaultModel
 }
 
 export type Draft = {
   provider: {
     list: () => readonly ProviderRecord[]
-    get: (providerID: ProviderV2.ID) => ProviderRecord | undefined
-    update: (providerID: ProviderV2.ID, fn: (provider: ProviderV2.MutableInfo) => void) => void
-    remove: (providerID: ProviderV2.ID) => void
+    get: (providerID: Provider.ID) => ProviderRecord | undefined
+    update: (providerID: Provider.ID, fn: (provider: Provider.MutableInfo) => void) => void
+    remove: (providerID: Provider.ID) => void
   }
   model: {
-    get: (providerID: ProviderV2.ID, modelID: ModelV2.ID) => ModelV2.Info | undefined
-    update: (providerID: ProviderV2.ID, modelID: ModelV2.ID, fn: (model: ModelV2.MutableInfo) => void) => void
-    remove: (providerID: ProviderV2.ID, modelID: ModelV2.ID) => void
+    get: (providerID: Provider.ID, modelID: Model.ID) => Model.Info | undefined
+    update: (providerID: Provider.ID, modelID: Model.ID, fn: (model: Model.MutableInfo) => void) => void
+    remove: (providerID: Provider.ID, modelID: Model.ID) => void
     default: {
       get: () => DefaultModel | undefined
-      set: (providerID: ProviderV2.ID, modelID: ModelV2.ID) => void
+      set: (providerID: Provider.ID, modelID: Model.ID) => void
     }
   }
 }
 
 export interface Interface extends State.Transformable<Draft> {
   readonly provider: {
-    readonly get: (providerID: ProviderV2.ID) => Effect.Effect<ProviderV2.Info | undefined>
-    readonly all: () => Effect.Effect<ProviderV2.Info[]>
-    readonly available: () => Effect.Effect<ProviderV2.Info[]>
+    readonly get: (providerID: Provider.ID) => Effect.Effect<Provider.Info | undefined>
+    readonly all: () => Effect.Effect<Provider.Info[]>
+    readonly available: () => Effect.Effect<Provider.Info[]>
   }
   readonly model: {
-    readonly get: (providerID: ProviderV2.ID, modelID: ModelV2.ID) => Effect.Effect<ModelV2.Info | undefined>
-    readonly all: () => Effect.Effect<ModelV2.Info[]>
-    readonly available: () => Effect.Effect<ModelV2.Info[]>
-    readonly default: () => Effect.Effect<ModelV2.Info | undefined>
-    readonly small: (providerID: ProviderV2.ID) => Effect.Effect<ModelV2.Info | undefined>
+    readonly get: (providerID: Provider.ID, modelID: Model.ID) => Effect.Effect<Model.Info | undefined>
+    readonly all: () => Effect.Effect<Model.Info[]>
+    readonly available: () => Effect.Effect<Model.Info[]>
+    readonly default: () => Effect.Effect<Model.Info | undefined>
+    readonly small: (providerID: Provider.ID) => Effect.Effect<Model.Info | undefined>
   }
 }
 
@@ -64,18 +64,18 @@ export class Service extends Context.Service<Service, Interface>()("@prioricode/
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     const policy = yield* Policy.Service
     const integrations = yield* Integration.Service
 
-    const available = (provider: ProviderV2.Info, integration: Integration.Info | undefined) => {
+    const available = (provider: Provider.Info, integration: Integration.Info | undefined) => {
       if (provider.disabled) return false
       if (typeof provider.request.body.apiKey === "string") return true
       if (integration?.connections.length) return true
       return provider.integrationID === undefined && !integration
     }
 
-    const projectModel = (model: ModelV2.Info, provider: ProviderV2.Info) => {
+    const projectModel = (model: Model.Info, provider: Provider.Info) => {
       const api =
         model.api.type === "native" && !model.api.url && Object.keys(model.api.settings).length === 0
           ? { ...provider.api, id: model.api.id }
@@ -89,14 +89,14 @@ const layer = Layer.effect(
         body: { ...provider.request.body, ...model.request.body },
         variant: model.request.variant,
       }
-      return ModelV2.Info.make({
+      return Model.Info.make({
         ...model,
         api,
         request,
       })
     }
 
-    const normalizeApi = (item: ProviderV2.MutableInfo | ModelV2.MutableInfo) => {
+    const normalizeApi = (item: Provider.MutableInfo | Model.MutableInfo) => {
       if (typeof item.request.body.baseURL !== "string") return
       item.api.url = item.request.body.baseURL
       delete item.request.body.baseURL
@@ -113,8 +113,8 @@ const layer = Layer.effect(
               let current = draft.providers.get(providerID)
               if (!current) {
                 current = {
-                  provider: ProviderV2.Info.empty(providerID) as ProviderV2.MutableInfo,
-                  models: new Map<ModelV2.ID, ModelV2.MutableInfo>(),
+                  provider: Provider.Info.empty(providerID) as Provider.MutableInfo,
+                  models: new Map<Model.ID, Model.MutableInfo>(),
                 }
                 draft.providers.set(providerID, current)
               }
@@ -131,13 +131,12 @@ const layer = Layer.effect(
               let record = draft.providers.get(providerID)
               if (!record) {
                 record = {
-                  provider: ProviderV2.Info.empty(providerID) as ProviderV2.MutableInfo,
-                  models: new Map<ModelV2.ID, ModelV2.MutableInfo>(),
+                  provider: Provider.Info.empty(providerID) as Provider.MutableInfo,
+                  models: new Map<Model.ID, Model.MutableInfo>(),
                 }
                 draft.providers.set(providerID, record)
               }
-              const model =
-                record.models.get(modelID) ?? (ModelV2.Info.empty(providerID, modelID) as ModelV2.MutableInfo)
+              const model = record.models.get(modelID) ?? (Model.Info.empty(providerID, modelID) as Model.MutableInfo)
               if (!record.models.has(modelID)) record.models.set(modelID, model)
               fn(model)
               model.id = modelID
@@ -237,12 +236,12 @@ const layer = Layer.effect(
           const provider = record.provider
 
           // TODO: Remove these provider-specific assumptions once model syncing reliably reports available deployments.
-          if (providerID === ProviderV2.ID.azure || providerID === ProviderV2.ID.make("azure-cognitive-services")) {
+          if (providerID === Provider.ID.azure || providerID === Provider.ID.make("azure-cognitive-services")) {
             return
           }
 
-          if (providerID === ProviderV2.ID.prioricode) {
-            const gpt5Nano = record.models.get(ModelV2.ID.make("gpt-5-nano"))
+          if (providerID === Provider.ID.prioricode) {
+            const gpt5Nano = record.models.get(Model.ID.make("gpt-5-nano"))
             if (gpt5Nano?.enabled && gpt5Nano.status === "active") return projectModel(gpt5Nano, provider)
           }
 
@@ -298,4 +297,4 @@ export const locationLayer = layer.pipe(
   Layer.provideMerge(Policy.locationLayer),
 )
 
-export const node = makeLocationNode({ service: Service, layer, deps: [EventV2.node, Policy.node, Integration.node] })
+export const node = makeLocationNode({ service: Service, layer, deps: [EventBus.node, Policy.node, Integration.node] })

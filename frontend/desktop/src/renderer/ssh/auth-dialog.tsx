@@ -39,7 +39,7 @@ export function SshAuthPromptHost() {
             </div>
             <input
               type="password"
-              class="mb-3 w-full rounded-md border border-pc-border-base bg-pc-bg-deep px-2 py-1.5 text-[13px] text-pc-text-base outline-none focus:border-pc-gold-600"
+              class="mb-3 w-full rounded-md border border-pc-border-base bg-pc-bg-deep px-2 py-1.5 text-[13px] text-pc-text-base outline-none focus:border-pc-border-focus"
               value={value()}
               onInput={(event) => setValue(event.currentTarget.value)}
               onKeyDown={(event) => {
@@ -57,7 +57,7 @@ export function SshAuthPromptHost() {
               </button>
               <button
                 type="button"
-                class="rounded-md bg-pc-gold-600 px-3 py-1.5 text-[12px] text-white"
+                class="rounded-md bg-pc-bg-accent px-3 py-1.5 text-[12px] text-pc-text-on-brand"
                 onClick={() => done(value())}
               >
                 {language.t("ssh.auth.submit")}

@@ -4,8 +4,8 @@ import path from "path"
 import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
 import { FSUtil } from "../fs-util"
-import { SkillV2 } from "../skill"
-import { PermissionV2 } from "../permission"
+import { Skill } from "../skill"
+import { Permission } from "../permission"
 import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
@@ -32,7 +32,7 @@ export const description = [
   "The skill name must match one of the available skills in the system context.",
 ].join("\n")
 
-export const toModelOutput = (skill: SkillV2.Info, files: ReadonlyArray<string>) => {
+export const toModelOutput = (skill: Skill.Info, files: ReadonlyArray<string>) => {
   const directory = path.dirname(skill.location)
   return [
     `<skill_content name="${skill.name}">`,
@@ -57,8 +57,8 @@ const layer = Layer.effectDiscard(
   Effect.gen(function* () {
     const tools = yield* Tools.Service
     const fs = yield* FSUtil.Service
-    const skills = yield* SkillV2.Service
-    const permission = yield* PermissionV2.Service
+    const skills = yield* Skill.Service
+    const permission = yield* Permission.Service
     yield* tools
       .register({
         [name]: Tool.make({
@@ -108,5 +108,5 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/skill",
   layer,
-  deps: [ToolRegistry.node, FSUtil.node, SkillV2.node, PermissionV2.node],
+  deps: [ToolRegistry.node, FSUtil.node, Skill.node, Permission.node],
 })

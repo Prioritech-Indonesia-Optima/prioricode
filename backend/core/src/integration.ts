@@ -18,7 +18,7 @@ import {
 import { Integration } from "@prioricode/schema/integration"
 import { Credential } from "./credential"
 import { State } from "./state"
-import { EventV2 } from "./event"
+import { EventBus } from "./event"
 import { IntegrationConnection } from "./integration/connection"
 
 export const ID = Integration.ID
@@ -222,7 +222,7 @@ export const locationLayer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const credentials = yield* Credential.Service
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     const scope = yield* Scope.Scope
     const attempts = SynchronizedRef.makeUnsafe(new Map<AttemptID, AttemptEntry>())
     const state = State.create<Data, Draft>({
@@ -517,4 +517,4 @@ export const locationLayer = Layer.effect(
   }),
 )
 
-export const node = makeLocationNode({ service: Service, layer: locationLayer, deps: [Credential.node, EventV2.node] })
+export const node = makeLocationNode({ service: Service, layer: locationLayer, deps: [Credential.node, EventBus.node] })

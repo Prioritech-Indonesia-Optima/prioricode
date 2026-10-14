@@ -8,8 +8,8 @@ import { SessionStatus } from "../../src/session/status"
 import { SessionSummary } from "../../src/session/summary"
 import { Todo } from "../../src/session/todo"
 import { SessionID, MessageID, PartID } from "../../src/session/schema"
-import { ProjectV2 } from "@prioricode/core/project"
-import { WorkspaceV2 } from "@prioricode/core/workspace"
+import { Project } from "@prioricode/core/project"
+import { Workspace } from "@prioricode/core/workspace"
 
 // Covers the session-domain Effect Schema migration. For each migrated
 // schema we assert:
@@ -22,8 +22,8 @@ const sessionID = Schema.decodeUnknownSync(SessionID)("ses_01J5Y5H0AH4Q4NXJ6P4C3
 const sessionIDChild = Schema.decodeUnknownSync(SessionID)("ses_01J5Y5H0AH4Q4NXJ6P4C3P5V2L")
 const messageID = Schema.decodeUnknownSync(MessageID)("msg_01J5Y5H0AH4Q4NXJ6P4C3P5V2M")
 const partID = Schema.decodeUnknownSync(PartID)("prt_01J5Y5H0AH4Q4NXJ6P4C3P5V2N")
-const projectID = ProjectV2.ID.make("proj-alpha")
-const workspaceID = Schema.decodeUnknownSync(WorkspaceV2.ID)("wrk-primary")
+const projectID = Project.ID.make("proj-alpha")
+const workspaceID = Schema.decodeUnknownSync(Workspace.ID)("wrk-primary")
 
 function decodeUnknown<S extends Schema.Top>(schema: S) {
   const decode = Schema.decodeUnknownSync(schema as any)

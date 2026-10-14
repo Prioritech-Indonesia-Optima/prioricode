@@ -5,7 +5,7 @@ import type { Disp, Proc } from "#pty"
 import { Context, Effect, Layer, Schema, Types } from "effect"
 import { Pty } from "@prioricode/schema/pty"
 import { Config } from "./config"
-import { EventV2 } from "./event"
+import { EventBus } from "./event"
 import { Location } from "./location"
 import { PtyID } from "./pty/schema"
 import { Shell } from "./shell"
@@ -92,7 +92,7 @@ export class Service extends Context.Service<Service, Interface>()("@prioricode/
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     const location = yield* Location.Service
     const config = yield* Config.Service
     const context = yield* Effect.context()
@@ -315,4 +315,4 @@ const layer = Layer.effect(
 
 export const locationLayer = layer.pipe(Layer.provide(Config.locationLayer))
 
-export const node = makeLocationNode({ service: Service, layer, deps: [EventV2.node, Location.node, Config.node] })
+export const node = makeLocationNode({ service: Service, layer, deps: [EventBus.node, Location.node, Config.node] })

@@ -2,15 +2,12 @@ import type {
   Event,
   createPrioricodeClient,
   Project,
-  Model,
-  Provider,
-  Permission,
   UserMessage,
   Message,
   Part,
   Config as SDKConfig,
 } from "@prioricode/sdk"
-import type { Provider as ProviderV2, Model as ModelV2, Auth } from "@prioricode/sdk/v2"
+import type { Provider, Model, Auth } from "@prioricode/sdk/v2"
 
 import type { BunShell } from "./shell.js"
 import { type ToolDefinition } from "./tool.js"
@@ -213,7 +210,7 @@ export type ProviderHookContext = {
 
 export type ProviderHook = {
   id: string
-  models?: (provider: ProviderV2, ctx: ProviderHookContext) => Promise<Record<string, ModelV2>>
+  models?: (provider: Provider, ctx: ProviderHookContext) => Promise<Record<string, Model>>
 }
 
 /** @deprecated Use AuthOAuthResult instead. */
@@ -258,7 +255,6 @@ export interface Hooks {
     input: { sessionID: string; agent: string; model: Model; provider: ProviderContext; message: UserMessage },
     output: { headers: Record<string, string> },
   ) => Promise<void>
-  "permission.ask"?: (input: Permission, output: { status: "ask" | "deny" | "allow" }) => Promise<void>
   "command.execute.before"?: (
     input: { command: string; sessionID: string; arguments: string },
     output: { parts: Part[] },
@@ -294,7 +290,7 @@ export interface Hooks {
       system: string[]
     },
   ) => Promise<void>
-  "experimental.provider.small_model"?: (input: { provider: ProviderV2 }, output: { model?: ModelV2 }) => Promise<void>
+  "experimental.provider.small_model"?: (input: { provider: Provider }, output: { model?: Model }) => Promise<void>
   /**
    * Called before session compaction starts. Allows plugins to customize
    * the compaction prompt.

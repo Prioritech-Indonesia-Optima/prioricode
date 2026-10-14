@@ -1,19 +1,19 @@
 import { describe, expect } from "bun:test"
 import { LLMClient, LLMEvent, Model, type LLMClientShape, type LLMRequest } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { Config } from "@prioricode/core/config"
 import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Location } from "@prioricode/core/location"
-import { PermissionV2 } from "@prioricode/core/permission"
+import { Permission } from "@prioricode/core/permission"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { SessionRunCoordinator } from "@prioricode/core/session/run-coordinator"
 import { SessionRunner } from "@prioricode/core/session/runner"
@@ -56,8 +56,8 @@ const client = Layer.succeed(
 )
 
 const permission = Layer.succeed(
-  PermissionV2.Service,
-  PermissionV2.Service.of({
+  Permission.Service,
+  Permission.Service.of({
     assert: () => Effect.void,
     ask: () => Effect.die("unused"),
     reply: () => Effect.die("unused"),
@@ -88,14 +88,14 @@ const runnerLayer = AppNodeBuilder.build(SessionRunnerLLM.node, [
   [Location.node, location],
   [SkillGuidance.node, skillGuidance],
   [ReferenceGuidance.node, referenceGuidance],
-  [PermissionV2.node, permission],
+  [Permission.node, permission],
   [Config.node, config],
 ])
 const execution = Layer.effect(
   SessionExecution.Service,
   Effect.gen(function* () {
     const sessionRunner = yield* SessionRunner.Service
-    const coordinator = yield* SessionRunCoordinator.make<SessionV2.ID, SessionRunner.RunError>({
+    const coordinator = yield* SessionRunCoordinator.make<Session.ID, SessionRunner.RunError>({
       drain: (sessionID, force) => sessionRunner.run({ sessionID, force }),
     })
     return SessionExecution.Service.of({
@@ -112,21 +112,21 @@ const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([
       Database.node,
-      EventV2.node,
+      EventBus.node,
       SessionProjector.node,
       SessionStore.node,
-      AgentV2.node,
+      Agent.node,
       ToolRegistry.node,
       ToolRegistry.toolsNode,
       SessionRunnerModel.node,
       Snapshot.node,
       SessionRunnerLLM.node,
       SessionExecution.node,
-      SessionV2.node,
+      Session.node,
     ]),
     [
       [LayerNodePlatform.llmClient, client],
-      [PermissionV2.node, permission],
+      [Permission.node, permission],
       [SessionRunnerModel.node, models],
       [Location.node, location],
       [SkillGuidance.node, skillGuidance],
@@ -138,8 +138,8 @@ const it = testEffect(
   ),
 )
 
-const sessionID = SessionV2.ID.make("ses_compact_manual")
-const otherID = SessionV2.ID.make("ses_compact_other")
+const sessionID = Session.ID.make("ses_compact_manual")
+const otherID = Session.ID.make("ses_compact_other")
 
 const setup = Effect.gen(function* () {
   responses = []
@@ -180,7 +180,7 @@ describe("manual compaction", () => {
   it.live("anchored compaction summarizes the head, keeps the tail verbatim, and re-baselines", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "First question alpha" }), resume: false })
       responses = [textTurn("text-one", "answer one")]
       yield* session.resume(sessionID)
@@ -225,7 +225,7 @@ describe("manual compaction", () => {
   it.live("compaction without an anchor summarizes all but the final message", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Old context" }), resume: false })
       responses = [textTurn("text-old", "old answer")]
       yield* session.resume(sessionID)
@@ -247,7 +247,7 @@ describe("manual compaction", () => {
   it.live("records an explainable manual decision and outcome on the compaction events", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const { db } = yield* Database.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "First question alpha" }), resume: false })
       responses = [textTurn("text-one", "answer one")]
@@ -266,8 +266,8 @@ describe("manual compaction", () => {
         .orderBy(asc(EventTable.seq))
         .all()
         .pipe(Effect.orDie)
-      const started = rows.find((row) => row.type === EventV2.versionedType(SessionEvent.Compaction.Started.type, 1))
-      const ended = rows.find((row) => row.type === EventV2.versionedType(SessionEvent.Compaction.Ended.type, 1))
+      const started = rows.find((row) => row.type === EventBus.versionedType(SessionEvent.Compaction.Started.type, 1))
+      const ended = rows.find((row) => row.type === EventBus.versionedType(SessionEvent.Compaction.Ended.type, 1))
       expect(started).toBeDefined()
       expect(ended).toBeDefined()
       expect((started!.data as Record<string, unknown>).decision).toMatchObject({
@@ -282,7 +282,7 @@ describe("manual compaction", () => {
   it.live("a busy session refuses manual compaction with BusyError", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Hold the gate" }), resume: false })
       streamGate = yield* Deferred.make<void>()
       responses = [textTurn("text-gated", "gated answer")]
@@ -294,7 +294,7 @@ describe("manual compaction", () => {
       }
       const exit = yield* session.compact({ sessionID }).pipe(Effect.exit)
       expect(exit._tag).toBe("Failure")
-      if (exit._tag === "Failure") expect(Cause.squash(exit.cause)).toBeInstanceOf(SessionV2.BusyError)
+      if (exit._tag === "Failure") expect(Cause.squash(exit.cause)).toBeInstanceOf(Session.BusyError)
       yield* Deferred.succeed(streamGate, undefined)
       yield* Effect.ignore(Fiber.join(drain))
     }),
@@ -303,7 +303,7 @@ describe("manual compaction", () => {
   it.effect("unknown or foreign anchors are rejected; empty history is a no-op", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const missing = yield* Effect.exit(
         session.compact({ sessionID, anchor: SessionMessage.ID.make("msg_nonexistent") }),
       )

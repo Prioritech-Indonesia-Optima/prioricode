@@ -24,7 +24,7 @@
     height: 368px;
     background: var(--pc-bg-layer-01);
     box-shadow: var(--pc-elevation-overlay);
-    border-radius: 10px;
+    border-radius: 8px;
     overflow: hidden;
     pointer-events: auto;
 

@@ -1,6 +1,6 @@
 import { SessionID, MessageID } from "./schema"
 import { SessionV1 } from "@prioricode/core/v1/session"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
 import {
   APIError,
   AbortedError,
@@ -130,7 +130,7 @@ function providerMeta(metadata: Record<string, any> | undefined) {
 
 export const toModelMessagesEffect = Effect.fnUntraced(function* (
   input: WithParts[],
-  model: Provider.Model,
+  model: Provider.ProviderModel,
   options?: { stripMedia?: boolean; toolOutputMaxChars?: number },
 ) {
   const result: UIMessage[] = []
@@ -416,7 +416,7 @@ export const toModelMessagesEffect = Effect.fnUntraced(function* (
 
 export function toModelMessages(
   input: WithParts[],
-  model: Provider.Model,
+  model: Provider.ProviderModel,
   options?: { stripMedia?: boolean; toolOutputMaxChars?: number },
 ): Promise<ModelMessage[]> {
   return Effect.runPromise(toModelMessagesEffect(input, model, options))
@@ -466,17 +466,13 @@ export const page = Effect.fn("MessageV2.page")(function* (input: {
   }
 })
 
-export function stream(sessionID: SessionID) {
+export function fetchAll(sessionID: SessionID) {
   const size = 50
   return Effect.gen(function* () {
     const result = [] as WithParts[]
     let before: string | undefined
     while (true) {
-      const next = yield* page({ sessionID, limit: size, before }).pipe(
-        Effect.catchIf(NotFoundError.isInstance, () =>
-          Effect.succeed({ items: [] as WithParts[], more: false, cursor: undefined }),
-        ),
-      )
+      const next = yield* page({ sessionID, limit: size, before })
       if (next.items.length === 0) break
       for (let i = next.items.length - 1; i >= 0; i--) {
         const item = next.items[i]
@@ -487,6 +483,10 @@ export function stream(sessionID: SessionID) {
     }
     return result
   })
+}
+
+export function stream(sessionID: SessionID) {
+  return fetchAll(sessionID).pipe(Effect.catchIf(NotFoundError.isInstance, () => Effect.succeed([] as WithParts[])))
 }
 
 export function parts(messageID: MessageID) {
@@ -605,7 +605,7 @@ function isAfter(info: Info, other?: Info) {
 
 export function fromError(
   e: unknown,
-  ctx: { providerID: ProviderV2.ID; aborted?: boolean },
+  ctx: { providerID: ProviderSchema.ID; aborted?: boolean },
 ): NonNullable<Assistant["error"]> {
   switch (true) {
     case e instanceof DOMException && e.name === "AbortError":

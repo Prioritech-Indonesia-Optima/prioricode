@@ -55,7 +55,9 @@
   padding-block: 0;
   padding-inline: 0 6px;
   gap: 8px;
-  width: 280px;
+  width: 100%;
+  min-width: 0;
+  max-width: 280px;
   height: 28px;
   border: 0;
   border-radius: 6px;
@@ -63,7 +65,7 @@
   outline-offset: 0;
   background: linear-gradient(180deg, var(--pc-alpha-light-2) 0%, var(--pc-alpha-light-0) 100%), var(--pc-bg-base);
   box-shadow: var(--pc-elevation-button-neutral);
-  flex: none;
+  flex: 1 1 auto;
   align-self: stretch;
   user-select: none;
   transition:

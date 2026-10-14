@@ -2,8 +2,8 @@ import { describe, expect, test } from "bun:test"
 import { Effect } from "effect"
 import { ProviderTransform } from "@/provider/transform"
 import { LLMRequestPrep } from "@/session/llm/request"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { ModelsDev } from "@prioricode/core/models-dev"
 import { generateText, jsonSchema, type ModelMessage } from "ai"
 import { createAmazonBedrock, type AmazonBedrockLanguageModelOptions } from "@ai-sdk/amazon-bedrock"
@@ -2214,8 +2214,8 @@ describe("ProviderTransform.message - DeepSeek reasoning content", () => {
     const result = ProviderTransform.message(
       msgs,
       {
-        id: ModelV2.ID.make("deepseek/deepseek-chat"),
-        providerID: ProviderV2.ID.make("deepseek"),
+        id: Model.ID.make("deepseek/deepseek-chat"),
+        providerID: Provider.ID.make("deepseek"),
         api: {
           id: "deepseek-chat",
           url: "https://api.deepseek.com",
@@ -2276,8 +2276,8 @@ describe("ProviderTransform.message - DeepSeek reasoning content", () => {
     const result = ProviderTransform.message(
       msgs,
       {
-        id: ModelV2.ID.make("openai/gpt-4"),
-        providerID: ProviderV2.ID.make("openai"),
+        id: Model.ID.make("openai/gpt-4"),
+        providerID: Provider.ID.make("openai"),
         api: {
           id: "gpt-4",
           url: "https://api.openai.com",

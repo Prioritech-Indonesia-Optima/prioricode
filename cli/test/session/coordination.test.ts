@@ -6,7 +6,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { Coordination } from "@/session/coordination"
 import { CoordinationTable } from "@prioricode/core/session/coordination.sql"
 import { testEffect } from "../lib/effect"
@@ -14,8 +14,8 @@ import { testEffect } from "../lib/effect"
 const it = testEffect(LayerNode.compile(LayerNode.group([Database.node, Coordination.node])))
 
 const projectID = Project.ID.global
-const a = SessionV2.ID.make("ses_coord_a")
-const b = SessionV2.ID.make("ses_coord_b")
+const a = Session.ID.make("ses_coord_a")
+const b = Session.ID.make("ses_coord_b")
 
 const setup = Effect.gen(function* () {
   const { db } = yield* Database.Service
@@ -872,7 +872,7 @@ describe("Coordination", () => {
       // A different recipient is unaffected.
       const other = yield* coordination.guardNote({
         fromSession: a,
-        toSession: SessionV2.ID.make("ses_coord_c"),
+        toSession: Session.ID.make("ses_coord_c"),
         kind: "message",
         body: "one more",
       })

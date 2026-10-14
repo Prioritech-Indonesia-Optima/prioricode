@@ -9,8 +9,8 @@ import { MessageID, PartID, type SessionID } from "../../src/session/schema"
 
 import { NotFoundError } from "@/storage/storage"
 import { testEffect } from "../lib/effect"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 
 const it = testEffect(LayerNode.compile(LayerNode.group([SessionNs.node, MessageV2.node, SessionProjector.node])))
 
@@ -97,8 +97,8 @@ const addAssistant = Effect.fn("Test.addAssistant")(function* (
     role: "assistant",
     time: { created: Date.now() },
     parentID,
-    modelID: ModelV2.ID.make("test"),
-    providerID: ProviderV2.ID.make("test"),
+    modelID: Model.ID.make("test"),
+    providerID: Provider.ID.make("test"),
     mode: "",
     agent: "default",
     path: { cwd: "/", root: "/" },

@@ -10,7 +10,7 @@ import { HttpServerRequest, HttpServerResponse } from "effect/unstable/http"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { InstanceHttpApi } from "../api"
 import { ProviderAuthApiError } from "../groups/provider"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
 
 function mapProviderAuthError<A, R>(self: Effect.Effect<A, ProviderAuth.Error, R>) {
   return self.pipe(
@@ -66,7 +66,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     })
 
     const authorize = Effect.fn("ProviderHttpApi.authorize")(function* (ctx: {
-      params: { providerID: ProviderV2.ID }
+      params: { providerID: ProviderSchema.ID }
       payload: ProviderAuth.AuthorizeInput
     }) {
       return yield* mapProviderAuthError(
@@ -79,7 +79,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     })
 
     const authorizeRaw = Effect.fn("ProviderHttpApi.authorizeRaw")(function* (ctx: {
-      params: { providerID: ProviderV2.ID }
+      params: { providerID: ProviderSchema.ID }
       request: HttpServerRequest.HttpServerRequest
     }) {
       const body = yield* Effect.orDie(ctx.request.text)
@@ -94,7 +94,7 @@ export const providerHandlers = HttpApiBuilder.group(InstanceHttpApi, "provider"
     })
 
     const callback = Effect.fn("ProviderHttpApi.callback")(function* (ctx: {
-      params: { providerID: ProviderV2.ID }
+      params: { providerID: ProviderSchema.ID }
       payload: ProviderAuth.CallbackInput
     }) {
       yield* mapProviderAuthError(

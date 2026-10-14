@@ -67,21 +67,22 @@
 }
 
 .dialog-saved-permissions-rule {
-  font-size: var(--font-size-md, 14px);
-  font-weight: 500;
-  color: var(--pc-text-strong, currentColor);
+  font-size: 13px;
+  font-weight: 530;
+  letter-spacing: -0.04px;
+  color: var(--pc-text-base);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .dialog-saved-permissions-separator {
-  color: var(--pc-text-muted, currentColor);
+  color: var(--pc-text-muted);
 }
 
 .dialog-saved-permissions-project {
-  font-size: var(--font-size-sm, 12px);
-  color: var(--pc-text-muted, currentColor);
+  font-size: 12px;
+  color: var(--pc-text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -91,8 +92,8 @@
   padding-block: 16px;
   padding-inline: 4px;
   text-align: center;
-  font-size: var(--font-size-sm, 13px);
-  color: var(--pc-text-muted, currentColor);
+  font-size: 13px;
+  color: var(--pc-text-muted);
 }
 
 .dialog-saved-permissions-loading {

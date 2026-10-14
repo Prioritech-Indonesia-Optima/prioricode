@@ -1,5 +1,5 @@
 import { TextAttributes, type OptimizedBuffer, RGBA } from "@opentui/core"
-import { big, tagline } from "../logo"
+import { big, BLOCK_CHAR, tagline } from "../logo"
 import { type Rgb, toRgb } from "./bg-pulse-render"
 
 // Painter for the animated home hero (`HomeHero`) — the "Re-materialize"
@@ -97,7 +97,7 @@ for (let gy = 0; gy < ROWS; gy++) {
       continue
     }
     const char = x >= ART_X && x - ART_X < line.length ? line[x - ART_X] : " "
-    const block = char === "█"
+    const block = char === BLOCK_CHAR
     CELLS.push({
       x,
       row: gy,

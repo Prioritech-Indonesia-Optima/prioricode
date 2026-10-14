@@ -6,7 +6,6 @@ import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Flag } from "@prioricode/core/flag/flag"
 import { registerAdapter } from "../../src/control-plane/adapters"
-import { WorkspaceV2 } from "@prioricode/core/workspace"
 import type { WorkspaceAdapter } from "../../src/control-plane/types"
 import { Workspace } from "../../src/control-plane/workspace"
 import { WorkspacePaths } from "../../src/server/routes/instance/httpapi/groups/workspace"
@@ -262,7 +261,7 @@ describe("workspace HttpApi", () => {
     Effect.gen(function* () {
       const dir = yield* tmpdirScoped({ git: true })
       const session = yield* Session.use.create({}).pipe(provideInstance(dir))
-      const workspaceID = WorkspaceV2.ID.ascending("wrk_missing_warp")
+      const workspaceID = Workspace.ID.ascending("wrk_missing_warp")
 
       const response = yield* request(WorkspacePaths.warp, dir, {
         method: "POST",

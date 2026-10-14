@@ -509,7 +509,7 @@ function HomeSessionProjectName(props: { name: string; search?: boolean }) {
 function HomeSessionsEmpty(props: { onNewSession?: () => void; language: ReturnType<typeof useLanguage> }) {
   return (
     <div class="flex min-h-full flex-col items-center gap-3 px-6 pt-[64px] text-center">
-      <span aria-hidden="true" class="size-2 bg-pc-gold-500" />
+      <span aria-hidden="true" class="size-2 bg-pc-icon-accent" />
       <div
         class={`
           shrink-0 text-[15px] leading-[15px] tracking-[-0.02em]

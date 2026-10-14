@@ -5,7 +5,7 @@ import { Context, Effect, Layer } from "effect"
 import { SessionTodo } from "@prioricode/schema/session-todo"
 import { Database } from "../database/database"
 import { makeLocationNode } from "../effect/app-node"
-import { EventV2 } from "../event"
+import { EventBus } from "../event"
 import { SessionSchema } from "./schema"
 import { TodoTable } from "./sql"
 
@@ -27,7 +27,7 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const { db } = yield* Database.Service
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
 
     const update = Effect.fn("SessionTodo.update")(function* (input: {
       readonly sessionID: SessionSchema.ID
@@ -75,4 +75,4 @@ const layer = Layer.effect(
   }),
 )
 
-export const node = makeLocationNode({ service: Service, layer, deps: [EventV2.node, Database.node] })
+export const node = makeLocationNode({ service: Service, layer, deps: [EventBus.node, Database.node] })

@@ -1,19 +1,19 @@
-export * as PluginV2 from "./plugin"
+export * as Plugin from "./plugin"
 
 import { makeLocationNode } from "./effect/app-node"
 import { Context, Deferred, Effect, Exit, Layer, Scope } from "effect"
 import type { Plugin as PluginRuntime } from "@prioricode/plugin/v2/effect"
 import { Plugin } from "@prioricode/schema/plugin"
-import { AgentV2 } from "./agent"
+import { Agent } from "./agent"
 import { AISDK } from "./aisdk"
 import { Catalog } from "./catalog"
-import { CommandV2 } from "./command"
-import { EventV2 } from "./event"
+import { Command } from "./command"
+import { EventBus } from "./event"
 import { Integration } from "./integration"
 import { KeyedMutex } from "./effect/keyed-mutex"
 import { PluginHost } from "./plugin/host"
 import { Reference } from "./reference"
-import { SkillV2 } from "./skill"
+import { Skill } from "./skill"
 import { State } from "./state"
 
 export const ID = Plugin.ID
@@ -26,12 +26,12 @@ export interface Interface {
   readonly wait: (id: ID) => Effect.Effect<void>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/Plugin") {}
+export class Service extends Context.Service<Service, Interface>()("@prioricode/Plugin") {}
 
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     const locks = KeyedMutex.makeUnsafe<ID>()
     const scope = yield* Scope.make()
     const active = new Map<ID, Scope.Closeable>()
@@ -143,10 +143,10 @@ const layer = Layer.effect(
 )
 
 export const locationLayer = layer.pipe(
-  Layer.provideMerge(AgentV2.locationLayer),
+  Layer.provideMerge(Agent.locationLayer),
   Layer.provideMerge(AISDK.locationLayer),
   Layer.provideMerge(Catalog.locationLayer),
-  Layer.provideMerge(CommandV2.locationLayer),
+  Layer.provideMerge(Command.locationLayer),
   Layer.provideMerge(Integration.locationLayer),
   Layer.provideMerge(Reference.locationLayer),
 )
@@ -155,13 +155,13 @@ export const node = makeLocationNode({
   service: Service,
   layer,
   deps: [
-    EventV2.node,
-    AgentV2.node,
+    EventBus.node,
+    Agent.node,
     AISDK.node,
     Catalog.node,
-    CommandV2.node,
+    Command.node,
     Integration.node,
     Reference.node,
-    SkillV2.node,
+    Skill.node,
   ],
 })

@@ -6,11 +6,44 @@ import { Question } from "../question"
 import { Session } from "@/session/session"
 import { Provider } from "@/provider/provider"
 import { InstanceState } from "@/effect/instance-state"
-import { MessageID, PartID } from "../session/schema"
+import { MessageID, PartID, SessionID } from "../session/schema"
 import EXIT_DESCRIPTION from "./plan-exit.txt"
 import ENTER_DESCRIPTION from "./plan-enter.txt"
 
 export const Parameters = Schema.Struct({})
+
+function injectSyntheticSwitch(
+  session: Session.Interface,
+  provider: Provider.Interface,
+  sessionID: SessionID,
+  agent: "plan" | "build",
+  text: string,
+) {
+  return Effect.gen(function* () {
+    const messages = yield* session.messages({ sessionID }).pipe(Effect.orDie)
+    const lastUser = messages.findLast((item) => item.info.role === "user" && item.info.model)
+    const model =
+      lastUser?.info.role === "user" && lastUser.info.model ? lastUser.info.model : yield* provider.defaultModel()
+
+    const msg: SessionV1.User = {
+      id: MessageID.ascending(),
+      sessionID,
+      role: "user",
+      time: { created: Date.now() },
+      agent,
+      model,
+    }
+    yield* session.updateMessage(msg)
+    yield* session.updatePart({
+      id: PartID.ascending(),
+      messageID: msg.id,
+      sessionID,
+      type: "text",
+      text,
+      synthetic: true,
+    } satisfies SessionV1.TextPart)
+  }).pipe(Effect.orDie)
+}
 
 export const PlanExitTool = Tool.define(
   "plan_exit",
@@ -45,28 +78,13 @@ export const PlanExitTool = Tool.define(
 
           if (answers[0]?.[0] === "No") yield* new Question.RejectedError()
 
-          const messages = yield* session.messages({ sessionID: ctx.sessionID }).pipe(Effect.orDie)
-          const lastUser = messages.findLast((item) => item.info.role === "user" && item.info.model)
-          const model =
-            lastUser?.info.role === "user" && lastUser.info.model ? lastUser.info.model : yield* provider.defaultModel()
-
-          const msg: SessionV1.User = {
-            id: MessageID.ascending(),
-            sessionID: ctx.sessionID,
-            role: "user",
-            time: { created: Date.now() },
-            agent: "build",
-            model,
-          }
-          yield* session.updateMessage(msg)
-          yield* session.updatePart({
-            id: PartID.ascending(),
-            messageID: msg.id,
-            sessionID: ctx.sessionID,
-            type: "text",
-            text: `The plan at ${plan} has been approved, you can now edit files. Execute the plan`,
-            synthetic: true,
-          } satisfies SessionV1.TextPart)
+          yield* injectSyntheticSwitch(
+            session,
+            provider,
+            ctx.sessionID,
+            "build",
+            `The plan at ${plan} has been approved, you can now edit files. Execute the plan`,
+          )
 
           return {
             title: "Switching to build agent",
@@ -108,28 +126,13 @@ export const PlanEnterTool = Tool.define(
 
           if (answers[0]?.[0] === "No") yield* new Question.RejectedError()
 
-          const messages = yield* session.messages({ sessionID: ctx.sessionID }).pipe(Effect.orDie)
-          const lastUser = messages.findLast((item) => item.info.role === "user" && item.info.model)
-          const model =
-            lastUser?.info.role === "user" && lastUser.info.model ? lastUser.info.model : yield* provider.defaultModel()
-
-          const msg: SessionV1.User = {
-            id: MessageID.ascending(),
-            sessionID: ctx.sessionID,
-            role: "user",
-            time: { created: Date.now() },
-            agent: "plan",
-            model,
-          }
-          yield* session.updateMessage(msg)
-          yield* session.updatePart({
-            id: PartID.ascending(),
-            messageID: msg.id,
-            sessionID: ctx.sessionID,
-            type: "text",
-            text: "Switch to plan mode. Analyze the request and create a plan.",
-            synthetic: true,
-          } satisfies SessionV1.TextPart)
+          yield* injectSyntheticSwitch(
+            session,
+            provider,
+            ctx.sessionID,
+            "plan",
+            "Switch to plan mode. Analyze the request and create a plan.",
+          )
 
           return {
             title: "Switching to plan agent",

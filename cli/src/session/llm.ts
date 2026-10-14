@@ -14,11 +14,10 @@ import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"
 import { ProviderTransform } from "@/provider/transform"
 import { Config } from "@/config/config"
 import type { Agent } from "@/agent/agent"
-import type { MessageV2 } from "./message-v2"
 import { Plugin } from "@/plugin"
 import { Permission } from "@/permission"
-import { EventV2Bridge } from "@/event-v2-bridge"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBridge } from "@/event-v2-bridge"
+import { EventBus } from "@prioricode/core/event"
 import { Wildcard } from "@/util/wildcard"
 import { SessionID } from "@/session/schema"
 import { Auth } from "@/auth"
@@ -36,7 +35,7 @@ export type StreamInput = {
   user: SessionV1.User
   sessionID: string
   parentSessionID?: string
-  model: Provider.Model
+  model: Provider.ProviderModel
   agent: Agent.Info
   permission?: PermissionV1.Ruleset
   system: string[]
@@ -67,7 +66,7 @@ const live: Layer.Layer<
   | Provider.Service
   | Plugin.Service
   | Permission.Service
-  | EventV2Bridge.Service
+  | EventBridge.Service
   | LLMClientService
   | RuntimeFlags.Service
 > = Layer.effect(
@@ -78,7 +77,7 @@ const live: Layer.Layer<
     const provider = yield* Provider.Service
     const plugin = yield* Plugin.Service
     const perm = yield* Permission.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const llmClient = yield* LLMClient.Service
     const flags = yield* RuntimeFlags.Service
 
@@ -162,12 +161,12 @@ const live: Layer.Layer<
           }
 
           const id = PermissionV1.ID.ascending()
-          let unsub: EventV2.Unsubscribe | undefined
+          let unsub: EventBus.Unsubscribe | undefined
           try {
             unsub = await bridge.promise(
               events.listen((event) => {
                 if (event.type !== Permission.Event.Replied.type) return Effect.void
-                const data = event.data as EventV2.Data<typeof Permission.Event.Replied>
+                const data = event.data as EventBus.Data<typeof Permission.Event.Replied>
                 if (data.requestID !== id) return Effect.void
                 void data.reply
                 return Effect.void
@@ -395,7 +394,7 @@ export const node = LayerNode.make({
     Provider.node,
     Plugin.node,
     Permission.node,
-    EventV2Bridge.node,
+    EventBridge.node,
     llmClient,
     RuntimeFlags.node,
   ],

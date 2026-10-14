@@ -509,6 +509,14 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
         if (id) void sessionArchive.archive(id)
       },
     }),
+    sessionCommand({
+      id: "session.move",
+      title: language.t("command.session.move"),
+      description: language.t("command.session.move.description"),
+      slash: "move",
+      disabled: !params.id,
+      onSelect: openMoveSession,
+    }),
   ]
 
   const fileCmds = () => {
@@ -631,6 +639,20 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
     }),
   ]
 
+  const openPermissionHistory = () => {
+    void openDialog(
+      () => import("@/components/dialog-permission-history"),
+      (x) => dialog.show(() => <x.DialogPermissionHistory />),
+    )
+  }
+
+  const openMoveSession = () => {
+    void openDialog(
+      () => import("@/components/dialog-move-session"),
+      (x) => dialog.show(() => <x.DialogMoveSession />),
+    )
+  }
+
   const permissionsCmds = () => [
     permissionsCommand({
       id: "permissions.autoaccept",
@@ -640,6 +662,14 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       keybind: "mod+shift+a",
       disabled: false,
       onSelect: toggleAutoAccept,
+    }),
+    permissionsCommand({
+      id: "permissions.history",
+      title: language.t("command.permissions.history"),
+      description: language.t("command.permissions.history.description"),
+      slash: "permission-history",
+      disabled: !params.id,
+      onSelect: openPermissionHistory,
     }),
   ]
 

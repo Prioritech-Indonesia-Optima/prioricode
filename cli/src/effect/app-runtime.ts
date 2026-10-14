@@ -50,7 +50,7 @@ import { Npm } from "@prioricode/core/npm"
 import { memoMap } from "@prioricode/core/effect/memo-map"
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { AppNodeBuilderV1 } from "./app-node-builder-v1"
 import { SessionProjector } from "@prioricode/core/session/projector"
@@ -81,7 +81,7 @@ export const AppLayer = AppNodeBuilderV1.build(
     SessionStatus.node,
     BackgroundJob.node,
     RuntimeFlags.node,
-    EventV2Bridge.node,
+    EventBridge.node,
     SessionRunState.node,
     SessionProcessor.node,
     SessionCompaction.node,

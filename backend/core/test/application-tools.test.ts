@@ -3,9 +3,9 @@ import { Tool } from "@prioricode/core/tool/tool"
 import { ApplicationTools } from "@prioricode/core/tool/application-tools"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionMessage } from "@prioricode/core/session/message"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { ToolRegistry } from "@prioricode/core/tool/registry"
 import { executeTool, settleTool, toolDefinitions } from "./lib/tool"
 import { ToolOutputStore } from "@prioricode/core/tool-output-store"
@@ -19,8 +19,8 @@ const it = testEffect(
   ]),
 )
 
-const sessionID = SessionV2.ID.make("ses_application_tool")
-const agent = AgentV2.ID.make("build")
+const sessionID = Session.ID.make("ses_application_tool")
+const agent = Agent.ID.make("build")
 const assistantMessageID = SessionMessage.ID.make("msg_application_tool")
 const contextual = (contexts: Tool.Context[]) =>
   Tool.make({

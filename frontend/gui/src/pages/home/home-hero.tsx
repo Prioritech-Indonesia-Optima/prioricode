@@ -8,7 +8,7 @@ export function HomeHero(props: { language: ReturnType<typeof useLanguage> }) {
       aria-label={props.language.t("home.title")}
     >
       <div class="flex items-center gap-2">
-        <span aria-hidden="true" class="size-2 bg-pc-gold-500" />
+        <span aria-hidden="true" class="size-2 bg-pc-icon-accent" />
         <span class="font-mono text-[11px] uppercase tracking-[0.22em] text-pc-text-accent">
           {props.language.t("home.hero.eyebrow")}
         </span>

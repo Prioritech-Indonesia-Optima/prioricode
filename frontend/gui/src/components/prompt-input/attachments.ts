@@ -195,19 +195,19 @@ export function createPromptAttachments(input: PromptAttachmentsInput) {
     event.preventDefault()
     input.setDraggingType(null)
 
+    const dropped = event.dataTransfer?.files
+    if (dropped && dropped.length > 0) {
+      await attachments.addAttachments(Array.from(dropped))
+      return
+    }
+
     const plainText = event.dataTransfer?.getData("text/plain")
     const filePrefix = "file:"
     if (plainText?.startsWith(filePrefix)) {
       const filePath = plainText.slice(filePrefix.length)
       input.focusEditor()
       input.addPart({ type: "file", path: filePath, content: "@" + filePath, start: 0, end: 0 })
-      return
     }
-
-    const dropped = event.dataTransfer?.files
-    if (!dropped) return
-
-    await attachments.addAttachments(Array.from(dropped))
   }
 
   onMount(() => {

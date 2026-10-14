@@ -12,9 +12,9 @@ import { ProviderError } from "../../src/provider/error"
 import { SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
 import { testEffect } from "../lib/effect"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider } from "@prioricode/core/provider"
 
-const providerID = ProviderV2.ID.make("test")
+const providerID = Provider.ID.make("test")
 const retryProvider = "test"
 const it = testEffect(LayerNode.compile(LayerNode.group([SessionStatus.node, CrossSpawnSpawner.node])))
 
@@ -489,7 +489,7 @@ describe("session.message-v2.fromError", () => {
       responseBody: '{"error":"boom"}',
       isRetryable: false,
     })
-    const result = MessageV2.fromError(error, { providerID: ProviderV2.ID.make("openai") })
+    const result = MessageV2.fromError(error, { providerID: Provider.ID.make("openai") })
     if (!SessionV1.APIError.isInstance(result)) throw new Error("expected APIError")
     expect(result.data.isRetryable).toBe(true)
   })
@@ -508,7 +508,7 @@ describe("session.message-v2.fromError", () => {
           },
         }),
       },
-      { providerID: ProviderV2.ID.make("openai") },
+      { providerID: Provider.ID.make("openai") },
     )
 
     expect(SessionV1.APIError.isInstance(result)).toBe(true)

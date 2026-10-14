@@ -6,9 +6,8 @@ export {}
 // import { test, expect, describe } from "bun:test"
 // import path from "path"
 
-// import { ProviderV2 } from "@prioricode/core/provider"
+// import { Provider } from "@prioricode/core/provider"
 // import { tmpdir, withTestInstance } from "../fixture/fixture"
-// import { Provider } from "@/provider/provider"
 // import { Env } from "../../src/env"
 // import { Global } from "@prioricode/core/global"
 // import { GitLabWorkflowLanguageModel } from "gitlab-ai-provider"

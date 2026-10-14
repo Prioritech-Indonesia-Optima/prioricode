@@ -27,7 +27,7 @@ export type StreamResult =
   | { readonly type: "unsupported"; readonly reason: string }
 
 type StreamInput = {
-  readonly model: Provider.Model
+  readonly model: Provider.ProviderModel
   readonly provider: Provider.Info
   readonly auth: Auth.Info | undefined
   readonly llmClient: LLMClientShape

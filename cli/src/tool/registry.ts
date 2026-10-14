@@ -48,23 +48,23 @@ import { SessionStatus } from "@/session/status"
 import { LSP } from "@/lsp/lsp"
 import { Instruction } from "../session/instruction"
 import { FSUtil } from "@prioricode/core/fs-util"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Agent } from "../agent/agent"
 import { Skill } from "../skill"
 import { Permission } from "@/permission"
 import { BackgroundJob } from "@/background/job"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { MCP } from "@/mcp"
 import { Sandbox } from "@/sandbox"
 import { PermissionV1 } from "@prioricode/core/v1/permission"
 import { McpCatalog } from "@/mcp/catalog"
 
-export function webSearchEnabled(providerID: ProviderV2.ID, flags = { exa: false, parallel: false }) {
+export function webSearchEnabled(providerID: ProviderSchema.ID, flags = { exa: false, parallel: false }) {
   return (
-    providerID === ProviderV2.ID.prioricode ||
-    providerID === ProviderV2.ID.make("prioricode-go") ||
+    providerID === ProviderSchema.ID.prioricode ||
+    providerID === ProviderSchema.ID.make("prioricode-go") ||
     flags.exa ||
     flags.parallel
   )
@@ -85,8 +85,8 @@ export interface Interface {
   readonly all: () => Effect.Effect<Tool.Def[]>
   readonly named: () => Effect.Effect<{ task: TaskDef; read: ReadDef }>
   readonly tools: (model: {
-    providerID: ProviderV2.ID
-    modelID: ModelV2.ID
+    providerID: ProviderSchema.ID
+    modelID: Model.ID
     agent: Agent.Info
     permission?: PermissionV1.Ruleset
   }) => Effect.Effect<Tool.Def[]>
@@ -469,7 +469,7 @@ export const node = LayerNode.make({
     LSP.node,
     Instruction.node,
     FSUtil.node,
-    EventV2Bridge.node,
+    EventBridge.node,
     httpClient,
     CrossSpawnSpawner.node,
     Format.node,

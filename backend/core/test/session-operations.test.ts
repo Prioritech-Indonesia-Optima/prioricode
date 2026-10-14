@@ -4,19 +4,19 @@ import { Effect, Exit, Layer } from "effect"
 import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { Location } from "@prioricode/core/location"
-import { ProjectV2 } from "@prioricode/core/project"
+import { Project } from "@prioricode/core/project"
 import { SessionSchema } from "@prioricode/core/session/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { location as locationFixture, tempLocationLayer } from "./fixture/location"
 import { SessionStore } from "@prioricode/core/session/store"
 import { SessionMessage } from "@prioricode/core/session/message"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
 import { Snapshot } from "@prioricode/core/snapshot"
 import { testEffect } from "./lib/effect"
 
@@ -46,9 +46,9 @@ const execution = Layer.succeed(
 )
 
 const projects = Layer.succeed(
-  ProjectV2.Service,
-  ProjectV2.Service.of({
-    resolve: (directory) => Effect.succeed({ id: ProjectV2.ID.global, directory }),
+  Project.Service,
+  Project.Service.of({
+    resolve: (directory) => Effect.succeed({ id: Project.ID.global, directory }),
     directories: () => Effect.succeed([]),
     commit: () => Effect.void,
   }),
@@ -65,10 +65,10 @@ const location = Layer.succeed(Location.Service, Location.Service.of(locationFix
 
 const it = testEffect(
   AppNodeBuilder.build(
-    LayerNode.group([Database.node, EventV2.node, SessionProjector.node, SessionStore.node, SessionV2.node]),
+    LayerNode.group([Database.node, EventBus.node, SessionProjector.node, SessionStore.node, Session.node]),
     [
       [SessionExecution.node, execution],
-      [ProjectV2.node, projects],
+      [Project.node, projects],
       [Snapshot.node, snapshots],
       [Location.node, location],
     ],
@@ -76,16 +76,16 @@ const it = testEffect(
 )
 
 const createSession = Effect.gen(function* () {
-  const sessions = yield* SessionV2.Service
+  const sessions = yield* Session.Service
   return yield* sessions.create({ location: locationRef, id: sessionID })
 })
 
-describe("SessionV2 operations while in use", () => {
+describe("Session operations while in use", () => {
   it.effect("admission and switch operations remain safe while a drain is active", () =>
     Effect.gen(function* () {
       yield* createSession
       active.add(sessionID)
-      const sessions = yield* SessionV2.Service
+      const sessions = yield* Session.Service
 
       const admitted = yield* sessions.prompt({
         sessionID,
@@ -97,7 +97,7 @@ describe("SessionV2 operations while in use", () => {
       yield* sessions.switchAgent({ sessionID, agent: "plan" })
       yield* sessions.switchModel({
         sessionID,
-        model: { providerID: ProviderV2.ID.make("test"), id: ModelV2.ID.make("test") },
+        model: { providerID: Provider.ID.make("test"), id: Model.ID.make("test") },
       })
       expect(wakes).toEqual([])
 
@@ -111,9 +111,9 @@ describe("SessionV2 operations while in use", () => {
     Effect.gen(function* () {
       yield* createSession
       active.add(sessionID)
-      const sessions = yield* SessionV2.Service
+      const sessions = yield* Session.Service
 
-      const busy = new SessionV2.BusyError({ sessionID })
+      const busy = new Session.BusyError({ sessionID })
       const stage = yield* Effect.exit(
         sessions.revert.stage({
           sessionID,
@@ -126,7 +126,7 @@ describe("SessionV2 operations while in use", () => {
       const commit = yield* Effect.exit(sessions.revert.commit(sessionID))
       expect(hasFailure(commit, busy)).toBe(true)
       const compact = yield* Effect.exit(sessions.compact({ sessionID }))
-      expect(hasFailure(compact, new SessionV2.BusyError({ sessionID }))).toBe(true)
+      expect(hasFailure(compact, new Session.BusyError({ sessionID }))).toBe(true)
 
       active.delete(sessionID)
     }),
@@ -135,7 +135,7 @@ describe("SessionV2 operations while in use", () => {
   it.effect("idle-only operations proceed once the Session settles", () =>
     Effect.gen(function* () {
       yield* createSession
-      const sessions = yield* SessionV2.Service
+      const sessions = yield* Session.Service
 
       // No staged revert: commit and clear are durable no-ops when idle.
       yield* sessions.revert.commit(sessionID)
@@ -150,10 +150,10 @@ describe("SessionV2 operations while in use", () => {
     Effect.gen(function* () {
       const missing = SessionSchema.ID.make("ses_operations_missing")
       active.add(missing)
-      const sessions = yield* SessionV2.Service
+      const sessions = yield* Session.Service
 
       const result = yield* Effect.exit(sessions.revert.commit(missing))
-      expect(hasFailure(result, new SessionV2.NotFoundError({ sessionID: missing }))).toBe(true)
+      expect(hasFailure(result, new Session.NotFoundError({ sessionID: missing }))).toBe(true)
       active.delete(missing)
     }),
   )
@@ -161,7 +161,7 @@ describe("SessionV2 operations while in use", () => {
   it.effect("wait and interrupt are no-ops or joins, never failures, for known Sessions", () =>
     Effect.gen(function* () {
       yield* createSession
-      const sessions = yield* SessionV2.Service
+      const sessions = yield* Session.Service
 
       yield* sessions.interrupt(sessionID)
       active.add(sessionID)
@@ -169,7 +169,7 @@ describe("SessionV2 operations while in use", () => {
       active.delete(sessionID)
 
       const wait = yield* Effect.exit(sessions.wait(sessionID))
-      expect(hasFailure(wait, new SessionV2.OperationUnavailableError({ operation: "wait" }))).toBe(true)
+      expect(hasFailure(wait, new Session.OperationUnavailableError({ operation: "wait" }))).toBe(true)
     }),
   )
 })

@@ -15,13 +15,12 @@ import { Hook } from "@/hook"
 import type { TaskPromptOps } from "@/tool/task"
 import { type Tool as AITool, tool, jsonSchema, type ToolExecutionOptions, asSchema } from "ai"
 import { Effect } from "effect"
-import { MessageV2 } from "./message-v2"
 import { Session } from "./session"
 import { SessionProcessor } from "./processor"
 import { PartID } from "./schema"
 import { EffectBridge } from "@/effect/bridge"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { isRecord } from "@/util/record"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 
@@ -30,18 +29,15 @@ const MCP_RESOURCE_TOOLS = {
   listTemplates: "list_mcp_resource_templates",
   read: "read_mcp_resource",
 } as const
-const MAX_MCP_RESOURCE_BLOB_BYTES = 10 * 1024 * 1024
-const SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES = new Set([
-  "application/pdf",
-  "image/gif",
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-])
+import {
+  MAX_MCP_RESOURCE_BLOB_BYTES,
+  SUPPORTED_MCP_RESOURCE_ATTACHMENT_MIMES,
+  formatMcpResourceBytes as formatBytes,
+} from "@/mcp/resource"
 
 export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   agent: Agent.Info
-  model: Provider.Model
+  model: Provider.ProviderModel
   session: Session.Info
   processor: Pick<SessionProcessor.Handle, "message" | "updateToolCall" | "completeToolCall">
   bypassAgentCheck: boolean
@@ -98,7 +94,7 @@ export const resolve = Effect.fn("SessionTools.resolve")(function* (input: {
   })
 
   for (const item of yield* registry.tools({
-    modelID: ModelV2.ID.make(input.model.api.id),
+    modelID: Model.ID.make(input.model.api.id),
     providerID: input.model.providerID,
     agent: input.agent,
     permission: input.session.permission,
@@ -603,12 +599,6 @@ function base64Size(value: string) {
   const trimmed = value.replace(/\s/g, "")
   const padding = trimmed.endsWith("==") ? 2 : trimmed.endsWith("=") ? 1 : 0
   return Math.max(0, Math.floor((trimmed.length * 3) / 4) - padding)
-}
-
-function formatBytes(value: number) {
-  if (value < 1024) return `${value} B`
-  if (value < 1024 * 1024) return `${Math.ceil(value / 1024)} KB`
-  return `${Math.ceil(value / (1024 * 1024))} MB`
 }
 
 export * as SessionTools from "./tools"

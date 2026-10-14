@@ -6,7 +6,7 @@ import { makeLocationNode } from "../effect/app-node"
 import { FileSystem } from "../filesystem"
 import { Image } from "../image"
 import { LocationMutation } from "../location-mutation"
-import { PermissionV2 } from "../permission"
+import { Permission } from "../permission"
 import { AbsolutePath } from "../schema"
 import { PermissionFailure } from "./permission-failure"
 import { ReadToolFileSystem } from "./read-filesystem"
@@ -34,7 +34,7 @@ const layer = Layer.effectDiscard(
     const reader = yield* ReadToolFileSystem.Service
     const mutation = yield* LocationMutation.Service
     const image = yield* Image.Service
-    const permission = yield* PermissionV2.Service
+    const permission = yield* Permission.Service
 
     yield* tools
       .register({
@@ -120,5 +120,5 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/read",
   layer,
-  deps: [ToolRegistry.node, ReadToolFileSystem.node, LocationMutation.node, Image.node, PermissionV2.node],
+  deps: [ToolRegistry.node, ReadToolFileSystem.node, LocationMutation.node, Image.node, Permission.node],
 })

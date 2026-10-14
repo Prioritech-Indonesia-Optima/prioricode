@@ -10,7 +10,6 @@ import { HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import z from "zod"
 import { LLM } from "../../src/session/llm"
 import { LLMClient, RequestExecutor } from "@prioricode/llm/route"
-import { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { ModelsDev } from "@prioricode/core/models-dev"
 
@@ -22,8 +21,9 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { Permission } from "@/permission"
 import { LLMAISDK } from "@/session/llm/ai-sdk"
 import { Session as SessionNs } from "@/session/session"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
@@ -53,7 +53,7 @@ const openAIConfig = (model: ModelsDev.Provider["models"][string], baseURL: stri
   }
 }
 
-const it = testEffect(AppNodeBuilder.build(LayerNode.group([LLM.node, Provider.node])))
+const it = testEffect(AppNodeBuilder.build(LayerNode.group([LLM.node, ProviderCli.node])))
 
 // LLM.stream returns a Stream, not an Effect, so we can't use the serviceUse proxy.
 const drain = (input: LLM.StreamInput) => LLM.Service.use((svc) => svc.stream(input).pipe(Stream.runDrain))
@@ -768,9 +768,9 @@ describe("session.llm.stream", () => {
             headers: { "Content-Type": "text/event-stream" },
           }),
         )
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(prioricodeFixture.providerID),
-          ModelV2.ID.make(prioricodeFixture.modelID),
+        const resolved = yield* ProviderCli.use.getModel(
+          Provider.ID.make(prioricodeFixture.providerID),
+          Model.ID.make(prioricodeFixture.modelID),
         )
         const sessionID = SessionID.make("session-child")
         const parentSessionID = SessionID.make("session-parent")
@@ -787,7 +787,7 @@ describe("session.llm.stream", () => {
           time: { created: Date.now() },
           agent: agent.name,
           model: {
-            providerID: ProviderV2.ID.make(prioricodeFixture.providerID),
+            providerID: Provider.ID.make(prioricodeFixture.providerID),
             modelID: resolved.id,
           },
         } satisfies SessionV1.User
@@ -836,9 +836,9 @@ describe("session.llm.stream", () => {
           }),
         )
 
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(vivgridFixture.providerID),
-          ModelV2.ID.make(fixture.model.id),
+        const resolved = yield* ProviderCli.use.getModel(
+          Provider.ID.make(vivgridFixture.providerID),
+          Model.ID.make(fixture.model.id),
         )
         const sessionID = SessionID.make("session-test-1")
         const agent = {
@@ -856,7 +856,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make(vivgridFixture.providerID), modelID: resolved.id, variant: "high" },
+          model: { providerID: Provider.ID.make(vivgridFixture.providerID), modelID: resolved.id, variant: "high" },
         } satisfies SessionV1.User
 
         yield* drain({
@@ -920,9 +920,9 @@ describe("session.llm.stream", () => {
             true,
           ),
         )
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(vivgridFixture.providerID),
-          ModelV2.ID.make(fixture.model.id),
+        const resolved = yield* ProviderCli.use.getModel(
+          Provider.ID.make(vivgridFixture.providerID),
+          Model.ID.make(fixture.model.id),
         )
         const sessionID = SessionID.make("session-test-network-error")
         const agent = {
@@ -937,7 +937,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make(vivgridFixture.providerID), modelID: resolved.id },
+          model: { providerID: Provider.ID.make(vivgridFixture.providerID), modelID: resolved.id },
         } satisfies SessionV1.User
 
         const error = yield* drain({
@@ -980,9 +980,9 @@ describe("session.llm.stream", () => {
           }),
         )
 
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(cerebrasFixture.providerID),
-          ModelV2.ID.make(fixture.model.id),
+        const resolved = yield* ProviderCli.use.getModel(
+          Provider.ID.make(cerebrasFixture.providerID),
+          Model.ID.make(fixture.model.id),
         )
         const sessionID = SessionID.make("session-test-cerebras-reasoning")
         const agent = {
@@ -998,7 +998,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make(cerebrasFixture.providerID), modelID: resolved.id },
+          model: { providerID: Provider.ID.make(cerebrasFixture.providerID), modelID: resolved.id },
         } satisfies SessionV1.User
 
         yield* drain({
@@ -1069,9 +1069,9 @@ describe("session.llm.stream", () => {
           ),
         )
 
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(mistralFixture.providerID),
-          ModelV2.ID.make(fixture.model.id),
+        const resolved = yield* ProviderCli.use.getModel(
+          Provider.ID.make(mistralFixture.providerID),
+          Model.ID.make(fixture.model.id),
         )
         const sessionID = SessionID.make("session-test-mistral-reasoning")
         const agent = {
@@ -1087,7 +1087,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make(mistralFixture.providerID), modelID: resolved.id },
+          model: { providerID: Provider.ID.make(mistralFixture.providerID), modelID: resolved.id },
         } satisfies SessionV1.User
 
         const thinking = {
@@ -1159,9 +1159,9 @@ describe("session.llm.stream", () => {
         const fixture = loadFixture(alibabaQwenFixture.providerID, alibabaQwenFixture.modelID)
         const pending = waitStreamingRequest("/chat/completions")
 
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(alibabaQwenFixture.providerID),
-          ModelV2.ID.make(fixture.model.id),
+        const resolved = yield* ProviderCli.use.getModel(
+          Provider.ID.make(alibabaQwenFixture.providerID),
+          Model.ID.make(fixture.model.id),
         )
         const sessionID = SessionID.make("session-test-service-abort")
         const agent = {
@@ -1176,7 +1176,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
+          model: { providerID: Provider.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
         } satisfies SessionV1.User
 
         const fiber = yield* drain({
@@ -1227,9 +1227,9 @@ describe("session.llm.stream", () => {
           }),
         )
 
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(alibabaQwenFixture.providerID),
-          ModelV2.ID.make(fixture.model.id),
+        const resolved = yield* ProviderCli.use.getModel(
+          Provider.ID.make(alibabaQwenFixture.providerID),
+          Model.ID.make(fixture.model.id),
         )
         const sessionID = SessionID.make("session-test-tools")
         const agent = {
@@ -1245,7 +1245,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
+          model: { providerID: Provider.ID.make(alibabaQwenFixture.providerID), modelID: resolved.id },
           tools: { question: true },
         } satisfies SessionV1.User
 
@@ -1332,7 +1332,7 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest("/responses", createEventResponse(responseChunks, true))
 
-        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
+        const resolved = yield* ProviderCli.use.getModel(Provider.ID.openai, Model.ID.make(model.id))
         const sessionID = SessionID.make("session-test-2")
         const agent = {
           name: "test",
@@ -1348,7 +1348,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id, variant: "high" },
+          model: { providerID: Provider.ID.make("openai"), modelID: resolved.id, variant: "high" },
         } satisfies SessionV1.User
 
         yield* drain({
@@ -1438,7 +1438,7 @@ describe("session.llm.stream", () => {
           }),
         )
 
-        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
+        const resolved = yield* ProviderCli.use.getModel(Provider.ID.openai, Model.ID.make(model.id))
         const sessionID = SessionID.make("session-test-native-flag-off")
         const agent = {
           name: "test",
@@ -1459,7 +1459,7 @@ describe("session.llm.stream", () => {
               role: "user",
               time: { created: Date.now() },
               agent: agent.name,
-              model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id, variant: "high" },
+              model: { providerID: Provider.ID.make("openai"), modelID: resolved.id, variant: "high" },
             } satisfies SessionV1.User,
             sessionID,
             model: resolved,
@@ -1504,7 +1504,7 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest("/responses", createEventResponse(chunks, true))
 
-        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
+        const resolved = yield* ProviderCli.use.getModel(Provider.ID.openai, Model.ID.make(model.id))
         const sessionID = SessionID.make("session-test-native")
         const agent = {
           name: "test",
@@ -1521,7 +1521,7 @@ describe("session.llm.stream", () => {
             role: "user",
             time: { created: Date.now() },
             agent: agent.name,
-            model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id, variant: "high" },
+            model: { providerID: Provider.ID.make("openai"), modelID: resolved.id, variant: "high" },
           } satisfies SessionV1.User,
           sessionID,
           model: resolved,
@@ -1588,7 +1588,7 @@ describe("session.llm.stream", () => {
           }),
         )
 
-        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
+        const resolved = yield* ProviderCli.use.getModel(Provider.ID.openai, Model.ID.make(model.id))
         const sessionID = SessionID.make("session-test-native-injected-tool")
         const agent = {
           name: "test",
@@ -1604,7 +1604,7 @@ describe("session.llm.stream", () => {
             role: "user",
             time: { created: Date.now() },
             agent: agent.name,
-            model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id },
+            model: { providerID: Provider.ID.make("openai"), modelID: resolved.id },
           } satisfies SessionV1.User,
           sessionID,
           model: resolved,
@@ -1677,7 +1677,7 @@ describe("session.llm.stream", () => {
         const request = waitRequest("/responses", createEventResponse(chunks, true))
         let executed: unknown
 
-        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
+        const resolved = yield* ProviderCli.use.getModel(Provider.ID.openai, Model.ID.make(model.id))
         const sessionID = SessionID.make("session-test-native-tool")
         const agent = {
           name: "test",
@@ -1693,7 +1693,7 @@ describe("session.llm.stream", () => {
             role: "user",
             time: { created: Date.now() },
             agent: agent.name,
-            model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id },
+            model: { providerID: Provider.ID.make("openai"), modelID: resolved.id },
           } satisfies SessionV1.User,
           sessionID,
           model: resolved,
@@ -1804,7 +1804,7 @@ describe("session.llm.stream", () => {
           ),
         ).toString("base64")}`
 
-        const resolved = yield* Provider.use.getModel(ProviderV2.ID.openai, ModelV2.ID.make(model.id))
+        const resolved = yield* ProviderCli.use.getModel(Provider.ID.openai, Model.ID.make(model.id))
         const sessionID = SessionID.make("session-test-data-url")
         const agent = {
           name: "test",
@@ -1819,7 +1819,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make("openai"), modelID: resolved.id },
+          model: { providerID: Provider.ID.make("openai"), modelID: resolved.id },
         } satisfies SessionV1.User
 
         yield* drain({
@@ -1891,9 +1891,9 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest("/messages", createEventResponse(chunks))
 
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(minimaxFixture.providerID),
-          ModelV2.ID.make(model.id),
+        const resolved = yield* ProviderCli.use.getModel(
+          Provider.ID.make(minimaxFixture.providerID),
+          Model.ID.make(model.id),
         )
         const sessionID = SessionID.make("session-test-3")
         const agent = {
@@ -1911,7 +1911,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make("minimax"), modelID: ModelV2.ID.make("MiniMax-M2.5") },
+          model: { providerID: Provider.ID.make("minimax"), modelID: Model.ID.make("MiniMax-M2.5") },
         } satisfies SessionV1.User
 
         yield* drain({
@@ -1988,7 +1988,7 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest("/messages", createEventResponse(chunks))
 
-        const resolved = yield* Provider.use.getModel(ProviderV2.ID.make("anthropic"), ModelV2.ID.make(model.id))
+        const resolved = yield* ProviderCli.use.getModel(Provider.ID.make("anthropic"), Model.ID.make(model.id))
         const sessionID = SessionID.make("session-test-anthropic-tools")
         const agent = {
           name: "test",
@@ -2002,7 +2002,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make("anthropic"), modelID: resolved.id, variant: "max" },
+          model: { providerID: Provider.ID.make("anthropic"), modelID: resolved.id, variant: "max" },
         } satisfies SessionV1.User
 
         const input = [
@@ -2187,9 +2187,9 @@ describe("session.llm.stream", () => {
         ]
         const request = waitRequest(pathSuffix, createEventResponse(chunks))
 
-        const resolved = yield* Provider.use.getModel(
-          ProviderV2.ID.make(geminiFixture.providerID),
-          ModelV2.ID.make(model.id),
+        const resolved = yield* ProviderCli.use.getModel(
+          Provider.ID.make(geminiFixture.providerID),
+          Model.ID.make(model.id),
         )
         const sessionID = SessionID.make("session-test-4")
         const agent = {
@@ -2207,7 +2207,7 @@ describe("session.llm.stream", () => {
           role: "user",
           time: { created: Date.now() },
           agent: agent.name,
-          model: { providerID: ProviderV2.ID.make(geminiFixture.providerID), modelID: resolved.id },
+          model: { providerID: Provider.ID.make(geminiFixture.providerID), modelID: resolved.id },
         } satisfies SessionV1.User
 
         yield* drain({

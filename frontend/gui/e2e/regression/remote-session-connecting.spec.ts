@@ -54,13 +54,21 @@ async function mockDefaultServer(page: Page) {
     const location = { directory: "/home/user" }
     if (url.pathname === "/global/health") return json(route, { healthy: true })
     if (url.pathname === "/api/health") return json(route, { healthy: true, version: "2.0.0", pid: 1 })
-    if (url.pathname === "/global/event" || url.pathname === "/event" || url.pathname === "/api/event") return sse(route)
+    if (url.pathname === "/global/event" || url.pathname === "/event" || url.pathname === "/api/event")
+      return sse(route)
     if (url.pathname === "/path" || url.pathname === "/api/path")
-      return json(route, { state: "/home/user", config: "/home/user", worktree: "/home/user", directory: "/home/user", home: "/home/user" })
+      return json(route, {
+        state: "/home/user",
+        config: "/home/user",
+        worktree: "/home/user",
+        directory: "/home/user",
+        home: "/home/user",
+      })
     if (url.pathname === "/project" || url.pathname === "/api/project") return json(route, [])
     if (url.pathname === "/project/current" || url.pathname === "/api/project/current")
       return json(route, { id: "project", directory: "/home/user" })
-    if (url.pathname === "/provider" || url.pathname === "/api/provider") return json(route, { all: [], connected: [], default: {} })
+    if (url.pathname === "/provider" || url.pathname === "/api/provider")
+      return json(route, { all: [], connected: [], default: {} })
     if (url.pathname === "/api/session") return json(route, { data: [], cursor: {} })
     if (url.pathname === "/api/session/active") return json(route, { data: {} })
     if (url.pathname === "/agent" || url.pathname === "/api/agent") return json(route, { data: [] })
@@ -71,7 +79,20 @@ async function mockDefaultServer(page: Page) {
     if (url.pathname === "/api/pty/shells") return json(route, { location, data: [] })
     if (url.pathname === "/api/permission/request" || url.pathname === "/api/question/request")
       return json(route, { location, data: [] })
-    if (["/global/config", "/config", "/provider/auth", "/mcp", "/skill", "/command", "/lsp", "/formatter", "/question", "/vcs/diff"].includes(url.pathname))
+    if (
+      [
+        "/global/config",
+        "/config",
+        "/provider/auth",
+        "/mcp",
+        "/skill",
+        "/command",
+        "/lsp",
+        "/formatter",
+        "/question",
+        "/vcs/diff",
+      ].includes(url.pathname)
+    )
       return json(route, {})
     return json(route, {})
   })

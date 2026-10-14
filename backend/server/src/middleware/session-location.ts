@@ -2,9 +2,9 @@ import { Database } from "@prioricode/core/database/database"
 import { LocationServiceMap } from "@prioricode/core/location-services"
 import { Location } from "@prioricode/core/location"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionTable } from "@prioricode/core/session/sql"
-import { WorkspaceV2 } from "@prioricode/core/workspace"
+import { Workspace } from "@prioricode/core/workspace"
 import { eq } from "drizzle-orm"
 import { Effect, Layer, Schema } from "effect"
 import { HttpRouter } from "effect/unstable/http"
@@ -19,7 +19,7 @@ export class SessionLocationMiddleware extends HttpApiMiddleware.Service<
   error: [InvalidRequestError, SessionNotFoundError],
 }) {}
 
-const decodeSessionID = Schema.decodeUnknownEffect(SessionV2.ID)
+const decodeSessionID = Schema.decodeUnknownEffect(Session.ID)
 
 export const sessionLocationLayer = Layer.effect(
   SessionLocationMiddleware,
@@ -56,7 +56,7 @@ export const sessionLocationLayer = Layer.effect(
             locations.get(
               Location.Ref.make({
                 directory: AbsolutePath.make(row.directory),
-                workspaceID: row.workspaceID ? WorkspaceV2.ID.make(row.workspaceID) : undefined,
+                workspaceID: row.workspaceID ? Workspace.ID.make(row.workspaceID) : undefined,
               }),
             ),
           ),

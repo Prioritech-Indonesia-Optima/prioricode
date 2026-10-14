@@ -4,11 +4,11 @@ import type { IntegrationOAuthMethodRegistration } from "@prioricode/plugin/v2/e
 import { define } from "@prioricode/plugin/v2/effect/plugin"
 import type { CredentialValue } from "@prioricode/sdk/v2/types"
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
-import { EventV2 } from "../../event"
+import { EventBus } from "../../event"
 import { Credential } from "../../credential"
 import { Integration } from "../../integration"
-import { ModelV2 } from "../../model"
-import { ProviderV2 } from "../../provider"
+import { Model } from "../../model"
+import { Provider } from "../../provider"
 import { ConfigProviderV1 } from "../../v1/config/provider"
 import { ConfigProviderOptionsV1 } from "../../v1/config/provider-options"
 import { ConfigV1 } from "../../v1/config/config"
@@ -83,10 +83,10 @@ function oauth(http: HttpClient.HttpClient) {
   } satisfies IntegrationOAuthMethodRegistration
 }
 
-export const PrioricodePlugin = define<HttpClient.HttpClient | EventV2.Service | Scope.Scope>({
+export const PrioricodePlugin = define<HttpClient.HttpClient | EventBus.Service | Scope.Scope>({
   id: "prioricode",
   effect: Effect.fn(function* (ctx) {
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
     const http = yield* HttpClient.HttpClient
     const loading = Semaphore.makeUnsafe(1)
     let connected = false
@@ -152,7 +152,7 @@ export const PrioricodePlugin = define<HttpClient.HttpClient | EventV2.Service |
             Object.assign(model.request.body, lowerer.request(withoutCredentials(config.options)))
             if (config.variants !== undefined) {
               model.variants = Object.entries(config.variants).map(([id, options]) => ({
-                id: ModelV2.VariantID.make(id),
+                id: Model.VariantID.make(id),
                 headers: { ...(options.headers ?? {}) },
                 body: lowerer.request(withoutCredentials(options)),
               }))
@@ -171,7 +171,7 @@ export const PrioricodePlugin = define<HttpClient.HttpClient | EventV2.Service |
         }
       }
 
-      const item = catalog.provider.get(ProviderV2.ID.prioricode)
+      const item = catalog.provider.get(Provider.ID.prioricode)
       if (!item) return
       const hasKey = Boolean(process.env.PRIORICODE_API_KEY || connected || item.provider.request.body.apiKey)
       catalog.provider.update(item.provider.id, (provider) => {

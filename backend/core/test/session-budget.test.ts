@@ -1,7 +1,7 @@
 import { describe, expect } from "bun:test"
 import { LLMClient, LLMEvent, Model, type LLMClientShape, type LLMRequest } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { Config } from "@prioricode/core/config"
 import { ConfigCompaction } from "@prioricode/core/config/compaction"
 import { ConfigPrune } from "@prioricode/core/config/prune"
@@ -10,13 +10,13 @@ import { Database } from "@prioricode/core/database/database"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Location } from "@prioricode/core/location"
-import { PermissionV2 } from "@prioricode/core/permission"
+import { Permission } from "@prioricode/core/permission"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { SessionRunCoordinator } from "@prioricode/core/session/run-coordinator"
 import { SessionRunner } from "@prioricode/core/session/runner"
@@ -55,8 +55,8 @@ const client = Layer.succeed(
 )
 
 const permission = Layer.succeed(
-  PermissionV2.Service,
-  PermissionV2.Service.of({
+  Permission.Service,
+  Permission.Service.of({
     assert: () => Effect.void,
     ask: () => Effect.die("unused"),
     reply: () => Effect.die("unused"),
@@ -120,14 +120,14 @@ const runnerLayer = AppNodeBuilder.build(SessionRunnerLLM.node, [
   [Location.node, locationLayer],
   [SkillGuidance.node, skillGuidance],
   [ReferenceGuidance.node, referenceGuidance],
-  [PermissionV2.node, permission],
+  [Permission.node, permission],
   [Config.node, config],
 ])
 const execution = Layer.effect(
   SessionExecution.Service,
   Effect.gen(function* () {
     const sessionRunner = yield* SessionRunner.Service
-    const coordinator = yield* SessionRunCoordinator.make<SessionV2.ID, SessionRunner.RunError>({
+    const coordinator = yield* SessionRunCoordinator.make<Session.ID, SessionRunner.RunError>({
       drain: (sessionID, force) => sessionRunner.run({ sessionID, force }),
     })
     return SessionExecution.Service.of({
@@ -144,10 +144,10 @@ const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([
       Database.node,
-      EventV2.node,
+      EventBus.node,
       SessionProjector.node,
       SessionStore.node,
-      AgentV2.node,
+      Agent.node,
       ToolRegistry.node,
       ToolRegistry.toolsNode,
       spitNode,
@@ -155,11 +155,11 @@ const it = testEffect(
       Snapshot.node,
       SessionRunnerLLM.node,
       SessionExecution.node,
-      SessionV2.node,
+      Session.node,
     ]),
     [
       [LayerNodePlatform.llmClient, client],
-      [PermissionV2.node, permission],
+      [Permission.node, permission],
       [SessionRunnerModel.node, models],
       [Location.node, locationLayer],
       [SkillGuidance.node, skillGuidance],
@@ -171,7 +171,7 @@ const it = testEffect(
   ),
 )
 
-const sessionID = SessionV2.ID.make("ses_budget_test")
+const sessionID = Session.ID.make("ses_budget_test")
 
 const setup = Effect.gen(function* () {
   responses = []
@@ -213,7 +213,7 @@ describe("context economics in a live drain", () => {
   it.live("the baseline starts low and a tier crossing arrives chronologically", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const { db } = yield* Database.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "One" }), resume: false })
       responses = [turn([])]
@@ -239,7 +239,7 @@ describe("context economics in a live drain", () => {
   it.live("a completed step advances the session-row usage so the budget tier reflects real tokens", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       const { db } = yield* Database.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Bill this" }), resume: false })
       responses = [
@@ -278,7 +278,7 @@ describe("context economics in a live drain", () => {
   it.live("pressure elides older large tool output in requests while history stays whole", () =>
     Effect.gen(function* () {
       yield* setup
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Spit three times" }), resume: false })
       responses = [
         turn([LLMEvent.toolCall({ id: "call-spit-1", name: "spit", input: {} })]),

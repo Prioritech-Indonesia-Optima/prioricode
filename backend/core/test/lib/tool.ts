@@ -1,10 +1,10 @@
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { ToolRegistry } from "@prioricode/core/tool/registry"
 import { Effect } from "effect"
 
 export const toolIdentity = {
-  agent: AgentV2.ID.make("build"),
+  agent: Agent.ID.make("build"),
   assistantMessageID: SessionMessage.ID.make("msg_tool_test"),
 }
 

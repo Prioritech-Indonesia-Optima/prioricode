@@ -18,8 +18,8 @@ import simplifyIntegrationCredentialsMigration from "@prioricode/core/database/m
 import simplifySessionInputMigration from "@prioricode/core/database/migration/20260622202450_simplify_session_input"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
-import { ProjectV2 } from "@prioricode/core/project"
+import { EventBus } from "@prioricode/core/event"
+import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { SessionSchema } from "@prioricode/core/session/schema"
@@ -333,13 +333,13 @@ describe("DatabaseMigration", () => {
         yield* DatabaseMigration.applyOnly(db, [simplifySessionInputMigration])
 
         const database = Layer.succeed(Database.Service, { db })
-        yield* EventV2.Service.use((service) =>
+        yield* EventBus.Service.use((service) =>
           service.publish(SessionV1.Event.Updated, {
             sessionID: SessionSchema.ID.make("session"),
             info: {
               id: SessionSchema.ID.make("session"),
               slug: "session",
-              projectID: ProjectV2.ID.global,
+              projectID: Project.ID.global,
               directory: "/project",
               title: "After",
               version: "test",
@@ -348,7 +348,7 @@ describe("DatabaseMigration", () => {
           }),
         ).pipe(
           Effect.provide(
-            AppNodeBuilder.build(LayerNode.group([EventV2.node, SessionProjector.node]), [[Database.node, database]]),
+            AppNodeBuilder.build(LayerNode.group([EventBus.node, SessionProjector.node]), [[Database.node, database]]),
           ),
         )
 
@@ -523,7 +523,7 @@ describe("DatabaseMigration", () => {
       Effect.gen(function* () {
         const db = yield* makeDb
         yield* DatabaseMigration.apply(db)
-        const projectID = ProjectV2.ID.make("codec_project")
+        const projectID = Project.ID.make("codec_project")
         const worktree = AbsolutePath.make("C:\\Repo\\Thing")
         const sandbox = AbsolutePath.make("C:\\Repo\\Thing\\sandbox")
         const directory = "C:\\Repo\\Thing\\packages\\api"
@@ -534,7 +534,7 @@ describe("DatabaseMigration", () => {
             db
               .insert(ProjectTable)
               .values({
-                id: ProjectV2.ID.make("invalid_path"),
+                id: Project.ID.make("invalid_path"),
                 worktree: AbsolutePath.make("not-absolute"),
                 sandboxes: [],
                 time_created: 1,

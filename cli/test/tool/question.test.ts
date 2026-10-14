@@ -7,7 +7,7 @@ import { SessionID, MessageID } from "../../src/session/schema"
 import { Agent } from "../../src/agent/agent"
 import { Truncate } from "@/tool/truncate"
 import { testEffect } from "../lib/effect"
-import { EventV2Bridge } from "../../src/event-v2-bridge"
+import { EventBridge } from "../../src/event-v2-bridge"
 import { Session } from "../../src/session/session"
 
 const ctx = {
@@ -22,11 +22,11 @@ const ctx = {
 }
 
 const it = testEffect(
-  LayerNode.compile(LayerNode.group([Question.node, Session.node, EventV2Bridge.node, Truncate.node, Agent.node])),
+  LayerNode.compile(LayerNode.group([Question.node, Session.node, EventBridge.node, Truncate.node, Agent.node])),
 )
 
 const pending = Effect.fn("QuestionToolTest.pending")(function* (question: Question.Interface) {
-  const events = yield* EventV2Bridge.Service
+  const events = yield* EventBridge.Service
   const asked = yield* Queue.unbounded<void>()
   const off = yield* events.listen((event) => {
     if (event.type === Question.Event.Asked.type) Queue.offerUnsafe(asked, undefined)

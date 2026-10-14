@@ -54,7 +54,7 @@ export function mapV2Foreground(
     "pc-icon-muted": greyRef(pickGrey(primitives, bgBase, 3, 600)),
     "pc-icon-inverse": greyRef(pickGrey(primitives, bgInverse, 7, inverseTarget)),
     "pc-icon-contrast": greyRef(pickGrey(primitives, bgContrast, 7, 100)),
-    "pc-icon-accent": isDark ? "var(--pc-gold-400)" : "var(--pc-gold-700)",
-    "pc-icon-accent-hover": isDark ? "var(--pc-gold-300)" : "var(--pc-gold-800)",
+    "pc-icon-accent": isDark ? "var(--pc-grey-100)" : "var(--pc-grey-1000)",
+    "pc-icon-accent-hover": isDark ? "var(--pc-grey-50)" : "var(--pc-grey-1100)",
   }
 }

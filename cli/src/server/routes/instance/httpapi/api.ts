@@ -1,10 +1,10 @@
 import { Schema } from "effect"
 import { HttpApi } from "effect/unstable/httpapi"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { EventManifest } from "@/event-manifest"
 import { Credential } from "@prioricode/core/credential"
 import { Integration } from "@prioricode/core/integration"
-import { SkillV2 } from "@prioricode/core/skill"
+import { Skill } from "@prioricode/core/skill"
 import { InstanceDisposed } from "@/server/event"
 import { Question } from "@/question"
 import { ConfigApi } from "./groups/config"
@@ -36,7 +36,7 @@ const EventSchema = Schema.Union([
   ...EventManifest.Latest.values()
     .map((definition) =>
       Schema.Struct({
-        id: EventV2.ID,
+        id: EventBus.ID,
         type: Schema.Literal(definition.type),
         properties: definition.data,
       }).annotate({ identifier: `Event.${definition.type}` }),
@@ -90,7 +90,7 @@ export const PrioriCodeHttpApi = HttpApi.make("prioricode")
     Integration.Inputs,
     Integration.Method,
     Integration.Ref,
-    SkillV2.Source,
+    Skill.Source,
   ])
 
 export type RootHttpApiType = typeof RootHttpApi

@@ -10,7 +10,7 @@ export * as SessionReviewGate from "./review-gate"
 
 import { DateTime, Effect, Stream } from "effect"
 import { LLM, LLMEvent, Message, type LLMRequest, type Model } from "@prioricode/llm"
-import { EventV2 } from "../../event"
+import { EventBus } from "../../event"
 import { Database } from "../../database/database"
 import { SessionInput } from "../input"
 import { SessionMessage } from "../message"
@@ -25,7 +25,7 @@ const MAX_REASON_CHARS = 2_000
 
 export interface Dependencies {
   readonly db: Database.Interface["db"]
-  readonly events: EventV2.Interface
+  readonly events: EventBus.Interface
   readonly store: SessionStore.Interface
   readonly judge: (request: LLMRequest) => Stream.Stream<LLMEvent, unknown>
   readonly models: SessionRunnerModel.Interface

@@ -6,6 +6,8 @@
       "name": "prioricode",
       "dependencies": {
         "@aws-sdk/client-s3": "3.933.0",
+        "@img/sharp-libvips-linux-x64": "1.0.4",
+        "@img/sharp-linux-x64": "0.33.5",
         "@prioricode/plugin": "workspace:*",
         "@prioricode/script": "workspace:*",
         "@prioricode/sdk": "workspace:*",
@@ -54,7 +56,7 @@
     },
     "backend/codemode": {
       "name": "@prioricode/codemode",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "acorn": "8.15.0",
         "effect": "catalog:",
@@ -68,7 +70,7 @@
     },
     "backend/core": {
       "name": "@prioricode/core",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "bin": {
         "prioricode": "./bin/prioricode",
       },
@@ -160,7 +162,7 @@
     },
     "backend/effect-drizzle-sqlite": {
       "name": "@prioricode/effect-drizzle-sqlite",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "drizzle-orm": "catalog:",
         "effect": "catalog:",
@@ -174,7 +176,7 @@
     },
     "backend/effect-sqlite-node": {
       "name": "@prioricode/effect-sqlite-node",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "effect": "catalog:",
       },
@@ -186,7 +188,7 @@
     },
     "backend/http-recorder": {
       "name": "@prioricode/http-recorder",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@effect/platform-node": "4.0.0-beta.83",
       },
@@ -216,7 +218,7 @@
     },
     "backend/llm": {
       "name": "@prioricode/llm",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@prioricode/schema": "workspace:*",
         "@smithy/eventstream-codec": "4.2.14",
@@ -235,7 +237,7 @@
     },
     "backend/plugin": {
       "name": "@prioricode/plugin",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@ai-sdk/provider": "3.0.8",
         "@prioricode/sdk": "workspace:*",
@@ -287,7 +289,7 @@
     },
     "backend/sdk": {
       "name": "@prioricode/sdk",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "cross-spawn": "catalog:",
       },
@@ -316,7 +318,7 @@
     },
     "backend/server": {
       "name": "@prioricode/server",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@prioricode/core": "workspace:*",
         "@prioricode/protocol": "workspace:*",
@@ -331,7 +333,7 @@
     },
     "backend/tui-abi": {
       "name": "@prioricode/tui-abi",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "devDependencies": {
         "@opentui/core": "catalog:",
         "@opentui/keymap": "catalog:",
@@ -350,7 +352,7 @@
     },
     "cli": {
       "name": "prioricode",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "bin": {
         "prioricode": "./bin/prioricode",
       },
@@ -481,7 +483,7 @@
     },
     "cloud/console/app": {
       "name": "@prioricode/console-app",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@cloudflare/vite-plugin": "1.15.2",
         "@ibm/plex": "6.4.1",
@@ -518,7 +520,7 @@
     },
     "cloud/console/core": {
       "name": "@prioricode/console-core",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@aws-sdk/client-sts": "3.782.0",
         "@jsx-email/render": "1.1.1",
@@ -545,7 +547,7 @@
     },
     "cloud/console/function": {
       "name": "@prioricode/console-function",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@ai-sdk/anthropic": "3.0.82",
         "@ai-sdk/openai": "3.0.48",
@@ -568,7 +570,7 @@
     },
     "cloud/console/mail": {
       "name": "@prioricode/console-mail",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@jsx-email/all": "2.2.3",
         "@jsx-email/cli": "1.4.3",
@@ -592,7 +594,7 @@
     },
     "cloud/console/support": {
       "name": "@prioricode/console-support",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@cloudflare/vite-plugin": "1.15.2",
         "@prioricode/console-core": "workspace:*",
@@ -612,7 +614,7 @@
     },
     "cloud/enterprise": {
       "name": "@prioricode/enterprise",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@hono/standard-validator": "catalog:",
         "@pierre/diffs": "catalog:",
@@ -644,7 +646,7 @@
     },
     "cloud/function": {
       "name": "@prioricode/function",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@octokit/auth-app": "8.0.1",
         "@octokit/rest": "catalog:",
@@ -660,7 +662,7 @@
     },
     "cloud/stats/app": {
       "name": "@prioricode/stats-app",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@ibm/plex": "6.4.1",
         "@kobalte/core": "catalog:",
@@ -687,7 +689,7 @@
     },
     "cloud/stats/core": {
       "name": "@prioricode/stats-core",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@aws-sdk/client-athena": "3.933.0",
         "@planetscale/database": "1.19.0",
@@ -706,7 +708,7 @@
     },
     "cloud/stats/server": {
       "name": "@prioricode/stats-server",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@aws-sdk/client-firehose": "3.933.0",
         "@effect/platform-node": "catalog:",
@@ -724,7 +726,7 @@
     },
     "docs/web": {
       "name": "@prioricode/web",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@astrojs/cloudflare": "12.6.3",
         "@astrojs/markdown-remark": "6.3.1",
@@ -758,7 +760,7 @@
     },
     "frontend/desktop": {
       "name": "@prioricode/desktop",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@zip.js/zip.js": "2.7.62",
         "drizzle-orm": "catalog:",
@@ -812,7 +814,7 @@
     },
     "frontend/gui": {
       "name": "@prioricode/app",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@corvu/drawer": "catalog:",
         "@dnd-kit/abstract": "0.5.0",
@@ -879,7 +881,7 @@
     },
     "frontend/session-ui": {
       "name": "@prioricode/session-ui",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@kobalte/core": "catalog:",
         "@pierre/diffs": "catalog:",
@@ -943,7 +945,7 @@
     },
     "frontend/tui": {
       "name": "@prioricode/tui",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@opentui/core": "catalog:",
         "@opentui/keymap": "catalog:",
@@ -969,7 +971,7 @@
     },
     "frontend/tui-core": {
       "name": "@prioricode/tui-core",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@prioricode/tui-abi": "workspace:*",
         "solid-js": "catalog:",
@@ -986,7 +988,7 @@
     },
     "frontend/ui": {
       "name": "@prioricode/ui",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@kobalte/core": "catalog:",
         "@pierre/diffs": "catalog:",
@@ -1037,7 +1039,7 @@
     },
     "integrations/slack": {
       "name": "@prioricode/slack",
-      "version": "0.2.4",
+      "version": "0.2.6",
       "dependencies": {
         "@prioricode/sdk": "workspace:*",
         "@slack/bolt": "^3.17.1",
@@ -2954,8 +2956,6 @@
     "@types/range-parser": ["@types/range-parser@1.2.7", "", {}, "sha512-hKormJbkJqzQGhziax5PItDUTMAM9uE2XXQmM37dyd4hVM+5aVl7oVxMVUiVQn2oCQFN/LKCZdvSM0pFRqbSmQ=="],
 
     "@types/react": ["@types/react@18.0.25", "", { "dependencies": { "@types/prop-types": "*", "@types/scheduler": "*", "csstype": "^3.0.2" } }, "sha512-xD6c0KDT4m7n9uD4ZHi02lzskaiqcBxf4zi+tXZY98a04wvc0hi/TcCPC2FOESZi51Nd7tlUeOJY8RofL799/g=="],
-
-    "@types/react-dom": ["@types/react-dom@19.3.0", "", { "peerDependencies": { "@types/react": "^19.3.0" } }, "sha512-ZI7bU42mZXXKHn/qNLEw2IrbiINU7X5+vfgdixBHkCNpYWXjKgfQ/P+uyGb5CjOLB9UcnTeg3rylQtV2hym44Q=="],
 
     "@types/responselike": ["@types/responselike@1.0.3", "", { "dependencies": { "@types/node": "*" } }, "sha512-H/+L+UkTV33uf49PH5pCAUBVPNj2nDBXTN+qS1dOwyyg24l3CcicicCA7ca+HMvJBZcFgl5r8e+RR6elsb4Lyw=="],
 
@@ -6146,8 +6146,6 @@
     "@testing-library/dom/aria-query": ["aria-query@5.3.0", "", { "dependencies": { "dequal": "^2.0.3" } }, "sha512-b0P0sZPKtyu8HkeRAfCq0IfURZK+SuwMjY1UXGBU27wpAiTwQAIlq56IbIO+ytk/JjS1fMR14ee5WBBfKi5J6A=="],
 
     "@testing-library/dom/dom-accessibility-api": ["dom-accessibility-api@0.5.16", "", {}, "sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg=="],
-
-    "@types/react-dom/@types/react": ["@types/react@19.3.0", "", { "dependencies": { "csstype": "^3.2.2" } }, "sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg=="],
 
     "@vitest/expect/@vitest/utils": ["@vitest/utils@3.2.4", "", { "dependencies": { "@vitest/pretty-format": "3.2.4", "loupe": "^3.1.4", "tinyrainbow": "^2.0.0" } }, "sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA=="],
 

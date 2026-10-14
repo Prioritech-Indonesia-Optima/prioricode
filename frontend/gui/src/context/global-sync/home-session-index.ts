@@ -1,4 +1,4 @@
-import type { Event, Session, SessionV2Info, V2SessionListResponse } from "@prioricode/sdk/v2/client"
+import type { Event, Session, SessionInfo, V2SessionListResponse } from "@prioricode/sdk/v2/client"
 import type { QueryClient } from "@tanstack/solid-query"
 import { trimSessions } from "./session-trim"
 import { pathKey } from "@/utils/path-key"
@@ -31,7 +31,7 @@ export async function loadHomeSessionIndex(
   eventSequence = 0,
   signal?: AbortSignal,
 ) {
-  const data: SessionV2Info[] = []
+  const data: SessionInfo[] = []
   let cursor: string | undefined
 
   for (;;) {
@@ -142,7 +142,7 @@ export function createHomeSessionIndexCache(queryClient: QueryClient, server: st
 // multiple directories. A bounded page could omit an old session updated today.
 // Once released, use client.v2.project.list() and client.v2.session.list({
 // parentID: null, order: "desc" }), then remove this adapter and its V1 fields.
-export function parseHomeSessionIndex(sessions: SessionV2Info[]): Session[] {
+export function parseHomeSessionIndex(sessions: SessionInfo[]): Session[] {
   return sessions.flatMap((item) => {
     if (item.parentID || typeof item.time.archived === "number") return []
     return [toLegacySummary(item)]
@@ -166,7 +166,7 @@ export function applyHomeSessionEvent(sessions: Session[], event: HomeSessionEve
   return sessions.with(index, info)
 }
 
-function toLegacySummary(session: SessionV2Info): Session {
+function toLegacySummary(session: SessionInfo): Session {
   return {
     id: session.id,
     slug: session.id,

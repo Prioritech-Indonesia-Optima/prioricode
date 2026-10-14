@@ -4,15 +4,15 @@ import { HttpClient, HttpClientResponse } from "effect/unstable/http"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
-import { PermissionV2 } from "@prioricode/core/permission"
-import { SessionV2 } from "@prioricode/core/session"
+import { Permission } from "@prioricode/core/permission"
+import { Session } from "@prioricode/core/session"
 import { ToolRegistry } from "@prioricode/core/tool/registry"
 import { WebSearchTool } from "@prioricode/core/tool/websearch"
 import { ToolOutputStore } from "@prioricode/core/tool-output-store"
 import { testEffect } from "./lib/effect"
 import { toolIdentity, executeTool, settleTool, toolDefinitions } from "./lib/tool"
 
-const sessionID = SessionV2.ID.make("ses_websearch_test")
+const sessionID = Session.ID.make("ses_websearch_test")
 const payload = (text: string) =>
   JSON.stringify({
     jsonrpc: "2.0",
@@ -68,7 +68,7 @@ interface Request {
 }
 
 const requests: Request[] = []
-const assertions: PermissionV2.AssertInput[] = []
+const assertions: Permission.AssertInput[] = []
 let responseBody = payload("search results")
 let makeResponse = () => new Response(responseBody, { status: 200 })
 let config: WebSearchTool.Config = { enableExa: false, enableParallel: false }
@@ -93,8 +93,8 @@ const http = Layer.succeed(
   ),
 )
 const permission = Layer.succeed(
-  PermissionV2.Service,
-  PermissionV2.Service.of({
+  Permission.Service,
+  Permission.Service.of({
     assert: (input) => Effect.sync(() => assertions.push(input)),
     ask: () => Effect.die("unused"),
     reply: () => Effect.die("unused"),
@@ -127,7 +127,7 @@ const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([ToolRegistry.node, ToolRegistry.toolsNode, WebSearchTool.configNode, WebSearchTool.node]),
     [
-      [PermissionV2.node, permission],
+      [Permission.node, permission],
       [LayerNodePlatform.httpClient, http],
       [WebSearchTool.configNode, websearchConfig],
       [ToolOutputStore.node, ToolOutputStore.nodeWithoutConfig],

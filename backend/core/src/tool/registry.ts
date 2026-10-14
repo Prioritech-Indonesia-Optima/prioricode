@@ -2,8 +2,8 @@ export * as ToolRegistry from "./registry"
 
 import { ToolOutput, type ToolCall, type ToolDefinition, type ToolResultValue } from "@prioricode/llm"
 import { Context, Effect, Layer, Scope } from "effect"
-import { AgentV2 } from "../agent"
-import { PermissionV2 } from "../permission"
+import { Agent } from "../agent"
+import { Permission } from "../permission"
 import { SessionMessage } from "../session/message"
 import { SessionSchema } from "../session/schema"
 import { ToolOutputStore } from "../tool-output-store"
@@ -15,13 +15,13 @@ import { makeLocationNode } from "../effect/app-node"
 
 export type ExecuteInput = {
   readonly sessionID: SessionSchema.ID
-  readonly agent: AgentV2.ID
+  readonly agent: Agent.ID
   readonly assistantMessageID: SessionMessage.ID
   readonly call: ToolCall
 }
 
 export interface Interface {
-  readonly materialize: (permissions?: PermissionV2.Ruleset) => Effect.Effect<Materialization>
+  readonly materialize: (permissions?: Permission.Ruleset) => Effect.Effect<Materialization>
   /** Internal registration capability exposed publicly only through Tools.Service. */
   readonly register: (tools: Readonly<Record<string, AnyTool>>) => Effect.Effect<void, RegistrationError, Scope.Scope>
 }
@@ -129,7 +129,7 @@ const layer = Layer.effect(
   Service.use((registry) => Effect.succeed(Tools.Service.of({ register: registry.register }))),
 ).pipe(Layer.provideMerge(registryLayer))
 
-function whollyDisabled(action: string, rules: PermissionV2.Ruleset) {
+function whollyDisabled(action: string, rules: Permission.Ruleset) {
   const rule = rules.findLast((rule) => Wildcard.match(action, rule.action))
   return rule?.resource === "*" && rule.effect === "deny"
 }

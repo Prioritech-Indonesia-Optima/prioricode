@@ -1,6 +1,6 @@
 import { describe, expect } from "bun:test"
 import { SessionV1 } from "@prioricode/core/v1/session"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { Deferred, Effect, Exit, Layer } from "effect"
 import { Session as SessionNs } from "@/session/session"
@@ -10,7 +10,7 @@ import { CrossSpawnSpawner } from "@prioricode/core/cross-spawn-spawner"
 import { provideInstance, tmpdirScoped } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { GlobalBus } from "@/bus/global"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
@@ -21,7 +21,7 @@ const it = testEffect(
   AppNodeBuilder.build(
     LayerNode.group([
       SessionNs.node,
-      EventV2Bridge.node,
+      EventBridge.node,
       SessionProjector.node,
       CrossSpawnSpawner.node,
       InstanceStore.node,
@@ -48,7 +48,7 @@ describe("session.created event", () => {
   it.instance("should emit session.created event when session is created", () =>
     Effect.gen(function* () {
       const session = yield* SessionNs.Service
-      const events = yield* EventV2Bridge.Service
+      const events = yield* EventBridge.Service
       const received = yield* Deferred.make<SessionNs.Info>()
 
       const unsub = yield* events.listen((event) => {
@@ -77,7 +77,7 @@ describe("session.created event", () => {
   it.instance("session.created event should be emitted before session.updated", () =>
     Effect.gen(function* () {
       const session = yield* SessionNs.Service
-      const source = yield* EventV2Bridge.Service
+      const source = yield* EventBridge.Service
       const events: string[] = []
       const received = yield* Deferred.make<string[]>()
       const push = (event: string) => {
@@ -109,8 +109,8 @@ describe("session.created event", () => {
   it.instance("emits legacy global sync payload", () =>
     Effect.gen(function* () {
       const session = yield* SessionNs.Service
-      const received = yield* Deferred.make<{ syncEvent: EventV2.SerializedEvent }>()
-      const listener = (event: { payload: { type?: string; syncEvent?: EventV2.SerializedEvent } }) => {
+      const received = yield* Deferred.make<{ syncEvent: EventBus.SerializedEvent }>()
+      const listener = (event: { payload: { type?: string; syncEvent?: EventBus.SerializedEvent } }) => {
         if (event.payload.type === "sync" && event.payload.syncEvent)
           Deferred.doneUnsafe(received, Effect.succeed({ syncEvent: event.payload.syncEvent }))
       }
@@ -121,7 +121,7 @@ describe("session.created event", () => {
       const event = yield* awaitDeferred(received, "timed out waiting for legacy global sync event")
 
       expect(event.syncEvent).toMatchObject({
-        type: EventV2.versionedType(SessionNs.Event.Created.type, 1),
+        type: EventBus.versionedType(SessionNs.Event.Created.type, 1),
         seq: 0,
         aggregateID: info.id,
         data: { sessionID: info.id },
@@ -138,7 +138,7 @@ describe("step-finish token propagation via event", () => {
     () =>
       Effect.gen(function* () {
         const session = yield* SessionNs.Service
-        const events = yield* EventV2Bridge.Service
+        const events = yield* EventBridge.Service
         const info = yield* session.create({})
 
         const messageID = MessageID.ascending()

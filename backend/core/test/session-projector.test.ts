@@ -4,14 +4,14 @@ import { asc, eq, sql } from "drizzle-orm"
 import { Database } from "@prioricode/core/database/database"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { EventTable } from "@prioricode/core/event/sql"
-import { ModelV2 } from "@prioricode/core/model"
+import { Model } from "@prioricode/core/model"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Provider } from "@prioricode/core/provider"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionEvent } from "@prioricode/core/session/event"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { Prompt } from "@prioricode/core/session/prompt"
@@ -24,11 +24,11 @@ import { testEffect } from "./lib/effect"
 import { Snapshot } from "@prioricode/core/snapshot"
 import { Location } from "@prioricode/core/location"
 
-const it = testEffect(AppNodeBuilder.build(LayerNode.group([Database.node, EventV2.node, SessionProjector.node])))
-const sessionsLayer = AppNodeBuilder.build(SessionV2.node, [[SessionExecution.node, SessionExecution.noopLayer]])
-const sessionID = SessionV2.ID.make("ses_projector_test")
+const it = testEffect(AppNodeBuilder.build(LayerNode.group([Database.node, EventBus.node, SessionProjector.node])))
+const sessionsLayer = AppNodeBuilder.build(Session.node, [[SessionExecution.node, SessionExecution.noopLayer]])
+const sessionID = Session.ID.make("ses_projector_test")
 const created = DateTime.makeUnsafe(0)
-const model = { id: ModelV2.ID.make("model"), providerID: ProviderV2.ID.make("provider") }
+const model = { id: Model.ID.make("model"), providerID: Provider.ID.make("provider") }
 const encodeMessage = Schema.encodeSync(SessionMessage.Message)
 
 const assistantRow = (
@@ -48,7 +48,7 @@ describe("SessionProjector", () => {
   it.effect("projects moved sessions without the transitional context epoch table", () =>
     Effect.gen(function* () {
       const { db } = yield* Database.Service
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
       yield* db
         .insert(ProjectTable)
         .values({ id: Project.ID.global, worktree: AbsolutePath.make("/project"), sandboxes: [] })
@@ -101,7 +101,7 @@ describe("SessionProjector", () => {
         .insert(SessionMessageTable)
         .values([assistantRow(boundary, 1), assistantRow(SessionMessage.ID.make("msg_later"), 2)])
         .run()
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
       yield* events.publish(SessionEvent.RevertEvent.Staged, {
         sessionID,
         timestamp: DateTime.makeUnsafe(1),
@@ -150,7 +150,7 @@ describe("SessionProjector", () => {
         })
         .run()
         .pipe(Effect.orDie)
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
 
       yield* events.publish(
         SessionEvent.Prompted,
@@ -161,7 +161,7 @@ describe("SessionProjector", () => {
           prompt: Prompt.make({ text: "first" }),
           delivery: "steer",
         },
-        { id: EventV2.ID.make("evt_z") },
+        { id: EventBus.ID.make("evt_z") },
       )
       yield* events.publish(
         SessionEvent.Prompted,
@@ -172,10 +172,10 @@ describe("SessionProjector", () => {
           prompt: Prompt.make({ text: "second" }),
           delivery: "steer",
         },
-        { id: EventV2.ID.make("evt_a") },
+        { id: EventBus.ID.make("evt_a") },
       )
 
-      const sessions = yield* SessionV2.Service
+      const sessions = yield* Session.Service
       const firstPage = yield* sessions.messages({ sessionID, limit: 1, order: "asc" })
       expect(firstPage.map((message) => (message.type === "user" ? message.text : message.type))).toEqual(["first"])
       const secondPage = yield* sessions.messages({
@@ -219,7 +219,7 @@ describe("SessionProjector", () => {
         })
         .run()
         .pipe(Effect.orDie)
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
       const id = SessionMessage.ID.make("msg_admitted")
       const admitted = yield* SessionInput.admit(db, events, {
         id,
@@ -263,7 +263,7 @@ describe("SessionProjector", () => {
         })
         .run()
         .pipe(Effect.orDie)
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
 
       yield* events.publish(SessionEvent.AgentSwitched, {
         sessionID,
@@ -390,7 +390,7 @@ describe("SessionProjector", () => {
         })
         .run()
         .pipe(Effect.orDie)
-      const events = yield* EventV2.Service
+      const events = yield* EventBus.Service
       const id = SessionMessage.ID.make("msg_creator_collision")
 
       yield* events.publish(SessionEvent.Synthetic, { sessionID, messageID: id, timestamp: created, text: "keep me" })
@@ -465,7 +465,7 @@ describe("SessionProjector", () => {
         .run()
         .pipe(Effect.orDie)
 
-      const service = yield* EventV2.Service
+      const service = yield* EventBus.Service
       yield* service.publish(SessionEvent.Step.Ended, {
         sessionID,
         timestamp: DateTime.makeUnsafe(1),
@@ -526,7 +526,7 @@ describe("SessionProjector", () => {
         .run()
         .pipe(Effect.orDie)
 
-      const service = yield* EventV2.Service
+      const service = yield* EventBus.Service
       yield* service.publish(SessionEvent.Text.Started, {
         sessionID,
         assistantMessageID: SessionMessage.ID.make("msg_assistant_completed"),

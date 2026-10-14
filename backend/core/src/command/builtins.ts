@@ -8,7 +8,7 @@
 export * as CommandBuiltIns from "./builtins"
 
 import { Effect, Layer } from "effect"
-import { CommandV2 } from "../command"
+import { Command } from "../command"
 import { makeLocationNode } from "../effect/app-node"
 
 const SPEC_TEMPLATE = `You are running the /spec command. Produce a written implementation spec through a short structured interview, then register it as this session's durable goal. Follow the steps in order and do nothing else.
@@ -23,7 +23,7 @@ const SPEC_TEMPLATE = `You are running the /spec command. Produce a written impl
 
 const layer = Layer.effectDiscard(
   Effect.gen(function* () {
-    const commands = yield* CommandV2.Service
+    const commands = yield* Command.Service
     yield* commands.transform((draft) => {
       draft.update("spec", (command) => {
         command.template = SPEC_TEMPLATE
@@ -33,4 +33,4 @@ const layer = Layer.effectDiscard(
   }),
 )
 
-export const node = makeLocationNode({ name: "command-builtins", layer, deps: [CommandV2.node] })
+export const node = makeLocationNode({ name: "command-builtins", layer, deps: [Command.node] })

@@ -1,7 +1,7 @@
 import { PermissionV1 } from "@prioricode/core/v1/permission"
 import { Agent } from "@/agent/agent"
 import { SessionV1 } from "@prioricode/core/v1/session"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Command } from "@/command"
 import { Permission } from "@/permission"
 import { SessionShare } from "@/share/session"
@@ -60,7 +60,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
     const todoSvc = yield* Todo.Service
     const coordinationSvc = yield* Coordination.Service
     const summary = yield* SessionSummary.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const scope = yield* Scope.Scope
 
     const list = Effect.fn("SessionHttpApi.list")(function* (ctx: { query: typeof ListQuery.Type }) {

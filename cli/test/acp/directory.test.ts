@@ -2,9 +2,9 @@ import { describe, expect } from "bun:test"
 import { Directory } from "@/acp/directory"
 import { Command } from "@/command"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
-import { Provider } from "@/provider/provider"
+import { Provider } from "@prioricode/core/provider"
+import { Provider as ProviderCli } from "@/provider/provider"
+import { Model } from "@prioricode/core/model"
 import { Effect, Layer } from "effect"
 import { it } from "../lib/effect"
 
@@ -15,8 +15,8 @@ const command = (name: string): Command.Info => ({
   hints: [],
 })
 
-const model = (providerID: ProviderV2.ID, id: string, variants?: Directory.ModelVariants): Provider.Model => ({
-  id: ModelV2.ID.make(id),
+const model = (providerID: Provider.ID, id: string, variants?: Directory.ModelVariants): ProviderCli.ProviderModel => ({
+  id: Model.ID.make(id),
   providerID,
   api: {
     id,
@@ -51,8 +51,8 @@ const model = (providerID: ProviderV2.ID, id: string, variants?: Directory.Model
 })
 
 const snapshot = (directory: string) => {
-  const providerID = ProviderV2.ID.make(`provider-${directory}`)
-  const modelID = ModelV2.ID.make(`model-${directory}`)
+  const providerID = Provider.ID.make(`provider-${directory}`)
+  const modelID = Model.ID.make(`model-${directory}`)
   const providers = {
     [providerID]: {
       id: providerID,
@@ -65,10 +65,10 @@ const snapshot = (directory: string) => {
           low: { reasoningEffort: "low" },
           high: { reasoningEffort: "high" },
         }),
-        [ModelV2.ID.make(`plain-${directory}`)]: model(providerID, `plain-${directory}`),
+        [Model.ID.make(`plain-${directory}`)]: model(providerID, `plain-${directory}`),
       },
     },
-  } satisfies Record<ProviderV2.ID, Provider.Info>
+  } satisfies Record<Provider.ID, ProviderCli.Info>
 
   return Directory.build({
     directory,
@@ -151,7 +151,7 @@ describe("ACP directory snapshot", () => {
         low: { reasoningEffort: "low" },
         high: { reasoningEffort: "high" },
       })
-      expect(directory.variants(alpha, { ...model, modelID: ModelV2.ID.make("missing") })).toBeUndefined()
+      expect(directory.variants(alpha, { ...model, modelID: Model.ID.make("missing") })).toBeUndefined()
     }).pipe(Effect.provide(fakeLayer([]))),
   )
 

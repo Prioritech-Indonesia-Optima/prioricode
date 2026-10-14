@@ -1,22 +1,22 @@
 // Prioricode publish boundary for core events. Attach routed instance location
-// so direct EventV2 consumers can isolate directory/workspace streams.
+// so direct Event consumers can isolate directory/workspace streams.
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { InstanceRef, WorkspaceRef } from "@/effect/instance-ref"
 import { GlobalBus } from "@/bus/global"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Location } from "@prioricode/core/location"
 import { Project } from "@prioricode/core/project"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { Context, Effect, Layer } from "effect"
 
-export class Service extends Context.Service<Service, EventV2.Interface>()("@prioricode/EventV2Bridge") {}
+export class Service extends Context.Service<Service, EventBus.Interface>()("@prioricode/EventBridge") {}
 
 const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
-    const events = yield* EventV2.Service
+    const events = yield* EventBus.Service
 
-    const publish: EventV2.Interface["publish"] = (definition, data, options) =>
+    const publish: EventBus.Interface["publish"] = (definition, data, options) =>
       Effect.gen(function* () {
         if (options?.location) return yield* events.publish(definition, data, options)
         const ctx = yield* InstanceRef
@@ -51,7 +51,7 @@ const layer = Layer.effect(
             type: "sync",
             syncEvent: {
               id: event.id,
-              type: EventV2.versionedType(event.type, event.durable.version),
+              type: EventBus.versionedType(event.type, event.durable.version),
               seq: event.durable.seq,
               aggregateID: event.durable.aggregateID,
               data: event.data,
@@ -66,6 +66,6 @@ const layer = Layer.effect(
   }),
 )
 
-export const node = LayerNode.make({ service: Service, layer: layer, deps: [EventV2.node] })
+export const node = LayerNode.make({ service: Service, layer: layer, deps: [EventBus.node] })
 
-export * as EventV2Bridge from "./event-v2-bridge"
+export * as EventBridge from "./event-v2-bridge"

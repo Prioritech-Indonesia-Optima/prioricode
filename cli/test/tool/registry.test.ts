@@ -17,8 +17,8 @@ import { InstanceState } from "@/effect/instance-state"
 import { ToolJsonSchema } from "@/tool/json-schema"
 import { MessageID, SessionID } from "@/session/schema"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { MCP } from "@/mcp"
 import type { Tool as MCPToolDef } from "@modelcontextprotocol/sdk/types.js"
 
@@ -124,8 +124,8 @@ describe("tool.registry", () => {
       const agents = yield* Agent.Service
       const ids = yield* registry.ids()
       const tools = yield* registry.tools({
-        providerID: ProviderV2.ID.prioricode,
-        modelID: ModelV2.ID.make("test"),
+        providerID: Provider.ID.prioricode,
+        modelID: Model.ID.make("test"),
         agent: yield* agents.defaultInfo(),
       })
       const execute = tools.find((tool) => tool.id === "execute")
@@ -141,8 +141,8 @@ describe("tool.registry", () => {
       const registry = yield* ToolRegistry.Service
       const agents = yield* Agent.Service
       const tools = yield* registry.tools({
-        providerID: ProviderV2.ID.prioricode,
-        modelID: ModelV2.ID.make("test"),
+        providerID: Provider.ID.prioricode,
+        modelID: Model.ID.make("test"),
         agent: yield* agents.defaultInfo(),
       })
 
@@ -157,8 +157,8 @@ describe("tool.registry", () => {
       const build = yield* agent.get("build")
       if (!build) throw new Error("build agent not found")
       const task = (yield* registry.tools({
-        providerID: ProviderV2.ID.prioricode,
-        modelID: ModelV2.ID.make("test"),
+        providerID: Provider.ID.prioricode,
+        modelID: Model.ID.make("test"),
         agent: build,
       })).find((tool) => tool.id === "task")
 
@@ -335,8 +335,8 @@ describe("tool.registry", () => {
 
       const agents = yield* Agent.Service
       const promptTools = yield* registry.tools({
-        providerID: ProviderV2.ID.prioricode,
-        modelID: ModelV2.ID.make("test"),
+        providerID: Provider.ID.prioricode,
+        modelID: Model.ID.make("test"),
         agent: yield* agents.defaultInfo(),
       })
       const promptTool = promptTools.find((tool) => tool.id === "sql")

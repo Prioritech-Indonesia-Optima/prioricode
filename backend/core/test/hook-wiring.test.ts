@@ -11,13 +11,13 @@ import { makeLocationNode } from "@prioricode/core/effect/app-node"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNodePlatform } from "@prioricode/core/effect/app-node-platform"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Location } from "@prioricode/core/location"
-import { PermissionV2 } from "@prioricode/core/permission"
+import { Permission } from "@prioricode/core/permission"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { Prompt } from "@prioricode/core/session/prompt"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { SessionExecution } from "@prioricode/core/session/execution"
@@ -28,7 +28,7 @@ import { SessionRunnerModel } from "@prioricode/core/session/runner/model"
 import { EventTable } from "@prioricode/core/event/sql"
 import { SessionTable } from "@prioricode/core/session/sql"
 import { SessionStore } from "@prioricode/core/session/store"
-import { AgentV2 } from "@prioricode/core/agent"
+import { Agent } from "@prioricode/core/agent"
 import { SkillGuidance } from "@prioricode/core/skill/guidance"
 import { ReferenceGuidance } from "@prioricode/core/reference/guidance"
 import { SystemContext } from "@prioricode/core/system-context"
@@ -47,7 +47,7 @@ const model = Model.make({ id: "fake-model", provider: "fake", route: OpenAIChat
 let responses: LLMEvent[][] = []
 const requests: LLMRequest[] = []
 const executions: string[] = []
-const permissionAsserts: PermissionV2.AssertInput[] = []
+const permissionAsserts: Permission.AssertInput[] = []
 let permissionDeny = false
 
 const client = Layer.succeed(
@@ -62,17 +62,17 @@ const client = Layer.succeed(
   }),
 )
 
-const hookAsserts = (input: PermissionV2.AssertInput) =>
+const hookAsserts = (input: Permission.AssertInput) =>
   Effect.gen(function* () {
     permissionAsserts.push(input)
     if (input.action !== "hooks.project") return yield* Effect.die(`unexpected permission action: ${input.action}`)
-    if (permissionDeny) return yield* Effect.fail(new PermissionV2.DeclinedError({}))
+    if (permissionDeny) return yield* Effect.fail(new Permission.DeclinedError({}))
   })
 
 const permission = Layer.succeed(
-  PermissionV2.Service,
-  PermissionV2.Service.of({
-    assert: hookAsserts as unknown as PermissionV2.Interface["assert"],
+  Permission.Service,
+  Permission.Service.of({
+    assert: hookAsserts as unknown as Permission.Interface["assert"],
     ask: () => Effect.die("unused"),
     reply: () => Effect.die("unused"),
     get: () => Effect.die("unused"),
@@ -141,14 +141,14 @@ const runnerLayer = AppNodeBuilder.build(SessionRunnerLLM.node, [
   [Location.node, location],
   [SkillGuidance.node, skillGuidance],
   [ReferenceGuidance.node, referenceGuidance],
-  [PermissionV2.node, permission],
+  [Permission.node, permission],
   [Config.node, config],
 ])
 const execution = Layer.effect(
   SessionExecution.Service,
   Effect.gen(function* () {
     const sessionRunner = yield* SessionRunner.Service
-    const coordinator = yield* SessionRunCoordinator.make<SessionV2.ID, SessionRunner.RunError>({
+    const coordinator = yield* SessionRunCoordinator.make<Session.ID, SessionRunner.RunError>({
       drain: (sessionID, force) => sessionRunner.run({ sessionID, force }),
     })
     return SessionExecution.Service.of({
@@ -163,11 +163,11 @@ const execution = Layer.effect(
 const graph = AppNodeBuilder.build(
   LayerNode.group([
     Database.node,
-    EventV2.node,
+    EventBus.node,
     SessionProjector.node,
     SessionStore.node,
     ApplicationTools.node,
-    AgentV2.node,
+    Agent.node,
     ToolRegistry.node,
     ToolRegistry.toolsNode,
     echoNode,
@@ -179,11 +179,11 @@ const graph = AppNodeBuilder.build(
     Snapshot.node,
     SessionRunnerLLM.node,
     SessionExecution.node,
-    SessionV2.node,
+    Session.node,
   ]),
   [
     [LayerNodePlatform.llmClient, client],
-    [PermissionV2.node, permission],
+    [Permission.node, permission],
     [SessionRunnerModel.node, models],
     [Location.node, location],
     [SkillGuidance.node, skillGuidance],
@@ -195,7 +195,7 @@ const graph = AppNodeBuilder.build(
 )
 
 const it = testEffect(graph)
-const sessionID = SessionV2.ID.make("ses_hook_wiring_test")
+const sessionID = Session.ID.make("ses_hook_wiring_test")
 
 const setup = (documents: ConfigHooks.Info[], projectFrom = Number.MAX_SAFE_INTEGER) =>
   Effect.gen(function* () {
@@ -242,7 +242,7 @@ const finalTextEvents = (id: string, text: string) => [
   LLMEvent.stepFinish({ index: 0, reason: "stop" }),
   LLMEvent.finish({ reason: "stop" }),
 ]
-const toolPartJSON = (session: SessionV2.Interface, callID: string) =>
+const toolPartJSON = (session: Session.Interface, callID: string) =>
   Effect.map(session.context(sessionID), (messages) =>
     messages
       .flatMap((message) =>
@@ -263,7 +263,7 @@ const durableEvents = Effect.gen(function* () {
     .all()
     .pipe(Effect.orDie)
 })
-const userTexts = (session: SessionV2.Interface) =>
+const userTexts = (session: Session.Interface) =>
   Effect.map(session.context(sessionID), (messages) =>
     messages.flatMap((message) => (message.type === "user" ? [message.text] : [])),
   )
@@ -277,7 +277,7 @@ posixOnly("hook wiring", () => {
   it.live("PreToolUse exit 2 replaces the tool result and the tool never executes", () =>
     Effect.gen(function* () {
       yield* setup([info({ PreToolUse: [sh("printf 'no echoing allowed\\n' >&2; exit 2")] })])
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Echo this" }), resume: false })
       responses = [toolCallEvents("call-blocked", "hello"), finalTextEvents("text-end", "Understood")]
       yield* session.resume(sessionID)
@@ -296,7 +296,7 @@ posixOnly("hook wiring", () => {
           ],
         }),
       ])
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Echo this" }), resume: false })
       responses = [toolCallEvents("call-run", "hello"), []]
       yield* session.resume(sessionID)
@@ -307,7 +307,7 @@ posixOnly("hook wiring", () => {
   it.live("PostToolUse stdout is appended to the settled tool result", () =>
     Effect.gen(function* () {
       yield* setup([info({ PostToolUse: [sh("printf 'lint: 1 warning'")] })])
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Echo this" }), resume: false })
       responses = [toolCallEvents("call-note", "hello"), []]
       yield* session.resume(sessionID)
@@ -328,7 +328,7 @@ posixOnly("hook wiring", () => {
           ],
         }),
       ])
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Done?" }), resume: false })
       responses = [finalTextEvents("text-stop", "All done"), finalTextEvents("text-stop-2", "Tests pass now")]
       yield* session.resume(sessionID)
@@ -341,7 +341,7 @@ posixOnly("hook wiring", () => {
   it.live("Stop allow without hooks costs nothing and the drain finishes", () =>
     Effect.gen(function* () {
       yield* setup([info({})])
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Hello" }), resume: false })
       responses = [finalTextEvents("text-only", "Hi")]
       yield* session.resume(sessionID)
@@ -362,7 +362,7 @@ posixOnly("hook wiring", () => {
           ],
         }),
       ])
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "First" }), resume: false })
       responses = [finalTextEvents("text-a", "A")]
       yield* session.resume(sessionID)
@@ -381,7 +381,7 @@ posixOnly("hook wiring", () => {
         [info({ PreToolUse: [sh("exit 0")] }), info({ PreToolUse: [sh("printf 'project policy\\n' >&2; exit 2")] })],
         1,
       )
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Echo this" }), resume: false })
       responses = [toolCallEvents("call-project", "hello"), []]
       yield* session.resume(sessionID)
@@ -396,7 +396,7 @@ posixOnly("hook wiring", () => {
     Effect.gen(function* () {
       yield* setup([info({ PreToolUse: [sh("printf 'project policy\\n' >&2; exit 2")] })], 0)
       permissionDeny = true
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Echo this" }), resume: false })
       responses = [toolCallEvents("call-untrusted", "hello"), []]
       yield* session.resume(sessionID)
@@ -408,7 +408,7 @@ posixOnly("hook wiring", () => {
   it.live("hook-produced tool errors are durable session events", () =>
     Effect.gen(function* () {
       yield* setup([info({ PreToolUse: [sh("printf 'blocked by policy\\n' >&2; exit 2")] })])
-      const session = yield* SessionV2.Service
+      const session = yield* Session.Service
       yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "Echo this" }), resume: false })
       responses = [toolCallEvents("call-replay", "hello"), []]
       yield* session.resume(sessionID)

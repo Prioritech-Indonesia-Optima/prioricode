@@ -1,7 +1,7 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Effect, Layer, Context, Schema } from "effect"
 import { SessionV1 } from "@prioricode/core/v1/session"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { Snapshot } from "@/snapshot"
 import { Session } from "./session"
 import { SessionID, MessageID } from "./schema"
@@ -76,7 +76,7 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const sessions = yield* Session.Service
     const snapshot = yield* Snapshot.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const config = yield* Config.Service
 
     const computeDiff = Effect.fn("SessionSummary.computeDiff")(function* (input: { messages: SessionV1.WithParts[] }) {
@@ -154,7 +154,7 @@ export type DiffInput = Schema.Schema.Type<typeof DiffInput>
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [Session.node, Snapshot.node, EventV2Bridge.node, Config.node],
+  deps: [Session.node, Snapshot.node, EventBridge.node, Config.node],
 })
 
 export * as SessionSummary from "./summary"

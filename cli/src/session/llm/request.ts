@@ -5,7 +5,6 @@ import type { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceState } from "@/effect/instance-state"
 import { Permission } from "@/permission"
 import type { Agent } from "@/agent/agent"
-import type { MessageV2 } from "../message-v2"
 import type { Provider } from "@/provider/provider"
 import { ProviderTransform } from "@/provider/transform"
 import { SystemPrompt } from "../system"
@@ -21,7 +20,7 @@ type PrepareInput = {
   readonly user: SessionV1.User
   readonly sessionID: string
   readonly parentSessionID?: string
-  readonly model: Provider.Model
+  readonly model: Provider.ProviderModel
   readonly agent: Agent.Info
   readonly permission?: PermissionV1.Ruleset
   readonly system: string[]

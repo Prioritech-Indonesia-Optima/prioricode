@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
 import { SessionCompaction } from "@prioricode/core/session/compaction"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { DateTime } from "effect"
@@ -57,7 +57,7 @@ test("compaction transcript pairs every tool call with a result line", () => {
       id: SessionMessage.ID.make("msg_compaction-tools"),
       type: "assistant",
       agent: "build",
-      model: { id: ModelV2.ID.make("model"), providerID: ProviderV2.ID.make("provider") },
+      model: { id: Model.ID.make("model"), providerID: Provider.ID.make("provider") },
       content,
       time: { created, completed: created },
     })

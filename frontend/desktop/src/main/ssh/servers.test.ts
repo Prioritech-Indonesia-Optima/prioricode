@@ -33,6 +33,8 @@ function setup(options?: {
   hosts?: SshHostProfile[]
   spawnSidecar?: (alias: string) => Promise<Sidecar>
   remoteExec?: (args: string[], stdin: string, timeoutMs: number) => Promise<{ code: number; output: string }>
+  reconnectBaseDelayMs?: number
+  reconnectMaxAttempts?: number
 }) {
   let persisted: SshServerConfig[] = []
   const hosts = options?.hosts ?? []
@@ -44,6 +46,8 @@ function setup(options?: {
       writeServers: (servers) => (persisted = servers.map((x) => ({ ...x }))),
       readHosts: () => ({ profiles: hosts, files: [{ path: "/home/u/.ssh/config", exists: true, error: null }] }),
       remoteExec: options?.remoteExec ?? (async () => ({ code: 0, output: "" })),
+      reconnectBaseDelayMs: options?.reconnectBaseDelayMs,
+      reconnectMaxAttempts: options?.reconnectMaxAttempts,
     },
   )
   return {
@@ -166,16 +170,82 @@ test("auto-install runs at most once per server", async () => {
   expect(controller.getState().servers[0]?.runtime.kind).toBe("failed")
 })
 
-test("tunnel exit flips runtime to failed", async () => {
+test("tunnel exit schedules reconnect (attempt 1)", async () => {
   const side = fakeSidecar()
-  const { controller } = setup({ spawnSidecar: async () => side as never })
+  const { controller } = setup({ spawnSidecar: async () => side as never, reconnectBaseDelayMs: 1 })
   await controller.addServer("web")
   await flush()
   expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
   side.triggerExit(137)
   const runtime = controller.getState().servers[0]?.runtime
+  expect(runtime?.kind).toBe("reconnecting")
+  if (runtime?.kind === "reconnecting") expect(runtime.attempt).toBe(1)
+})
+
+test("reconnect succeeds and returns to ready", async () => {
+  let spawns = 0
+  const side = fakeSidecar()
+  const { controller } = setup({
+    spawnSidecar: async () => {
+      spawns++
+      return side as never
+    },
+    reconnectBaseDelayMs: 1,
+  })
+  await controller.addServer("web")
+  await flush()
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
+  side.triggerExit(137)
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("reconnecting")
+  await new Promise((resolve) => setTimeout(resolve, 10))
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
+  expect(spawns).toBe(2)
+})
+
+test("reconnect exhaustion flips to failed", async () => {
+  const side = fakeSidecar()
+  const { controller } = setup({
+    spawnSidecar: async () => side as never,
+    reconnectBaseDelayMs: 1,
+    reconnectMaxAttempts: 3,
+  })
+  await controller.addServer("web")
+  await flush()
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
+  side.triggerExit(137)
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("reconnecting")
+  await new Promise((resolve) => setTimeout(resolve, 50))
+  const runtime = controller.getState().servers[0]?.runtime
   expect(runtime?.kind).toBe("failed")
-  if (runtime?.kind === "failed") expect(runtime.message).toContain("web")
+  if (runtime?.kind === "failed") expect(runtime.message).toContain("reconnect_exhausted")
+})
+
+test("stopServer cancels pending reconnect", async () => {
+  const side = fakeSidecar()
+  const { controller } = setup({ spawnSidecar: async () => side as never, reconnectBaseDelayMs: 100 })
+  await controller.addServer("web")
+  await flush()
+  side.triggerExit(137)
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("reconnecting")
+  await controller.stopServer("ssh:web")
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("stopped")
+  await new Promise((resolve) => setTimeout(resolve, 110))
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("stopped")
+})
+
+test("removeServer cancels pending reconnect", async () => {
+  const side = fakeSidecar()
+  const { controller, persistedConfigs } = setup({
+    spawnSidecar: async () => side as never,
+    reconnectBaseDelayMs: 100,
+  })
+  await controller.addServer("web")
+  await flush()
+  side.triggerExit(137)
+  expect(controller.getState().servers[0]?.runtime.kind).toBe("reconnecting")
+  await controller.removeServer("ssh:web")
+  expect(persistedConfigs()).toEqual([])
+  expect(controller.getState().servers).toEqual([])
 })
 
 test("stopServer kills the tunnel and marks stopped; removeServer deletes config", async () => {

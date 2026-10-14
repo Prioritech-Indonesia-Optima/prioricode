@@ -12,7 +12,7 @@ import { Duration, Effect, Schema } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { ConfigVerify } from "../../config/verify"
 import { Database } from "../../database/database"
-import { EventV2 } from "../../event"
+import { EventBus } from "../../event"
 import { FSUtil } from "../../fs-util"
 import { AppProcess } from "../../process"
 import { SessionInput } from "../input"
@@ -92,7 +92,7 @@ export interface Verifier {
 
 export const make = (deps: {
   readonly db: Database.Interface["db"]
-  readonly events: EventV2.Interface
+  readonly events: EventBus.Interface
   readonly fs: FSUtil.Interface
   readonly process: AppProcess.Interface
   readonly directory: string

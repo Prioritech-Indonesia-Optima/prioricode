@@ -119,6 +119,9 @@ export function WslServerSettings(props: {
                   </span>
                   <span class="settings-v2-servers-meta">
                     <Show when={check()?.version}>{(version) => `v${version()}`}</Show>
+                    <Show when={item.runtime.kind === "reconnecting"}>
+                      <span class="text-pc-text-muted">{language.t("wsl.server.status.reconnecting")}</span>
+                    </Show>
                   </span>
                 </div>
               </div>

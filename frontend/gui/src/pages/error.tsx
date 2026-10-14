@@ -1,6 +1,6 @@
 import { TextField } from "@prioricode/ui/text-field"
 import * as Sentry from "@sentry/solid"
-import { Logo } from "@prioricode/ui/logo"
+import { ColorLogo } from "@prioricode/ui/logo"
 import { Button } from "@prioricode/ui/button"
 import { Component, createSignal, onMount, Show } from "solid-js"
 import { createStore } from "solid-js/store"
@@ -281,7 +281,7 @@ export const ErrorPage: Component<ErrorPageProps> = (props) => {
       data-tauri-drag-region
     >
       <div class="w-2/3 max-w-3xl flex flex-col items-center justify-center gap-8">
-        <Logo class="w-58.5 opacity-12 shrink-0" />
+        <ColorLogo class="w-58.5 opacity-12 shrink-0" />
         <div class="flex flex-col items-center gap-2 text-center">
           <h1 class="text-lg font-medium text-text-strong">{language.t("error.page.title")}</h1>
           <p class="text-sm text-text-weak">{language.t(errorDescriptionKey(props.error))}</p>

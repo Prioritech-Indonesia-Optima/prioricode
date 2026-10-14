@@ -10,7 +10,7 @@ import { Global } from "@prioricode/core/global"
 import { Shell } from "@prioricode/core/shell"
 import { makeGlobalNode } from "@prioricode/core/effect/app-node"
 import { Config } from "@/config/config"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { SandboxEvent } from "@prioricode/schema/sandbox-event"
 
@@ -151,7 +151,7 @@ const layer = Layer.effect(
     const config = yield* Config.Service
     const app = yield* AppProcess.Service
     const fs = yield* FSUtil.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const global = yield* Global.Service
     const probeEffect = yield* Effect.cached(
       probeCapability({
@@ -276,5 +276,5 @@ const layer = Layer.effect(
 export const node = makeGlobalNode({
   service: Service,
   layer: layer,
-  deps: [Config.node, AppProcess.node, FSUtil.node, EventV2Bridge.node, Global.node],
+  deps: [Config.node, AppProcess.node, FSUtil.node, EventBridge.node, Global.node],
 })

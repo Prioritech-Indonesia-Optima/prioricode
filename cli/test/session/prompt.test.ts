@@ -4,7 +4,7 @@ import { Database } from "@prioricode/core/database/database"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { SessionProjector } from "@prioricode/core/session/projector"
 import { eq } from "drizzle-orm"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { describe, expect } from "bun:test"
 import { Cause, Deferred, Duration, Effect, Exit, Fiber, Layer } from "effect"
 import path from "path"
@@ -43,7 +43,6 @@ import { SessionRevert } from "../../src/session/revert"
 import { SessionRunState } from "../../src/session/run-state"
 import { MessageID, PartID, SessionID } from "../../src/session/schema"
 import { SessionStatus } from "../../src/session/status"
-import { SessionV2 } from "@prioricode/core/session"
 import { SessionExecution } from "@prioricode/core/session/execution"
 import { Skill } from "../../src/skill"
 import { SystemPrompt } from "../../src/session/system"
@@ -60,8 +59,8 @@ import { TestInstance } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { reply, TestLLMServer } from "../lib/llm-server"
 import { RuntimeFlags } from "@/effect/runtime-flags"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { LocationServiceMap, locationServiceMapLayer } from "@prioricode/core/location-services"
 
 const summary = Layer.succeed(
@@ -74,8 +73,8 @@ const summary = Layer.succeed(
 )
 
 const ref = {
-  providerID: ProviderV2.ID.make("test"),
-  modelID: ModelV2.ID.make("test-model"),
+  providerID: Provider.ID.make("test"),
+  modelID: Model.ID.make("test-model"),
 }
 
 function withSh<A, E, R>(fx: () => Effect.Effect<A, E, R>) {
@@ -195,7 +194,7 @@ const promptRoot = LayerNode.group([
   SessionStatus.node,
   SessionRunState.node,
   Database.node,
-  EventV2Bridge.node,
+  EventBridge.node,
   Question.node,
   Todo.node,
   ToolRegistry.node,
@@ -678,13 +677,13 @@ withMcpInstructions.instance(
 
 it.instance("legacy prompt emits message events without session.next events", () =>
   Effect.gen(function* () {
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const prompt = yield* SessionPrompt.Service
     const sessions = yield* Session.Service
     const chat = yield* sessions.create({
       title: "Pinned",
       agent: "plan",
-      model: { providerID: ProviderV2.ID.make("old"), id: ModelV2.ID.make("old-model") },
+      model: { providerID: Provider.ID.make("old"), id: Model.ID.make("old-model") },
     })
     const seen: string[] = []
     const off = yield* events.listen((event) => {
@@ -727,7 +726,7 @@ it.instance("legacy prompt emits message events without session.next events", ()
 it.instance("loop surfaces content-filter finishes as session errors", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig(providerCfg)
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const prompt = yield* SessionPrompt.Service
     const sessions = yield* Session.Service
     const chat = yield* sessions.create({ title: "Pinned" })
@@ -800,7 +799,7 @@ it.instance("loop stops provider overflow instead of auto-compacting when disabl
   }),
 )
 
-it.instance("loop triggers pre-emptive auto-compaction when estimated tokens exceed threshold", () =>
+it.instance("loop triggers auto-compaction when isOverflow detects token threshold exceeded", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig((url) => ({
       ...providerCfg(url),
@@ -810,19 +809,19 @@ it.instance("loop triggers pre-emptive auto-compaction when estimated tokens exc
     const sessions = yield* Session.Service
     const chat = yield* sessions.create({ title: "Threshold" })
 
-    // 5000 chars of text → JSON ~5500 chars → Token.estimate ≈ 1375 > trigger (1000)
-    const bigText = "x".repeat(5_000)
-
-    // Response 1: compaction summary (called by compaction.process)
+    // threshold: 1 → trigger = 1% of 100K context = 1000 tokens
+    // Response 1: first assistant reply reports 1100 total tokens → isOverflow triggers
+    yield* llm.text("first", { usage: { input: 900, output: 200 } })
+    // Response 2: compaction summary (called by compaction.process)
     yield* llm.text("summary", { usage: { input: 100, output: 100 } })
-    // Response 2: reply to the synthetic "Continue" message after compaction
+    // Response 3: reply after compaction
     yield* llm.text("done", { usage: { input: 100, output: 100 } })
 
     yield* prompt.prompt({
       sessionID: chat.id,
       agent: "build",
       noReply: true,
-      parts: [{ type: "text", text: bigText }],
+      parts: [{ type: "text", text: "hello" }],
     })
 
     yield* prompt.loop({ sessionID: chat.id })
@@ -833,7 +832,7 @@ it.instance("loop triggers pre-emptive auto-compaction when estimated tokens exc
   }),
 )
 
-it.instance("loop does not trigger pre-emptive auto-compaction when estimated tokens are below threshold", () =>
+it.instance("loop does not trigger auto-compaction when tokens are below threshold", () =>
   Effect.gen(function* () {
     const { llm } = yield* useServerConfig((url) => ({
       ...providerCfg(url),
@@ -843,7 +842,8 @@ it.instance("loop does not trigger pre-emptive auto-compaction when estimated to
     const sessions = yield* Session.Service
     const chat = yield* sessions.create({ title: "BelowThreshold" })
 
-    // Short message → Token.estimate well below trigger (80000)
+    // threshold: 80 → trigger = 80% of 100K = 80000 tokens
+    // Response reports 200 total tokens → well below trigger
     yield* llm.text("response", { usage: { input: 100, output: 100 } })
 
     yield* prompt.prompt({
@@ -884,9 +884,9 @@ noLLMServer.instance.skip(
         ],
       })
 
-      const messages = yield* SessionV2.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
+      const messages = yield* Session.Service.use((session) => session.messages({ sessionID: chat.id })).pipe(
         Effect.provide(
-          LayerNode.compile(SessionV2.node, [
+          LayerNode.compile(Session.node, [
             [SessionExecution.node, SessionExecution.noopLayer],
             [LocationServiceMap.node, locationServiceMapLayer],
           ]),
@@ -899,7 +899,7 @@ noLLMServer.instance.skip(
         .where(eq(SessionMessageTable.session_id, chat.id))
         .get()
         .pipe(Effect.orDie)
-      expect(messages.find((message) => message.type === "user")).toMatchObject({ type: "user", text: "hello v2" })
+      expect(messages.find((message) => message.info.role === "user")).toMatchObject({ type: "user", text: "hello v2" })
       expect(typeof row?.data.time.created).toBe("number")
       expect(messages).toEqual(
         expect.arrayContaining([
@@ -1140,8 +1140,8 @@ it.instance("failed subtask preserves metadata on error tool state", () =>
     expect(tool.state.metadata).toBeDefined()
     expect(tool.state.metadata?.sessionId).toBeDefined()
     expect(tool.state.metadata?.model).toEqual({
-      providerID: ProviderV2.ID.make("test"),
-      modelID: ModelV2.ID.make("missing-model"),
+      providerID: Provider.ID.make("test"),
+      modelID: Model.ID.make("missing-model"),
     })
   }),
 )
@@ -2480,7 +2480,7 @@ noLLMServer.instance(
       const other = yield* prompt.prompt({
         sessionID: session.id,
         agent: "build",
-        model: { providerID: ProviderV2.ID.make("prioricode"), modelID: ModelV2.ID.make("kimi-k2.5-free") },
+        model: { providerID: Provider.ID.make("prioricode"), modelID: Model.ID.make("kimi-k2.5-free") },
         noReply: true,
         parts: [{ type: "text", text: "hello" }],
       })
@@ -2495,8 +2495,8 @@ noLLMServer.instance(
       })
       if (match.info.role !== "user") throw new Error("expected user message")
       expect(match.info.model).toEqual({
-        providerID: ProviderV2.ID.make("test"),
-        modelID: ModelV2.ID.make("test-model"),
+        providerID: Provider.ID.make("test"),
+        modelID: Model.ID.make("test-model"),
         variant: "xhigh",
       })
       expect(match.info.model.variant).toBe("xhigh")

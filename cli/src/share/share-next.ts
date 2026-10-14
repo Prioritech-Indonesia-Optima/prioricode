@@ -5,7 +5,7 @@ import { serviceUse } from "@prioricode/core/effect/service-use"
 import { Effect, Exit, Layer, Option, Schema, Scope, Context, Stream } from "effect"
 import { FetchHttpClient, HttpClient, HttpClientRequest, HttpClientResponse } from "effect/unstable/http"
 import { Account } from "@/account/account"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { Provider } from "@/provider/provider"
 
@@ -16,9 +16,9 @@ import { Database } from "@prioricode/core/database/database"
 import { eq } from "drizzle-orm"
 import { Config } from "@/config/config"
 import { SessionShareTable } from "@prioricode/core/share/sql"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
-import { EventV2 } from "@prioricode/core/event"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
+import { EventBus } from "@prioricode/core/event"
 
 const disabled = process.env["PRIORICODE_DISABLE_SHARE"] === "true" || process.env["PRIORICODE_DISABLE_SHARE"] === "1"
 
@@ -113,7 +113,7 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const account = yield* Account.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const cfg = yield* Config.Service
     const { db } = yield* Database.Service
     const http = yield* HttpClient.HttpClient
@@ -163,13 +163,13 @@ const layer = Layer.effect(
 
         if (disabled) return cache
 
-        const watch = <D extends EventV2.Definition>(
+        const watch = <D extends EventBus.Definition>(
           def: D,
-          fn: (data: EventV2.Data<D>) => Effect.Effect<void, unknown>,
+          fn: (data: EventBus.Data<D>) => Effect.Effect<void, unknown>,
         ) =>
           events.listen((event) => {
             if (event.type !== def.type || event.location?.directory !== _ctx.directory) return Effect.void
-            return fn(event.data as EventV2.Data<D>).pipe(
+            return fn(event.data as EventBus.Data<D>).pipe(
               Effect.catchCause((cause) =>
                 Effect.logError("share subscriber failed", { type: def.type, cause: cause }),
               ),
@@ -285,7 +285,7 @@ const layer = Layer.effect(
               .map((item) => [`${item.providerID}/${item.modelID}`, item] as const),
           ).values(),
         ),
-        (item) => provider.getModel(ProviderV2.ID.make(item.providerID), ModelV2.ID.make(item.modelID)),
+        (item) => provider.getModel(ProviderSchema.ID.make(item.providerID), Model.ID.make(item.modelID)),
         { concurrency: 8 },
       )
 
@@ -365,7 +365,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [Account.node, EventV2Bridge.node, Config.node, Database.node, httpClient, Provider.node, Session.node],
+  deps: [Account.node, EventBridge.node, Config.node, Database.node, httpClient, Provider.node, Session.node],
 })
 
 export * as ShareNext from "./share-next"

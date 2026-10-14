@@ -7,7 +7,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Shell } from "@prioricode/core/shell"
 import { Wildcard } from "@prioricode/core/util/wildcard"
 import { Config } from "@/config/config"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { Session } from "@/session/session"
 import { HookEvent } from "@prioricode/schema/hook-event"
@@ -98,7 +98,7 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const config = yield* Config.Service
     const app = yield* AppProcess.Service
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     const session = yield* Session.Service
     const scope = yield* Scope.Scope
 
@@ -280,5 +280,5 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [Config.node, AppProcess.node, EventV2Bridge.node, Session.node],
+  deps: [Config.node, AppProcess.node, EventBridge.node, Session.node],
 })

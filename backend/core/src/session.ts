@@ -1,23 +1,23 @@
-export * as SessionV2 from "./session"
+export * as Session from "./session"
 export * from "./session/schema"
 
 import { DateTime, Effect, Layer, Schema, Context, Stream } from "effect"
 import { ListAnchor } from "@prioricode/schema/session"
 import { and, asc, desc, eq, gt, like, lt, or, type SQL } from "drizzle-orm"
-import { ProjectV2 } from "./project"
-import { WorkspaceV2 } from "./workspace"
-import { ModelV2 } from "./model"
+import { Project } from "./project"
+import { Workspace } from "./workspace"
+import { Model } from "./model"
 import { Location } from "./location"
 import { SessionMessage } from "./session/message"
 import { Prompt } from "./session/prompt"
 import { PromptInput } from "@prioricode/schema/prompt-input"
-import { EventV2 } from "./event"
+import { EventBus } from "./event"
 import { Database } from "./database/database"
 import { SessionProjector } from "./session/projector"
 import { SessionMessageTable, SessionTable } from "./session/sql"
 import { SessionSchema } from "./session/schema"
 import { AbsolutePath, PositiveInt, RelativePath } from "./schema"
-import { AgentV2 } from "./agent"
+import { Agent } from "./agent"
 import { SessionV1 } from "./v1/session"
 import { InstallationVersion } from "./installation/version"
 import { Slug } from "./util/slug"
@@ -53,7 +53,7 @@ export type RevertState = Revert.State
 export { ListAnchor }
 
 const ListInputBase = {
-  workspaceID: WorkspaceV2.ID.pipe(Schema.optional),
+  workspaceID: Workspace.ID.pipe(Schema.optional),
   search: Schema.String.pipe(Schema.optional),
   limit: PositiveInt.pipe(Schema.optional),
   order: Schema.Literals(["asc", "desc"]).pipe(Schema.optional),
@@ -67,7 +67,7 @@ const ListDirectoryInput = Schema.Struct({
 
 const ListProjectInput = Schema.Struct({
   ...ListInputBase,
-  project: ProjectV2.ID,
+  project: Project.ID,
   subpath: RelativePath.pipe(Schema.optional),
 })
 
@@ -78,8 +78,8 @@ export type ListInput = typeof ListInput.Type
 
 type CreateInput = {
   id?: SessionSchema.ID
-  agent?: AgentV2.ID
-  model?: ModelV2.Ref
+  agent?: Agent.ID
+  model?: Model.Ref
   location: Location.Ref
   parentID?: SessionSchema.ID
   title?: string
@@ -107,7 +107,7 @@ export {
 } from "./session/error"
 
 /**
- * SessionV2.Service operations are classified by how they behave while a Session
+ * Session.Service operations are classified by how they behave while a Session
  * drain is active in this process. Always-safe operations (prompt, switchAgent,
  * switchModel, resume, interrupt, active, and reads) are either coordinated by
  * the run coordinator or sampled at the next provider-turn boundary. Idle-only
@@ -150,10 +150,7 @@ export interface Interface {
   }) => Effect.Effect<{ events: ReadonlyArray<SessionEvent.DurableEvent>; hasMore: boolean }, NotFoundError>
   readonly switchAgent: (input: { sessionID: SessionSchema.ID; agent: string }) => Effect.Effect<void, NotFoundError>
   readonly setGoal: (input: { sessionID: SessionSchema.ID; goal: string }) => Effect.Effect<void, NotFoundError>
-  readonly switchModel: (input: {
-    sessionID: SessionSchema.ID
-    model: ModelV2.Ref
-  }) => Effect.Effect<void, NotFoundError>
+  readonly switchModel: (input: { sessionID: SessionSchema.ID; model: Model.Ref }) => Effect.Effect<void, NotFoundError>
   readonly prompt: (input: {
     id?: SessionMessage.ID
     sessionID: SessionSchema.ID
@@ -162,13 +159,13 @@ export interface Interface {
     resume?: boolean
   }) => Effect.Effect<SessionInput.Admitted, NotFoundError | PromptConflictError>
   readonly shell: (input: {
-    id?: EventV2.ID
+    id?: EventBus.ID
     sessionID: SessionSchema.ID
     command: string
     resume?: boolean
   }) => Effect.Effect<void, OperationUnavailableError>
   readonly skill: (input: {
-    id?: EventV2.ID
+    id?: EventBus.ID
     sessionID: SessionSchema.ID
     skill: string
     resume?: boolean
@@ -198,8 +195,8 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const database = yield* Database.Service
     const db = database.db
-    const events = yield* EventV2.Service
-    const projects = yield* ProjectV2.Service
+    const events = yield* EventBus.Service
+    const projects = yield* Project.Service
     const execution = yield* SessionExecution.Service
     const requireIdle = (sessionID: SessionSchema.ID): Effect.Effect<void, BusyError> =>
       execution.active.pipe(
@@ -244,13 +241,13 @@ const layer = Layer.effect(
           projectID: project.id,
           directory: input.location.directory,
           path: path.relative(project.directory, input.location.directory).replaceAll("\\", "/"),
-          workspaceID: input.location.workspaceID ? WorkspaceV2.ID.make(input.location.workspaceID) : undefined,
+          workspaceID: input.location.workspaceID ? Workspace.ID.make(input.location.workspaceID) : undefined,
           title: input.title ?? `New session - ${new Date(now).toISOString()}`,
           agent: input.agent,
           parentID: input.parentID,
           model: input.model
             ? {
-                id: ModelV2.ID.make(input.model.id),
+                id: Model.ID.make(input.model.id),
                 providerID: input.model.providerID,
                 variant: input.model.variant,
               }
@@ -372,7 +369,7 @@ const layer = Layer.effect(
         ).pipe(Stream.filter((event): event is SessionEvent.DurableEvent => isDurableSessionEvent(event))),
       history: Effect.fn("V2Session.history")(function* (input) {
         yield* result.get(input.sessionID)
-        return yield* EventV2.readAggregate(db, {
+        return yield* EventBus.readAggregate(db, {
           ...input,
           aggregateID: input.sessionID,
           manifest: SessionDurable,
@@ -483,7 +480,7 @@ const layer = Layer.effect(
           yield* requireMessage(session.id, input.messageID)
           return yield* SessionRevert.stage({ session, messageID: input.messageID, files: input.files }).pipe(
             Effect.provideService(Database.Service, database),
-            Effect.provideService(EventV2.Service, events),
+            Effect.provideService(EventBus.Service, events),
             Effect.provide(locations.get(session.location)),
           )
         }),
@@ -491,14 +488,14 @@ const layer = Layer.effect(
           const session = yield* result.get(sessionID)
           yield* requireIdle(session.id)
           yield* SessionRevert.clear(session).pipe(
-            Effect.provideService(EventV2.Service, events),
+            Effect.provideService(EventBus.Service, events),
             Effect.provide(locations.get(session.location)),
           )
         }),
         commit: Effect.fn("V2Session.revert.commit")(function* (sessionID) {
           const session = yield* result.get(sessionID)
           yield* requireIdle(session.id)
-          yield* SessionRevert.commit(session).pipe(Effect.provideService(EventV2.Service, events))
+          yield* SessionRevert.commit(session).pipe(Effect.provideService(EventBus.Service, events))
         }),
       },
     })
@@ -526,8 +523,8 @@ export const node = makeGlobalNode({
   layer: layer.pipe(Layer.orDie),
   deps: [
     Database.node,
-    EventV2.node,
-    ProjectV2.node,
+    EventBus.node,
+    Project.node,
     SessionExecution.node,
     SessionStore.node,
     LocationServiceMap.node,

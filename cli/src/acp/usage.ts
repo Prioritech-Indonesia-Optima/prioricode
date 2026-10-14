@@ -5,8 +5,8 @@ import { InstanceBootstrap } from "@/project/bootstrap"
 import { InstanceStore } from "@/project/instance-store"
 import { makeGlobalNode, Node } from "@prioricode/core/effect/app-node"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { Provider } from "@/provider/provider"
 import { Context, Effect, Layer, SynchronizedRef } from "effect"
 
@@ -39,7 +39,7 @@ export interface MessageLoaderInterface {
 }
 
 export interface ContextLimitLoaderInterface {
-  readonly providers: (directory: string) => Effect.Effect<Record<ProviderV2.ID, Provider.Info>, unknown>
+  readonly providers: (directory: string) => Effect.Effect<Record<ProviderSchema.ID, Provider.Info>, unknown>
 }
 
 export type UsageConnection = Pick<AgentSideConnection, "sessionUpdate">
@@ -50,8 +50,8 @@ export interface Interface {
   readonly totalSessionCost: (messages: readonly SessionMessage[]) => number
   readonly contextLimit: (input: {
     readonly directory: string
-    readonly providerID: ProviderV2.ID
-    readonly modelID: ModelV2.ID
+    readonly providerID: ProviderSchema.ID
+    readonly modelID: Model.ID
   }) => Effect.Effect<number | undefined>
   readonly sendUpdate: (input: {
     readonly connection: UsageConnection
@@ -115,9 +115,9 @@ export function totalSessionCost(messages: readonly SessionMessage[]): number {
 }
 
 export function findContextLimit(
-  providers: Record<ProviderV2.ID, Provider.Info>,
-  providerID: ProviderV2.ID,
-  modelID: ModelV2.ID,
+  providers: Record<ProviderSchema.ID, Provider.Info>,
+  providerID: ProviderSchema.ID,
+  modelID: Model.ID,
 ): number | undefined {
   return providers[providerID]?.models[modelID]?.limit.context
 }
@@ -148,8 +148,8 @@ const layer = Layer.effect(
 
     const cachedLimit = Effect.fnUntraced(function* (input: {
       readonly directory: string
-      readonly providerID: ProviderV2.ID
-      readonly modelID: ModelV2.ID
+      readonly providerID: ProviderSchema.ID
+      readonly modelID: Model.ID
     }) {
       return yield* SynchronizedRef.modifyEffect(
         limits,
@@ -174,8 +174,8 @@ const layer = Layer.effect(
 
     const contextLimit = Effect.fn("ACPUsage.contextLimit")(function* (input: {
       readonly directory: string
-      readonly providerID: ProviderV2.ID
-      readonly modelID: ModelV2.ID
+      readonly providerID: ProviderSchema.ID
+      readonly modelID: Model.ID
     }) {
       return yield* yield* cachedLimit(input)
     })
@@ -200,8 +200,8 @@ const layer = Layer.effect(
 
       const size = yield* contextLimit({
         directory: input.directory,
-        providerID: ProviderV2.ID.make(message.providerID),
-        modelID: ModelV2.ID.make(message.modelID),
+        providerID: ProviderSchema.ID.make(message.providerID),
+        modelID: Model.ID.make(message.modelID),
       })
       if (!size) return
 

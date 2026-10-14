@@ -1,5 +1,5 @@
 import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
-import { ProjectV2 } from "../project"
+import { Project } from "../project"
 import { ProjectTable } from "../project/sql"
 
 export type PresenceState = "busy" | "idle"

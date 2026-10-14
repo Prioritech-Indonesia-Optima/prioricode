@@ -7,7 +7,7 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Effect, Fiber, Layer } from "effect"
 import { Session as SessionNs } from "@/session/session"
 import { SessionID } from "@/session/schema"
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { InstanceStore } from "@/project/instance-store"
 import { InstanceBootstrap } from "@/project/bootstrap"
 import { Permission } from "@/permission"
@@ -19,7 +19,7 @@ const it = testEffect(
     LayerNode.group([
       SessionNs.node,
       Permission.node,
-      EventV2Bridge.node,
+      EventBridge.node,
       SessionProjector.node,
       CrossSpawnSpawner.node,
       InstanceStore.node,

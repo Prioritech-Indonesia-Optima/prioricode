@@ -18,8 +18,7 @@ import type { ConsoleState } from "@prioricode/core/v1/config/console-state"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
 import { Context, Duration, Effect, Exit, Fiber, Layer, Option, Schema } from "effect"
-import { FetchHttpClient, HttpClient, HttpClientRequest } from "effect/unstable/http"
-import { EffectFlock } from "@prioricode/core/util/effect-flock"
+import { HttpClient, HttpClientRequest } from "effect/unstable/http"
 import { containsPath, type InstanceContext } from "../project/instance-context"
 import { ConfigV1 } from "@prioricode/core/v1/config/config"
 import { RemoteAuthError } from "@prioricode/core/v1/config/error"
@@ -293,7 +292,7 @@ const layer = Layer.effect(
         ),
         Effect.orElseSucceed((): Info => ({})),
       ),
-      Duration.infinity,
+      Duration.seconds(15),
     )
 
     const getGlobal = Effect.fn("Config.getGlobal")(function* () {
@@ -549,6 +548,7 @@ const layer = Layer.effect(
             },
           })
         }
+        delete result.mode
 
         if (Flag.PRIORICODE_PERMISSION) {
           try {
@@ -569,6 +569,7 @@ const layer = Layer.effect(
             perms[tool] = action
           }
           result.permission = mergeDeep(perms, result.permission ?? {})
+          delete result.tools
         }
 
         if (!result.username) {
@@ -583,6 +584,7 @@ const layer = Layer.effect(
         if (result.autoshare === true && !result.share) {
           result.share = "auto"
         }
+        delete result.autoshare
 
         if (Flag.PRIORICODE_DISABLE_AUTOCOMPACT) {
           result.compaction = { ...result.compaction, auto: false }

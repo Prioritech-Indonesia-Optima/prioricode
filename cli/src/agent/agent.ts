@@ -26,12 +26,12 @@ import { InstanceState } from "@/effect/instance-state"
 import * as Option from "effect/Option"
 import * as OtelTracer from "@effect/opentelemetry/Tracer"
 import { AbsolutePath, type DeepMutable } from "@prioricode/core/schema"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider as ProviderSchema } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { LocationServiceMap, locationServiceMapLayer } from "@prioricode/core/location-services"
 import { Reference } from "@prioricode/core/reference"
 import { Location } from "@prioricode/core/location"
-import { PluginV2 } from "@prioricode/core/plugin"
+import { Plugin as PluginCore } from "@prioricode/core/plugin"
 
 export const Info = Schema.Struct({
   name: Schema.String,
@@ -45,8 +45,8 @@ export const Info = Schema.Struct({
   permission: PermissionV1.Ruleset,
   model: Schema.optional(
     Schema.Struct({
-      modelID: ModelV2.ID,
-      providerID: ProviderV2.ID,
+      modelID: Model.ID,
+      providerID: ProviderSchema.ID,
     }),
   ),
   variant: Schema.optional(Schema.String),
@@ -69,7 +69,7 @@ export interface Interface {
   readonly defaultAgent: () => Effect.Effect<string>
   readonly generate: (input: {
     description: string
-    model?: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
+    model?: { providerID: ProviderSchema.ID; modelID: Model.ID }
   }) => Effect.Effect<
     {
       identifier: string
@@ -102,7 +102,7 @@ const layer = Layer.effect(
         const skillDirs = yield* skill.dirs()
         const referenceDirs = Object.keys(cfg.references ?? cfg.reference ?? {}).length
           ? yield* Effect.gen(function* () {
-              yield* (yield* PluginV2.Service).wait(PluginV2.ID.make("core/config-reference"))
+              yield* (yield* PluginCore.Service).wait(PluginCore.ID.make("core/config-reference"))
               return (yield* (yield* Reference.Service).list()).map((reference) => reference.path)
             }).pipe(
               Effect.provide(locations.get(Location.Ref.make({ directory: AbsolutePath.make(ctx.directory) }))),
@@ -415,7 +415,7 @@ const layer = Layer.effect(
       }),
       generate: Effect.fn("Agent.generate")(function* (input: {
         description: string
-        model?: { providerID: ProviderV2.ID; modelID: ModelV2.ID }
+        model?: { providerID: ProviderSchema.ID; modelID: Model.ID }
       }) {
         const cfg = yield* config.get()
         const model = input.model ?? (yield* provider.defaultModel())

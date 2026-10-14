@@ -1,7 +1,7 @@
-import { EventV2Bridge } from "@/event-v2-bridge"
+import { EventBridge } from "@/event-v2-bridge"
 import { InstanceState } from "@/effect/instance-state"
 import { GlobalBus } from "@/bus/global"
-import { EventV2 } from "@prioricode/core/event"
+import { EventBus } from "@prioricode/core/event"
 import { Effect, Queue } from "effect"
 import * as Stream from "effect/Stream"
 import { HttpServerResponse } from "effect/unstable/http"
@@ -19,16 +19,16 @@ function eventData(data: unknown): Sse.Event {
 }
 
 function eventID() {
-  return EventV2.ID.create()
+  return EventBus.ID.create()
 }
 
-function eventResponse(events: EventV2.Interface) {
+function eventResponse(events: EventBus.Interface) {
   return Effect.gen(function* () {
     const instance = yield* InstanceState.context
     const workspaceID = yield* InstanceState.workspaceID
     // Listener registration is eager, so events published after this point cannot
     // be lost while the HTTP body fiber is starting or emitting server.connected.
-    const queue = yield* Queue.unbounded<EventV2.Payload>()
+    const queue = yield* Queue.unbounded<EventBus.Payload>()
     const unsubscribe = yield* events.listen((event) => Effect.sync(() => Queue.offerUnsafe(queue, event)))
     yield* Effect.addFinalizer(() => unsubscribe)
     const stream = Stream.fromQueue(queue).pipe(
@@ -88,7 +88,7 @@ function eventResponse(events: EventV2.Interface) {
 
 export const eventHandlers = HttpApiBuilder.group(EventApi, "event", (handlers) =>
   Effect.gen(function* () {
-    const events = yield* EventV2Bridge.Service
+    const events = yield* EventBridge.Service
     return handlers.handleRaw(
       "subscribe",
       Effect.fn("EventHttpApi.subscribe")(function* () {

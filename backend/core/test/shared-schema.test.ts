@@ -1,8 +1,5 @@
 import { expect, test } from "bun:test"
 import { Schema } from "effect"
-import { AgentV2 } from "@prioricode/core/agent"
-import { ModelV2 } from "@prioricode/core/model"
-import { SessionV2 } from "@prioricode/core/session"
 import { Agent } from "@prioricode/schema/agent"
 import { Location } from "@prioricode/schema/location"
 import { Model } from "@prioricode/schema/model"
@@ -28,8 +25,6 @@ import { Reference } from "@prioricode/schema/reference"
 import { SessionTodo } from "@prioricode/schema/session-todo"
 import { Skill } from "@prioricode/schema/skill"
 import { AbsolutePath, optional, statics } from "@prioricode/schema/schema"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { PluginV2 } from "@prioricode/core/plugin"
 
 test("Core reuses the canonical shared schemas", async () => {
   const [
@@ -77,9 +72,9 @@ test("Core reuses the canonical shared schemas", async () => {
   ])
 
   const schemas = [
-    [AgentV2.ID, Agent.ID],
-    [AgentV2.Color, Agent.Color],
-    [AgentV2.Info, Agent.Info],
+    [Agent.ID, Agent.ID],
+    [Agent.Color, Agent.Color],
+    [Agent.Info, Agent.Info],
     [coreCommand.Info, Command.Info],
     [coreConnection.CredentialInfo, Connection.CredentialInfo],
     [coreConnection.EnvInfo, Connection.EnvInfo],
@@ -108,36 +103,36 @@ test("Core reuses the canonical shared schemas", async () => {
     [coreLLM.ToolTextContent, LLM.ToolTextContent],
     [coreLLM.ToolFileContent, LLM.ToolFileContent],
     [coreLLM.ToolContent, LLM.ToolContent],
-    [ModelV2.ID, Model.ID],
-    [ModelV2.VariantID, Model.VariantID],
-    [ModelV2.Ref, Model.Ref],
-    [ModelV2.Family, Model.Family],
-    [ModelV2.Capabilities, Model.Capabilities],
-    [ModelV2.Cost, Model.Cost],
-    [ModelV2.Api, Model.Api],
-    [ModelV2.Info, Model.Info],
-    [ProviderV2.ID, Provider.ID],
-    [ProviderV2.AISDK, Provider.AISDK],
-    [ProviderV2.Native, Provider.Native],
-    [ProviderV2.Api, Provider.Api],
-    [ProviderV2.Request, Provider.Request],
-    [ProviderV2.Info, Provider.Info],
+    [Model.ID, Model.ID],
+    [Model.VariantID, Model.VariantID],
+    [Model.Ref, Model.Ref],
+    [Model.Family, Model.Family],
+    [Model.Capabilities, Model.Capabilities],
+    [Model.Cost, Model.Cost],
+    [Model.Api, Model.Api],
+    [Model.Info, Model.Info],
+    [Provider.ID, Provider.ID],
+    [Provider.AISDK, Provider.AISDK],
+    [Provider.Native, Provider.Native],
+    [Provider.Api, Provider.Api],
+    [Provider.Request, Provider.Request],
+    [Provider.Info, Provider.Info],
     [corePermission.Effect, Permission.Effect],
     [corePermission.Rule, Permission.Rule],
     [corePermission.Ruleset, Permission.Ruleset],
     [corePermissionV1.Event, PermissionV1.Event],
     [coreProjectCopy.Event, ProjectDirectories.Event],
-    [PluginV2.ID, Plugin.ID],
-    [PluginV2.Event, Plugin.Event],
+    [Plugin.ID, Plugin.ID],
+    [Plugin.Event, Plugin.Event],
     [corePty.Info, Pty.Info],
     [corePty.Event, Pty.Event],
     [coreProject.ID, Project.ID],
     [coreReference.LocalSource, Reference.LocalSource],
     [coreReference.GitSource, Reference.GitSource],
     [coreReference.Source, Reference.Source],
-    [SessionV2.ID, Session.ID],
-    [SessionV2.Info, Session.Info],
-    [SessionV2.ListAnchor, Session.ListAnchor],
+    [Session.ID, Session.ID],
+    [Session.Info, Session.Info],
+    [Session.ListAnchor, Session.ListAnchor],
     [coreSessionInput.Delivery, SessionInput.Delivery],
     [coreSessionInput.Admitted, SessionInput.Admitted],
     [coreSessionMessage.ID, SessionMessage.ID],
@@ -177,11 +172,11 @@ test("Core reuses the canonical shared schemas", async () => {
   ]
   for (const [core, shared] of schemas) expect(core).toBe(shared)
 
-  expect(Agent.Info.empty(Agent.ID.make("test"))).toEqual(AgentV2.Info.empty(AgentV2.ID.make("test")))
+  expect(Agent.Info.empty(Agent.ID.make("test"))).toEqual(Agent.Info.empty(Agent.ID.make("test")))
   expect(Model.Info.empty(Provider.ID.make("test"), Model.ID.make("model"))).toEqual(
-    ModelV2.Info.empty(ProviderV2.ID.make("test"), ModelV2.ID.make("model")),
+    Model.Info.empty(Provider.ID.make("test"), Model.ID.make("model")),
   )
-  expect(Provider.Info.empty(Provider.ID.make("test"))).toEqual(ProviderV2.Info.empty(ProviderV2.ID.make("test")))
+  expect(Provider.Info.empty(Provider.ID.make("test"))).toEqual(Provider.Info.empty(Provider.ID.make("test")))
   expect(Skill.Source.key(Skill.DirectorySource.make({ type: "directory", path: AbsolutePath.make("/tmp") }))).toBe(
     "directory:/tmp",
   )

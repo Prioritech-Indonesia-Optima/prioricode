@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test"
 import { Model } from "@prioricode/llm"
 import * as OpenAIChat from "@prioricode/llm/protocols/openai-chat"
 import { DateTime } from "effect"
-import { ModelV2 } from "@prioricode/core/model"
-import { ProviderV2 } from "@prioricode/core/provider"
+import { Model as ModelCore } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
 import { SessionCompaction, type Entry, type Settings } from "@prioricode/core/session/compaction"
 import { SessionMessage } from "@prioricode/core/session/message"
 import { Token } from "@prioricode/core/util/token"
@@ -14,7 +14,7 @@ const makeSettings = (overrides?: Partial<Settings>): Settings => ({
   tokens: 8_000,
   turns: undefined,
   threshold: undefined,
-  defaultContext: 128_000,
+  defaultContext: 256_000,
   ...overrides,
 })
 
@@ -36,7 +36,7 @@ const assistant = (seq: number, text: string): Entry => ({
     id: SessionMessage.ID.create(),
     type: "assistant",
     agent: "build",
-    model: { id: ModelV2.ID.make("m"), providerID: ProviderV2.ID.make("p") },
+    model: { id: ModelCore.ID.make("m"), providerID: Provider.ID.make("p") },
     content: [{ type: "text", id: "t", text }],
     time: { created: now },
   } as SessionMessage.Message,
@@ -72,6 +72,15 @@ describe("SessionCompaction.resolveContext", () => {
       source: "default",
       declared: 0,
     })
+  })
+
+  it("undeclared 256k-window model triggers at >90% not ~42%", () => {
+    const m = modelWith(0, 8_000)
+    const resolution = SessionCompaction.resolveContext(m, 256_000)
+    expect(resolution.source).toBe("default")
+    expect(resolution.context).toBe(256_000)
+    const trigger = 256_000 - Math.max(8_000, 20_000)
+    expect(trigger / 256_000).toBeGreaterThan(0.9)
   })
 })
 

@@ -7,13 +7,13 @@ import type { SessionInput } from "./input"
 import type { Snapshot } from "../snapshot"
 import { PermissionV1 } from "../v1/permission"
 import { Permission } from "@prioricode/schema/permission"
-import { ProjectV2 } from "../project"
+import { Project } from "../project"
 import type { SessionSchema } from "./schema"
 import type { MessageID, PartID, SessionV1 } from "../v1/session"
-import { WorkspaceV2 } from "../workspace"
+import { Workspace } from "../workspace"
 import { Timestamps } from "../database/schema.sql"
 import type { SystemContext } from "../system-context/index"
-import { AgentV2 } from "../agent"
+import { Agent } from "../agent"
 import type { Revert } from "@prioricode/schema/revert"
 
 type SessionMessageData = Omit<(typeof SessionMessage.Message)["Encoded"], "type" | "id">
@@ -25,10 +25,10 @@ export const SessionTable = sqliteTable(
   {
     id: text().$type<SessionSchema.ID>().primaryKey(),
     project_id: text()
-      .$type<ProjectV2.ID>()
+      .$type<Project.ID>()
       .notNull()
       .references(() => ProjectTable.id, { onDelete: "cascade" }),
-    workspace_id: text().$type<WorkspaceV2.ID>(),
+    workspace_id: text().$type<Workspace.ID>(),
     parent_id: text().$type<SessionSchema.ID>(),
     slug: text().notNull(),
     directory: DatabasePath.directoryColumn().notNull(),

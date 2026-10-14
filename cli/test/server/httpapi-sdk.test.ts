@@ -26,8 +26,8 @@ import { resetDatabase } from "../fixture/db"
 import { disposeAllInstances, TestInstance, tmpdirScoped } from "../fixture/fixture"
 import { awaitWithTimeout, pollWithTimeout, testEffect } from "../lib/effect"
 import { testProviderConfig } from "../lib/test-provider"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 import { Database } from "@prioricode/core/database/database"
 import { httpApiLayer } from "./httpapi-layer"
 
@@ -310,7 +310,7 @@ function seedMessage(directory: string, sessionID: string) {
             role: "user",
             time: { created: Date.now() },
             agent: "test",
-            model: { providerID: ProviderV2.ID.make("test"), modelID: ModelV2.ID.make("test") },
+            model: { providerID: Provider.ID.make("test"), modelID: Model.ID.make("test") },
             tools: {},
           } satisfies SessionV1.User)
           const part = yield* svc.updatePart({
@@ -670,7 +670,7 @@ describe("HttpApi SDK", () => {
     ),
   )
 
-  // Regression: EventV2 must publish on the same ProjectBus the /event handler
+  // Regression: EventBus must publish on the same ProjectBus the /event handler
   // subscribes to, AND the /event stream must forward handler ALS/context into the
   // body-pump fiber. Drives the full SDK → /event → Session.updatePart → sync.run →
   // bus.publish → SDK subscriber path. Goes red if either the publisher uses a

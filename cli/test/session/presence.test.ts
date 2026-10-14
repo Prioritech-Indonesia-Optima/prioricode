@@ -4,14 +4,14 @@ import { eq } from "drizzle-orm"
 import { Database } from "@prioricode/core/database/database"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { SessionPresenceTable } from "@prioricode/core/session/presence.sql"
-import { SessionV2 } from "@prioricode/core/session"
+import { Session } from "@prioricode/core/session"
 import { SessionPresence, DEAD_PROCESS_GRACE_MS } from "@/session/presence"
 import { testEffect } from "../lib/effect"
 
 const it = testEffect(LayerNode.compile(LayerNode.group([Database.node, SessionPresence.node])))
 
-const a = SessionV2.ID.make("ses_pres_a")
-const b = SessionV2.ID.make("ses_pres_b")
+const a = Session.ID.make("ses_pres_a")
+const b = Session.ID.make("ses_pres_b")
 
 describe("SessionPresence", () => {
   it.instance("idleSince: no row reads as idle since 0", () =>

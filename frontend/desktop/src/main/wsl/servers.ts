@@ -51,6 +51,8 @@ type WslServersControllerOptions = {
   probeDistro?: typeof probeWslDistro
   resolvePrioricode?: typeof resolveWslPrioricode
   readCommandVersion?: typeof readWslCommandVersion
+  reconnectBaseDelayMs?: number
+  reconnectMaxAttempts?: number
 }
 
 export type WslServersController = ReturnType<typeof createWslServersController>
@@ -58,6 +60,10 @@ export type WslServersController = ReturnType<typeof createWslServersController>
 export function wslServerIdForDistro(distro: string) {
   return `wsl:${distro}`
 }
+
+const RECONNECT_BASE_DELAY_MS = 2_000
+const RECONNECT_MAX_DELAY_MS = 30_000
+const RECONNECT_MAX_ATTEMPTS = 10
 
 export function createWslServersController(
   appVersion: string,
@@ -68,11 +74,15 @@ export function createWslServersController(
   const listeners = new Set<(event: WslServersEvent) => void>()
   const sidecars = new Map<string, RunningSidecar>()
   const startAttempts = new Map<string, number>()
+  const reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  const reconnectAttempts = new Map<string, number>()
   let jobAbort: AbortController | undefined
   const logger = options?.logger
   const readServers = options?.readServers ?? readPersistedServers
   const writeServers = options?.writeServers ?? writePersistedServers
   const probeDistro = options?.probeDistro ?? probeWslDistro
+  const reconnectBaseDelayMs = options?.reconnectBaseDelayMs ?? RECONNECT_BASE_DELAY_MS
+  const reconnectMaxAttempts = options?.reconnectMaxAttempts ?? RECONNECT_MAX_ATTEMPTS
 
   const emit = () => {
     for (const listener of listeners) listener({ type: "state", state })
@@ -220,9 +230,45 @@ export function createWslServersController(
     return startAttempts.get(id) === attempt && state.servers.some((item) => item.config.id === id)
   }
 
+  const clearReconnectTimer = (id: string) => {
+    const timer = reconnectTimers.get(id)
+    if (timer) {
+      clearTimeout(timer)
+      reconnectTimers.delete(id)
+    }
+  }
+
+  const scheduleReconnect = (id: string, distro: string) => {
+    clearReconnectTimer(id)
+    const attempt = (reconnectAttempts.get(id) ?? 0) + 1
+    reconnectAttempts.set(id, attempt)
+    if (attempt > reconnectMaxAttempts) {
+      reconnectAttempts.delete(id)
+      setRuntime(id, {
+        kind: "failed",
+        message: nativeT("desktop.wsl.error.serverExited", {
+          code: "reconnect_exhausted",
+          signal: "null",
+        }),
+      })
+      logger?.error("wsl reconnect attempts exhausted", { id, distro, attempts: attempt })
+      return
+    }
+    setRuntime(id, { kind: "reconnecting", attempt })
+    const delay = Math.min(reconnectBaseDelayMs * 2 ** (attempt - 1), RECONNECT_MAX_DELAY_MS)
+    logger?.log("wsl scheduling reconnect", { id, distro, attempt, delayMs: delay })
+    const timer = setTimeout(() => {
+      reconnectTimers.delete(id)
+      if (!state.servers.some((item) => item.config.id === id)) return
+      void startServer(id)
+    }, delay)
+    reconnectTimers.set(id, timer)
+  }
+
   const startServer = async (id: string) => {
     const item = state.servers.find((x) => x.config.id === id)
     if (!item) return
+    clearReconnectTimer(id)
     const attempt = nextStartAttempt(id)
     await stopServerInternal(id)
     if (!isCurrentStartAttempt(id, attempt)) return
@@ -238,6 +284,7 @@ export function createWslServersController(
         }
         return
       }
+      reconnectAttempts.delete(id)
       sidecars.set(id, sidecar)
       setRuntime(id, {
         kind: "ready",
@@ -248,20 +295,20 @@ export function createWslServersController(
       sidecar.listener.onExit((code, signal) => {
         if (sidecars.get(id) !== sidecar) return
         sidecars.delete(id)
-        const message = startupFailure(code, signal)
-        setRuntime(id, { kind: "failed", message })
         logger?.error("wsl sidecar exited", { id, distro: item.config.distro, code, signal })
+        scheduleReconnect(id, item.config.distro)
       })
       refreshPrioricodeCheckBackground(id, item.config.distro)
       logger?.log("wsl sidecar ready", { id, distro: item.config.distro, url: sidecar.url })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       if (!isCurrentStartAttempt(id, attempt)) return
-      setRuntime(id, { kind: "failed", message })
-      // Without this, an Ubuntu-style silent failure leaves no trace in
-      // main.log — the controller captures the message in its state but
-      // nothing surfaces unless the user opens the WSL servers dialog.
       logger?.error("wsl sidecar failed to start", { id, distro: item.config.distro, message })
+      if (reconnectAttempts.has(id)) {
+        scheduleReconnect(id, item.config.distro)
+        return
+      }
+      setRuntime(id, { kind: "failed", message })
     }
   }
 
@@ -397,6 +444,8 @@ export function createWslServersController(
     async removeServer(id: string) {
       const distro = state.servers.find((item) => item.config.id === id)?.config.distro
       invalidateStartAttempt(id)
+      clearReconnectTimer(id)
+      reconnectAttempts.delete(id)
       await stopServerInternal(id)
       const remaining = readServers().filter((item) => item.id !== id)
       persistServers(remaining)
@@ -410,6 +459,9 @@ export function createWslServersController(
 
     stopAll() {
       for (const item of state.servers) invalidateStartAttempt(item.config.id)
+      for (const timer of reconnectTimers.values()) clearTimeout(timer)
+      reconnectTimers.clear()
+      reconnectAttempts.clear()
       for (const existing of sidecars.values()) {
         try {
           existing.listener.stop()

@@ -11,8 +11,8 @@ import { call, callAuthProbe, disposeApps } from "./backend"
 import { original } from "./environment"
 import { runtime } from "./runtime"
 import type { ActiveScenario, Options, ProjectOptions, Result, Scenario, ScenarioContext, SeededContext } from "./types"
-import { ProviderV2 } from "@prioricode/core/provider"
-import { ModelV2 } from "@prioricode/core/model"
+import { Provider } from "@prioricode/core/provider"
+import { Model } from "@prioricode/core/model"
 
 export function runScenario(options: Options) {
   return (scenario: Scenario) => {
@@ -153,8 +153,8 @@ function withContext<A, E>(
                 time: { created: Date.now() },
                 agent: "build",
                 model: {
-                  providerID: ProviderV2.ID.prioricode,
-                  modelID: ModelV2.ID.make("test"),
+                  providerID: Provider.ID.prioricode,
+                  modelID: Model.ID.make("test"),
                 },
               }
               const part: SessionV1.TextPart = {
