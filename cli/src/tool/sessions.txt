@@ -5,6 +5,7 @@ Sending:
 - ask: needs an ANSWER. Blocks up to `timeout` (default 60s, max 300) then reports delivery progress. A timed-out ask is not a failure — the answer may still be coming; use `wait` on the request id or keep working.
 - notify: needs COMPLETION. Subscribe to be told when the peer next goes idle (optional `note` reminder), then KEEP WORKING — the notice wakes you. Waiting for work to finish = notify, never a parked long ask.
 - respond: answer a request by its request_id. Only the asked session (or its responder) may answer.
+- broadcast: warn EVERY active peer at once before a repo-wide shared-state action — `git stash`, `git reset`, `git clean`, branch switches, pushes to shared branches. Each peer gets a request its coordination responder can answer even while busy. Waits up to `timeout` (default 30s, max 120) and reports per-peer state: answered / reply in flight / seen / never saw it. Gate rule: proceed only if every active peer explicitly answered OK; any unanswered, busy, or objecting peer means use `git worktree add` for an isolated tree instead of the repo-wide op. Unanswered requests escalate to the user after the window.
 
 Knowing:
 - A read-only sibling roster (id, title, busy/idle, file claims) is in your context every turn. Do not message peers just to greet or check in — silence means noted; use the channel only for real coordination.

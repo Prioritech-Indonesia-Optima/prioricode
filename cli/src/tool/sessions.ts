@@ -7,7 +7,17 @@ import { SessionStatus } from "@/session/status"
 import { SessionID } from "../session/schema"
 
 export const Parameters = Schema.Struct({
-  action: Schema.Literals(["discover", "claim", "release", "send", "ask", "respond", "wait", "notify"]).annotate({
+  action: Schema.Literals([
+    "discover",
+    "claim",
+    "release",
+    "send",
+    "ask",
+    "respond",
+    "wait",
+    "notify",
+    "broadcast",
+  ]).annotate({
     description: "Coordination action to perform against sibling sessions in this project",
   }),
   target: Schema.optional(Schema.String).annotate({
@@ -31,7 +41,7 @@ export const Parameters = Schema.Struct({
   }),
   timeout: Schema.optional(Schema.Number).annotate({
     description:
-      "For ask/wait: maximum seconds to block for a response (default 60, max 300). For notify: seconds until the subscription expires (default 12h).",
+      "For ask/wait: maximum seconds to block for a response (default 60, max 300). For notify: seconds until the subscription expires (default 12h). For broadcast: seconds to wait for peer answers (default 30, max 120).",
   }),
 })
 
@@ -44,6 +54,8 @@ type Metadata = {
 
 const DEFAULT_TIMEOUT_SECONDS = 60
 const MAX_TIMEOUT_SECONDS = 300
+const BROADCAST_DEFAULT_SECONDS = 30
+const BROADCAST_MAX_SECONDS = 120
 const STALE_AFTER_MS = 1000 * 60 * 60 * 72
 const RECENT_DELIVERED_MS = 1000 * 60 * 30
 // Default lifetime of a notify subscription when no timeout is given.
@@ -462,6 +474,105 @@ export const SessionsTool = Tool.define(
         )
       })
 
+      const broadcast = Effect.fn("SessionsTool.broadcast")(function* (
+        self: Session.Info,
+        params: Schema.Schema.Type<typeof Parameters>,
+      ) {
+        const message = params.message
+        if (!message) return failure("broadcast requires a message")
+        const seconds = Math.min(params.timeout ?? BROADCAST_DEFAULT_SECONDS, BROADCAST_MAX_SECONDS)
+        const [siblings, statusMap] = yield* Effect.all([
+          sessions.list({ limit: 100, roots: true }),
+          status.list(),
+        ])
+        const now = Date.now()
+        const peers = siblings.filter((session) => session.id !== self.id && !session.time.archived)
+        const active: Array<{ id: SessionID; title: string }> = []
+        const skipped: string[] = []
+        for (const peer of peers) {
+          const idleFor = now - peer.time.updated
+          if (idleFor > STALE_AFTER_MS) {
+            skipped.push(`${peer.id} (stale, ${agoLabel(idleFor)})`)
+            continue
+          }
+          active.push({ id: peer.id, title: peer.title })
+        }
+        if (active.length === 0)
+          return result(
+            "broadcast",
+            `No active peers to broadcast to${skipped.length > 0 ? ` (skipped: ${skipped.join(", ")})` : ""}. ` +
+              "The shared-state action is safe to proceed.",
+            {},
+          )
+        // Fan out one request per active peer. Requests — not messages — so a
+        // busy peer's standing coordination responder is guaranteed to answer
+        // even if its main agent never reaches a step boundary.
+        const requests: Coordination.Info[] = []
+        const blocked: string[] = []
+        for (const peer of active) {
+          const guard = yield* coordination.guardNote({
+            fromSession: self.id,
+            toSession: SessionID.make(peer.id),
+            kind: "request",
+            body: message,
+          })
+          if (guard.blocked) {
+            blocked.push(`${peer.id}: ${guard.blocked}`)
+            continue
+          }
+          const request = yield* coordination.post({
+            projectID: self.projectID,
+            kind: "request",
+            fromSession: self.id,
+            toSession: SessionID.make(peer.id),
+            body: `[broadcast] ${message}`,
+            deadline: now + seconds * 1000,
+          })
+          requests.push(request)
+        }
+        if (requests.length === 0)
+          return failure(`Broadcast blocked for every peer: ${blocked.join(" | ")}`)
+        const receipts = new Map<string, { seenAt?: number; ackedAt?: number; claimedBy?: string }>()
+        const responses = yield* pollBroadcast(
+          coordination,
+          requests,
+          Date.now() + seconds * 1000,
+          receipts,
+        )
+        for (const row of responses.values()) {
+          yield* coordination.markRead([row.id])
+          yield* coordination.markAck([row.id])
+        }
+        const lines = requests.map((request) => {
+          const peer = active.find((p) => p.id === request.toSession)
+          const answer = responses.get(request.id)
+          if (answer) return `- ${peer?.id} "${peer?.title}": ANSWERED — ${answer.body}`
+          const receipt = receipts.get(request.id)
+          if (receipt?.claimedBy?.startsWith(Coordination.RESPONDER_LEASE_PREFIX))
+            return `- ${peer?.id} "${peer?.title}": reply being generated by its coordination responder`
+          if (receipt?.ackedAt) return `- ${peer?.id} "${peer?.title}": received and processed, no reply`
+          if (receipt?.seenAt) return `- ${peer?.id} "${peer?.title}": seen, no reply yet`
+          return `- ${peer?.id} "${peer?.title}": never saw it (busy in a long step, or unresponsive)`
+        })
+        const answered = responses.size
+        const busy = active.filter((peer) => statusMap.get(peer.id)?.type === "busy").map((peer) => peer.id)
+        return result(
+          "broadcast",
+          [
+            `Broadcast reached ${requests.length} active peer(s); ${answered}/${requests.length} answered within ${seconds}s.` +
+              (busy.length > 0 ? ` Busy peers: ${busy.join(", ")}.` : ""),
+            ...lines,
+            ...(blocked.length > 0 ? [`Blocked (not sent): ${blocked.join(" | ")}`] : []),
+            ...(skipped.length > 0 ? [`Skipped: ${skipped.join(", ")}`] : []),
+            "",
+            "Gate rule: proceed with the shared-state action only if every active peer explicitly answered OK. " +
+              "Any unanswered, busy, or objecting peer means do NOT run the repo-wide operation — use `git worktree add` for an isolated tree instead. " +
+              "Unanswered requests escalate to the user after the window.",
+          ].join("\n"),
+          {},
+        )
+      })
+
       switch (params.action) {
         case "discover":
           return yield* discover(self)
@@ -480,6 +591,8 @@ export const SessionsTool = Tool.define(
           return yield* respond(self, params)
         case "wait":
           return yield* wait(self, params)
+        case "broadcast":
+          return yield* broadcast(self, params)
       }
     })
 
@@ -519,6 +632,43 @@ function pollResponse(
           Effect.andThen(Effect.sleep(Duration.millis(200))),
           Effect.andThen(pollResponse(coordination, requestID, deadline, receipt)),
         )
+    }),
+  )
+}
+
+// Batch variant of pollResponse: wait until every request in the set has a
+// response or the deadline passes, observing each request's delivery ledger so
+// the caller can tell "never seen" apart from "seen but unanswered".
+function pollBroadcast(
+  coordination: Coordination.Interface,
+  requests: ReadonlyArray<Coordination.Info>,
+  deadline: number,
+  receipts: Map<string, { seenAt?: number; ackedAt?: number; claimedBy?: string }>,
+): Effect.Effect<Map<string, Coordination.Info>> {
+  return coordination.responsesFor(requests.map((request) => request.id)).pipe(
+    Effect.flatMap((found) => {
+      const responses = new Map<string, Coordination.Info>()
+      for (const row of found) if (row.replyTo) responses.set(row.replyTo, row)
+      if (responses.size >= requests.length || Date.now() >= deadline) return Effect.succeed(responses)
+      return Effect.forEach(
+        requests.filter((request) => !responses.has(request.id)),
+        (request) =>
+          coordination.get(request.id).pipe(
+            Effect.tap((row) =>
+              Effect.sync(() => {
+                const receipt = receipts.get(request.id) ?? {}
+                if (row?.timeRead !== undefined && receipt.seenAt === undefined) receipt.seenAt = row.timeRead
+                if (row?.timeAck !== undefined && receipt.ackedAt === undefined) receipt.ackedAt = row.timeAck
+                if (row?.claimedBy !== undefined && receipt.claimedBy === undefined) receipt.claimedBy = row.claimedBy
+                receipts.set(request.id, receipt)
+              }),
+            ),
+          ),
+        { discard: true, concurrency: "unbounded" },
+      ).pipe(
+        Effect.andThen(Effect.sleep(Duration.millis(200))),
+        Effect.andThen(() => pollBroadcast(coordination, requests, deadline, receipts)),
+      )
     }),
   )
 }
