@@ -4,6 +4,7 @@ import { Switch } from "@prioricode/ui/v2/switch-v2"
 import { Icon as IconV2 } from "@prioricode/ui/v2/icon"
 import { IconButtonV2 } from "@prioricode/ui/v2/icon-button-v2"
 import { TextInputV2 } from "@prioricode/ui/v2/text-input-v2"
+import { useDialog } from "@prioricode/ui/context/dialog"
 import { type Component, For, Show } from "solid-js"
 import { createStore } from "solid-js/store"
 import { useLanguage } from "@/context/language"
@@ -13,6 +14,7 @@ import { popularProviders } from "@/hooks/use-providers"
 import { Persist, persisted } from "@/utils/persist"
 import { SettingsListV2 } from "./parts/list"
 import { SettingsRowV2 } from "./parts/row"
+import { ModelConfigDialog } from "./model-config-dialog"
 import "./settings-v2.css"
 
 type ModelItem = ReturnType<ReturnType<typeof useModels>["list"]>[number]
@@ -22,6 +24,7 @@ const PROVIDER_ICON_SIZE = 16
 export const SettingsModelsV2: Component = () => {
   const language = useLanguage()
   const models = useModels()
+  const dialog = useDialog()
   const serverSdk = useServerSDK()
   const [store, setStore] = persisted(
     Persist.serverGlobal(serverSdk().scope, "settings-v2.models.providers"),
@@ -158,7 +161,26 @@ export const SettingsModelsV2: Component = () => {
                             const key = { providerID: item.provider.id, modelID: item.id }
                             return (
                               <SettingsRowV2 title={item.name} description="">
-                                <div>
+                                <div class="flex items-center gap-2">
+                                  <IconButtonV2
+                                    type="button"
+                                    variant="ghost-muted"
+                                    size="small"
+                                    data-action="settings-model-config"
+                                    icon={<IconV2 name="settings-gear" size="large" />}
+                                    aria-label={language.t("settings.models.config.open")}
+                                    title={language.t("settings.models.config.open")}
+                                    onClick={() =>
+                                      void dialog.show(() => (
+                                        <ModelConfigDialog
+                                          providerID={item.provider.id}
+                                          modelID={item.id}
+                                          name={item.name}
+                                          limit={item.limit}
+                                        />
+                                      ))
+                                    }
+                                  />
                                   <Switch
                                     checked={models.visible(key)}
                                     onChange={(checked) => {

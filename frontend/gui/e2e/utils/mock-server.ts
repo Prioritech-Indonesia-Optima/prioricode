@@ -28,11 +28,15 @@ export interface MockServerConfig {
   fileContent?: (path: string) => unknown | Promise<unknown>
   findFiles?: (input: { query: string; dirs?: string; limit?: number }) => unknown | Promise<unknown>
   sessionStatus?: Record<string, unknown> | (() => Record<string, unknown>)
+  agents?: unknown[]
+  globalConfig?: Record<string, unknown>
+  onConfigUpdate?: (body: Record<string, unknown>) => void
 }
 
 export async function mockPrioriCodeServer(page: Page, config: MockServerConfig) {
   const cursors = new Map<string, string>()
   let nextCursor = 0
+  let globalConfig: Record<string, unknown> = structuredClone(config.globalConfig ?? {})
   const staticRoutes: Record<string, unknown> = {
     "/path": {
       state: config.directory,
@@ -43,7 +47,7 @@ export async function mockPrioriCodeServer(page: Page, config: MockServerConfig)
     },
     "/project": [config.project],
     "/project/current": config.project,
-    "/agent": [{ name: "build", mode: "primary" }],
+    "/agent": config.agents ?? [{ name: "build", mode: "primary" }],
     "/vcs": { branch: "main", default_branch: "main" },
     "/session": config.sessions,
   }
@@ -180,6 +184,16 @@ export async function mockPrioriCodeServer(page: Page, config: MockServerConfig)
     if (path === "/api/pty/shells") return json(route, { location: location(config), data: [] })
     if (/^\/api\/pty\/[^/]+\/connect-token$/.test(path))
       return json(route, { location: location(config), data: { ticket: "e2e-ticket", expires_in: 60 } })
+    if (path === "/global/config") {
+      if (route.request().method() === "PATCH") {
+        const body: unknown = route.request().postDataJSON()
+        if (isRecord(body)) {
+          globalConfig = mergeDeep(globalConfig, body)
+          config.onConfigUpdate?.(body)
+        }
+      }
+      return json(route, globalConfig)
+    }
     if (emptyObject.has(path)) return json(route, {})
     if (emptyList.has(path)) return json(route, [])
     if (path === "/api/session") {
@@ -421,6 +435,22 @@ function currentMessage(value: unknown) {
       ]
     }),
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
+function mergeDeep(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
+  const output: Record<string, unknown> = { ...target }
+  for (const [key, value] of Object.entries(source)) {
+    if (isRecord(value) && isRecord(output[key])) {
+      output[key] = mergeDeep(output[key], value)
+    } else {
+      output[key] = value
+    }
+  }
+  return output
 }
 
 function json(route: Route, body: unknown, headers?: Record<string, string>, status = 200) {

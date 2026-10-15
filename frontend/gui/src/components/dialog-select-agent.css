@@ -1,0 +1,104 @@
+[data-component="dialog-v2"].dialog-select-agent [data-slot="dialog-container"] {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  height: auto;
+  align-items: stretch;
+}
+
+[data-component="dialog-v2"].dialog-select-agent [data-slot="dialog-content"] {
+  align-items: stretch;
+  width: 100%;
+  overflow: hidden;
+}
+
+[data-component="dialog-v2"].dialog-select-agent [data-slot="dialog-header"] {
+  align-items: center;
+  padding-block: 24px 0;
+  padding-inline: 16px;
+}
+
+[data-component="dialog-v2"].dialog-select-agent [data-slot="dialog-body"] {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+}
+
+.dialog-select-agent-body {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  box-sizing: border-box;
+  padding-block: 8px 16px;
+  padding-inline: 16px;
+}
+
+.dialog-select-agent-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dialog-select-agent-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  text-align: start;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding-block: 8px;
+  padding-inline: 10px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.dialog-select-agent-row:hover,
+.dialog-select-agent-row:focus-visible {
+  border-color: var(--pc-border-base);
+  background: var(--pc-overlay-hover);
+}
+
+.dialog-select-agent-row--active {
+  border-color: var(--pc-border-base);
+  background: var(--pc-overlay-hover);
+}
+
+.dialog-select-agent-name {
+  font-size: 13px;
+  font-weight: 530;
+  letter-spacing: -0.04px;
+  color: var(--pc-text-base);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: capitalize;
+}
+
+.dialog-select-agent-description {
+  font-size: 12px;
+  color: var(--pc-text-muted);
+  min-width: 0;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dialog-select-agent-native {
+  font-size: 11px;
+  color: var(--pc-text-muted);
+  flex-shrink: 0;
+}

@@ -688,6 +688,7 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         title: "Switch agent",
         category: "Agent",
         slashName: "agents",
+        slashAliases: ["mode", "agent"],
         run: () => {
           dialog.replace(() => <DialogAgent />)
         },

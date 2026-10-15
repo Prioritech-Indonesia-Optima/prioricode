@@ -61,6 +61,23 @@ export const useComposerCommands = (input: { model?: ModelSelection } = {}) => {
     })
   }
 
+  const chooseAgent = async () => {
+    const editor = document.querySelector<HTMLElement>('[data-component="prompt-input"]')
+    const selection = window.getSelection()
+    const cursor =
+      editor && selection?.rangeCount && editor.contains(selection.anchorNode) ? getCursorPosition(editor) : null
+    const restoreComposer = () => {
+      requestAnimationFrame(() => {
+        const editor = document.querySelector<HTMLElement>('[data-component="prompt-input"]')
+        if (!editor) return
+        editor.focus()
+        if (cursor !== null) setCursorPosition(editor, cursor)
+      })
+    }
+    const { DialogSelectAgent } = await import("@/components/dialog-select-agent")
+    void dialog.show(() => <DialogSelectAgent />, restoreComposer)
+  }
+
   command.register("composer", () => [
     modelCommand({
       id: "model.choose",
@@ -69,6 +86,26 @@ export const useComposerCommands = (input: { model?: ModelSelection } = {}) => {
       keybind: "mod+'",
       slash: "model",
       onSelect: chooseModel,
+    }),
+    agentCommand({
+      id: "agent.select",
+      title: language.t("command.agent.select"),
+      description: language.t("command.agent.select.description"),
+      slash: "agents",
+      disabled: !local.agent.visible(),
+      onSelect: () => {
+        void chooseAgent()
+      },
+    }),
+    agentCommand({
+      id: "agent.mode",
+      title: language.t("command.agent.mode"),
+      description: language.t("command.agent.mode.description"),
+      slash: "mode",
+      disabled: !local.agent.visible(),
+      onSelect: () => {
+        void chooseAgent()
+      },
     }),
     modelCommand({
       id: "model.variant.cycle",
