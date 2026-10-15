@@ -4,7 +4,10 @@ import DESCRIPTION_WRITE from "./todowrite.txt"
 import { Todo } from "../session/todo"
 
 export const Parameters = Schema.Struct({
-  todos: Schema.mutable(Schema.Array(Todo.Info)).annotate({ description: "The updated todo list" }),
+  todos: Schema.mutable(Schema.Array(Todo.Info)).annotate({
+    description:
+      "The complete updated todo list. Every task: content, one of pending|in_progress|completed|cancelled, priority high|medium|low, and an optional phase label that groups consecutive tasks into one collapsible section.",
+  }),
 })
 
 type Metadata = {
@@ -21,6 +24,9 @@ export const TodoWriteTool = Tool.define<typeof Parameters, Metadata, Todo.Servi
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
+          const problem = Todo.validate(params.todos)
+          if (problem) throw new Error(`Invalid todo list: ${problem}`)
+
           yield* ctx.ask({
             permission: "todowrite",
             patterns: ["*"],

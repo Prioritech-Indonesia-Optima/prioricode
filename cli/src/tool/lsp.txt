@@ -1,24 +1,13 @@
-Interact with Language Server Protocol (LSP) servers to get code intelligence features.
+Code intelligence via Language Server Protocol.
 
-Supported operations:
-- goToDefinition: Find where a symbol is defined
-- findReferences: Find all references to a symbol
-- hover: Get hover information (documentation, type info) for a symbol
-- documentSymbol: Get all symbols (functions, classes, variables) in a document
-- workspaceSymbol: List project-wide symbols matching a query string
-- goToImplementation: Find implementations of an interface or abstract method
-- prepareCallHierarchy: Get call hierarchy item at a position (functions/methods)
-- incomingCalls: Find all functions/methods that call the function at a position
-- outgoingCalls: Find all functions/methods called by the function at a position
+Operations:
+- goToDefinition / goToImplementation: where a symbol is defined / implemented
+- findReferences: all references to a symbol
+- hover: docs and type info at a position
+- documentSymbol: all symbols in a file
+- workspaceSymbol: project-wide symbols matching query (empty query = all; filePath here only selects/starts the server, it is not sent in the LSP request)
+- prepareCallHierarchy / incomingCalls / outgoingCalls: call hierarchy at a position
 
-All operations require:
-- filePath: The file to operate on
-- line: The line number (1-based, as shown in editors)
-- character: The character offset (1-based, as shown in editors)
+Position args (all operations): filePath, line (1-based), character (1-based).
 
-workspaceSymbol also accepts:
-- query: A query string to filter symbols by. Empty string requests all symbols.
-
-For workspaceSymbol, filePath is not sent in the LSP workspace/symbol request. It is used by prioricode to select and start the matching LSP server.
-
-Note: LSP servers must be configured for the file type. If no server is available, an error will be returned.
+Requires a configured LSP server for the file type — otherwise errors.

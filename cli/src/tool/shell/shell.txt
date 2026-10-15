@@ -4,23 +4,22 @@ Be aware: OS: ${os}, Shell: ${shell}
 
 ${workdirSection}
 
-Use `${tmp}` for temporary work outside the workspace. This directory has already been created, already exists, and is pre-approved for external directory access.
+`${tmp}` is pre-approved scratch space outside the workspace; it already exists.
 
-IMPORTANT: This tool is for terminal operations like git, npm, docker, etc. DO NOT use it for file operations (reading, writing, editing, searching, finding files) - use the specialized tools for this instead.
+IMPORTANT: terminal operations only — git, npm, docker. For file operations (reading, writing, editing, searching, finding) use the dedicated tools instead.
 
 ${commandSection}
 
 # Background execution
-- Long-running commands (dev servers, watchers, builds, `tail -f`) should be started with `background: true` instead of raising large timeouts.
-- The call returns a job id immediately; all output is appended to a file you can Read or Grep, and the `jobs` tool supports incremental output (`action: "output"` with a `cursor`), `wait`, `kill`, and `list`.
-- You will be notified automatically when a background job finishes. NEVER sleep, poll in a loop, or repeatedly check on it; do not kill it via taskkill/Stop-Process, use the jobs tool instead.
+- Long-running commands (dev servers, watchers, builds, `tail -f`): `background: true`, not large timeouts.
+- The call returns a job id immediately; output appends to a file you can Read/Grep, and the jobs tool gives incremental output (`cursor`), `wait`, `kill`, `list`.
+- Completion is announced automatically. NEVER sleep, poll, or repeatedly check; kill via the jobs tool, not taskkill/Stop-Process.
 
 # Git and GitHub
 - Only commit, amend, push, or create PRs when explicitly requested.
-- Before committing, inspect `git status`, `git diff`, and `git log --oneline -10`; stage only intended files and never commit secrets.
-- Write a concise commit message that matches the repo style.
-- Do not update git config, skip hooks, use interactive `-i`, force-push, or create empty commits unless explicitly requested.
-- If a commit fails or hooks reject it, fix the issue and create a new commit; do not amend the failed commit.
-- Before creating a PR, inspect status, diff, remote tracking, recent commits, and the diff from the base branch.
-- Review all commits included in the PR, not just the latest commit.
-- Use `gh` for GitHub tasks, including PRs, issues, checks, and releases; return the PR URL when done.
+- Before committing: inspect `git status`, `git diff`, `git log --oneline -10`; stage only intended files; never commit secrets.
+- Commit messages: concise, matching repo style.
+- Never update git config, skip hooks, use interactive `-i`, force-push, or create empty commits unless explicitly requested.
+- A failed commit or rejected hook: fix and create a new commit; never amend the failed one.
+- Before a PR: inspect status, diff, remote tracking, recent commits, and the diff against the base branch; review all commits in the PR, not just the latest.
+- Use `gh` for GitHub tasks — PRs, issues, checks, releases; return the PR URL when done.

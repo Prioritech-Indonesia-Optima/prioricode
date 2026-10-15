@@ -1,45 +1,16 @@
-Create and maintain a structured task list for the current coding session. Tracks progress, organizes multi-step work, and surfaces status to the user.
+Create and maintain the session todo list — the user's live view of your progress. Any request that modifies files or spans multiple steps requires a todo list, written BEFORE the first change. No list = lost work the moment context is compacted or the process dies; the list is persisted outside the conversation and survives both.
 
-## When to use
-Use proactively when:
-- The task requires 3+ distinct steps or actions (not just 3 tool calls for a single conceptual step)
-- The work is non-trivial and benefits from planning
-- The user provides multiple tasks (numbered or comma-separated) or explicitly asks for a todo list
-- New instructions arrive - capture them as todos
-- You start a task - mark it `in_progress` (only one at a time) before working
-- You finish a task - mark it `completed` and add any follow-ups discovered during the work
+Structure: group work into phases with the optional `phase` label — consecutive tasks sharing a label render as one collapsible group (e.g. "Phase 1: schema", "Phase 2: wiring"). Tasks inside a phase are the concrete steps; finish a phase's tasks before starting the next phase's.
 
-## When NOT to use
-Skip when:
-- The work is a single, straightforward task (or <3 trivial steps)
-- The request is purely informational or conversational
-- Tracking adds no organizational value
+Statuses: `pending`, `in_progress`, `completed`, `cancelled` — anything else is rejected. The tool also rejects a list with more than one `in_progress`, or with work in flight (pending + completed mix) and nothing active.
 
-## States
-- `pending` - not started
-- `in_progress` - actively working (exactly ONE at a time)
-- `completed` - finished successfully
-- `cancelled` - no longer needed
+Discipline (every one is mandatory):
+- Write the list before the first edit of any modifying request; one item per logical step/phase.
+- Mark `in_progress` the moment you start a task. Exactly one at a time.
+- Cross off — mark `completed` — the instant a task is truly done and verified. Never batch completions and never mark completed on intent.
+- Update in real time: capture new instructions as todos immediately, append follow-ups you discover, set `cancelled` when scope drops a task.
+- Blocked: keep `in_progress`, add a follow-up todo naming the blocker.
+- End of turn: do not finish a modifying request with tasks still open unless the user stopped you.
+- Preserve user-provided commands verbatim (flags, args, order); items specific and actionable.
 
-## Rules
-- The todo list is the user's live view of your progress. Update it in real time.
-- Update status in real time; don't batch completions
-- Mark `completed` only after the required work is actually done, including any required verification. Never based on intent.
-- Keep exactly one `in_progress` while work remains
-- If blocked or partial, keep it `in_progress` and add a follow-up todo describing the blocker
-- Preserve user-provided commands verbatim (flags, args, order)
-- Items should be specific and actionable; break large work into smaller steps
-
-## Examples
-
-Use it:
-- "Add a dark mode toggle and run the tests" -> multi-step feature + explicit verification
-- "Rename getCwd -> getCurrentWorkingDirectory across the repo" -> grep reveals 15 occurrences in 8 files
-- "Implement registration, catalog, cart, checkout" -> multiple complex features
-
-Skip it:
-- "How do I print Hello World in Python?" -> informational
-- "Add a comment to calculateTotal" -> single edit
-- "Run npm install and tell me what happened" -> one command
-
-When in doubt, use it.
+Skip only for: a single trivial edit, or purely informational questions. When in doubt, write the list.
