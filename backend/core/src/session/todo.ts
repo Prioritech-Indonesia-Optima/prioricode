@@ -13,6 +13,34 @@ export const Info = SessionTodo.Info
 export type Info = typeof Info.Type
 export const Event = SessionTodo.Event
 
+export const validate = (todos: ReadonlyArray<Info>) => {
+  const count = (status: Info["status"]) => todos.filter((todo) => todo.status === status).length
+  const active = count("in_progress")
+  if (active > 1) return "Only one task may be in_progress at a time — set the other active tasks back to pending."
+  if (active === 0 && count("pending") > 0 && count("completed") + count("cancelled") > 0)
+    return "Work is mid-flight: mark exactly one pending task in_progress in this list."
+  return undefined
+}
+
+const MARK: Record<Info["status"], string> = { pending: "[ ]", in_progress: "[>]", completed: "[x]", cancelled: "[-]" }
+
+export const snapshot = (todos: ReadonlyArray<Info>) => {
+  if (todos.length === 0) return ""
+  const lines: string[] = []
+  let phase: string | undefined
+  let index = 0
+  for (const todo of todos) {
+    if (todo.phase !== phase) {
+      phase = todo.phase
+      index = 0
+      if (phase) lines.push(`### ${phase}`)
+    }
+    index += 1
+    lines.push(`${index}. ${MARK[todo.status]} ${todo.content}`)
+  }
+  return lines.join("\n")
+}
+
 export interface Interface {
   readonly update: (input: {
     readonly sessionID: SessionSchema.ID
@@ -46,6 +74,7 @@ const layer = Layer.effect(
                   content: todo.content,
                   status: todo.status,
                   priority: todo.priority,
+                  phase: todo.phase,
                   position,
                 })),
               )
@@ -68,6 +97,7 @@ const layer = Layer.effect(
         content: row.content,
         status: row.status,
         priority: row.priority,
+        phase: row.phase ?? undefined,
       }))
     })
 

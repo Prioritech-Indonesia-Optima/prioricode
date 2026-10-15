@@ -30,3 +30,28 @@ export function TodoItem(props: TodoItemProps) {
     </box>
   )
 }
+
+export interface TodoGroupProps {
+  label: string
+  done: number
+  total: number
+  open: boolean
+}
+
+export function TodoPhaseHeader(props: TodoGroupProps) {
+  const { theme } = useTheme()
+
+  return (
+    <box flexDirection="row" gap={0}>
+      <text flexShrink={0} style={{ fg: theme.text }}>
+        {props.open ? "▼ " : "▶ "}
+      </text>
+      <text flexGrow={1} wrapMode="word" style={{ fg: theme.text }}>
+        <b>{props.label}</b>
+      </text>
+      <text flexShrink={0} style={{ fg: theme.textMuted }}>
+        {props.done}/{props.total}
+      </text>
+    </box>
+  )
+}

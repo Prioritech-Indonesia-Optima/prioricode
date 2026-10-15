@@ -1,8 +1,8 @@
 {
   "version": "7",
   "dialect": "sqlite",
-  "id": "884bcb9a-f573-4698-b062-427255fb24b5",
-  "prevIds": ["0e22380a-b6bd-4275-9b09-c5caed27d7d4"],
+  "id": "8f057af4-f689-4c4d-a3a1-8a203cff9176",
+  "prevIds": ["884bcb9a-f573-4698-b062-427255fb24b5"],
   "ddl": [
     {
       "name": "workspace",
@@ -1611,6 +1611,16 @@
       "default": null,
       "generated": null,
       "name": "priority",
+      "entityType": "columns",
+      "table": "todo"
+    },
+    {
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "name": "phase",
       "entityType": "columns",
       "table": "todo"
     },

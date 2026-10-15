@@ -672,13 +672,14 @@ export type Todo = {
    */
   content: string
   /**
-   * Current status of the task: pending, in_progress, completed, cancelled
+   * Task state; exactly one item may be in_progress while work remains
    */
-  status: string
+  status: "pending" | "in_progress" | "completed" | "cancelled"
   /**
-   * Priority level of the task: high, medium, low
+   * Priority level of the task
    */
-  priority: string
+  priority: "high" | "medium" | "low"
+  phase?: string
 }
 
 export type SessionStatus =

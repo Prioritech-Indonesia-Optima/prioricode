@@ -115,8 +115,8 @@ const layer = Layer.effect(
         (lines.length > 0 ? lines.slice(-RESPONDER_SNAPSHOT_MESSAGES).join("\n\n") : "(no visible conversation yet)") +
         "\n\nCurrent file claims: " +
         (claims.length > 0 ? claims.join(", ") : "(none)") +
-        "\n\nCurrent todo list: " +
-        (todos.length > 0 ? todos.map((item) => `${item.status} — ${item.content}`).join("; ") : "(none)")
+        "\n\nCurrent todo list:\n" +
+        (todos.length > 0 ? Todo.snapshot(todos) : "(none)")
       )
     })
 

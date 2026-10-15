@@ -2566,6 +2566,16 @@ ToolRegistry.register({
       return `${list.filter((t: Todo) => t.status === "completed").length}/${list.length}`
     })
 
+    const groups = createMemo(() => {
+      const out: { phase: string | undefined; todos: Todo[] }[] = []
+      for (const todo of todos() as Todo[]) {
+        const last = out[out.length - 1]
+        if (last && last.phase === todo.phase) last.todos.push(todo)
+        else out.push({ phase: todo.phase, todos: [todo] })
+      }
+      return out
+    })
+
     return (
       <BasicTool
         {...props}
@@ -2578,16 +2588,27 @@ ToolRegistry.register({
       >
         <Show when={todos().length}>
           <div data-component="todos">
-            <For each={todos()}>
-              {(todo: Todo) => (
-                <Checkbox readOnly checked={todo.status === "completed"}>
-                  <span
-                    data-slot="message-part-todo-content"
-                    data-completed={todo.status === "completed" ? "completed" : undefined}
-                  >
-                    {todo.content}
-                  </span>
-                </Checkbox>
+            <For each={groups()}>
+              {(group) => (
+                <div>
+                  <Show when={group.phase}>
+                    <div data-slot="message-part-todo-phase" class="text-13-medium py-1">
+                      {group.phase}
+                    </div>
+                  </Show>
+                  <For each={group.todos}>
+                    {(todo) => (
+                      <Checkbox readOnly checked={todo.status === "completed"}>
+                        <span
+                          data-slot="message-part-todo-content"
+                          data-completed={todo.status === "completed" ? "completed" : undefined}
+                        >
+                          {todo.content}
+                        </span>
+                      </Checkbox>
+                    )}
+                  </For>
+                </div>
               )}
             </For>
           </div>

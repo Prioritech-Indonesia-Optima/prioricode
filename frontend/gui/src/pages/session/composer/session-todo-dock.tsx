@@ -7,7 +7,7 @@ import { useSpring } from "@prioricode/ui/motion-spring"
 import { TextReveal } from "@prioricode/ui/text-reveal"
 import { TextStrikethrough } from "@prioricode/ui/text-strikethrough"
 import { createResizeObserver } from "@solid-primitives/resize-observer"
-import { Index, createEffect, createMemo } from "solid-js"
+import { For, Index, Show, createEffect, createMemo } from "solid-js"
 import { Dynamic } from "solid-js/web"
 import { createStore } from "solid-js/store"
 import { useLanguage } from "@/context/language"
@@ -219,6 +219,17 @@ export function SessionTodoDock(props: {
 function TodoList(props: { todos: Todo[] }) {
   const [store, setStore] = createStore({
     stuck: false,
+    closed: {} as Record<string, boolean>,
+  })
+
+  const groups = createMemo(() => {
+    const out: { phase: string | undefined; todos: Todo[] }[] = []
+    for (const todo of props.todos) {
+      const last = out[out.length - 1]
+      if (last && last.phase === todo.phase) last.todos.push(todo)
+      else out.push({ phase: todo.phase, todos: [todo] })
+    }
+    return out
   })
 
   return (
@@ -230,40 +241,79 @@ function TodoList(props: { todos: Todo[] }) {
           setStore("stuck", e.currentTarget.scrollTop > 0)
         }}
       >
-        <Index each={props.todos}>
-          {(todo) => (
-            <Checkbox
-              readOnly
-              checked={todo().status === "completed"}
-              indeterminate={todo().status === "in_progress"}
-              data-in-progress={todo().status === "in_progress" ? "" : undefined}
-              data-state={todo().status}
-              icon={dot(todo().status)}
-              style={{
-                "--checkbox-align": "flex-start",
-                "--checkbox-offset": "1px",
-                transition: "opacity 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1))",
-                opacity: todo().status === "pending" ? "0.94" : "1",
-              }}
-            >
-              <TextStrikethrough
-                active={todo().status === "completed" || todo().status === "cancelled"}
-                text={todo().content}
-                class="text-14-regular min-w-0 break-words"
-                style={{
-                  "line-height": "var(--line-height-normal)",
-                  transition:
-                    "color 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)), opacity 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1))",
-                  color:
-                    todo().status === "completed" || todo().status === "cancelled"
-                      ? "var(--text-weak)"
-                      : "var(--text-strong)",
-                  opacity: todo().status === "pending" ? "0.92" : "1",
+        <For each={groups()}>
+          {(group) => (
+            <div class="flex flex-col gap-1.5">
+              <Show when={group.phase}>
+                {(phase) => {
+                  const open = () => !store.closed[phase()]
+                  const done = () => group.todos.filter((todo) => todo.status === "completed").length
+                  return (
+                    <button
+                      type="button"
+                      data-action="session-todo-phase-toggle"
+                      data-phase={phase()}
+                      aria-expanded={open()}
+                      onClick={() => setStore("closed", phase(), (value) => !value)}
+                      class="flex items-center gap-1.5 py-0.5 text-left cursor-pointer select-none"
+                    >
+                      <svg
+                        viewBox="0 0 12 12"
+                        width="12"
+                        height="12"
+                        class="shrink-0 transition-transform duration-150"
+                        style={{ transform: open() ? "rotate(0deg)" : "rotate(-90deg)" }}
+                        aria-hidden="true"
+                      >
+                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" />
+                      </svg>
+                      <span class="text-13-regular font-medium text-text-strong min-w-0 break-words">{phase()}</span>
+                      <span class="text-12-regular text-text-weak shrink-0">
+                        {done()}/{group.todos.length}
+                      </span>
+                    </button>
+                  )
                 }}
-              />
-            </Checkbox>
+              </Show>
+              <Show when={!group.phase || !store.closed[group.phase]}>
+                <Index each={group.todos}>
+                  {(todo) => (
+                    <Checkbox
+                      readOnly
+                      checked={todo().status === "completed"}
+                      indeterminate={todo().status === "in_progress"}
+                      data-in-progress={todo().status === "in_progress" ? "" : undefined}
+                      data-state={todo().status}
+                      icon={dot(todo().status)}
+                      style={{
+                        "--checkbox-align": "flex-start",
+                        "--checkbox-offset": "1px",
+                        transition: "opacity 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1))",
+                        opacity: todo().status === "pending" ? "0.94" : "1",
+                      }}
+                    >
+                      <TextStrikethrough
+                        active={todo().status === "completed" || todo().status === "cancelled"}
+                        text={todo().content}
+                        class="text-14-regular min-w-0 break-words"
+                        style={{
+                          "line-height": "var(--line-height-normal)",
+                          transition:
+                            "color 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)), opacity 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1))",
+                          color:
+                            todo().status === "completed" || todo().status === "cancelled"
+                              ? "var(--text-weak)"
+                              : "var(--text-strong)",
+                          opacity: todo().status === "pending" ? "0.92" : "1",
+                        }}
+                      />
+                    </Checkbox>
+                  )}
+                </Index>
+              </Show>
+            </div>
           )}
-        </Index>
+        </For>
       </div>
       <div
         class="pointer-events-none absolute top-0 left-0 right-0 h-4 transition-opacity duration-150"

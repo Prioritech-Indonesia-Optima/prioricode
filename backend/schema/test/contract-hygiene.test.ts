@@ -19,13 +19,23 @@ describe("contract hygiene", () => {
     expect(Schema.encodeSync(Value)({ value: undefined })).toEqual({})
   })
 
-  test("todo status and priority preserve arbitrary strings", () => {
+  test("todo status and priority are closed literal sets with an optional phase", () => {
     const decode = Schema.decodeUnknownSync(SessionTodo.Info)
-    expect(decode({ content: "ship", status: "waiting", priority: "urgent" })).toEqual({
+    expect(decode({ content: "ship", status: "pending", priority: "high" })).toEqual({
       content: "ship",
-      status: "waiting",
-      priority: "urgent",
+      status: "pending",
+      priority: "high",
     })
+    expect(() => decode({ content: "ship", status: "waiting", priority: "high" })).toThrow()
+    expect(() => decode({ content: "ship", status: "pending", priority: "urgent" })).toThrow()
+    expect(Schema.encodeSync(SessionTodo.Info)({ content: "ship", status: "pending", priority: "high" })).toEqual({
+      content: "ship",
+      status: "pending",
+      priority: "high",
+    })
+    expect(
+      Schema.encodeSync(SessionTodo.Info)({ content: "ship", status: "pending", priority: "high", phase: "Phase 1" }),
+    ).toEqual({ content: "ship", status: "pending", priority: "high", phase: "Phase 1" })
   })
 
   test("current ID constructors expose create", () => {

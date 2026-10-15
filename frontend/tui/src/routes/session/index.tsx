@@ -2556,12 +2556,32 @@ function ApplyPatch(props: ToolProps) {
 
 function TodoWrite(props: ToolProps) {
   const todos = createMemo(() => parseTodos(props.input.todos))
+  const phases = createMemo(() => {
+    const out: { phase: string | undefined; items: ReturnType<typeof parseTodos> }[] = []
+    for (const todo of todos()) {
+      const last = out[out.length - 1]
+      if (last && last.phase === todo.phase) last.items.push(todo)
+      else out.push({ phase: todo.phase, items: [todo] })
+    }
+    return out
+  })
   return (
     <Switch>
       <Match when={parseTodos(props.metadata.todos).length}>
         <BlockTool title="# Todos" part={props.part}>
           <box>
-            <For each={todos()}>{(todo) => <TodoItem status={todo.status} content={todo.content} />}</For>
+            <For each={phases()}>
+              {(group) => (
+                <box>
+                  <Show when={group.phase}>
+                    <text>
+                      <b>{group.phase}</b>
+                    </text>
+                  </Show>
+                  <For each={group.items}>{(todo) => <TodoItem status={todo.status} content={todo.content} />}</For>
+                </box>
+              )}
+            </For>
           </box>
         </BlockTool>
       </Match>
@@ -2708,7 +2728,11 @@ export function parseTodos(value: unknown) {
     const todo = recordValue(item)
     const status = stringValue(todo?.status)
     const content = stringValue(todo?.content)
-    return status && content ? [{ status, content }] : []
+    if (!status || !content) return []
+    const entry: { status: string; content: string; phase?: string } = { status, content }
+    const phase = stringValue(todo?.phase)
+    if (phase) entry.phase = phase
+    return [entry]
   })
 }
 

@@ -7,11 +7,14 @@ import { asc } from "drizzle-orm"
 import { TodoTable } from "@prioricode/core/session/sql"
 import { EventBridge } from "@/event-v2-bridge"
 import { SessionTodo } from "@prioricode/schema/session-todo"
+import { SessionTodo as SessionTodoCore } from "@prioricode/core/session/todo"
 
 export const Info = SessionTodo.Info
 export type Info = SessionTodo.Info
 
 export const Event = SessionTodo.Event
+export const validate = SessionTodoCore.validate
+export const snapshot = SessionTodoCore.snapshot
 
 export interface Interface {
   readonly update: (input: { sessionID: SessionID; todos: ReadonlyArray<Info> }) => Effect.Effect<void>
@@ -40,6 +43,7 @@ const layer = Layer.effect(
                   content: todo.content,
                   status: todo.status,
                   priority: todo.priority,
+                  phase: todo.phase,
                   position,
                 })),
               )
@@ -62,6 +66,7 @@ const layer = Layer.effect(
         content: row.content,
         status: row.status,
         priority: row.priority,
+        phase: row.phase ?? undefined,
       }))
     })
 

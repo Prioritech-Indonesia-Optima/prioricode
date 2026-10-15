@@ -7,6 +7,7 @@ import type { EventBus as Event } from "../event"
 import { SessionEvent } from "./event"
 import { SessionMessage } from "./message"
 import { SessionSchema } from "./schema"
+import { SessionTodo } from "./todo"
 import { Token } from "../util/token"
 
 const DEFAULT_BUFFER = 20_000
@@ -81,6 +82,7 @@ type Dependencies = {
     readonly stream: (request: LLMRequest) => Stream.Stream<LLMEvent, LLMError>
   }
   readonly config: readonly Config.Entry[]
+  readonly todos: (sessionID: SessionSchema.ID) => Effect.Effect<ReadonlyArray<SessionTodo.Info>>
 }
 
 type Input = {
@@ -219,6 +221,7 @@ export const plan = (
   context: number,
   summaryOutput: number,
   headCutSeq?: number,
+  todos?: string,
 ): PlanResult | undefined => {
   const conversation: ConversationItem[] = entries
     .filter((entry) => entry.message.type !== "compaction")
@@ -290,6 +293,7 @@ export const plan = (
     buildPrompt({
       previousSummary: summary,
       context: [priorRecent, headText].filter(Boolean),
+      todos,
       instructions: undefined,
     })
   for (;;) {
@@ -338,9 +342,16 @@ export const plan = (
 export const buildPrompt = (input: {
   readonly previousSummary?: string
   readonly context: readonly string[]
+  readonly todos?: string
   readonly instructions?: string
 }) => {
   const conversation = `Here is the conversation so far:\n\n<conversation>\n${input.context.join("\n\n")}\n</conversation>`
+  const checklist =
+    input.todos === undefined || input.todos.trim() === ""
+      ? []
+      : [
+          `The session's live todo list, read directly from storage — more authoritative than anything recalled from the conversation:\n\n<current-todos>\n${input.todos.trim()}\n</current-todos>\nCopy every open item into "Work State / Active" with its exact content and phase heading, finished items into "Completed", and base "Next Move" on the first open item in list order.`,
+        ]
   const focus =
     input.instructions === undefined || input.instructions.trim() === ""
       ? []
@@ -348,12 +359,14 @@ export const buildPrompt = (input: {
   if (!input.previousSummary)
     return [
       conversation,
+      ...checklist,
       ...focus,
       "Create a new anchored summary from the conversation history in the <conversation> tags above so another coding agent can continue the work.",
       SUMMARY_TEMPLATE,
     ].join("\n\n")
   return [
     conversation,
+    ...checklist,
     ...focus,
     `Here is the summary of the conversation before the <conversation> above:\n\n<prior-summary>\n${input.previousSummary}\n</prior-summary>`,
     SUMMARY_UPDATE_INSTRUCTIONS,
@@ -410,6 +423,7 @@ export const make = (dependencies: Dependencies) => {
     }
     const output = input.request?.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
     const summaryOutput = Math.min(output || SUMMARY_OUTPUT_TOKENS, SUMMARY_OUTPUT_TOKENS)
+    const todosText = SessionTodo.snapshot(yield* dependencies.todos(input.sessionID))
     const prior = input.entries.find((entry) => entry.message.type === "compaction")?.message
     const planned = plan(
       input.entries,
@@ -419,6 +433,7 @@ export const make = (dependencies: Dependencies) => {
       resolution.context,
       summaryOutput,
       input.headCutSeq,
+      todosText || undefined,
     )
     if (planned === undefined) return false
     if (planned.fallback === "window-too-small") {
@@ -452,6 +467,7 @@ export const make = (dependencies: Dependencies) => {
               buildPrompt({
                 previousSummary: planned.priorSummary,
                 context: [planned.priorRecent, planned.head].filter(Boolean),
+                todos: todosText || undefined,
                 instructions: input.instructions,
               }),
             ),

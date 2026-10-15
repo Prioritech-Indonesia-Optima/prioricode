@@ -1,4 +1,4 @@
-import { describe, expect } from "bun:test"
+import { describe, expect, test } from "bun:test"
 import { asc } from "drizzle-orm"
 import { Effect } from "effect"
 import { Database } from "@prioricode/core/database/database"
@@ -91,4 +91,41 @@ describe("SessionTodo", () => {
       ])
     }),
   )
+
+  it.effect("persists phase labels and renders them as an ordered snapshot", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const todos = yield* SessionTodo.Service
+      const list = [
+        { content: "schema", status: "in_progress" as const, priority: "high" as const, phase: "Phase 1: schema" },
+        { content: "migration", status: "pending" as const, priority: "medium" as const, phase: "Phase 1: schema" },
+        { content: "wiring", status: "pending" as const, priority: "low" as const, phase: "Phase 2: wiring" },
+      ]
+      yield* todos.update({ sessionID, todos: list })
+      expect(yield* todos.get(sessionID)).toEqual(list)
+      expect(SessionTodo.snapshot(yield* todos.get(sessionID))).toBe(
+        ["### Phase 1: schema", "1. [>] schema", "2. [ ] migration", "### Phase 2: wiring", "1. [ ] wiring"].join("\n"),
+      )
+    }),
+  )
+})
+
+describe("SessionTodo.validate", () => {
+  const todo = (status: SessionTodo.Info["status"]) => ({ content: status, status, priority: "low" as const })
+
+  test("allows a single active task, all-pending lists, and fully settled lists", () => {
+    expect(SessionTodo.validate([todo("in_progress"), todo("pending")])).toBeUndefined()
+    expect(SessionTodo.validate([todo("pending"), todo("pending")])).toBeUndefined()
+    expect(SessionTodo.validate([todo("completed"), todo("cancelled")])).toBeUndefined()
+    expect(SessionTodo.validate([])).toBeUndefined()
+    expect(SessionTodo.snapshot([])).toBe("")
+  })
+
+  test("rejects multiple in-progress tasks", () => {
+    expect(SessionTodo.validate([todo("in_progress"), todo("in_progress")])).toContain("Only one task")
+  })
+
+  test("rejects mid-flight work with nothing active", () => {
+    expect(SessionTodo.validate([todo("completed"), todo("pending")])).toContain("mid-flight")
+  })
 })

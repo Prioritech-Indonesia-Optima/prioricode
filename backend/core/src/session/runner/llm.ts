@@ -54,6 +54,7 @@ import { ProviderRetry } from "./provider-retry"
 import { ToolGuard } from "./tool-guard"
 import { SessionPrune } from "./prune"
 import { Snapshot } from "../../snapshot"
+import { SessionTodo } from "../todo"
 import { makeLocationNode } from "../../effect/app-node"
 import { llmClient } from "../../effect/app-node-platform"
 
@@ -127,7 +128,13 @@ const layer = Layer.effect(
     const hooks = yield* Hook.Service
     const permissions = yield* Permission.Service
     const db = (yield* Database.Service).db
-    const compaction = SessionCompaction.make({ events, llm, config: yield* config.entries() })
+    const sessionTodos = yield* SessionTodo.Service
+    const compaction = SessionCompaction.make({
+      events,
+      llm,
+      config: yield* config.entries(),
+      todos: (sessionID) => sessionTodos.get(sessionID),
+    })
     const getSession = Effect.fn("SessionRunner.getSession")(function* (sessionID: SessionSchema.ID) {
       const session = yield* store.get(sessionID)
       if (!session) return yield* Effect.die(`Session not found: ${sessionID}`)
@@ -750,5 +757,6 @@ export const node = makeLocationNode({
     AppProcess.node,
     Hook.node,
     Permission.node,
+    SessionTodo.node,
   ],
 })

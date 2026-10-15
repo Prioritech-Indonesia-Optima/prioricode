@@ -1,5 +1,13 @@
 # V2 Schema Changelog
 
+## 2026-10-15: Phase-Structured Todos and Literal States
+
+- Add optional `phase` label to `SessionTodo.Info` (`Todo`), grouping consecutive tasks into one collapsible section across TUI, GUI dock, and timeline renderers; migration `todo_phase` adds the nullable `phase` text column.
+- Tighten `status` to the documented literals (`pending`, `in_progress`, `completed`, `cancelled`) and `priority` to `high`, `medium`, `low`; rows and tool inputs outside these sets are now rejected at decode.
+- Enforce the single-`in_progress` invariant in `todowrite` execution (both runtimes) instead of leaving it prompt-only; a list with work in flight and nothing active is rejected.
+- Compaction prompts (`buildPrompt`) now receive the live todo list read from storage as `<current-todos>`, injected as the authoritative work state; V1 additionally prunes-protects `todowrite` results.
+- Compatibility: existing rows already hold documented status/priority values; the new column is nullable and old reads decode unchanged. No route or event shape changes beyond the `Todo` payload fields.
+
 ## 2026-06-26: Add Finite Session History
 
 - Add `GET /api/session/:sessionID/history` and generated Promise, Effect, and legacy JavaScript client methods.

@@ -2,6 +2,7 @@ import { sqliteTable, text, integer, index, primaryKey, real, uniqueIndex } from
 import * as DatabasePath from "../database/path"
 import { ProjectTable } from "../project/sql"
 import type { SessionMessage } from "./message"
+import type { SessionTodo } from "@prioricode/schema/session-todo"
 import type { Prompt } from "./prompt"
 import type { SessionInput } from "./input"
 import type { Snapshot } from "../snapshot"
@@ -108,8 +109,9 @@ export const TodoTable = sqliteTable(
       .notNull()
       .references(() => SessionTable.id, { onDelete: "cascade" }),
     content: text().notNull(),
-    status: text().notNull(),
-    priority: text().notNull(),
+    status: text().$type<SessionTodo.Info["status"]>().notNull(),
+    priority: text().$type<SessionTodo.Info["priority"]>().notNull(),
+    phase: text(),
     position: integer().notNull(),
     ...Timestamps,
   },

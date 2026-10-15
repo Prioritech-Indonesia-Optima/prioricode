@@ -17860,11 +17860,16 @@
           },
           "status": {
             "type": "string",
-            "description": "Current status of the task: pending, in_progress, completed, cancelled"
+            "enum": ["pending", "in_progress", "completed", "cancelled"],
+            "description": "Task state; exactly one item may be in_progress while work remains"
           },
           "priority": {
             "type": "string",
-            "description": "Priority level of the task: high, medium, low"
+            "enum": ["high", "medium", "low"],
+            "description": "Priority level of the task"
+          },
+          "phase": {
+            "type": "string"
           }
         },
         "required": ["content", "status", "priority"],

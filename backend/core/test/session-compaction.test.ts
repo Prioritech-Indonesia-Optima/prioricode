@@ -19,6 +19,17 @@ test("compaction prompt preserves detailed work state and relevant files", () =>
   expect(prompt).toContain("## Relevant Files")
 })
 
+test("compaction prompt anchors the summary on the live todo list", () => {
+  const prompt = SessionCompaction.buildPrompt({ context: ["conversation history"], todos: "### Phase 1\n1. [>] wire" })
+
+  expect(prompt.indexOf("</conversation>")).toBeLessThan(prompt.indexOf("<current-todos>"))
+  expect(prompt).toContain("1. [>] wire")
+  expect(prompt).toContain("more authoritative than anything recalled from the conversation")
+  expect(SessionCompaction.buildPrompt({ context: ["conversation history"], todos: "  " })).not.toContain(
+    "<current-todos>",
+  )
+})
+
 test("compaction prompt gives update instructions for a prior summary", () => {
   const prompt = SessionCompaction.buildPrompt({
     context: ["new conversation"],

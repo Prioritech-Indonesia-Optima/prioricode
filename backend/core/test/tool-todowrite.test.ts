@@ -104,6 +104,39 @@ describe("TodoWriteTool", () => {
     }),
   )
 
+  it.effect("rejects malformed lists before permissions or storage are touched", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const service = yield* SessionTodo.Service
+
+      const result = yield* executeTool(
+        registry,
+        call([
+          { content: "one", status: "in_progress", priority: "high" },
+          { content: "two", status: "in_progress", priority: "high" },
+        ]),
+      )
+      expect(result).toEqual({ type: "error", value: expect.stringContaining("Only one task") })
+      expect(assertions.length).toBe(0)
+      expect(yield* service.get(sessionID)).toEqual([])
+    }),
+  )
+
+  it.effect("persists phase-grouped todos", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const service = yield* SessionTodo.Service
+      const list: ReadonlyArray<SessionTodo.Info> = [
+        { content: "schema", status: "in_progress", priority: "high", phase: "Phase 1: schema" },
+      ]
+
+      yield* settleTool(registry, call(list))
+      expect(yield* service.get(sessionID)).toEqual(list)
+    }),
+  )
+
   it.effect("does not update persisted todos when permission is denied", () =>
     Effect.gen(function* () {
       yield* setup

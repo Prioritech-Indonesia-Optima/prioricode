@@ -21,6 +21,7 @@ import { EventBridge } from "@/event-v2-bridge"
 import { Provider as ProviderSchema } from "@prioricode/core/provider"
 import { Model } from "@prioricode/core/model"
 import { buildPrompt } from "@prioricode/core/session/compaction"
+import { Todo } from "./todo"
 import { SessionCompactionEvent } from "@prioricode/schema/session-compaction-event"
 
 export const Event = SessionCompactionEvent
@@ -28,7 +29,7 @@ export const Event = SessionCompactionEvent
 const PRUNE_MINIMUM = 20_000
 const PRUNE_PROTECT = 40_000
 const TOOL_OUTPUT_MAX_CHARS = 2_000
-const PRUNE_PROTECTED_TOOLS = ["skill"]
+const PRUNE_PROTECTED_TOOLS = ["skill", "todowrite"]
 const MIN_PRESERVE_RECENT_TOKENS = 2_000
 const MAX_PRESERVE_RECENT_TOKENS = 15_000
 // Reserved inside the summary-request budget for the generated summary.
@@ -206,6 +207,7 @@ const layer = Layer.effect(
     const provider = yield* Provider.Service
     const events = yield* EventBridge.Service
     const flags = yield* RuntimeFlags.Service
+    const todo = yield* Todo.Service
 
     const isOverflow = Effect.fn("SessionCompaction.isOverflow")(function* (input: {
       tokens: SessionV1.Assistant["tokens"]
@@ -304,10 +306,13 @@ const layer = Layer.effect(
       cfg: ConfigV1.Info
       model: Provider.ProviderModel
       previousSummary: string | undefined
+      todos: string | undefined
     }) {
       const render = (head: SessionV1.WithParts[]) => head.map(serialize).filter(Boolean).join("\n\n")
       const promptSize = (head: SessionV1.WithParts[]) =>
-        Token.estimate(buildPrompt({ previousSummary: input.previousSummary, context: [render(head)] }))
+        Token.estimate(
+          buildPrompt({ previousSummary: input.previousSummary, context: [render(head)], todos: input.todos }),
+        )
       const budget = effectiveContext(input.cfg, input.model) - SUMMARY_OUTPUT_TOKENS
       if (budget <= 0) return { conversation: render(input.head), droppedTokens: 0, truncated: false }
       let head = [...input.head]
@@ -448,7 +453,8 @@ const layer = Layer.effect(
       )
       const msgs = structuredClone(selected.head)
       yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
-      const shrunk = yield* shrinkHeadToFit({ head: msgs, cfg, model, previousSummary })
+      const todosText = Todo.snapshot(yield* todo.get(input.sessionID))
+      const shrunk = yield* shrinkHeadToFit({ head: msgs, cfg, model, previousSummary, todos: todosText || undefined })
       const conversation = shrunk.conversation
       const nextPrompt =
         compacting.prompt ??
@@ -456,6 +462,7 @@ const layer = Layer.effect(
           buildPrompt({
             previousSummary,
             context: [conversation],
+            todos: todosText || undefined,
           }),
           ...compacting.context,
         ]
@@ -674,6 +681,7 @@ export const node = LayerNode.make({
     Provider.node,
     EventBridge.node,
     RuntimeFlags.node,
+    Todo.node,
   ],
 })
 

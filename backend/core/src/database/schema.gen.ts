@@ -246,6 +246,7 @@ export default {
           \`content\` text NOT NULL,
           \`status\` text NOT NULL,
           \`priority\` text NOT NULL,
+          \`phase\` text,
           \`position\` integer NOT NULL,
           \`time_created\` integer NOT NULL,
           \`time_updated\` integer NOT NULL,
