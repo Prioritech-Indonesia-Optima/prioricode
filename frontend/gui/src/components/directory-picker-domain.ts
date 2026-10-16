@@ -331,7 +331,10 @@ export function pickerSegments(path: string, home: string): PickerSegment[] {
   const root = pickerRoot(value)
   if (!root) return []
   const segments: PickerSegment[] = [{ label: nativePickerPath(root), path: root }]
-  const parts = value.slice(root.length).split("/").filter((part) => part)
+  const parts = value
+    .slice(root.length)
+    .split("/")
+    .filter((part) => part)
   let cursor = root
   for (const part of parts) {
     cursor = joinPickerPath(cursor, part)

@@ -396,7 +396,7 @@ export function DialogSelectDirectoryV2(props: DialogSelectDirectoryV2Props) {
                 class="directory-picker-v2-up"
                 onClick={() => void navigate(pickerParent(root()))}
               >
-                {language.t("dialog.directory.up")}
+                {language.t("dialog.directory.parent")}
               </ButtonV2>
             </div>
             <div class="directory-picker-v2-path" ref={pathArea}>
