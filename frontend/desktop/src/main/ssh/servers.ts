@@ -252,6 +252,13 @@ export function createSshServersController(
           const check = await checkPrioricode(alias)
           setPrioricodeCheck(alias, check)
           installed = check.version !== null
+        } else {
+          logger?.error("ssh auto-install failed", {
+            id,
+            alias,
+            code: result.code,
+            output: result.output.slice(-2000),
+          })
         }
       } catch (installError) {
         logger?.error("ssh auto-install failed", { id, alias, message: String(installError) })
@@ -434,6 +441,11 @@ export function createSshServersController(
       await runJob({ kind: "install-prioricode", alias, startedAt: Date.now() }, async () => {
         const result = await remoteExec(installArgs(alias, appVersion), "", INSTALL_TIMEOUT_MS)
         if (result.code !== 0) {
+          logger?.error("ssh prioricode install failed", {
+            alias,
+            code: result.code,
+            output: result.output.slice(-2000),
+          })
           throw new Error(nativeT("desktop.ssh.error.installPrioricode", { host: alias }))
         }
         const check = await checkPrioricode(alias)

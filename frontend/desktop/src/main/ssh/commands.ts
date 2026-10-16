@@ -38,7 +38,10 @@ export function installArgs(alias: string, version: string) {
     alias,
     "bash",
     "-lc",
-    `curl -fsSL https://prioricode.ai/install | bash -s -- --version ${shellEscape(version)}`,
+    // pipefail so a curl/DNS failure fails the pipeline; without it `bash -s`
+    // reads empty stdin, exits 0, and the desktop reports a bogus version
+    // mismatch for an install that never ran.
+    `set -o pipefail; curl -fsSL https://code.prioritech.co.id/install | bash -s -- --version ${shellEscape(version)}`,
   ]
 }
 

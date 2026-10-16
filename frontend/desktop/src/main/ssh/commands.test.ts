@@ -80,7 +80,9 @@ test("stop script is idempotent", () => {
 
 test("install pins the desktop app version", () => {
   const args = installArgs("web", "0.1.18")
-  expect(args.at(-1)).toContain("curl -fsSL https://prioricode.ai/install | bash -s -- --version '0.1.18'")
+  expect(args.at(-1)).toContain(
+    "set -o pipefail; curl -fsSL https://code.prioritech.co.id/install | bash -s -- --version '0.1.18'",
+  )
 })
 
 test("marker parsing tolerates shell noise", () => {

@@ -146,7 +146,7 @@ test("missing remote binary auto-installs once and retries the sidecar", async (
   await controller.addServer("web")
   for (let i = 0; i < 10; i++) await flush()
   expect(spawns).toBe(2)
-  expect(execs.some((x) => x.includes("curl -fsSL https://prioricode.ai/install"))).toBeTrue()
+  expect(execs.some((x) => x.includes("set -o pipefail; curl -fsSL https://code.prioritech.co.id/install"))).toBeTrue()
   expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
 })
 
@@ -172,7 +172,9 @@ test("auto-install runs at most once per server", async () => {
   for (let i = 0; i < 10; i++) await flush()
   await controller.startServer("ssh:web")
   for (let i = 0; i < 10; i++) await flush()
-  expect(execs.filter((x) => x.includes("curl -fsSL https://prioricode.ai/install"))).toHaveLength(1)
+  expect(
+    execs.filter((x) => x.includes("set -o pipefail; curl -fsSL https://code.prioritech.co.id/install")),
+  ).toHaveLength(1)
   expect(controller.getState().servers[0]?.runtime.kind).toBe("failed")
 })
 
@@ -313,7 +315,7 @@ test("installPrioricode runs pinned version, refreshes check, and restarts known
   execCalls.length = 0
   started.length = 0
   await controller.installPrioricode("web")
-  expect(execCalls[0]?.args.join(" ")).toContain("curl -fsSL https://prioricode.ai/install")
+  expect(execCalls[0]?.args.join(" ")).toContain("set -o pipefail; curl -fsSL https://code.prioritech.co.id/install")
   expect(execCalls[0]?.args.join(" ")).toContain("--version '0.1.18'")
   expect(controller.getState().prioricodeChecks.web?.matchesDesktop).toBeTrue()
   expect(started).toEqual(["web"])
