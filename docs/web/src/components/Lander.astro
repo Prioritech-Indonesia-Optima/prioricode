@@ -5,6 +5,8 @@ import config from "virtual:starlight/user-config";
 
 import CopyIcon from "../assets/lander/copy.svg";
 import CheckIcon from "../assets/lander/check.svg";
+import LogoLight from "../assets/logo-light.svg";
+import LogoDark from "../assets/logo-dark.svg";
 import TuiScreenshot from "../assets/lander/screenshot-splash.png";
 import VscodeScreenshot from "../assets/lander/screenshot-vscode.png";
 import GithubScreenshot from "../assets/lander/screenshot-github.png";
@@ -32,32 +34,12 @@ const command = "curl -fsSL"
 const protocol = "https://"
 const url = "prioricode.ai/install"
 const bash = "| bash"
-
-let darkImage: ImageMetadata | undefined;
-let lightImage: ImageMetadata | undefined;
-let rawHtml: string | undefined;
-if (image) {
-    if ('file' in image) {
-        darkImage = image.file;
-    } else if ('dark' in image) {
-        darkImage = image.dark;
-        lightImage = image.light;
-    } else {
-        rawHtml = image.html;
-  }
-}
 ---
 <div class="hero">
     <section class="top">
       <div class="logo">
-        {darkImage && (
-          <Image
-            src={darkImage}
-            {...imageAttrs}
-            class:list={{ 'light:sl-hidden': Boolean(lightImage) }}
-          />
-        )}
-        {lightImage && <Image src={lightImage} {...imageAttrs} class="dark:sl-hidden" />}
+        <Image src={LogoDark} {...imageAttrs} alt="PrioriCode" class="light:sl-hidden" />
+        <Image src={LogoLight} {...imageAttrs} alt="PrioriCode" class="dark:sl-hidden" />
       </div>
       <h1>{t('app.lander.hero.title')}</h1>
     </section>

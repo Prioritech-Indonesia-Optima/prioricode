@@ -1,8 +1,6 @@
 import { type ComponentProps, type JSX } from "solid-js"
 import markInk from "../assets/brand/mark-ink.png"
 import markWhite from "../assets/brand/mark-white.png"
-import wordmarkInk from "../assets/brand/wordmark-ink.png"
-import wordmarkWhite from "../assets/brand/wordmark-white.png"
 import lockupColorDark from "../assets/brand/lockup-color-dark.png"
 import lockupColorLight from "../assets/brand/lockup-color-light.png"
 
@@ -49,15 +47,7 @@ export const Splash = (props: Pick<ComponentProps<"svg">, "ref" | "class">) => {
 }
 
 export const Logo = (props: { class?: string }) => {
-  return (
-    <BrandImage
-      class={props.class}
-      component="logo-wordmark"
-      white={wordmarkWhite}
-      ink={wordmarkInk}
-      alt="PrioriCode"
-    />
-  )
+  return <BrandImage class={props.class} component="logo-wordmark" white={markWhite} ink={markInk} alt="PrioriCode" />
 }
 
 export const ColorLogo = (props: { class?: string }) => {

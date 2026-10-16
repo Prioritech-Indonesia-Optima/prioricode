@@ -4,16 +4,10 @@ import sharp from "sharp"
 import { BILINEAR, createICNS, createICO } from "png2icons"
 
 const ROOT = path.resolve(import.meta.dir, "..")
-const SOURCE = path.join(ROOT, "branding/source/2026-lockup.png")
 const EMBLEM = path.join(ROOT, "branding/source/emblem.png")
-const WORDMARK = path.join(ROOT, "branding/source/wordmark.png")
 const INK = { r: 28, g: 27, b: 23 }
 const BG_THRESHOLD = 32
 const DARK_BG_THRESHOLD = 60
-
-const MARK = { left: 436, top: 274, width: 1124, height: 932 }
-const WORD = { left: 436, top: 1504, width: 1117, height: 180 }
-const LOCK = { left: 436, top: 274, width: 1124, height: 1410 }
 
 const UWP = [30, 44, 71, 89, 107, 142, 150, 284, 310]
 
@@ -222,45 +216,70 @@ async function processDarkSource(file: string) {
   return { trimmed, trimmedWhite, w, h }
 }
 
+// Center a transparent buffer in a square canvas (size = its larger dimension).
+// Used to turn the wide icon-only P into a square mark for favicons and headers.
+async function square(buf: Buffer) {
+  const meta = await sharp(buf).metadata()
+  const size = Math.max(meta.width!, meta.height!)
+  return sharp({ create: { width: size, height: size, channels: 4, background: "#00000000" } })
+    .composite([{ input: buf, gravity: "centre" }])
+    .png()
+    .toBuffer()
+}
+
+// Find the row that splits the mark (P + swoosh) from the wordmark below it, by
+// locating the largest empty horizontal band in the interior of the lockup.
+async function markSplitRow(buf: Buffer, w: number, h: number) {
+  const { data } = await sharp(buf).raw().toBuffer({ resolveWithObject: true })
+  const content = (i: number) => {
+    const o = i * 4
+    return data[o + 3] > 40 && !(data[o] > 200 && data[o + 1] > 200 && data[o + 2] > 200)
+  }
+  let best = { start: 0, len: 0 }
+  let run = 0
+  let start = 0
+  for (let y = 0; y < h; y++) {
+    let c = 0
+    for (let x = 0; x < w; x++) if (content(y * w + x)) c++
+    if (c < 5) {
+      if (run === 0) start = y
+      run++
+    } else {
+      if (run > best.len && start > 0 && start + run < h) best = { start, len: run }
+      run = 0
+    }
+  }
+  return best.len ? best.start + Math.floor(best.len / 2) : Math.round(h * 0.61)
+}
+
 async function main() {
-  // Process new dark-background sources
+  // The emblem source is the full clean lockup (mark + wordmark). The raw
+  // wordmark source is the full brand sheet, not a wordmark — never use it as a logo.
   const emblem = await processDarkSource(EMBLEM)
-  const wordmark = await processDarkSource(WORDMARK)
 
-  // Compose lockup: emblem on top, wordmark below
-  const emblemMeta = await sharp(emblem.trimmed).metadata()
-  const wordMeta = await sharp(wordmark.trimmed).metadata()
-  const lockW = Math.max(emblemMeta.width!, wordMeta.width!)
-  const lockH = emblemMeta.height! + wordMeta.height! + 40
-  const lockup = await sharp({ create: { width: lockW, height: lockH, channels: 4, background: "#00000000" } })
-    .composite([
-      { input: emblem.trimmed, gravity: "north" },
-      { input: wordmark.trimmed, gravity: "south" },
-    ])
-    .png()
-    .toBuffer()
-  const lockupWhite = await sharp({ create: { width: lockW, height: lockH, channels: 4, background: "#00000000" } })
-    .composite([
-      { input: emblem.trimmedWhite, gravity: "north" },
-      { input: wordmark.trimmedWhite, gravity: "south" },
-    ])
-    .png()
-    .toBuffer()
-
-  // Use emblem as the mark (icon)
+  // The mark (and the full lockup) is the emblem.
   const markWhite = emblem.trimmedWhite
   const markInk = emblem.trimmed
 
-  // Use wordmark for text
-  const wordWhite = wordmark.trimmedWhite
-  const wordInk = wordmark.trimmed
+  // Icon-only P (no wordmark), square, for slots that render "PrioriCode" as
+  // text too and use a square box: the favicon, the landing header, the
+  // VitePress logo, and the Mintlify navbar.
+  const markMeta = await sharp(markInk).metadata()
+  const markW = markMeta.width!
+  const markH = markMeta.height!
+  const splitRow = await markSplitRow(markInk, markMeta.width!, markMeta.height!)
+  const crop = { left: 0, top: 0, width: markMeta.width!, height: splitRow }
+  const iconInk = await square(await sharp(markInk).extract(crop).trim().png().toBuffer())
+  const iconWhite = await square(await sharp(markWhite).extract(crop).trim().png().toBuffer())
 
-  // Use composed lockup (social share only)
-  const lockWhite = lockupWhite
+  // Social share uses the clean lockup.
+  const lockWhite = markWhite
 
   const iconMaster = await tile(1024, markWhite)
 
   // branding/
+  await out("branding/mark-icon-ink.png", iconInk)
+  await out("branding/mark-icon-white.png", iconWhite)
   const brandMark512 = await tile(512, markWhite, { rounded: false, fill: 0.78 })
   const brandMarkLight512 = await sharp({ create: { width: 512, height: 512, channels: 4, background: "#00000000" } })
     .composite([
@@ -279,8 +298,6 @@ async function main() {
   const brand = "frontend/ui/src/assets/brand"
   await out(`${brand}/mark-white.png`, await sharp(markWhite).resize(1024).png().toBuffer())
   await out(`${brand}/mark-ink.png`, await sharp(markInk).resize(1024).png().toBuffer())
-  await out(`${brand}/wordmark-white.png`, await sharp(wordWhite).resize(2048).png().toBuffer())
-  await out(`${brand}/wordmark-ink.png`, await sharp(wordInk).resize(2048).png().toBuffer())
   await out(`${brand}/icon-master.png`, iconMaster)
 
   // favicons (gui/public symlinks point here; -v3 names kept in sync)
@@ -329,24 +346,33 @@ async function main() {
     await social(`${img}/social-share-black.png`, 1280, 721, lockWhite, "#000000"),
   )
 
-  const oauthWhite = await sharp(wordWhite).resize(480).png().toBuffer()
-  const oauthInk = await sharp(wordInk).resize(480).png().toBuffer()
+  // The OAuth page logo is the clean mark lockup, not the raw wordmark source
+  // (which is the full brand sheet).
+  const oauthWhite = await sharp(markWhite).resize(480).png().toBuffer()
+  const oauthInk = await sharp(markInk).resize(480).png().toBuffer()
   await out(
     "backend/core/src/oauth/wordmark.ts",
     `export const WORDMARK_WHITE = "data:image/png;base64,${oauthWhite.toString("base64")}"\nexport const WORDMARK_INK = "data:image/png;base64,${oauthInk.toString("base64")}"\n`,
   )
 
-  // docs (mintlify) + cloud console raster-wrapper svgs
-  const wordW = wordMeta.width!
-  const wordH = wordMeta.height!
-  await out("docs/mintlify/logo/light.svg", svgWrap(wordInk, wordW, wordH))
-  await out("docs/mintlify/logo/dark.svg", svgWrap(wordWhite, wordW, wordH))
+  // docs (mintlify) + cloud console raster-wrapper svgs.
+  // Mintlify shows the site `name` next to the logo, so it gets the icon-only P
+  // (the full lockup would read "prioricode" twice). Starlight's logo replaces
+  // the title, so it gets the full lockup. The raw wordmark source is the full
+  // brand sheet, not a wordmark — never use it as a logo.
+  const iconMeta = await sharp(iconInk).metadata()
+  const iconW = iconMeta.width!
+  const iconH = iconMeta.height!
+  await out("docs/mintlify/logo/light.svg", svgWrap(iconInk, iconW, iconH))
+  await out("docs/mintlify/logo/dark.svg", svgWrap(iconWhite, iconW, iconH))
   await out("docs/mintlify/favicon.svg", svgWrap(favTile96, 96, 96))
+  await out("docs/web/src/assets/logo-light.svg", svgWrap(markInk, markW, markH))
+  await out("docs/web/src/assets/logo-dark.svg", svgWrap(markWhite, markW, markH))
   const consoleAsset = "cloud/console/app/src/asset"
-  await out(`${consoleAsset}/logo-ornate-light.svg`, svgWrap(wordInk, wordW, wordH))
-  await out(`${consoleAsset}/logo-ornate-dark.svg`, svgWrap(wordWhite, wordW, wordH))
-  await out(`${consoleAsset}/lander/logo-light.svg`, svgWrap(wordInk, wordW, wordH))
-  await out(`${consoleAsset}/lander/logo-dark.svg`, svgWrap(wordWhite, wordW, wordH))
+  await out(`${consoleAsset}/logo-ornate-light.svg`, svgWrap(markInk, markW, markH))
+  await out(`${consoleAsset}/logo-ornate-dark.svg`, svgWrap(markWhite, markW, markH))
+  await out(`${consoleAsset}/lander/logo-light.svg`, svgWrap(markInk, markW, markH))
+  await out(`${consoleAsset}/lander/logo-dark.svg`, svgWrap(markWhite, markW, markH))
 
   console.log("brand generation complete")
 }
