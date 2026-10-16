@@ -31,7 +31,7 @@ function fakeSidecar(): Sidecar & { triggerExit: (code?: number | null) => void;
 
 function setup(options?: {
   hosts?: SshHostProfile[]
-  spawnSidecar?: (alias: string) => Promise<Sidecar>
+  spawnSidecar?: (alias: string, options?: { binPath?: string }) => Promise<Sidecar>
   remoteExec?: (args: string[], stdin: string, timeoutMs: number) => Promise<{ code: number; output: string }>
   reconnectBaseDelayMs?: number
   reconnectMaxAttempts?: number
@@ -137,7 +137,10 @@ test("missing remote binary auto-installs once and retries the sidecar", async (
     },
     remoteExec: async (args) => {
       execs.push(args.join(" "))
-      return { code: 0, output: 'PRIORICODE_SSH_CHECK {"version":"0.1.18","path":"/usr/local/bin/prioricode"}\n' }
+      return {
+        code: 0,
+        output: 'PRIORICODE_SSH_CHECK {"bins":[{"path":"/usr/local/bin/prioricode","version":"0.1.18"}]}\n',
+      }
     },
   })
   await controller.addServer("web")
@@ -159,7 +162,10 @@ test("auto-install runs at most once per server", async () => {
     },
     remoteExec: async (args) => {
       execs.push(args.join(" "))
-      return { code: 0, output: 'PRIORICODE_SSH_CHECK {"version":"0.1.18","path":"/usr/local/bin/prioricode"}\n' }
+      return {
+        code: 0,
+        output: 'PRIORICODE_SSH_CHECK {"bins":[{"path":"/usr/local/bin/prioricode","version":"0.1.18"}]}\n',
+      }
     },
   })
   await controller.addServer("web")
@@ -298,7 +304,7 @@ test("installPrioricode runs pinned version, refreshes check, and restarts known
       execCalls.push({ args, stdin })
       return {
         code: 0,
-        output: `PRIORICODE_SSH_CHECK {"version":"0.1.18","path":"/home/u/.prioricode/bin/prioricode"}`,
+        output: `PRIORICODE_SSH_CHECK {"bins":[{"path":"/home/u/.prioricode/bin/prioricode","version":"0.1.18"}]}`,
       }
     },
   })
@@ -311,6 +317,30 @@ test("installPrioricode runs pinned version, refreshes check, and restarts known
   expect(execCalls[0]?.args.join(" ")).toContain("--version '0.1.18'")
   expect(controller.getState().prioricodeChecks.web?.matchesDesktop).toBeTrue()
   expect(started).toEqual(["web"])
+})
+
+test("installPrioricode succeeds when the fresh binary shadows a stale copy", async () => {
+  const spawnCalls: { alias: string; binPath?: string }[] = []
+  const { controller } = setup({
+    hosts: [{ alias: "web", hostname: "web", user: null, port: null, hasProxy: false, sourceFile: "/x" }],
+    spawnSidecar: async (alias, options) => {
+      spawnCalls.push({ alias, binPath: options?.binPath })
+      return fakeSidecar() as never
+    },
+    remoteExec: async () => ({
+      code: 0,
+      // the installer wrote ~/bin but an older 0.2.6 copy sits earlier in the
+      // historical probe order; the check must trust the matching binary
+      output: `PRIORICODE_SSH_CHECK {"bins":[{"path":"/home/u/.local/bin/prioricode","version":"0.2.6"},{"path":"/home/u/bin/prioricode","version":"0.1.18"}]}`,
+    }),
+  })
+  await controller.addServer("web")
+  await flush()
+  spawnCalls.length = 0
+  await controller.installPrioricode("web")
+  expect(controller.getState().prioricodeChecks.web?.version).toBe("0.1.18")
+  expect(controller.getState().prioricodeChecks.web?.matchesDesktop).toBeTrue()
+  expect(spawnCalls).toEqual([{ alias: "web", binPath: "/home/u/bin/prioricode" }])
 })
 
 test("initialize starts every persisted server and refreshes hosts", async () => {

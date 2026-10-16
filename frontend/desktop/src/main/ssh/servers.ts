@@ -13,7 +13,7 @@ import { getStore } from "../store"
 import { nativeT } from "../native-translations"
 import { readSshConfigProfiles } from "./config"
 import { isValidSshAlias, sshBootstrapCodeOf } from "./errors"
-import { checkArgs, checkScript, installArgs, parseCheckMarker } from "./commands"
+import { checkArgs, checkScript, installArgs, parseCheckMarker, selectBinary } from "./commands"
 import { stopSshServer } from "./sidecar"
 
 type RunningSidecar = {
@@ -23,7 +23,7 @@ type RunningSidecar = {
   password: string
 }
 
-type SpawnSidecar = (alias: string) => Promise<RunningSidecar>
+type SpawnSidecar = (alias: string, options?: { binPath?: string }) => Promise<RunningSidecar>
 
 type RemoteExec = (args: string[], stdin: string, timeoutMs: number) => Promise<{ code: number; output: string }>
 
@@ -136,12 +136,13 @@ export function createSshServersController(
               : nativeT("desktop.ssh.error.bootstrapFailed", { host: alias, code: parsed.code }),
         }
       }
+      const picked = selectBinary(parsed.bins, appVersion)
       return {
         alias,
-        resolvedPath: parsed.path,
-        version: parsed.version || null,
+        resolvedPath: picked?.path ?? null,
+        version: picked?.version || null,
         expectedVersion: appVersion,
-        matchesDesktop: parsed.version === appVersion,
+        matchesDesktop: picked?.version === appVersion,
         error: null,
       }
     } catch (error) {
@@ -229,8 +230,10 @@ export function createSshServersController(
   }
 
   const startSidecarWithAutoInstall = async (id: string, alias: string, attempt: number) => {
+    const spawnResolved = () =>
+      spawnSidecar(alias, { binPath: state.prioricodeChecks[alias]?.resolvedPath ?? undefined })
     try {
-      return await spawnSidecar(alias)
+      return await spawnResolved()
     } catch (error) {
       if (
         sshBootstrapCodeOf(error) !== "missing_binary" ||
@@ -259,7 +262,7 @@ export function createSshServersController(
         return null
       }
       try {
-        return await spawnSidecar(alias)
+        return await spawnResolved()
       } catch (retryError) {
         failStart(id, attempt, alias, retryError, "ssh sidecar failed to start after auto-install")
         return null

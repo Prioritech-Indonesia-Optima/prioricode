@@ -169,9 +169,10 @@ const main = Effect.gen(function* () {
   )
   const sshServers = createSshServersController(
     app.getVersion(),
-    async (alias) => {
-      logger.log("spawning ssh sidecar", { alias })
+    async (alias, options) => {
+      logger.log("spawning ssh sidecar", { alias, binPath: options?.binPath })
       return spawnSshSidecar(alias, {
+        binPath: options?.binPath,
         onLine: (line) => logger.log("ssh sidecar", { alias, stream: line.stream, text: line.text }),
       })
     },

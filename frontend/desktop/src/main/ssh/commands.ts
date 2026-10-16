@@ -57,7 +57,7 @@ export function tunnelArgs(alias: string, localPort: number, remotePort: number,
   return args
 }
 
-export function bootstrapScript(password: string) {
+export function bootstrapScript(password: string, binPath?: string) {
   const escaped = shellEscape(password)
   return [
     "set -eu",
@@ -76,9 +76,15 @@ export function bootstrapScript(password: string) {
     "fi",
     `trap 'rmdir "$D/lock" 2>/dev/null || true' EXIT`,
     'BIN=""',
+    // The desktop resolves the version-matching binary from the check probe;
+    // prefer it over the first-existing candidate so a stale copy cannot
+    // shadow the installed one.
+    ...(binPath ? [`PREF=${shellEscape(binPath)}`, 'if [ -x "$PREF" ]; then BIN="$PREF"; fi'] : []),
+    'if [ -z "$BIN" ]; then',
     'for c in "$HOME/.prioricode/bin/prioricode" "$HOME/.local/bin/prioricode" "$HOME/bin/prioricode" "/usr/local/bin/prioricode"; do',
     '  if [ -x "$c" ]; then BIN="$c"; break; fi',
     "done",
+    "fi",
     'if [ -z "$BIN" ] && command -v prioricode >/dev/null 2>&1; then BIN="$(command -v prioricode)"; fi',
     `if [ -z "$BIN" ]; then echo "$ERR missing_binary"; exit 3; fi`,
     'V="$("$BIN" --version 2>/dev/null | sed -n \'1p\' || true)"',
@@ -144,41 +150,41 @@ export function stopScript() {
 
 export const SSH_CHECK_MARKER = "PRIORICODE_SSH_CHECK"
 
-const BINARY_CANDIDATES = [
-  '"$HOME/.prioricode/bin/prioricode"',
-  '"$HOME/.local/bin/prioricode"',
-  '"$HOME/bin/prioricode"',
-  '"/usr/local/bin/prioricode"',
-]
-
-function binaryProbeLines() {
-  return [
-    'BIN=""',
-    `for c in ${BINARY_CANDIDATES.join(" ")}; do`,
-    '  if [ -x "$c" ]; then BIN="$c"; break; fi',
-    "done",
-    'if [ -z "$BIN" ] && command -v prioricode >/dev/null 2>&1; then BIN="$(command -v prioricode)"; fi',
-    `if [ -z "$BIN" ]; then echo '${SSH_BOOTSTRAP_ERROR_MARKER} missing_binary'; exit 3; fi`,
-  ]
-}
-
 export function checkArgs(alias: string) {
   return [...BASE_ARGS, alias, "sh", "-s"]
 }
 
+// Reports every prioricode binary found on the host, not just the first
+// candidate: the installer writes to $HOME/bin by default while older installs
+// live in ~/.local/bin or ~/.prioricode/bin, so a first-match probe can report
+// a stale copy that shadows the freshly installed one.
 export function checkScript() {
   return [
     "set -eu",
-    ...binaryProbeLines(),
-    'V="$("$BIN" --version 2>/dev/null | sed -n \'1p\' || true)"',
-    `V="$(printf '%s' "$V" | tr -cd 'A-Za-z0-9._+-')"`,
-    `P="$(printf '%s' "$BIN" | tr -cd 'A-Za-z0-9._/+-')"`,
-    `printf '${SSH_CHECK_MARKER} {"version":"%s","path":"%s"}\\n' "$V" "$P"`,
+    'BINS=""',
+    'SEEN=""',
+    "try_bin() {",
+    '  [ -x "$1" ] || return 0',
+    '  case "$SEEN" in *"|$1|"*) return 0 ;; esac',
+    '  SEEN="$SEEN|$1|"',
+    '  V="$("$1" --version 2>/dev/null | sed -n \'1p\' || true)"',
+    `  V="$(printf '%s' "$V" | tr -cd 'A-Za-z0-9._+-')"`,
+    `  P="$(printf '%s' "$1" | tr -cd 'A-Za-z0-9._/+-')"`,
+    `  BINS="$BINS{\\"path\\":\\"$P\\",\\"version\\":\\"$V\\"},"`,
+    "}",
+    `try_bin "$HOME/.prioricode/bin/prioricode"`,
+    `try_bin "$HOME/.local/bin/prioricode"`,
+    `try_bin "$HOME/bin/prioricode"`,
+    `try_bin "/usr/local/bin/prioricode"`,
+    'if command -v prioricode >/dev/null 2>&1; then try_bin "$(command -v prioricode)"; fi',
+    `if [ -z "$BINS" ]; then echo '${SSH_BOOTSTRAP_ERROR_MARKER} missing_binary'; exit 3; fi`,
+    `printf '${SSH_CHECK_MARKER} {"bins":[%s]}\\n' "$(printf '%s' "$BINS" | sed 's/,$//')"`,
     "",
   ].join("\n")
 }
 
-export type SshCheckResult = { version: string; path: string } | { code: string }
+export type SshBin = { path: string; version: string }
+export type SshCheckResult = { bins: SshBin[] } | { code: string }
 
 export function parseCheckMarker(output: string): SshCheckResult {
   for (const line of output.split(/\r?\n/)) {
@@ -188,13 +194,45 @@ export function parseCheckMarker(output: string): SshCheckResult {
     if (marker === -1) continue
     try {
       const value = JSON.parse(line.slice(marker + SSH_CHECK_MARKER.length + 1)) as Record<string, unknown>
-      if (typeof value.path !== "string" || !value.path) return { code: "bad_marker" }
-      return { version: typeof value.version === "string" ? value.version : "", path: value.path }
+      if (!Array.isArray(value.bins)) return { code: "bad_marker" }
+      const bins = value.bins.flatMap((bin): SshBin[] => {
+        if (!bin || typeof bin !== "object") return []
+        const record = bin as Record<string, unknown>
+        if (typeof record.path !== "string" || !record.path) return []
+        return [{ path: record.path, version: typeof record.version === "string" ? record.version : "" }]
+      })
+      return bins.length ? { bins } : { code: "missing_binary" }
     } catch {
       return { code: "bad_marker" }
     }
   }
   return { code: "no_marker" }
+}
+
+export function compareVersions(a: string, b: string) {
+  const left = a.split(/[.-]/)
+  const right = b.split(/[.-]/)
+  for (let i = 0; i < Math.max(left.length, right.length); i++) {
+    const l = parseInt(left[i] ?? "0", 10)
+    const r = parseInt(right[i] ?? "0", 10)
+    const ln = Number.isNaN(l) ? 0 : l
+    const rn = Number.isNaN(r) ? 0 : r
+    if (ln !== rn) return ln - rn
+    if (left[i] !== right[i]) {
+      if ((left[i] ?? "") < (right[i] ?? "")) return -1
+      return 1
+    }
+  }
+  return 0
+}
+
+// Picks the binary the desktop should trust and launch: the one matching the
+// desktop version when present, else the highest version found.
+export function selectBinary(bins: SshBin[], expectedVersion: string): SshBin | undefined {
+  if (!bins.length) return undefined
+  const exact = bins.find((bin) => bin.version === expectedVersion)
+  if (exact) return exact
+  return bins.reduce((best, bin) => (compareVersions(bin.version, best.version) > 0 ? bin : best), bins[0]!)
 }
 
 export function parseBootstrapMarker(output: string): SshBootstrapResult | SshBootstrapError {

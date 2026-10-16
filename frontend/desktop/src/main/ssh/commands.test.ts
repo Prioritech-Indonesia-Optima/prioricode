@@ -11,6 +11,8 @@ import {
   parseBootstrapMarker,
   parseListeningLine,
   probeArgs,
+  selectBinary,
+  compareVersions,
   SSH_BOOTSTRAP_MARKER,
   stopArgs,
   stopScript,
@@ -123,18 +125,46 @@ test("listening line parser extracts host and port", () => {
   expect(parseListeningLine("no noise here")).toBeNull()
 })
 
-test("check probe prints marker with sanitized version and path", () => {
+test("check probe reports every candidate binary and parses the marker", () => {
   const script = checkScript()
   expect(script).toContain("set -eu")
   expect(script).toContain(SSH_CHECK_MARKER)
   expect(script).toContain("tr -cd")
   expect(checkArgs("web").join(" ")).not.toContain("Password")
   expect(
-    parseCheckMarker(`${SSH_CHECK_MARKER} {"version":"0.1.18","path":"/home/u/.prioricode/bin/prioricode"}`),
+    parseCheckMarker(
+      `${SSH_CHECK_MARKER} {"bins":[{"path":"/home/u/.local/bin/prioricode","version":"0.1.17"},{"path":"/home/u/bin/prioricode","version":"0.1.18"}]}`,
+    ),
   ).toEqual({
-    version: "0.1.18",
-    path: "/home/u/.prioricode/bin/prioricode",
+    bins: [
+      { path: "/home/u/.local/bin/prioricode", version: "0.1.17" },
+      { path: "/home/u/bin/prioricode", version: "0.1.18" },
+    ],
   })
   expect(parseCheckMarker("noise")).toEqual({ code: "no_marker" })
   expect(parseCheckMarker("PRIORICODE_SSH_BOOTSTRAP_ERROR missing_binary")).toEqual({ code: "missing_binary" })
+})
+
+test("selectBinary prefers the desktop-matching copy over a stale shadow", () => {
+  const bins = [
+    { path: "/home/u/.local/bin/prioricode", version: "0.2.6" },
+    { path: "/home/u/bin/prioricode", version: "0.3.0" },
+  ]
+  expect(selectBinary(bins, "0.3.0")).toEqual(bins[1])
+  expect(selectBinary(bins, "9.9.9")).toEqual(bins[1])
+  expect(selectBinary([{ path: "/a", version: "" }], "0.3.0")).toEqual({ path: "/a", version: "" })
+  expect(selectBinary([], "0.3.0")).toBeUndefined()
+})
+
+test("compareVersions orders numeric segments", () => {
+  expect(compareVersions("0.3.0", "0.2.6")).toBeGreaterThan(0)
+  expect(compareVersions("0.10.0", "0.9.9")).toBeGreaterThan(0)
+  expect(compareVersions("1.2.3", "1.2.3")).toBe(0)
+})
+
+test("bootstrap prefers the desktop-resolved binary path", () => {
+  const script = bootstrapScript(PASSWORD, "/home/u/bin/prioricode")
+  expect(script).toContain("/home/u/bin/prioricode")
+  expect(script.indexOf('if [ -x "$PREF" ]')).toBeLessThan(script.indexOf('for c in "$HOME/.prioricode/bin'))
+  expect(bootstrapScript(PASSWORD)).not.toContain("PREF=")
 })

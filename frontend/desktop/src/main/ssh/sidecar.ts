@@ -34,6 +34,7 @@ export type SshSidecarOptions = {
   listenerTimeoutMs?: number
   authEnv?: Record<string, string>
   spawn?: typeof spawn
+  binPath?: string
 }
 
 export class SshTunnelExitError extends Error {
@@ -302,7 +303,7 @@ function runBootstrap(
     windowsHide: true,
     env: opts.authEnv,
   })
-  child.stdin.end(bootstrapScript(password))
+  child.stdin.end(bootstrapScript(password, opts.binPath))
   let stdout = ""
   child.stdout.setEncoding("utf8")
   child.stdout.on("data", (chunk: string) => {
