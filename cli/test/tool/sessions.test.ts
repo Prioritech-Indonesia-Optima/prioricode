@@ -93,7 +93,11 @@ describe("tool.sessions.broadcast", () => {
     Effect.gen(function* () {
       yield* setup
       roster.peers = [activeInfo, staleInfo]
-      const result = yield* execute({ action: "broadcast", message: "about to git stash for a clean e2e baseline", timeout: 1 })
+      const result = yield* execute({
+        action: "broadcast",
+        message: "about to git stash for a clean e2e baseline",
+        timeout: 1,
+      })
       expect(result.output).toContain("1 active peer(s)")
       expect(result.output).toContain("0/1 answered")
       expect(result.output).toContain(`${activeID}`)
@@ -117,9 +121,11 @@ describe("tool.sessions.broadcast", () => {
       yield* setup
       roster.peers = [activeInfo]
       const coordination = yield* Coordination.Service
-      const fiber = yield* execute({ action: "broadcast", message: "about to git reset, any objection?", timeout: 10 }).pipe(
-        Effect.forkScoped,
-      )
+      const fiber = yield* execute({
+        action: "broadcast",
+        message: "about to git reset, any objection?",
+        timeout: 10,
+      }).pipe(Effect.forkScoped)
       const request = yield* pollWithTimeout(
         Effect.gen(function* () {
           const inbox = yield* coordination.inbox({ sessionID: activeID, kinds: ["request"], unreadOnly: true })

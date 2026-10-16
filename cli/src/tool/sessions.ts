@@ -481,10 +481,7 @@ export const SessionsTool = Tool.define(
         const message = params.message
         if (!message) return failure("broadcast requires a message")
         const seconds = Math.min(params.timeout ?? BROADCAST_DEFAULT_SECONDS, BROADCAST_MAX_SECONDS)
-        const [siblings, statusMap] = yield* Effect.all([
-          sessions.list({ limit: 100, roots: true }),
-          status.list(),
-        ])
+        const [siblings, statusMap] = yield* Effect.all([sessions.list({ limit: 100, roots: true }), status.list()])
         const now = Date.now()
         const peers = siblings.filter((session) => session.id !== self.id && !session.time.archived)
         const active: Array<{ id: SessionID; title: string }> = []
@@ -530,15 +527,9 @@ export const SessionsTool = Tool.define(
           })
           requests.push(request)
         }
-        if (requests.length === 0)
-          return failure(`Broadcast blocked for every peer: ${blocked.join(" | ")}`)
+        if (requests.length === 0) return failure(`Broadcast blocked for every peer: ${blocked.join(" | ")}`)
         const receipts = new Map<string, { seenAt?: number; ackedAt?: number; claimedBy?: string }>()
-        const responses = yield* pollBroadcast(
-          coordination,
-          requests,
-          Date.now() + seconds * 1000,
-          receipts,
-        )
+        const responses = yield* pollBroadcast(coordination, requests, Date.now() + seconds * 1000, receipts)
         for (const row of responses.values()) {
           yield* coordination.markRead([row.id])
           yield* coordination.markAck([row.id])
