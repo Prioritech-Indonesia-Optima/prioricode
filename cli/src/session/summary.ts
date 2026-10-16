@@ -63,6 +63,47 @@ function unquoteGitPath(input: string) {
   return Buffer.from(bytes).toString()
 }
 
+const maxPatchBytes = 1_000_000
+const maxPatchTotalBytes = 4_000_000
+
+// Full-context patches for large diffs (generated files, repo-wide renames) can reach tens of MB.
+// The durable `message.updated` payload embeds every diff verbatim, so oversized patches are
+// dropped (counts stay) to keep the event log, SSE fan-out, and renderer memory bounded.
+function capDiffs(diffs: Snapshot.FileDiff[]): Snapshot.FileDiff[] {
+  let total = 0
+  let touched = false
+  const next = diffs.map((item) => {
+    const patch = item.patch
+    if (!patch) return item
+    if (patch.length > maxPatchBytes || total + patch.length > maxPatchTotalBytes) {
+      touched = true
+      return { ...item, patch: "" }
+    }
+    total += patch.length
+    return item
+  })
+  return touched ? next : diffs
+}
+
+function diffRange(messages: SessionV1.WithParts[]) {
+  let from: string | undefined
+  let to: string | undefined
+  for (const item of messages) {
+    if (!from) {
+      for (const part of item.parts) {
+        if (part.type === "step-start" && part.snapshot) {
+          from = part.snapshot
+          break
+        }
+      }
+    }
+    for (const part of item.parts) {
+      if (part.type === "step-finish" && part.snapshot) to = part.snapshot
+    }
+  }
+  return { from, to }
+}
+
 export interface Interface {
   readonly summarize: (input: { sessionID: SessionID; messageID: MessageID }) => Effect.Effect<void>
   readonly diff: (input: { sessionID: SessionID; messageID?: MessageID }) => Effect.Effect<Snapshot.FileDiff[]>
@@ -80,24 +121,14 @@ const layer = Layer.effect(
     const config = yield* Config.Service
 
     const computeDiff = Effect.fn("SessionSummary.computeDiff")(function* (input: { messages: SessionV1.WithParts[] }) {
-      let from: string | undefined
-      let to: string | undefined
-      for (const item of input.messages) {
-        if (!from) {
-          for (const part of item.parts) {
-            if (part.type === "step-start" && part.snapshot) {
-              from = part.snapshot
-              break
-            }
-          }
-        }
-        for (const part of item.parts) {
-          if (part.type === "step-finish" && part.snapshot) to = part.snapshot
-        }
-      }
-      if (from && to) return yield* snapshot.diffFull(from, to)
+      const { from, to } = diffRange(input.messages)
+      if (from && to) return capDiffs(yield* snapshot.diffFull(from, to))
       return []
     })
+
+    // summarize runs on every assistant step-finish; snapshots are immutable, so the same
+    // (from, to) range always yields the same diff. Skip recompute + re-emit when unchanged.
+    const summarized = new Map<MessageID, string>()
 
     const summarize = Effect.fn("SessionSummary.summarize")(function* (input: {
       sessionID: SessionID
@@ -121,7 +152,15 @@ const layer = Layer.effect(
       )
       const target = messages.find((m) => m.info.id === input.messageID)
       if (!target || target.info.role !== "user") return
+      const range = diffRange(messages)
+      const key = `${range.from ?? ""}:${range.to ?? ""}`
+      if (summarized.get(input.messageID) === key) return
       const msgDiffs = yield* computeDiff({ messages })
+      if (summarized.size > 1000) {
+        const oldest = summarized.keys().next()
+        if (!oldest.done) summarized.delete(oldest.value)
+      }
+      summarized.set(input.messageID, key)
       target.info.summary = { ...target.info.summary, diffs: msgDiffs }
       yield* sessions.updateMessage(target.info)
     })

@@ -117,6 +117,9 @@ export function createHomeSessionsController(home: HomeController) {
                   (ctx.sync.session.data.message[record.session.id] ?? []).flatMap((message) =>
                     (ctx.sync.session.data.part[message.id] ?? []).flatMap((part) => {
                       if (part.type !== "text" || !part.text) return []
+                      // Skip oversized parts: parsing them on the home screen can OOM the renderer
+                      // before any session is even opened.
+                      if (part.text.length > 200_000) return []
                       return preloadMarkdown(part.text, part.id)
                     }),
                   ),

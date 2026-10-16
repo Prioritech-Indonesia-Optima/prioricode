@@ -1178,6 +1178,8 @@ function UserMessageComments(props: { comments: UserMessageComment[]; bounded: b
   )
 }
 
+const maxRenderedTextChars = 1_000_000
+
 export function UserMessageDisplay(props: {
   message: UserMessage
   parts: PartType[]
@@ -1205,7 +1207,12 @@ export function UserMessageDisplay(props: {
     ),
   )
 
-  const text = createMemo(() => textPart()?.text || "")
+  const text = createMemo(() => {
+    const value = textPart()?.text || ""
+    // Huge pastes (multi-MB logs/diffs) must not be materialized in full into the DOM;
+    // the store keeps the complete text for copy/export.
+    return value.length > maxRenderedTextChars ? value.slice(0, maxRenderedTextChars) + "…" : value
+  })
 
   const files = createMemo(() => (props.parts?.filter((p) => p.type === "file") as FilePart[]) ?? [])
 

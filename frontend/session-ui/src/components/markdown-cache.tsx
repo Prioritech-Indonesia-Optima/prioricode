@@ -8,8 +8,10 @@ export type MarkdownCacheEntry = {
   html: string
 }
 
-const max = 200
+const maxEntries = 200
+const maxBytes = 16 * 1024 * 1024
 const cache = new Map<string, MarkdownCacheEntry>()
+let cacheBytes = 0
 const config = {
   USE_PROFILES: { html: true, mathMl: true },
   SANITIZE_NAMED_PROPS: true,
@@ -42,14 +44,26 @@ export function getCachedMarkdown(key: string) {
 }
 
 export function touchCachedMarkdown(key: string, value: MarkdownCacheEntry) {
-  cache.delete(key)
-  cache.set(key, value)
+  const prev = cache.get(key)
+  if (prev) {
+    cacheBytes -= prev.raw.length + prev.html.length
+    cache.delete(key)
+  }
 
-  if (cache.size <= max) return
+  const size = value.raw.length + value.html.length
+  // A single oversized entry would blow the whole budget; keep it out of the cache.
+  if (size <= maxBytes) {
+    cache.set(key, value)
+    cacheBytes += size
+  }
 
-  const first = cache.keys().next().value
-  if (!first) return
-  cache.delete(first)
+  while (cache.size > 1 && (cache.size > maxEntries || cacheBytes > maxBytes)) {
+    const first = cache.keys().next()
+    if (first.done) return
+    const oldest = cache.get(first.value)
+    if (oldest) cacheBytes -= oldest.raw.length + oldest.html.length
+    cache.delete(first.value)
+  }
 }
 
 export async function preloadMarkdown(text: string, cacheKey: string) {

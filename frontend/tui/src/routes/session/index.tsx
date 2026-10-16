@@ -1400,7 +1400,7 @@ function UserMessage(props: {
         return null
       })
       .filter(Boolean)
-    return texts.join("\n\n")
+    return Locale.truncate(texts.join("\n\n"), maxRenderChars)
   })
   const files = createMemo(() => props.parts.flatMap((x) => (x.type === "file" ? [x] : [])))
   const notifications = createMemo(() =>
@@ -1613,6 +1613,10 @@ function AssistantMessage(props: { message: AssistantMessage; parts: Part[]; las
   )
 }
 
+// Terminal rendering materializes the whole string (parse tree + styled spans); oversized
+// parts (multi-MB pastes, huge tool inputs) must never reach the renderer in full.
+const maxRenderChars = 100_000
+
 const PART_MAPPING = {
   text: TextPart,
   tool: ToolPart,
@@ -1630,7 +1634,7 @@ function ReasoningPart(props: { last: boolean; part: ReasoningPart; message: Ass
 
   const content = createMemo(() => {
     // OpenRouter encrypts some reasoning blocks; drop the placeholder.
-    return props.part.text.replace("[REDACTED]", "").trim()
+    return Locale.truncate(props.part.text.replace("[REDACTED]", "").trim(), maxRenderChars)
   })
   const opaque = createMemo(() => !content() && Boolean(props.part.metadata))
   // Reasoning is finalized when the server sets `time.end` (see processor.ts).
@@ -1724,14 +1728,15 @@ function ReasoningHeader(props: {
 function TextPart(props: { last: boolean; part: TextPart; message: AssistantMessage }) {
   const ctx = use()
   const { theme, syntax } = useTheme()
+  const content = createMemo(() => Locale.truncate(props.part.text.trim(), maxRenderChars))
   return (
-    <Show when={props.part.text.trim()}>
+    <Show when={content()}>
       <box ref={(el: BoxRenderable) => alwaysSeparate.add(el)} paddingLeft={3} marginTop={1} flexShrink={0}>
         <markdown
           syntaxStyle={syntax()}
           streaming={true}
           internalBlockMode="top-level"
-          content={props.part.text.trim()}
+          content={content()}
           tableOptions={{ style: "grid" }}
           conceal={ctx.conceal()}
           fg={theme.markdownText}
@@ -2144,7 +2149,7 @@ function Write(props: ToolProps) {
   const { theme, syntax } = useTheme()
   const pathFormatter = usePathFormatter()
   const code = createMemo(() => {
-    return stringValue(props.input.content) ?? ""
+    return Locale.truncate(stringValue(props.input.content) ?? "", maxRenderChars)
   })
 
   return (
@@ -2439,7 +2444,7 @@ function Edit(props: ToolProps) {
 
   const ft = createMemo(() => filetype(stringValue(props.input.filePath)))
 
-  const diffContent = createMemo(() => stringValue(props.metadata.diff) ?? "")
+  const diffContent = createMemo(() => Locale.truncate(stringValue(props.metadata.diff) ?? "", maxRenderChars))
 
   return (
     <Switch>
@@ -2538,7 +2543,7 @@ function ApplyPatch(props: ToolProps) {
                   </text>
                 }
               >
-                <Diff diff={file.patch} filePath={file.filePath} />
+                <Diff diff={Locale.truncate(file.patch, maxRenderChars)} filePath={file.filePath} />
                 <Diagnostics diagnostics={props.metadata.diagnostics} filePath={file.movePath ?? file.filePath} />
               </Show>
             </BlockTool>

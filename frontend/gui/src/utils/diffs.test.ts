@@ -72,4 +72,43 @@ describe("message", () => {
 
     expect(message(input)).toMatchObject({ summary: undefined })
   })
+
+  test("keeps small patches untouched", () => {
+    const input = userMessage([item])
+    expect(message(input)).toMatchObject({ summary: { diffs: [item] } })
+  })
+
+  test("drops a single patch above the per-file budget", () => {
+    const big = { ...item, patch: "x".repeat(1_000_001) }
+    const result = message(userMessage([big, item])) as unknown as {
+      summary: { diffs: (FileDiffInfo & { patch: string })[] }
+    }
+    expect(result.summary.diffs[0]).toMatchObject({ patch: "", additions: 1, deletions: 1 })
+    expect(result.summary.diffs[1]?.patch).toBe(item.patch)
+  })
+
+  test("drops patches beyond the total budget", () => {
+    const many = Array.from({ length: 6 }, (_, i) => ({
+      ...item,
+      file: `src/f${i}.ts`,
+      patch: "y".repeat(900_000),
+    }))
+    const result = message(userMessage(many)) as unknown as {
+      summary: { diffs: (FileDiffInfo & { patch: string })[] }
+    }
+    expect(result.summary.diffs.slice(0, 4).every((d) => d.patch.length === 900_000)).toBe(true)
+    expect(result.summary.diffs.slice(4).every((d) => d.patch === "")).toBe(true)
+  })
 })
+
+function userMessage(items: unknown[]) {
+  return {
+    id: "msg_1",
+    sessionID: "ses_1",
+    role: "user",
+    time: { created: 1 },
+    agent: "build",
+    model: { providerID: "openai", modelID: "gpt-5" },
+    summary: { diffs: items },
+  } as unknown as Message
+}
