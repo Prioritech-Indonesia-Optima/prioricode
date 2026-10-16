@@ -1,0 +1,94 @@
+[data-component="dialog-v2"].dialog-select-permission-mode [data-slot="dialog-container"] {
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  height: auto;
+  align-items: stretch;
+}
+
+[data-component="dialog-v2"].dialog-select-permission-mode [data-slot="dialog-content"] {
+  align-items: stretch;
+  width: 100%;
+  overflow: hidden;
+}
+
+[data-component="dialog-v2"].dialog-select-permission-mode [data-slot="dialog-header"] {
+  align-items: center;
+  padding-block: 24px 0;
+  padding-inline: 16px;
+}
+
+[data-component="dialog-v2"].dialog-select-permission-mode [data-slot="dialog-body"] {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0;
+  gap: 0;
+}
+
+.dialog-select-permission-mode-body {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+  align-self: stretch;
+  box-sizing: border-box;
+  padding-block: 8px 16px;
+  padding-inline: 16px;
+}
+
+.dialog-select-permission-mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 360px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.dialog-select-permission-mode-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  text-align: start;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding-block: 8px;
+  padding-inline: 10px;
+  cursor: pointer;
+  color: inherit;
+}
+
+.dialog-select-permission-mode-row:hover,
+.dialog-select-permission-mode-row:focus-visible {
+  border-color: var(--pc-border-base);
+  background: var(--pc-overlay-hover);
+}
+
+.dialog-select-permission-mode-row--active {
+  border-color: var(--pc-border-base);
+  background: var(--pc-overlay-hover);
+}
+
+.dialog-select-permission-mode-name {
+  font-size: 13px;
+  font-weight: 530;
+  letter-spacing: -0.04px;
+  color: var(--pc-text-base);
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dialog-select-permission-mode-description {
+  font-size: 12px;
+  color: var(--pc-text-muted);
+  min-width: 0;
+  white-space: normal;
+}

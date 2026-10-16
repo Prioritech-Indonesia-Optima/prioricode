@@ -646,6 +646,15 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
     )
   }
 
+  const openPermissionMode = () => {
+    const sessionID = params.id
+    if (!sessionID) return
+    void openDialog(
+      () => import("@/components/dialog-select-permission-mode"),
+      (x) => dialog.show(() => <x.DialogSelectPermissionMode sessionID={sessionID} />),
+    )
+  }
+
   const openMoveSession = () => {
     void openDialog(
       () => import("@/components/dialog-move-session"),
@@ -662,6 +671,14 @@ export const useSessionCommands = (actions: SessionCommandContext) => {
       keybind: "mod+shift+a",
       disabled: false,
       onSelect: toggleAutoAccept,
+    }),
+    permissionsCommand({
+      id: "permissions.mode",
+      title: language.t("command.permissions.mode"),
+      description: language.t("command.permissions.mode.description"),
+      slash: "permission",
+      disabled: !params.id,
+      onSelect: openPermissionMode,
     }),
     permissionsCommand({
       id: "permissions.history",
