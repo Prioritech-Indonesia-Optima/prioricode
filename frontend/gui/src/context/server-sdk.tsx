@@ -6,7 +6,7 @@ import { makeEventListener } from "@solid-primitives/event-listener"
 import { type Accessor, batch, createMemo, createResource, onCleanup, onMount } from "solid-js"
 import { createApiForServer, createSdkForServer, type ServerApi } from "@/utils/server"
 import { useLanguage } from "./language"
-import { usePlatform } from "./platform"
+import { usePlatform, type Platform } from "./platform"
 import { ServerConnection, useServer } from "./server"
 import { createRefCountMap } from "@/utils/refcount"
 import { useGlobal } from "./global"
@@ -164,6 +164,12 @@ export function resumeStreamAfterPageShow(event: PageTransitionEvent, start: () 
   start()
 }
 
+export const streamTiming = {
+  reconnectMs: 250,
+  stallMs: 30_000,
+  stallCheckMs: 5_000,
+}
+
 type ServerEventEmitter = ReturnType<typeof createGlobalEmitter<{ [key: string]: ServerEvent }>>
 type ServerSDKBase = {
   server: ServerConnection.Any
@@ -184,8 +190,12 @@ type ServerSDKBase = {
   ) => ReturnType<typeof createSdkForServer>
 }
 
-function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerScope): ServerSDKBase {
-  const platform = usePlatform()
+function createServerSdkContextBase(
+  server: ServerConnection.Any,
+  scope: ServerScope,
+  platformOverride?: Platform,
+): ServerSDKBase {
+  const platform = platformOverride ?? usePlatform()
   const abort = new AbortController()
 
   const eventFetch = (() => {
@@ -217,12 +227,12 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
   type Queued = QueuedServerEvent
   const FLUSH_FRAME_MS = 16
   const STREAM_YIELD_MS = 8
-  const RECONNECT_DELAY_MS = 250
 
   let queue: Queued[] = []
   let buffer: Queued[] = []
   let timer: ReturnType<typeof setTimeout> | undefined
   let last = 0
+  let lastFrame = 0
 
   const flush = () => {
     if (timer) clearTimeout(timer)
@@ -271,6 +281,11 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
           attempt?.abort()
         }
         abort.signal.addEventListener("abort", onAbort)
+        lastFrame = Date.now()
+        const watchdog = setInterval(() => {
+          if (!attempt || Date.now() - lastFrame <= streamTiming.stallMs) return
+          attempt.abort()
+        }, streamTiming.stallCheckMs)
         try {
           const kind = await protocol
           const events =
@@ -279,6 +294,7 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
               : eventApi.event.subscribe({ signal: attempt.signal })
           let yielded = Date.now()
           for await (const event of events) {
+            lastFrame = Date.now()
             streamErrorLogged = false
             const legacy = "payload" in event
             if (legacy && event.payload.type === "sync") continue
@@ -300,12 +316,13 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
             })
           }
         } finally {
+          clearInterval(watchdog)
           abort.signal.removeEventListener("abort", onAbort)
           attempt = undefined
         }
 
         if (abort.signal.aborted || !started || generation !== active) return
-        await wait(RECONNECT_DELAY_MS)
+        await wait(streamTiming.reconnectMs)
       }
     })().finally(() => {
       if (run !== current) return
@@ -322,9 +339,21 @@ function createServerSdkContextBase(server: ServerConnection.Any, scope: ServerS
     attempt?.abort()
   }
 
+  const stalled = () => Date.now() - lastFrame > streamTiming.stallMs
+
+  const kick = () => {
+    if (!started || !stalled()) return
+    stop()
+    void start()
+  }
+
   onMount(() => {
     makeEventListener(window, "pagehide", stop)
     makeEventListener(window, "pageshow", (event) => resumeStreamAfterPageShow(event, start))
+    makeEventListener(document, "visibilitychange", () => {
+      if (document.visibilityState === "visible") kick()
+    })
+    makeEventListener(window, "online", kick)
   })
 
   onCleanup(() => {
@@ -376,8 +405,12 @@ export type ServerSDK = ServerSDKBase & {
   ensureDirSdkContext: (directory: string) => ReturnType<typeof createDirSdkContext>
 }
 
-export function createServerSdkContext(server: ServerConnection.Any, scope: ServerScope): ServerSDK {
-  const sdk = createServerSdkContextBase(server, scope)
+export function createServerSdkContext(
+  server: ServerConnection.Any,
+  scope: ServerScope,
+  platformOverride?: Platform,
+): ServerSDK {
+  const sdk = createServerSdkContextBase(server, scope, platformOverride)
   return Object.assign(sdk, {
     ensureDirSdkContext: createRefCountMap((dir) => createDirSdkContext(dir, sdk)),
   })
