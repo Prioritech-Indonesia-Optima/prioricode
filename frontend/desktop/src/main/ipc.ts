@@ -37,6 +37,7 @@ type Deps = {
   killSidecar: () => Promise<void> | void
   relaunch: () => void
   awaitInitialization: () => Promise<ServerReadyData>
+  installCli: () => Promise<string>
   consumeInitialDeepLinks: () => Promise<string[]> | string[]
   getDefaultServerUrl: () => Promise<string | null> | string | null
   setDefaultServerUrl: (url: string | null) => Promise<void> | void
@@ -64,6 +65,7 @@ export function registerIpcHandlers(deps: Deps) {
   app.on("browser-window-created", (_event, win) => win.on("session-end", () => drafts.flush()))
 
   ipcMain.handle("kill-sidecar", () => deps.killSidecar())
+  ipcMain.handle("install-cli", () => deps.installCli())
   ipcMain.handle("await-initialization", () => deps.awaitInitialization())
   ipcMain.handle("consume-initial-deep-links", () => deps.consumeInitialDeepLinks())
   ipcMain.handle("get-default-server-url", () => deps.getDefaultServerUrl())
@@ -127,11 +129,11 @@ export function registerIpcHandlers(deps: Deps) {
   })
   ipcMain.handle("store-delete", (_event: IpcMainInvokeEvent, name: string, key: string) => {
     getStore(name).delete(key)
-    void removeStoreFileIfEmpty(name)
+    void removeStoreFileIfEmpty(name).catch(() => undefined)
   })
   ipcMain.handle("store-clear", (_event: IpcMainInvokeEvent, name: string) => {
     getStore(name).clear()
-    void removeStoreFileIfEmpty(name)
+    void removeStoreFileIfEmpty(name).catch(() => undefined)
   })
   ipcMain.handle("store-keys", (_event: IpcMainInvokeEvent, name: string) => {
     const store = getStore(name)

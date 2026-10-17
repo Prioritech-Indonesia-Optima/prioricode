@@ -21,7 +21,9 @@ export function createUnresponsiveSampler(win: BrowserWindow, name: string) {
 
   const schedule = () => {
     sampleTimer = setTimeout(() => {
-      void collect()
+      void collect().catch((error) =>
+        writeLog("window", "unresponsive sample failed", { window: name, error }, "error"),
+      )
     }, sampleInterval)
   }
 

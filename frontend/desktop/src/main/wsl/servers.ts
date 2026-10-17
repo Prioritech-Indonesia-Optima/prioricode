@@ -260,7 +260,12 @@ export function createWslServersController(
     const timer = setTimeout(() => {
       reconnectTimers.delete(id)
       if (!state.servers.some((item) => item.config.id === id)) return
-      void startServer(id)
+      void startServer(id).catch((error) =>
+        logger?.error("wsl reconnect start failed", {
+          id,
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      )
     }, delay)
     reconnectTimers.set(id, timer)
   }
@@ -351,8 +356,18 @@ export function createWslServersController(
 
     async initialize() {
       refreshFromStore()
-      void refreshPrioricodeChecks()
-      for (const id of wslServerIdsToStartOnInitialize(state.servers.map((item) => item.config))) void startServer(id)
+      void refreshPrioricodeChecks().catch((error) =>
+        logger?.error("wsl prioricode checks refresh failed", {
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      )
+      for (const id of wslServerIdsToStartOnInitialize(state.servers.map((item) => item.config)))
+        void startServer(id).catch((error) =>
+          logger?.error("wsl start server failed", {
+            id,
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        )
     },
 
     async probeRuntime() {
@@ -437,7 +452,12 @@ export function createWslServersController(
       setState({
         servers: [...state.servers, { config, runtime: { kind: "starting" } }],
       })
-      void startServer(id)
+      void startServer(id).catch((error) =>
+        logger?.error("wsl start server failed", {
+          id,
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      )
       return config
     },
 
@@ -456,6 +476,20 @@ export function createWslServersController(
     },
 
     startServer,
+
+    retryDisconnected() {
+      for (const item of state.servers) {
+        if (item.runtime.kind !== "failed" && item.runtime.kind !== "reconnecting") continue
+        clearReconnectTimer(item.config.id)
+        reconnectAttempts.delete(item.config.id)
+        void startServer(item.config.id).catch((error) =>
+          logger?.error("wsl reconnect after wake failed", {
+            id: item.config.id,
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        )
+      }
+    },
 
     stopAll() {
       for (const item of state.servers) invalidateStartAttempt(item.config.id)

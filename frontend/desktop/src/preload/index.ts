@@ -117,6 +117,11 @@ const api: ElectronAPI = {
     ipcRenderer.on("deep-link", handler)
     return () => ipcRenderer.removeListener("deep-link", handler)
   },
+  onSystemResumed: (cb) => {
+    const handler = () => cb()
+    ipcRenderer.on("system-resumed", handler)
+    return () => ipcRenderer.removeListener("system-resumed", handler)
+  },
 
   openDirectoryPicker: (opts) => ipcRenderer.invoke("open-directory-picker", opts),
   openFilePicker: (opts) => ipcRenderer.invoke("open-file-picker", opts),

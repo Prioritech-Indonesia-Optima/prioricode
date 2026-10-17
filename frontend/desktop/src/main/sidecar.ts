@@ -73,6 +73,8 @@ async function start(command: StartCommand) {
 async function stop() {
   try {
     await listener?.stop()
+  } catch (error) {
+    console.warn("sidecar stop failed", error)
   } finally {
     listener = undefined
     parentPort.postMessage({ type: "stopped" })

@@ -26,6 +26,7 @@ import { createEffect, createMemo, createResource, createSignal, onCleanup, Show
 import { render } from "solid-js/web"
 import pkg from "../../package.json"
 import { t } from "./i18n"
+import { attachFatalErrorForwarder } from "./fatal-error-forwarder"
 import { initializationData } from "./initialization"
 import { DesktopFirstLaunchOnboarding } from "./onboarding"
 import { resetZoom, setPinchZoomEnabled, webviewZoom, zoomIn, zoomOut } from "./webview-zoom"
@@ -67,6 +68,23 @@ if (import.meta.env.VITE_SENTRY_DSN) {
 
 const [updaterState, setUpdaterState] = createSignal<UpdaterState>({ status: "disabled" })
 void window.api.updater.subscribe(setUpdaterState)
+
+const detectOs = (): "macos" | "windows" | "linux" | undefined => {
+  const ua = navigator.userAgent
+  if (ua.includes("Mac")) return "macos"
+  if (ua.includes("Windows")) return "windows"
+  if (ua.includes("Linux")) return "linux"
+  return undefined
+}
+
+const rendererOs = detectOs()
+
+// The renderer process cannot log to the desktop log files itself; forward any
+// uncaught async failure so fatal renderer errors survive in the export bundle.
+attachFatalErrorForwarder({
+  record: (payload) => window.api.recordFatalRendererError(payload),
+  info: { version: pkg.version, platform: "desktop", os: rendererOs, url: () => window.location.href },
+})
 
 const deepLinkEvent = "prioricode:deep-link"
 
@@ -124,13 +142,7 @@ async function readSingleClipboardImage() {
 
 const createPlatform = (windowState: DesktopWindowState): Platform => {
   const attachmentPaths = new WeakMap<File, string>()
-  const os = (() => {
-    const ua = navigator.userAgent
-    if (ua.includes("Mac")) return "macos"
-    if (ua.includes("Windows")) return "windows"
-    if (ua.includes("Linux")) return "linux"
-    return undefined
-  })()
+  const os = rendererOs
 
   const runDesktopMenuAction: Platform["runDesktopMenuAction"] = (action) => {
     switch (action) {
@@ -351,6 +363,9 @@ window.api.onMenuCommand((id) => {
   menuTrigger?.(id)
 })
 listenForDeepLinks()
+window.api.onSystemResumed(() => {
+  window.dispatchEvent(new Event("online"))
+})
 
 function LoadingSplash() {
   return (

@@ -57,6 +57,15 @@ export async function startBackgroundCli(logger: Logger, shellStateHome?: string
   }
 }
 
+export async function installBundledCli(logger: Logger) {
+  const bundled = app.isPackaged
+    ? join(process.resourcesPath, executableName())
+    : join(root, "../../resources", executableName())
+  logger.log("cli install requested", { bundled })
+  const version = await run(bundled, ["--version"], logger)
+  return installCli(bundled, version, logger)
+}
+
 async function installCli(source: string, version: string, logger: Logger) {
   const directory = join(app.getPath("userData"), "cli", version.replace(/[^a-zA-Z0-9._-]/g, "-"))
   const destination = join(directory, executableName())

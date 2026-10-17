@@ -12,6 +12,7 @@ import { exportDebugLogs, write as writeLog } from "./logging"
 import { getStore, removeStoreFile } from "./store"
 import { PINCH_ZOOM_ENABLED_KEY, WINDOW_IDS_KEY } from "./store-keys"
 import { createUnresponsiveSampler } from "./unresponsive"
+import { createReloadGuard } from "./reload-guard"
 import { nativeT } from "./native-translations"
 import { createWindowRegistry } from "./window-registry"
 import { safeWindowURL } from "./window-state"
@@ -243,7 +244,7 @@ export function openExternalURL(value: string) {
     writeLog("window", "blocked external target", { url: value }, "warn")
     return
   }
-  void shell.openExternal(url)
+  shell.openExternal(url).catch((error) => writeLog("window", "failed to open external url", { url, error }, "error"))
 }
 
 export function openLocalFileURL(value: string) {
@@ -252,9 +253,12 @@ export function openLocalFileURL(value: string) {
     writeLog("window", "blocked local file target", { url: value }, "warn")
     return
   }
-  void shell.openPath(path).then((error) => {
-    if (error) writeLog("window", "failed to open local file", { path, error }, "error")
-  })
+  void shell
+    .openPath(path)
+    .then((error) => {
+      if (error) writeLog("window", "failed to open local file", { path, error }, "error")
+    })
+    .catch((error) => writeLog("window", "failed to open local file", { path, error }, "error"))
 }
 
 function wireNavigationPolicy(win: BrowserWindow) {
@@ -339,16 +343,32 @@ function loadWindow(win: BrowserWindow, html: string) {
   const devUrl = process.env.ELECTRON_RENDERER_URL
   if (devUrl) {
     const url = new URL(html, devUrl)
-    void win.loadURL(url.toString())
+    win
+      .loadURL(url.toString())
+      .catch((error) => writeLog("window", "renderer load rejected", { window: safeWindowURL(win), error }, "warn"))
     return
   }
 
-  void win.loadURL(`${rendererProtocol}://${rendererHost}/${html}`)
+  const rendererUrl = `${rendererProtocol}://${rendererHost}/${html}`
+  win
+    .loadURL(rendererUrl)
+    .catch((error) => writeLog("window", "renderer load rejected", { window: rendererUrl, error }, "warn"))
 }
+
+const UNRESPONSIVE_RELOAD_GRACE_MS = 8_000
 
 function wireWindowRecovery(win: BrowserWindow, name: string) {
   let showing = false
   const sampler = createUnresponsiveSampler(win, name)
+  let unresponsiveTimer: ReturnType<typeof setTimeout> | undefined
+
+  const safeReload = createReloadGuard({
+    isAlive: () => !win.isDestroyed() && !win.webContents.isDestroyed(),
+    reload: () => {
+      writeLog("window", "renderer auto-reloading", { window: name, currentURL: safeWindowURL(win) }, "warn")
+      loadWindow(win, "index.html")
+    },
+  }).tryReload
 
   type RecoveryAction = "relaunch" | "export-logs" | "keep-waiting" | "quit"
   const handle = async (action: RecoveryAction | undefined, wait: boolean) => {
@@ -397,6 +417,8 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
         if (await handle(actions[result.response]?.id, wait)) continue
         return
       }
+    } catch (error) {
+      writeLog("window", "recovery dialog failed", { window: name, error }, "error")
     } finally {
       showing = false
     }
@@ -425,6 +447,7 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
     )
 
     if (!isMainFrame || errorCode === -3) return
+    if (safeReload()) return
     void show(
       nativeT("desktop.recovery.loadFailed"),
       nativeT("desktop.recovery.loadFailed.detail", {
@@ -446,6 +469,7 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
   win.webContents.on("render-process-gone", (_event, details) => {
     sampler.stopAndFlush()
     writeLog("window", "renderer process gone", { window: name, currentURL: safeWindowURL(win), details }, "error")
+    if (safeReload()) return
     void show(
       nativeT("desktop.recovery.terminated"),
       nativeT("desktop.recovery.terminated.detail", {
@@ -459,11 +483,21 @@ function wireWindowRecovery(win: BrowserWindow, name: string) {
   win.on("unresponsive", () => {
     writeLog("window", "renderer unresponsive", { window: name, currentURL: safeWindowURL(win) }, "error")
     sampler.start()
-    void show(nativeT("desktop.recovery.unresponsive"), nativeT("desktop.recovery.unresponsive.detail"), true)
+    if (unresponsiveTimer) return
+    unresponsiveTimer = setTimeout(() => {
+      unresponsiveTimer = undefined
+      if (win.isDestroyed()) return
+      if (safeReload()) return
+      void show(nativeT("desktop.recovery.unresponsive"), nativeT("desktop.recovery.unresponsive.detail"), true)
+    }, UNRESPONSIVE_RELOAD_GRACE_MS)
   })
   win.on("responsive", () => {
     writeLog("window", "renderer responsive", { window: name, currentURL: safeWindowURL(win) }, "error")
     sampler.stopAndFlush()
+    if (unresponsiveTimer) {
+      clearTimeout(unresponsiveTimer)
+      unresponsiveTimer = undefined
+    }
   })
   win.webContents.on("console-message", (_event, level, message, line, sourceId) => {
     if (message.toLowerCase().includes("terminal") || sourceId.toLowerCase().includes("terminal")) {

@@ -224,7 +224,12 @@ export function createSshServersController(
     const timer = setTimeout(() => {
       reconnectTimers.delete(id)
       if (!state.servers.some((item) => item.config.id === id)) return
-      void startServer(id)
+      void startServer(id).catch((error) =>
+        logger?.error("ssh reconnect start failed", {
+          id,
+          message: error instanceof Error ? error.message : String(error),
+        }),
+      )
     }, delay)
     reconnectTimers.set(id, timer)
   }
@@ -359,7 +364,13 @@ export function createSshServersController(
     async initialize() {
       refreshFromStore()
       void refreshHostsInternal().catch((error) => logger?.error("ssh hosts refresh failed", String(error)))
-      for (const item of state.servers) void startServer(item.config.id)
+      for (const item of state.servers)
+        void startServer(item.config.id).catch((error) =>
+          logger?.error("ssh start server failed", {
+            id: item.config.id,
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        )
     },
 
     async refreshHosts() {
@@ -378,7 +389,9 @@ export function createSshServersController(
       const config: SshServerConfig = { id, alias: clean, workspace: normalizeWorkspace(workspace) }
       writeServers([...readServers(), config])
       setState({ servers: [...state.servers, { config, runtime: { kind: "starting" } }] })
-      void startServer(id)
+      void startServer(id).catch((error) =>
+        logger?.error("ssh start server failed", { id, message: error instanceof Error ? error.message : String(error) }),
+      )
       void checkPrioricode(clean).then((check) => {
         if (!state.servers.some((item) => item.config.id === id)) return
         setPrioricodeCheck(clean, check)
@@ -417,6 +430,20 @@ export function createSshServersController(
     },
 
     startServer,
+
+    retryDisconnected() {
+      for (const item of state.servers) {
+        if (item.runtime.kind !== "failed" && item.runtime.kind !== "reconnecting") continue
+        clearReconnectTimer(item.config.id)
+        reconnectAttempts.delete(item.config.id)
+        void startServer(item.config.id).catch((error) =>
+          logger?.error("ssh reconnect after wake failed", {
+            id: item.config.id,
+            message: error instanceof Error ? error.message : String(error),
+          }),
+        )
+      }
+    },
 
     async stopServer(id: string) {
       invalidateStartAttempt(id)

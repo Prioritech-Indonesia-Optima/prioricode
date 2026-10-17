@@ -6,7 +6,7 @@ import { homedir, tmpdir } from "node:os"
 import { join } from "node:path"
 import { getCACertificates, setDefaultCACertificates } from "node:tls"
 import type { Event } from "electron"
-import { app, BrowserWindow } from "electron"
+import { app, BrowserWindow, powerMonitor } from "electron"
 
 import { Deferred, Effect, Fiber } from "effect"
 import contextMenu from "electron-context-menu"
@@ -25,6 +25,7 @@ import {
   isOldLayoutEligible,
 } from "./onboarding"
 import {
+  checkHealth,
   getDefaultServerUrl,
   preferAppEnv,
   setDefaultServerUrl,
@@ -50,7 +51,9 @@ import { registerWslIpcHandlers } from "./wsl/ipc"
 import { spawnWslSidecar } from "./wsl/sidecar"
 import { migrate } from "./migrate"
 import { cleanupStoreFiles } from "./store-cleanup"
-import { startBackgroundCli } from "./background-cli"
+import { startBackgroundCli, installBundledCli } from "./background-cli"
+import { startSidecarWatchdog } from "./sidecar-watchdog"
+import { installProcessGuards, describeError } from "./process-guards"
 import { setNativeTranslations } from "./native-translations"
 
 const APP_NAMES: Record<string, string> = {
@@ -69,6 +72,10 @@ const jsCallStackFeature = "DocumentPolicyIncludeJSCallStacksInCrashReports"
 
 let logger: ReturnType<typeof initLogging>
 let server: SidecarListener | null = null
+let sidecarQuitting = false
+let probeSidecar: (() => Promise<boolean>) | null = null
+let restartSidecar: (() => Promise<void>) | null = null
+let sidecarWatchdog: { stop: () => void; poke: () => void } | null = null
 
 const pendingDeepLinks: string[] = []
 
@@ -184,16 +191,22 @@ const main = Effect.gen(function* () {
     },
   )
   const stopSidecars = async () => {
+    sidecarQuitting = true
+    sidecarWatchdog?.stop()
     await killSidecar()
     wslServers.stopAll()
     sshServers.stopAll()
   }
   const relaunch = () => {
     setAppQuitting()
-    void stopSidecars().finally(() => {
-      app.relaunch()
-      app.quit()
-    })
+    void stopSidecars()
+      .catch((error) =>
+        writeLog("main", "failed to stop sidecars before relaunch", { error: describeError(error) }, "error"),
+      )
+      .finally(() => {
+        app.relaunch()
+        app.quit()
+      })
   }
 
   try {
@@ -255,12 +268,16 @@ const main = Effect.gen(function* () {
 
   app.on("before-quit", () => {
     setAppQuitting()
-    void stopSidecars()
+    void stopSidecars().catch((error) =>
+      writeLog("main", "failed to stop sidecars on before-quit", { error: describeError(error) }, "error"),
+    )
   })
 
   app.on("will-quit", () => {
     setAppQuitting()
-    void stopSidecars()
+    void stopSidecars().catch((error) =>
+      writeLog("main", "failed to stop sidecars on will-quit", { error: describeError(error) }, "error"),
+    )
   })
 
   app.on("child-process-gone", (_event, details) => {
@@ -273,6 +290,17 @@ const main = Effect.gen(function* () {
 
   setRelaunchHandler(() => {
     relaunch()
+  })
+
+  // Electron's main process dies on an unhandled rejection or uncaught
+  // exception by default. Keep the app alive: log rejections (usually a lost
+  // background task, not a broken invariant) and relaunch once on a true
+  // uncaught exception, never fighting a deliberate shutdown.
+  installProcessGuards({
+    log: (message, meta) => writeLog("process", message, meta, "error"),
+    relaunch: () => relaunch(),
+    isQuitting: () => sidecarQuitting,
+    exit: (code) => app.exit(code),
   })
 
   for (const signal of ["SIGINT", "SIGTERM"] as const) {
@@ -309,12 +337,16 @@ const main = Effect.gen(function* () {
       const win = getLastFocusedWindow()
       if (win) sendMenuCommand(win, id)
     },
-    checkForUpdates: () => void showUpdaterDialog(updater, true),
+    checkForUpdates: () =>
+      void showUpdaterDialog(updater, true).catch((error) =>
+        writeLog("updater", "failed to check for updates", { error: describeError(error) }, "error"),
+      ),
     relaunch,
   }
   registerIpcHandlers({
     killSidecar: () => killSidecar(),
     relaunch,
+    installCli: () => installBundledCli(logger),
     awaitInitialization: Effect.fnUntraced(
       function* () {
         logger.log("awaiting server ready")
@@ -335,7 +367,10 @@ const main = Effect.gen(function* () {
     checkAppExists: (appName) => checkAppExists(appName),
     resolveAppPath: async (appName) => resolveAppPath(appName),
     updater,
-    showUpdater: () => showUpdaterDialog(updater, true),
+    showUpdater: () =>
+      showUpdaterDialog(updater, true).catch((error) =>
+        writeLog("updater", "updater dialog failed", { error: describeError(error) }, "error"),
+      ),
     setBackgroundColor: (color) => setBackgroundColor(color),
     exportDebugLogs: () => exportDebugLogs(),
     recordFatalRendererError: (error) => writeLog("renderer", "fatal renderer error", { ...error }, "error"),
@@ -345,7 +380,9 @@ const main = Effect.gen(function* () {
   })
   registerWslIpcHandlers(wslServers)
   registerSshIpcHandlers(sshServers)
-  void updater.start()
+  void updater
+    .start()
+    .catch((error) => writeLog("updater", "updater start failed", { error: describeError(error) }, "error"))
   const updateTimer = setInterval(() => void updater.check(), 10 * 60 * 1000)
   updateTimer.unref()
   app.once("will-quit", () => clearInterval(updateTimer))
@@ -371,6 +408,14 @@ const main = Effect.gen(function* () {
         username: sidecar.username,
         password: sidecar.password,
       })
+      let v2Url = sidecar.url
+      let v2Password = sidecar.password
+      probeSidecar = () => checkHealth(v2Url, v2Password)
+      restartSidecar = async () => {
+        const fresh = await startBackgroundCli(logger, shellEnv?.XDG_STATE_HOME)
+        v2Url = fresh.url
+        v2Password = fresh.password
+      }
 
       if (process.platform === "win32") {
         void wslServers.initialize().catch((error) => logger.error("wsl server initialization failed", error))
@@ -418,6 +463,17 @@ const main = Effect.gen(function* () {
       }),
     )
     server = listener
+    probeSidecar = () => checkHealth(url, password)
+    restartSidecar = async () => {
+      await killSidecar()
+      const { listener: respawnSide } = await spawnLocalServer(hostname, port, password, {
+        userDataPath: app.getPath("userData"),
+        onStdout: (message) => writeLog("server", "stdout", { message }),
+        onStderr: (message) => writeLog("server", "stderr", { message }, "warn"),
+        onExit: (code) => writeLog("utility", "sidecar exited", { code }, "warn"),
+      })
+      server = respawnSide
+    }
     yield* Deferred.succeed(serverReady, {
       url,
       username: "prioricode",
@@ -442,6 +498,32 @@ const main = Effect.gen(function* () {
   }).pipe(forwardInitializationFailure(serverReady), Effect.forkChild)
 
   yield* Fiber.await(loadingTask)
+
+  if (probeSidecar && restartSidecar) {
+    sidecarWatchdog = startSidecarWatchdog({
+      probe: probeSidecar,
+      restart: restartSidecar,
+      isQuitting: () => sidecarQuitting,
+      log: (message, meta) => logger.log(message, meta),
+    })
+  }
+
+  const handleSystemWake = () => {
+    writeLog("power", "system resumed")
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win.isDestroyed() || win.webContents.isDestroyed()) continue
+      win.webContents.send("system-resumed")
+    }
+    sidecarWatchdog?.poke()
+    try {
+      wslServers.retryDisconnected()
+      sshServers.retryDisconnected()
+    } catch (error) {
+      writeLog("power", "failed to retry remote servers after wake", { error: describeError(error) }, "error")
+    }
+  }
+  powerMonitor.on("resume", handleSystemWake)
+  powerMonitor.on("unlock-screen", handleSystemWake)
 
   app.on("window-all-closed", () => {
     if (process.platform === "darwin") return

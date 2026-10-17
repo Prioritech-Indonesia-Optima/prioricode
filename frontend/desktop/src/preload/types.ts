@@ -90,6 +90,7 @@ export type ElectronAPI = {
   getWindowID: () => Promise<string>
   onMenuCommand: (cb: (id: string) => void) => () => void
   onDeepLink: (cb: (urls: string[]) => void) => () => void
+  onSystemResumed: (cb: () => void) => () => void
 
   openDirectoryPicker: (opts?: {
     multiple?: boolean
