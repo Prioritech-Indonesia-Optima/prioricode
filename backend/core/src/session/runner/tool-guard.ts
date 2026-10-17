@@ -6,6 +6,7 @@ import { Hash } from "../../util/hash"
 export interface Settings {
   readonly toolCallsPerTurn: number
   readonly toolOutputBytesPerTurn: number
+  readonly subagentLaunchesPerTurn: number
   readonly repeatWarn: number
   readonly repeatBlock: number
   readonly readOnlyRepeatBlock: number
@@ -17,6 +18,7 @@ export const DEFAULT_READ_ONLY_TOOLS = ["read", "glob", "grep", "webfetch", "ski
 export const DEFAULT_SETTINGS: Settings = {
   toolCallsPerTurn: 64,
   toolOutputBytesPerTurn: 200_000,
+  subagentLaunchesPerTurn: 3,
   repeatWarn: 2,
   repeatBlock: 4,
   readOnlyRepeatBlock: 8,
@@ -26,6 +28,7 @@ export const DEFAULT_SETTINGS: Settings = {
 export const settings = (info: ConfigLoop.Info | undefined): Settings => ({
   toolCallsPerTurn: info?.tool_calls_per_turn ?? DEFAULT_SETTINGS.toolCallsPerTurn,
   toolOutputBytesPerTurn: info?.tool_output_bytes_per_turn ?? DEFAULT_SETTINGS.toolOutputBytesPerTurn,
+  subagentLaunchesPerTurn: info?.subagent_launches_per_turn ?? DEFAULT_SETTINGS.subagentLaunchesPerTurn,
   repeatWarn: info?.repeat_warn ?? DEFAULT_SETTINGS.repeatWarn,
   repeatBlock: info?.repeat_block ?? DEFAULT_SETTINGS.repeatBlock,
   readOnlyRepeatBlock: info?.read_only_repeat_block ?? DEFAULT_SETTINGS.readOnlyRepeatBlock,
@@ -88,6 +91,11 @@ const outputBudgetMessage = (budget: number) =>
 
 Tool results collected in this provider turn already fill its aggregate output budget. Do NOT call any more tools in this turn. Work from what you already have, narrow later queries (offset/limit, include filters, targeted paths), or respond with a summary.`
 
+const subagentCapMessage = (limit: number) =>
+  `SUBAGENT LAUNCH LIMIT REACHED FOR THIS TURN (${limit} launches)
+
+You have already launched the maximum of ${limit} subagents (Task tool) this turn. Do not launch more. Work from what you already have: read, grep, and glob directly, or continue using the subagent results in hand. If the task genuinely needs more parallel subagents, say so in text and defer the rest to the next turn.`
+
 const repeatWarnMessage = (name: string, count: number) =>
   `WARNING: identical call repeated (${count}x this run)
 
@@ -106,13 +114,17 @@ export const make = (resolved: Settings): Guard => {
   const warned = new Set<string>()
   let callsInTurn = 0
   let outputBytesInTurn = 0
+  let subagentLaunchesInTurn = 0
 
   return {
     beginTurn: () => {
       callsInTurn = 0
       outputBytesInTurn = 0
+      subagentLaunchesInTurn = 0
     },
     verdict: (name, input) => {
+      if (name === "task" && subagentLaunchesInTurn >= resolved.subagentLaunchesPerTurn)
+        return { type: "block", reason: subagentCapMessage(resolved.subagentLaunchesPerTurn) }
       if (callsInTurn >= resolved.toolCallsPerTurn)
         return { type: "block", reason: toolCallCapMessage(resolved.toolCallsPerTurn) }
       if (outputBytesInTurn >= resolved.toolOutputBytesPerTurn)
@@ -123,6 +135,7 @@ export const make = (resolved: Settings): Guard => {
       if (count >= blockThreshold) return { type: "block", reason: repeatBlockMessage(name, count) }
       seen.set(key, count)
       callsInTurn += 1
+      if (name === "task") subagentLaunchesInTurn += 1
       if (count >= resolved.repeatWarn && !warned.has(key)) {
         warned.add(key)
         return { type: "warn", warning: repeatWarnMessage(name, count) }

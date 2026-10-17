@@ -1,0 +1,3 @@
+# Model-specific: general-purpose (default)
+
+Use the dedicated tools for file work — `read` to read, `edit` to modify, `write` to create, `glob` to find files, `grep` to search contents — and `bash` only for real terminal operations. Before declaring a change done, verify it with the project's own test, lint, and typecheck commands.

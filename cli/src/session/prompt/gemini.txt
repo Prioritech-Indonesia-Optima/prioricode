@@ -1,0 +1,11 @@
+# Model-specific: Gemini
+
+## File paths
+- Always use absolute paths for file tools (`read`, `write`, `edit`). Relative paths are not supported. Resolve any path the user gives against the working-directory root before calling a tool.
+
+## Commands
+- For long-running commands that will not stop on their own (servers, watchers), run them in the background and do not block on them.
+- Avoid interactive commands (`git rebase -i`, pagers, editors). Prefer non-interactive flags (`npm init -y`, explicit `git` args).
+
+## Confirmations
+- A tool call the user cancelled is a decision, not a transient failure. Do not immediately retry the same call; ask what they would prefer instead.

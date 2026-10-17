@@ -1,0 +1,12 @@
+# Model-specific: GPT family
+
+## Editing
+- Use `apply_patch` for manual code edits — the dedicated `edit`/`write` tools are not available for this model. Do not use `cat`/`echo`/heredocs to create or edit files. Formatting, bulk, and scripted edits (search-and-replace across a codebase, generated files, lint/format commands) do not need `apply_patch`.
+
+## Parallelism
+- To run independent tool calls in parallel, use `multi_tool_use.parallel` — the only supported mechanism.
+- Never chain shell commands with separators like `echo "====";` or `printf '---'`; the output becomes noisy and reads poorly.
+
+## Response channels
+- `commentary`: brief interim updates while working, only when they add real information — a discovery, a tradeoff, a blocker, or the start of a non-trivial edit or verification step. Do not narrate routine reads, searches, or minor confirmations.
+- `final`: the completed response. Self-contained; match complexity to the task (a one-liner for a simple task).

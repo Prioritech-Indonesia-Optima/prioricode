@@ -7,6 +7,7 @@ import { Skill } from "../../src/skill"
 import { Permission } from "../../src/permission"
 import { SystemPrompt } from "../../src/session/system"
 import PROMPT_BASE from "../../src/session/prompt/base.txt"
+import type { Provider } from "../../src/provider/provider"
 import { MCP } from "../../src/mcp"
 import { testEffect } from "../lib/effect"
 
@@ -84,22 +85,39 @@ const it = testEffect(
 )
 
 describe("session.system", () => {
-  test("base prompt is identical for every model", () => {
+  test("base is the model-agnostic shared preamble", () => {
     expect(SystemPrompt.base).toBe(PROMPT_BASE)
     expect(SystemPrompt.base).toContain("You are PrioriCode")
+    expect(SystemPrompt.base).toContain("Lead with the outcome")
+    expect(SystemPrompt.base).toContain("Done means verified")
+    expect(SystemPrompt.base).toContain("Tools act; your text communicates")
     expect(SystemPrompt.base).not.toContain("{{")
   })
 
-  test("base prompt has no provider-specific forks", () => {
-    for (const dead of ["beast", "trinity", "kimi", "Gemini", "Muse", "Claude", "GPT"]) {
-      expect(PROMPT_BASE).not.toContain(dead)
+  test("shared preamble stays model-agnostic", () => {
+    for (const name of ["PrioriTech", "GPT", "Gemini", "Muse", "Claude", "Trinity", "Kimi", "Astra"]) {
+      expect(PROMPT_BASE).not.toContain(name)
     }
   })
 
-  test("base prompt keeps the caveman invariants", () => {
-    expect(PROMPT_BASE).toContain("Lead with the outcome")
-    expect(PROMPT_BASE).toContain("Done means verified")
-    expect(PROMPT_BASE).toContain("Tools act; your text communicates")
+  test("provider selects the family delta", () => {
+    const pick = (id: string, providerID = "test") =>
+      SystemPrompt.provider({ api: { id }, providerID } as Provider.ProviderModel)[0]
+    expect(pick("gpt-4o")).toContain("o-series")
+    expect(pick("gpt-5")).toContain("GPT family")
+    expect(pick("gpt-6")).toContain("Astra")
+    expect(pick("claude-sonnet-4")).toContain("Claude")
+    expect(pick("gemini-2.0")).toContain("Gemini")
+    expect(pick("kimi-k2", "moonshotai")).toContain("Kimi")
+    expect(SystemPrompt.provider({ api: { id: "unknown-model" } } as Provider.ProviderModel)[0]).toContain(
+      "general-purpose",
+    )
+  })
+
+  test("provider substitutes the Meta model name", () => {
+    const meta = SystemPrompt.provider({ api: { id: "meta/muse-spark-preview" } } as Provider.ProviderModel)[0]
+    expect(meta).toContain("Muse Spark")
+    expect(meta).not.toContain("{{")
   })
 
   it.effect("skills output is sorted by name and stable across calls", () =>

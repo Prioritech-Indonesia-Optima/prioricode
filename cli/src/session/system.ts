@@ -5,6 +5,16 @@ import { InstanceState } from "@/effect/instance-state"
 
 import PROMPT_BASE from "./prompt/base.txt"
 import PROMPT_SOURCING from "./prompt/sourcing.txt"
+import PROMPT_ANTHROPIC from "./prompt/anthropic.txt"
+import PROMPT_BEAST from "./prompt/beast.txt"
+import PROMPT_CODEX from "./prompt/codex.txt"
+import PROMPT_DEFAULT from "./prompt/default.txt"
+import PROMPT_GEMINI from "./prompt/gemini.txt"
+import PROMPT_ASTRA from "./prompt/gpt-astra.txt"
+import PROMPT_GPT from "./prompt/gpt.txt"
+import PROMPT_KIMI from "./prompt/kimi.txt"
+import PROMPT_META from "./prompt/meta.txt"
+import PROMPT_TRINITY from "./prompt/trinity.txt"
 import type { Provider } from "@/provider/provider"
 import type { Agent } from "@/agent/agent"
 import { Permission } from "@/permission"
@@ -19,6 +29,28 @@ import { PermissionV1 } from "@prioricode/core/v1/permission"
 export const sourcing = PROMPT_SOURCING
 
 export const base = PROMPT_BASE
+
+/** Model-specific delta appended after the shared {@link base} preamble. */
+export function provider(model: Provider.ProviderModel): string[] {
+  const id = model.api.id
+  const providerID = model.providerID ?? ""
+  if (id.includes("muse")) {
+    const name = id.includes("muse-glimmer") ? "Muse Glimmer" : "Muse Spark"
+    return [PROMPT_META.replaceAll("{{MODEL_NAME}}", name)]
+  }
+  if (id.includes("gpt-4") || id.includes("o1") || id.includes("o3")) return [PROMPT_BEAST]
+  if (id.includes("gpt")) {
+    if (id.includes("gpt-6")) return [PROMPT_ASTRA]
+    if (id.includes("codex")) return [PROMPT_CODEX]
+    return [PROMPT_GPT]
+  }
+  if (id.includes("gemini-")) return [PROMPT_GEMINI]
+  if (id.includes("claude")) return [PROMPT_ANTHROPIC]
+  if (id.toLowerCase().includes("trinity")) return [PROMPT_TRINITY]
+  if (id.toLowerCase().includes("kimi") || ["kimi-for-coding", "moonshotai", "moonshotai-cn"].includes(providerID))
+    return [PROMPT_KIMI]
+  return [PROMPT_DEFAULT]
+}
 
 export interface Interface {
   readonly environment: (model: Provider.ProviderModel) => Effect.Effect<string[]>

@@ -1,0 +1,10 @@
+# Model-specific: Anthropic / Claude
+
+## Editing
+- Use the dedicated file tools: `read` to read, `edit` to modify, `write` only when creating. Reserve `bash` for real terminal operations. Never use `bash` echo or code comments to communicate with the user.
+
+## Exploration
+- Open-ended, multi-area codebase surveys belong to the `task`/explore subagent; a known file, symbol, or path should be read directly. When you do delegate, use the minimum thoroughness that answers the question.
+
+## WebFetch
+- If `webfetch` reports a redirect to a different host, immediately fetch the redirect URL it provides.

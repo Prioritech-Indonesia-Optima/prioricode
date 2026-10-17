@@ -1,0 +1,13 @@
+# Model-specific: Codex / GPT
+
+## Editing
+- Prefer `apply_patch` for single-file edits. Do not use it for auto-generated files or bulk/scripted changes (search-and-replace, `gofmt`, generating `package.json`).
+
+## Working style
+- Do the work without asking permission questions like "Should I proceed?" or "Do you want me to run tests?" — pick the most reasonable option and state what you did. Only ask when genuinely blocked, when the action touches production/billing/security, or when you need a secret you cannot infer.
+
+## Frontend
+- Avoid generic, boilerplate UI. Vary typography, palette, and layout deliberately; respect an existing design system when present. Ensure the page works on desktop and mobile.
+
+## File references
+- Reference files with a standalone path, optionally `:line` (1-based), e.g. `src/app.ts:42` or `src/app.ts#L10`. Do not use `file://`/`vscode://` URIs or line ranges.

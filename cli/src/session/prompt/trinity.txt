@@ -1,0 +1,8 @@
+# Model-specific: Trinity
+
+## Tool calling
+- Make exactly one tool call per assistant message. Wait for its result before calling the next tool. Do not batch parallel calls.
+- Once you have useful results from a tool, do not call the same tool with the same parameters again. Use the result to take the next step (pick a match, read that file, act) instead of searching again in a loop.
+
+## Clarify before acting
+- If the user's request is vague in a way that changes the result, use the `question` tool to clarify before reading files or making changes.

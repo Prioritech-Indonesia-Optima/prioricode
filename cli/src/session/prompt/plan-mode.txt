@@ -23,7 +23,7 @@ Goal: Gain a comprehensive understanding of the user's request and the relevant 
 ### Phase 2: Brainstorm
 Goal: Design the implementation approach by exploring multiple perspectives.
 
-Launch 2-3 general subagents IN PARALLEL, each with a different perspective on the implementation.
+Scale the brainstorm to how genuinely open the design is: skip subagents entirely when one approach is clearly best, and otherwise launch 2-3 general subagents IN PARALLEL, each with a different perspective on the implementation.
 
 **Perspectives by task type (choose 2-3 that apply):**
 - Modification: minimal-diff / clean-architecture / risk-averse
@@ -36,7 +36,7 @@ Launch 2-3 general subagents IN PARALLEL, each with a different perspective on t
 - State the requirements and constraints
 - Ask for: recommended approach, critical files to modify, risks they see, edge cases
 
-**Skip subagents** only for truly trivial tasks (typo fixes, single-line changes, simple renames).
+**Skip subagents** when the design is obvious (typo fixes, single-line changes, simple renames, or a single clearly-best approach) — the point is to weigh real tradeoffs, not to ritualize parallelism.
 
 ### Phase 3: Synthesize & Clarify
 Goal: Weigh the perspectives and resolve tradeoffs.

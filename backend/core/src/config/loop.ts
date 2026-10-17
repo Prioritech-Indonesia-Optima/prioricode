@@ -25,6 +25,9 @@ export class Info extends Schema.Class<Info>("ConfigV2.Loop")({
   tool_output_bytes_per_turn: PositiveInt.pipe(Schema.optional).annotate({
     description: "Aggregate model-facing tool output budget in bytes before further calls are held back",
   }),
+  subagent_launches_per_turn: PositiveInt.pipe(Schema.optional).annotate({
+    description: "Maximum Task/subagent launches allowed within one provider turn before further launches are held back",
+  }),
   repeat_warn: PositiveInt.pipe(Schema.optional).annotate({
     description: "Occurrence count at which an identical tool call receives a model-visible warning",
   }),
