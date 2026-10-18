@@ -281,19 +281,24 @@ test("wsl reconnect exhaustion flips to failed", async () => {
   persistedServers = []
   releasePrioricodeResolve = undefined
   let exitCb: ((code: number | null, signal: NodeJS.Signals | null) => void) | undefined
+  let spawns = 0
   const controller = createWslServersController(
     "1.16.2",
-    async () => ({
-      listener: {
-        stop: () => undefined,
-        onExit: (cb: (code: number | null, signal: NodeJS.Signals | null) => void) => {
-          exitCb = cb
+    async () => {
+      spawns += 1
+      if (spawns > 1) throw new Error("wsl: sidecar exited during startup")
+      return {
+        listener: {
+          stop: () => undefined,
+          onExit: (cb: (code: number | null, signal: NodeJS.Signals | null) => void) => {
+            exitCb = cb
+          },
         },
-      },
-      url: "http://127.0.0.1:4096",
-      username: "prioricode",
-      password: "secret",
-    }),
+        url: "http://127.0.0.1:4096",
+        username: "prioricode",
+        password: "secret",
+      }
+    },
     {
       ...testControllerOptions(),
       resolvePrioricode: async () => "/home/me/.prioricode/bin/prioricode",
@@ -307,10 +312,13 @@ test("wsl reconnect exhaustion flips to failed", async () => {
   expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
   exitCb?.(137, null)
   expect(controller.getState().servers[0]?.runtime.kind).toBe("reconnecting")
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  for (let round = 0; round < 100 && controller.getState().servers[0]?.runtime.kind !== "failed"; round++) {
+    await new Promise((resolve) => setTimeout(resolve, 2))
+  }
   const runtime = controller.getState().servers[0]?.runtime
   expect(runtime?.kind).toBe("failed")
   if (runtime?.kind === "failed") expect(runtime.message).toContain("reconnect_exhausted")
+  expect(spawns).toBe(4)
 })
 
 test("wsl stopServer cancels pending reconnect", async () => {

@@ -477,6 +477,14 @@ export function createWslServersController(
 
     startServer,
 
+    async stopServer(id: string) {
+      invalidateStartAttempt(id)
+      clearReconnectTimer(id)
+      reconnectAttempts.delete(id)
+      await stopServerInternal(id)
+      if (state.servers.some((item) => item.config.id === id)) setRuntime(id, { kind: "stopped" })
+    },
+
     retryDisconnected() {
       for (const item of state.servers) {
         if (item.runtime.kind !== "failed" && item.runtime.kind !== "reconnecting") continue

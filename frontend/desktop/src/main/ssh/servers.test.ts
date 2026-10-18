@@ -212,8 +212,13 @@ test("reconnect succeeds and returns to ready", async () => {
 
 test("reconnect exhaustion flips to failed", async () => {
   const side = fakeSidecar()
+  let spawns = 0
   const { controller } = setup({
-    spawnSidecar: async () => side as never,
+    spawnSidecar: async () => {
+      spawns += 1
+      if (spawns > 1) throw new Error("ssh: connect to host port 22: Connection refused")
+      return side as never
+    },
     reconnectBaseDelayMs: 1,
     reconnectMaxAttempts: 3,
   })
@@ -222,10 +227,13 @@ test("reconnect exhaustion flips to failed", async () => {
   expect(controller.getState().servers[0]?.runtime.kind).toBe("ready")
   side.triggerExit(137)
   expect(controller.getState().servers[0]?.runtime.kind).toBe("reconnecting")
-  await new Promise((resolve) => setTimeout(resolve, 50))
+  for (let round = 0; round < 100 && controller.getState().servers[0]?.runtime.kind !== "failed"; round++) {
+    await new Promise((resolve) => setTimeout(resolve, 2))
+  }
   const runtime = controller.getState().servers[0]?.runtime
   expect(runtime?.kind).toBe("failed")
   if (runtime?.kind === "failed") expect(runtime.message).toContain("reconnect_exhausted")
+  expect(spawns).toBe(4)
 })
 
 test("stopServer cancels pending reconnect", async () => {
