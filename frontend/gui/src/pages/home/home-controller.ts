@@ -47,10 +47,15 @@ export function createHomeController() {
   }
 
   function openProjectNewSession(conn: ServerConnection.Any, directory: string) {
+    const key = ServerConnection.key(conn)
     const ctx = global.ensureServerCtx(conn)
     ctx.projects.open(directory)
     ctx.projects.touch(directory)
-    void tabs.newDraft({ server: ServerConnection.key(conn), directory })
+    // The draft mounts the conn's providers, but the globally active server must follow:
+    // otherwise remote session IDs resolve against the local sidecar when any legacy
+    // (server-less) navigation or redirect re-disambiguates them.
+    server.setActive(key)
+    void tabs.newDraft({ server: key, directory })
   }
 
   return {

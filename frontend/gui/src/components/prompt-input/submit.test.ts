@@ -139,6 +139,7 @@ beforeAll(async () => {
 
   mock.module("@prioricode/core/util/encode", () => ({
     base64Encode: (value: string) => value,
+    base64Decode: (value: string) => value,
   }))
 
   mock.module("@/context/local", () => ({
@@ -169,6 +170,14 @@ beforeAll(async () => {
 
   mock.module("@/context/server", () => ({
     useServer: () => ({ key: "server-key" }),
+    ServerConnection: {
+      Key: { make: (value: string) => value },
+      key: (conn: { key: string }) => conn.key,
+    },
+  }))
+
+  mock.module("@/context/server-sdk", () => ({
+    useServerSDK: () => () => ({ server: { key: "server-key" } }),
   }))
 
   mock.module("@/context/tabs", () => ({

@@ -8,6 +8,7 @@ import {
   rootSession,
   serverKeyFromSegment,
   serverKeyLabel,
+  serverRouteStatus,
   sessionHref,
 } from "./session-route"
 
@@ -33,6 +34,51 @@ describe("session routes", () => {
         ServerConnection.Key.make("server-b"),
       ),
     ).toBe(ServerConnection.Key.make("server-b"))
+  })
+
+  test("uses a server that actually holds the session when no tab exists", () => {
+    expect(
+      legacySessionServer([], "session-1", ServerConnection.Key.make("sidecar"), {
+        owners: [ServerConnection.Key.make("ssh:web")],
+      }),
+    ).toBe(ServerConnection.Key.make("ssh:web"))
+  })
+
+  test("disambiguates ambiguous tabs with session owners", () => {
+    expect(
+      legacySessionServer(
+        [
+          { type: "session", server: ServerConnection.Key.make("server-a"), sessionId: "session-1" },
+          { type: "session", server: ServerConnection.Key.make("server-b"), sessionId: "session-1" },
+        ],
+        "session-1",
+        ServerConnection.Key.make("server-c"),
+        { owners: [ServerConnection.Key.make("server-b")] },
+      ),
+    ).toBe(ServerConnection.Key.make("server-b"))
+  })
+
+  test("prefers the active server when several servers hold the session", () => {
+    expect(
+      legacySessionServer([], "session-1", ServerConnection.Key.make("server-a"), {
+        owners: [ServerConnection.Key.make("server-b"), ServerConnection.Key.make("server-a")],
+      }),
+    ).toBe(ServerConnection.Key.make("server-a"))
+  })
+
+  test("uses a unique draft directory match when no tab or owner matches", () => {
+    expect(
+      legacySessionServer([], "session-1", ServerConnection.Key.make("sidecar"), {
+        directory: "/remote/project",
+        drafts: [{ server: ServerConnection.Key.make("ssh:web"), directory: "/remote/project" }],
+      }),
+    ).toBe(ServerConnection.Key.make("ssh:web"))
+  })
+
+  test("falls back to the active server without any signal", () => {
+    expect(legacySessionServer([], "session-1", ServerConnection.Key.make("sidecar"))).toBe(
+      ServerConnection.Key.make("sidecar"),
+    )
   })
 
   test("builds and decodes a server-keyed session route", () => {
@@ -95,5 +141,44 @@ describe("session routes", () => {
     }
 
     expect(rootSession(sessions.child, async (id) => sessions[id]!)).rejects.toThrow("Session parent cycle: child")
+  })
+
+  test("maps an invalid server route to the invalid key", () => {
+    expect(serverRouteStatus("", undefined, { invalid: true, timedOut: false })).toEqual({
+      key: "session.server.invalidRoute",
+    })
+  })
+
+  test("surfaces the SSH reconnect attempt count", () => {
+    expect(serverRouteStatus("web", { kind: "reconnecting", attempt: 3 }, { timedOut: false })).toEqual({
+      key: "session.server.reconnecting",
+      params: { server: "web", attempt: 3 },
+    })
+  })
+
+  test("maps a failed SSH runtime to the unreachable wording", () => {
+    expect(serverRouteStatus("web", { kind: "failed", message: "boom" }, { timedOut: false })).toEqual({
+      key: "app.server.unreachable",
+      params: { server: "web" },
+    })
+  })
+
+  test("maps a stopped SSH runtime to the stopped key", () => {
+    expect(serverRouteStatus("web", { kind: "stopped" }, { timedOut: false })).toEqual({
+      key: "session.server.stopped",
+      params: { server: "web" },
+    })
+  })
+
+  test("shows connecting while an SSH server is starting", () => {
+    expect(serverRouteStatus("web", { kind: "starting" }, { timedOut: false })).toEqual({
+      key: "session.server.connecting",
+      params: { server: "web" },
+    })
+  })
+
+  test("falls back to connecting then unreachable without a known runtime", () => {
+    expect(serverRouteStatus("web", undefined, { timedOut: false }).key).toBe("session.server.connecting")
+    expect(serverRouteStatus("web", undefined, { timedOut: true }).key).toBe("app.server.unreachable")
   })
 })

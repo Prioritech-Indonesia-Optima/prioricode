@@ -15,7 +15,7 @@ import { playSoundById } from "@/utils/sound"
 import { useGlobal } from "./global"
 import { ServerConnection, useServer } from "./server"
 import { type DraftTab, useTabs } from "./tabs"
-import { serverKeyFromSegment } from "@/utils/session-route"
+import { serverKeyFromSegment, sessionHref } from "@/utils/session-route"
 import type { ServerScope } from "@/utils/server-scope"
 
 type NotificationBase = {
@@ -149,6 +149,7 @@ export const { use: useNotification, provider: NotificationProvider } = createSi
           state: createServerNotificationState({
             sdk: ctx.sdk,
             sync: ctx.sync,
+            serverKey: key,
             active: () => server.scope(activeServer()) === ctx.sdk.scope,
             directory: activeDirectory,
             sessionID: activeSession,
@@ -214,6 +215,7 @@ type NotificationState = ReturnType<typeof createServerNotificationState>
 function createServerNotificationState(input: {
   sdk: ServerSDK
   sync: ServerSync
+  serverKey: ServerConnection.Key
   active: Accessor<boolean>
   directory: Accessor<string | undefined>
   sessionID: Accessor<string | undefined>
@@ -355,7 +357,7 @@ function createServerNotificationState(input: {
         session: sessionID,
       })
 
-      const href = `/${base64Encode(directory)}/session/${sessionID}`
+      const href = sessionHref(input.serverKey, session.id)
       if (settings.notifications.agent()) {
         void platform.notify(language.t("notification.session.responseReady.title"), session.title ?? sessionID, () =>
           input.navigate(href),
@@ -390,7 +392,7 @@ function createServerNotificationState(input: {
       const description =
         session?.title ??
         (typeof error === "string" ? error : language.t("notification.session.error.fallbackDescription"))
-      const href = sessionID ? `/${base64Encode(directory)}/session/${sessionID}` : `/${base64Encode(directory)}`
+      const href = sessionID ? sessionHref(input.serverKey, sessionID) : `/${base64Encode(directory)}`
       if (settings.notifications.errors()) {
         void platform.notify(language.t("notification.session.error.title"), description, () => input.navigate(href))
       }

@@ -118,13 +118,19 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
 
     onCleanup(memory.dispose)
 
+    // Desktop SSH/WSL servers come and go with their runtime (starting, reconnecting,
+    // briefly absent after restart). Their tabs are the only durable record of which
+    // server owns a remote session ID, so transient absence must not purge them.
+    // Explicit removal still cleans up via actions.removeServer (see dialog-select-server).
+    const transientServer = (key: ServerConnection.Key) => key.startsWith("ssh:") || key.startsWith("wsl:")
+
     createEffect(() => {
       if (!ready() || !recentReady()) return
       const servers = new Set(server.list.map(ServerConnection.key))
-      const next = store.filter((tab) => servers.has(tab.server))
+      const next = store.filter((tab) => servers.has(tab.server) || transientServer(tab.server))
       if (next.length !== store.length) {
         for (const tab of store) {
-          if (!servers.has(tab.server)) {
+          if (!servers.has(tab.server) && !transientServer(tab.server)) {
             const key = tabKey(tab)
             memory.remove(key)
             removeInfo(key)
@@ -142,7 +148,7 @@ export const { use: useTabs, provider: TabsProvider } = createSimpleContext({
     createEffect(() => {
       if (!closedReady()) return
       const servers = new Set(server.list.map(ServerConnection.key))
-      const next = closed.filter((entry) => servers.has(entry.tab.server))
+      const next = closed.filter((entry) => servers.has(entry.tab.server) || transientServer(entry.tab.server))
       if (next.length !== closed.length) setClosed(() => next)
     })
 

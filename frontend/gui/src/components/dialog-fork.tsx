@@ -11,6 +11,7 @@ import { extractPromptFromParts } from "@/utils/prompt"
 import type { TextPart as SDKTextPart } from "@prioricode/sdk/v2/client"
 import { base64Encode } from "@prioricode/core/util/encode"
 import { useLanguage } from "@/context/language"
+import { requireServerKey, sessionHref } from "@/utils/session-route"
 
 interface ForkableMessage {
   id: string
@@ -73,7 +74,11 @@ export const DialogFork: Component = () => {
       .then((forked) => {
         dialog.close()
         prompt.set(restored, undefined, { dir, id: forked.id })
-        navigate(`/${dir}/session/${forked.id}`)
+        navigate(
+          params.serverKey
+            ? sessionHref(requireServerKey(params.serverKey), forked.id)
+            : `/${dir}/session/${forked.id}`,
+        )
       })
       .catch((err: unknown) => {
         const message = err instanceof Error ? err.message : String(err)

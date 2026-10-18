@@ -3,7 +3,7 @@ import { showToast } from "@/utils/toast"
 import { base64Encode } from "@prioricode/core/util/encode"
 import { Binary } from "@prioricode/core/util/binary"
 import { useNavigate, useParams, useSearchParams } from "@solidjs/router"
-import { batch, startTransition, type Accessor } from "solid-js"
+import { batch, createSignal, startTransition, type Accessor } from "solid-js"
 import { useTabs } from "@/context/tabs"
 import { useServerSync, type ServerSync } from "@/context/server-sync"
 import { useLanguage } from "@/context/language"
@@ -12,6 +12,8 @@ import { useLocal, type ModelSelection } from "@/context/local"
 import { usePermission } from "@/context/permission"
 import { type ContextItem, type ImageAttachmentPart, type Prompt, type usePrompt } from "@/context/prompt"
 import { useSDK, type DirectorySDK } from "@/context/sdk"
+import { ServerConnection } from "@/context/server"
+import { useServerSDK } from "@/context/server-sdk"
 import { useSync, type DirectorySync } from "@/context/sync"
 import { Identifier } from "@/utils/id"
 import { Worktree as WorktreeState } from "@/utils/worktree"
@@ -21,6 +23,7 @@ import { formatServerError } from "@/utils/server-errors"
 import { ScopedKey } from "@/utils/server-scope"
 import { createPromptSubmissionState } from "./submission-state"
 import { normalizeSessionInfo } from "@/utils/session"
+import { sessionHref } from "@/utils/session-route"
 import { Event } from "@prioricode/schema/event"
 import { blobDataUrl } from "@/utils/draft-store"
 
@@ -234,6 +237,7 @@ type PromptSubmitInput = {
 export function createPromptSubmit(input: PromptSubmitInput) {
   const navigate = useNavigate()
   const sdk = useSDK()
+  const serverSDK = useServerSDK()
   const sync = useSync()
   const serverSync = useServerSync()
   const local = useLocal()
@@ -244,6 +248,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
   const params = useParams()
   const [search] = useSearchParams<{ draftId?: string }>()
   const tabs = useTabs()
+  const [submitting, setSubmitting] = createSignal(false)
   const pendingKey = (sessionID: string) => ScopedKey.from(sdk().scope, sessionID)
 
   const errorMessage = (err: unknown) => {
@@ -317,6 +322,7 @@ export function createPromptSubmit(input: PromptSubmitInput) {
 
   const handleSubmit = async (event: Event) => {
     event.preventDefault()
+    if (submitting()) return
 
     const target = prompt.capture()
     const submission = createPromptSubmissionState({
@@ -400,6 +406,9 @@ export function createPromptSubmit(input: PromptSubmitInput) {
 
     let session = input.info()
     if (!session && isNewSession) {
+      // Over a remote link the create round-trip is visible; without this the composer
+      // looks idle and a second Enter creates a duplicate session.
+      setSubmitting(true)
       const created = await sdk()
         .api.session.create({
           agent: currentAgent.name,
@@ -428,10 +437,14 @@ export function createPromptSubmit(input: PromptSubmitInput) {
           layout.handoff.setTabs(base64Encode(sessionDirectory), session.id)
           const draftID = search.draftId
           if (draftID) tabs.promoteDraft(draftID, { server: tabs.draft(draftID).server, sessionId: session.id })
-          else navigate(`/${base64Encode(sessionDirectory)}/session/${session.id}`)
+          // Server-explicit route: a server-less URL re-disambiguates through
+          // legacySessionServer, which can resolve a fresh remote session against the
+          // active (local) server before its tab exists.
+          else navigate(sessionHref(ServerConnection.key(serverSDK().server), session.id))
           submission.retarget(prompt.capture({ dir: base64Encode(sessionDirectory), id: session.id }))
         })
       }
+      setSubmitting(false)
     }
     if (!session) {
       showToast({
@@ -641,5 +654,6 @@ export function createPromptSubmit(input: PromptSubmitInput) {
   return {
     abort,
     handleSubmit,
+    submitting,
   }
 }

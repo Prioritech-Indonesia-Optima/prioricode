@@ -122,10 +122,14 @@ export function createPromptProjectControls() {
     const conn = serverKey ? server.list.find((conn) => ServerConnection.key(conn) === serverKey) : projectServer()
     if (search.draftId) {
       if (!conn) return
+      const key = ServerConnection.key(conn)
       const target = global.ensureServerCtx(conn)
       target.projects.open(worktree)
       target.projects.touch(worktree)
-      tabs.updateDraft(search.draftId, { server: ServerConnection.key(conn), directory: worktree })
+      // Match the non-draft branch below: the active server must follow the draft's owner,
+      // or remote session IDs resolve against the local sidecar in server-less redirects.
+      server.setActive(key)
+      tabs.updateDraft(search.draftId, { server: key, directory: worktree })
       return
     }
 

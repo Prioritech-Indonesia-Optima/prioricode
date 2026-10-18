@@ -7,6 +7,7 @@ import { File } from "@prioricode/session-ui/file"
 import { Font } from "@prioricode/ui/font"
 import { Splash } from "@prioricode/ui/logo"
 import { ButtonV2 } from "@prioricode/ui/v2/button-v2"
+import { LoaderV2 } from "@prioricode/ui/v2/loader-v2"
 import { ThemeProvider } from "@prioricode/ui/theme/context"
 import { MetaProvider } from "@solidjs/meta"
 import {
@@ -55,10 +56,10 @@ import { usePlatform } from "@/context/platform"
 import { PromptProvider } from "@/context/prompt"
 import { ServerConnection, ServerProvider, serverName, useServer } from "@/context/server"
 import { SettingsProvider, useSettings } from "@/context/settings"
-import { TabsProvider, useTabs, type DraftTab } from "@/context/tabs"
+import { TabsProvider, useTabs, type DraftTab, type SessionTab } from "@/context/tabs"
 import { SDKProvider, useSDK } from "@/context/sdk"
 import { WslServersProvider } from "@/wsl/context"
-import { SshServersProvider } from "@/ssh/context"
+import { SshServersProvider, useSshServers } from "@/ssh/context"
 import DirectoryLayout, { DirectoryDataProvider } from "@/pages/directory-layout"
 import LegacyLayout from "@/pages/layout"
 import NewLayout from "@/pages/layout-new"
@@ -69,8 +70,10 @@ import {
   legacySessionServer,
   serverKeyFromSegment,
   serverKeyLabel,
+  serverRouteStatus,
   sessionHref,
 } from "./utils/session-route"
+import { decode64 } from "@/utils/base64"
 import { createSessionLineage } from "@/pages/session/session-lineage"
 
 import { SessionPage, SessionRouteErrorBoundary, TargetSessionRouteContent } from "@/pages/session"
@@ -78,6 +81,37 @@ import { NewHome } from "@/pages/home"
 import { LegacyHome } from "@/pages/home/legacy-home"
 
 const NewSession = lazy(() => import("@/pages/new-session"))
+
+// Servers whose sync store already holds this session ID. A cheap, source-of-truth
+// signal for disambiguating a server-less (legacy) session URL across local/remote
+// servers — session IDs are not namespaced per host.
+function sessionOwners(global: ReturnType<typeof useGlobal>, sessionID: string) {
+  const keys: ServerConnection.Key[] = []
+  for (const conn of global.servers.list()) {
+    if (global.ensureServerCtx(conn).sync.session.peek(sessionID)) keys.push(ServerConnection.key(conn))
+  }
+  return keys
+}
+
+function LegacySessionServerNavigate(props: { sessionID: string; directory?: string }) {
+  const global = useGlobal()
+  const server = useServer()
+  const tabs = useTabs()
+  return (
+    <Show when={tabs.ready()}>
+      {(_) => {
+        const sessionTabs = tabs.store.filter((item): item is SessionTab => item.type === "session")
+        const drafts = tabs.store.filter((item): item is DraftTab => item.type === "draft")
+        const key = legacySessionServer(sessionTabs, props.sessionID, server.key, {
+          directory: props.directory,
+          drafts,
+          owners: sessionOwners(global, props.sessionID),
+        })
+        return <Navigate href={sessionHref(key, props.sessionID)} />
+      }}
+    </Show>
+  )
+}
 
 const SessionRoute = () => {
   const settings = useSettings()
@@ -88,15 +122,7 @@ const SessionRoute = () => {
   const tabs = useTabs()
 
   if (params.id && settings.general.newLayoutDesigns()) {
-    const sessionID = params.id
-    return (
-      <Show when={tabs.ready()}>
-        {(_) => {
-          const persisted = tabs.store.filter((item) => item.type === "session")
-          return <Navigate href={sessionHref(legacySessionServer(persisted, sessionID, server.key), sessionID)} />
-        }}
-      </Show>
-    )
+    return <LegacySessionServerNavigate sessionID={params.id} directory={decode64(params.dir)} />
   }
 
   // When the new layout is enabled, the legacy new-session route (/:dir/session with no id)
@@ -119,36 +145,77 @@ const SessionRoute = () => {
 // either the server key in the URL is unresolvable, or the server is not connected
 // (e.g. an SSH sidecar still starting after a restart). Shows a loading state that
 // auto-resolves when the server becomes available, instead of crashing the app or
-// silently targeting another server.
-function ServerRouteFallback(props: { server?: string; invalid?: boolean }) {
+// silently targeting another server. For desktop SSH servers it surfaces the real
+// runtime state (starting / reconnecting / failed / stopped) from the mirrored
+// sshServers platform state, with a connect affordance, so remote waits are legible.
+function ServerRouteFallback(props: { server?: string; invalid?: boolean; serverKey?: ServerConnection.Key }) {
   const language = useLanguage()
   const navigate = useNavigate()
+  const platform = usePlatform()
+  const ssh = useSshServers()
   const [timedOut, setTimedOut] = createSignal(false)
   if (!props.invalid) {
     const timer = setTimeout(() => setTimedOut(true), 30_000)
     onCleanup(() => clearTimeout(timer))
   }
-  const title = props.invalid
-    ? language.t("session.server.invalidRoute")
-    : timedOut()
-      ? language.t("app.server.unreachable", { server: props.server ?? "" })
-      : language.t("session.server.connecting", { server: props.server ?? "" })
+  const alias = createMemo(() => {
+    const key = props.serverKey ?? ""
+    return key.startsWith("ssh:") ? key.slice(4) : undefined
+  })
+  const runtime = createMemo(() => {
+    const name = alias()
+    if (!name) return undefined
+    return ssh.data?.servers.find((item) => item.config.alias === name)?.runtime
+  })
+  const title = createMemo(() => {
+    const status = serverRouteStatus(props.server ?? "", runtime(), {
+      invalid: props.invalid,
+      timedOut: timedOut(),
+    })
+    return status.params ? language.t(status.key, status.params) : language.t(status.key)
+  })
+  const failure = createMemo(() => {
+    const current = runtime()
+    if (current?.kind !== "failed") return undefined
+    return current.message
+  })
+  const connectable = createMemo(() => {
+    const current = runtime()
+    if (!current || !platform.sshServers) return false
+    return current.kind === "failed" || current.kind === "stopped"
+  })
+  const start = () => {
+    const name = alias()
+    const api = platform.sshServers
+    if (!name || !api) return
+    void api.startServer(`ssh:${name}`).catch(() => undefined)
+  }
 
   return (
     <div
       data-component="server-route-fallback"
       class="h-dvh w-screen flex flex-col items-center justify-center bg-background-base gap-6 p-6"
     >
-      <Splash class="w-16 h-20 opacity-50 animate-pulse" />
+      <Show when={runtime()} fallback={<Splash class="w-16 h-20 opacity-50 animate-pulse" />}>
+        <LoaderV2 class="size-10" />
+      </Show>
       <div class="flex flex-col items-center max-w-md text-center gap-2">
-        <p class="text-14-regular text-text-base">{title}</p>
-        <Show when={!props.invalid && !timedOut()}>
+        <p class="text-14-regular text-text-base">{title()}</p>
+        <Show when={failure()}>{(message) => <p class="text-12-regular text-text-weak break-all">{message()}</p>}</Show>
+        <Show when={!props.invalid && !connectable() && !timedOut()}>
           <p class="text-12-regular text-text-weak">{language.t("app.server.retrying")}</p>
         </Show>
       </div>
-      <ButtonV2 variant="neutral" size="normal" onClick={() => navigate("/")}>
-        {language.t("session.server.goHome")}
-      </ButtonV2>
+      <div class="flex items-center gap-2">
+        <Show when={connectable()}>
+          <ButtonV2 variant="neutral" size="normal" onClick={start}>
+            {runtime()?.kind === "stopped" ? language.t("ssh.server.start") : language.t("session.server.retry")}
+          </ButtonV2>
+        </Show>
+        <ButtonV2 variant="neutral" size="normal" onClick={() => navigate("/")}>
+          {language.t("session.server.goHome")}
+        </ButtonV2>
+      </div>
     </div>
   )
 }
@@ -173,7 +240,7 @@ function TargetServerRoute(props: ParentProps) {
     // The inner Show is intentionally unkeyed so a reconnect with the same key
     // updates the SDK reactively rather than remounting the session subtree.
     <Show when={key()} keyed fallback={<ServerRouteFallback invalid />}>
-      <Show when={conn()} fallback={<ServerRouteFallback server={label()} />}>
+      <Show when={conn()} fallback={<ServerRouteFallback server={label()} serverKey={key()} />}>
         <ServerSDKProvider server={conn}>
           <ServerSyncProvider server={conn}>{props.children}</ServerSyncProvider>
         </ServerSDKProvider>
@@ -704,22 +771,6 @@ function Routes(props: { serverScoped?: JSX.Element }) {
 }
 
 function NewLayoutLegacySessionRedirect() {
-  const server = useServer()
-  const tabs = useTabs()
-  const params = useParams<{ id: string }>()
-
-  return (
-    <Show when={tabs.ready()}>
-      <Navigate
-        href={sessionHref(
-          legacySessionServer(
-            tabs.store.filter((item) => item.type === "session"),
-            params.id,
-            server.key,
-          ),
-          params.id,
-        )}
-      />
-    </Show>
-  )
+  const params = useParams<{ dir: string; id: string }>()
+  return <LegacySessionServerNavigate sessionID={params.id} directory={decode64(params.dir)} />
 }

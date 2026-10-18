@@ -8,6 +8,7 @@ import { useSDK } from "@/context/sdk"
 import { useSync } from "@/context/sync"
 import { showToast } from "@/utils/toast"
 import { base64Encode } from "@prioricode/core/util/encode"
+import { requireServerKey, sessionHref } from "@/utils/session-route"
 
 type DirectoryItem = {
   directory: string
@@ -70,7 +71,7 @@ export const DialogMoveSession: Component = () => {
       })
       dialog.close()
       const dir = base64Encode(item.directory)
-      navigate(`/${dir}/session/${id}`)
+      navigate(params.serverKey ? sessionHref(requireServerKey(params.serverKey), id) : `/${dir}/session/${id}`)
       showToast({
         variant: "success",
         title: language.t("dialog.moveSession.success.title"),
