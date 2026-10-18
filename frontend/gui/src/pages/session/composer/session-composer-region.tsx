@@ -1,5 +1,9 @@
-import { Show, type JSX } from "solid-js"
+import { Show, createMemo, type JSX } from "solid-js"
+import { LoaderV2 } from "@prioricode/ui/v2/loader-v2"
+import { useGlobal } from "@/context/global"
 import { useLanguage } from "@/context/language"
+import { ServerConnection, serverName } from "@/context/server"
+import { useServerSDK } from "@/context/server-sdk"
 import { useSettings } from "@/context/settings"
 import { SessionPermissionDock } from "@/pages/session/composer/session-permission-dock"
 import { SessionQuestionDock } from "@/pages/session/composer/session-question-dock"
@@ -15,6 +19,21 @@ export function SessionComposerRegion(props: {
   const language = useLanguage()
   const controller = props.controller
   const settings = useSettings()
+  const serverSDK = useServerSDK()
+  const global = useGlobal()
+  // Remote servers pay a health round-trip before the composer is meaningful;
+  // say which server the wait is against instead of a generic loading label.
+  const waitingForServer = createMemo(() => {
+    const conn = serverSDK().server
+    if (ServerConnection.local(conn)) return false
+    const health = global.servers.health[ServerConnection.key(conn)]
+    return health === undefined || !health.healthy
+  })
+  const loadingLabel = createMemo(() =>
+    waitingForServer()
+      ? language.t("prompt.waitingForServer", { server: serverName(serverSDK().server) })
+      : language.t("prompt.loading"),
+  )
   const rolled = () => {
     const revert = controller.revert()
     return revert?.items.length ? revert : undefined
@@ -102,7 +121,12 @@ export function SessionComposerRegion(props: {
                   class="w-full min-h-32 md:min-h-40 rounded-md border border-border-weak-base bg-background-base/50 px-4 py-3 text-text-weak whitespace-pre-wrap pointer-events-none"
                   style={{ "margin-top": `${-36 * controller.dockProgress()}px` }}
                 >
-                  {controller.handoffPrompt() || language.t("prompt.loading")}
+                  {controller.handoffPrompt() || (
+                    <div class="flex items-center gap-2 whitespace-normal">
+                      <LoaderV2 class="size-4 shrink-0" />
+                      <span>{loadingLabel()}</span>
+                    </div>
+                  )}
                 </div>
               </>
             }

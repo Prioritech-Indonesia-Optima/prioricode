@@ -403,7 +403,8 @@ export function usePromptInputV2Controller(props: PromptInputV2ControllerProps):
       },
       submit: {
         stopping,
-        working,
+        working: () => working() || submission.submitting(),
+        submitting: submission.submitting,
         onSubmit: () => void submission.handleSubmit(new Event("submit")),
         onStop: () => void submission.abort(),
       },

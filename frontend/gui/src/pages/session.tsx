@@ -33,6 +33,7 @@ import { SelectV2 } from "@prioricode/ui/v2/select-v2"
 import { isScrollKeyTarget, scrollKey, scrollKeyOwner } from "@prioricode/ui/scroll-view"
 import { Tabs } from "@prioricode/ui/tabs"
 import { ButtonV2 } from "@prioricode/ui/v2/button-v2"
+import { LoaderV2 } from "@prioricode/ui/v2/loader-v2"
 import { createAutoScroll } from "@prioricode/ui/hooks"
 import { previewSelectedLines } from "@prioricode/session-ui/pierre/selection-bridge"
 import { Button } from "@prioricode/ui/button"
@@ -99,7 +100,7 @@ import { diffs as list } from "@/utils/diffs"
 import { Persist, persisted } from "@/utils/persist"
 import { extractPromptFromParts } from "@/utils/prompt"
 import { formatServerError, isLocalSessionNotFoundError, isSessionNotFoundError } from "@/utils/server-errors"
-import { legacySessionHref, requireServerKey, sessionHref } from "@/utils/session-route"
+import { legacySessionHref, requireServerKey, serverKeyLabel, sessionHref } from "@/utils/session-route"
 import { useUsageExceededDialogs } from "./session/usage-exceeded-dialogs"
 import { createSessionOwnership } from "./session/session-ownership"
 import { createSessionLineage } from "./session/session-lineage"
@@ -243,6 +244,28 @@ function SessionErrorFallback(props: { error: unknown; sessionID?: string; serve
   return <ErrorPage error={props.error} />
 }
 
+// Fills the blank gap while a target session is cold-loading on a remote server:
+// first while its lineage/directory is being resolved, then while the first history
+// page is in flight. Names the server the wait is against so remote latency is legible.
+function SessionTimelineLoading(props: { serverKey: ServerConnection.Key }) {
+  const language = useLanguage()
+  const server = useServer()
+  const conn = createMemo(() => server.list.find((item) => ServerConnection.key(item) === props.serverKey))
+  const remote = createMemo(() => !!conn() && !ServerConnection.local(conn()))
+  const label = createMemo(() => (conn() ? serverName(conn()) : serverKeyLabel(props.serverKey)))
+  return (
+    <div
+      data-component="session-timeline-loading"
+      class="flex-1 min-h-0 h-full flex flex-col items-center justify-center gap-4 p-6"
+    >
+      <LoaderV2 class="size-8" />
+      <p class="text-14-regular text-text-weak text-center">
+        {remote() ? language.t("session.loading.remote", { server: label() }) : language.t("session.loading")}
+      </p>
+    </div>
+  )
+}
+
 function ResolvedTargetSessionRoute() {
   const params = useParams<{ serverKey: string; id: string }>()
   const tabs = useTabs()
@@ -269,7 +292,7 @@ function ResolvedTargetSessionRoute() {
     // lineage mid-resolution), which tears down the workspace subtree including
     // the terminal. Same-workspace tab switches keep it open because warm
     // targets resolve synchronously from the sync cache.
-    <Show when={directory()}>
+    <Show when={directory()} fallback={<SessionTimelineLoading serverKey={serverKey()} />}>
       <SDKProvider directory={targetDirectory}>
         <DirectoryDataProvider directory={targetDirectory} server={serverKey}>
           <TargetSessionPage />
@@ -2082,7 +2105,11 @@ export default function Page() {
             </div>
           </Match>
           <Match when={params.id}>
-            <Show when={messagesReady() ? params.id : undefined} keyed>
+            <Show
+              when={messagesReady() ? params.id : undefined}
+              keyed
+              fallback={<SessionTimelineLoading serverKey={ServerConnection.key(serverSDK().server)} />}
+            >
               {(_id) => (
                 <MessageTimeline
                   actions={actions}
