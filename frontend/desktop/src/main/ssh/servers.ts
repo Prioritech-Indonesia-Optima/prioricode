@@ -390,7 +390,10 @@ export function createSshServersController(
       writeServers([...readServers(), config])
       setState({ servers: [...state.servers, { config, runtime: { kind: "starting" } }] })
       void startServer(id).catch((error) =>
-        logger?.error("ssh start server failed", { id, message: error instanceof Error ? error.message : String(error) }),
+        logger?.error("ssh start server failed", {
+          id,
+          message: error instanceof Error ? error.message : String(error),
+        }),
       )
       void checkPrioricode(clean).then((check) => {
         if (!state.servers.some((item) => item.config.id === id)) return
