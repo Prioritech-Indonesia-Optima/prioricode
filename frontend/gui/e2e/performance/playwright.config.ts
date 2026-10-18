@@ -7,7 +7,9 @@ process.env.PRIORICODE_PERFORMANCE_RUN_ID ??= `${new Date().toISOString().replac
 export default {
   ...config,
   testDir: ".",
-  testIgnore: "unit/**",
+  // timeline-stability owns its own config (test:stability); its fixture.test.ts is a
+  // bun test and crashes Playwright's node loader if collected here.
+  testIgnore: ["unit/**", "timeline-stability/**"],
   outputDir: "../test-results/performance",
   fullyParallel: false,
   workers: 1,
