@@ -1,6 +1,6 @@
 Create and maintain the session todo list — the user's live view of your progress and the plan in force. Any request that modifies files or spans multiple steps requires a todo list, seeded BEFORE the first change. The list is persisted outside the conversation (it survives compaction and restarts) and every response echoes the live list, so you never re-emit it.
 
-Treat the list as sacred: mutate it IN PLACE, never rebuild it from memory. Address items by the (td_…) id shown in every response — the live list always wins over your recollection; when in doubt, "view" first.
+Treat the list as sacred: mutate it IN PLACE, never rebuild it from memory. Address items by the (td_…) id shown in every response — the live list always wins over your recollection; when in doubt, "view" first. Why in-place: full rewrites silently drop, reword, or reorder unfinished work — exactly the failure this tool exists to prevent.
 
 Actions:
 - "view" — read the live list; changes nothing.
