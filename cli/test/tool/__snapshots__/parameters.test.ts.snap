@@ -391,6 +391,10 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
             "description": "Brief description of the task",
             "type": "string",
           },
+          "id": {
+            "pattern": "^td_[0-9a-f]{8}$",
+            "type": "string",
+          },
           "phase": {
             "type": "string",
           },

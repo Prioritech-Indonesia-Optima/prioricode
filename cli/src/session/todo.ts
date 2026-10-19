@@ -13,8 +13,11 @@ export const Info = SessionTodo.Info
 export type Info = SessionTodo.Info
 
 export const Event = SessionTodo.Event
+export const ID = SessionTodoCore.ID
 export const validate = SessionTodoCore.validate
 export const snapshot = SessionTodoCore.snapshot
+export const ensureIds = SessionTodoCore.ensureIds
+export const toInfo = SessionTodoCore.toInfo
 
 export interface Interface {
   readonly update: (input: { sessionID: SessionID; todos: ReadonlyArray<Info> }) => Effect.Effect<void>
@@ -30,16 +33,18 @@ const layer = Layer.effect(
     const { db } = yield* Database.Service
 
     const update = Effect.fn("Todo.update")(function* (input: { sessionID: SessionID; todos: ReadonlyArray<Info> }) {
+      const todos = ensureIds(input.todos)
       yield* db
         .transaction((tx) =>
           Effect.gen(function* () {
             yield* tx.delete(TodoTable).where(eq(TodoTable.session_id, input.sessionID)).run()
-            if (input.todos.length === 0) return
+            if (todos.length === 0) return
             yield* tx
               .insert(TodoTable)
               .values(
-                input.todos.map((todo, position) => ({
+                todos.map((todo, position) => ({
                   session_id: input.sessionID,
+                  id: todo.id,
                   content: todo.content,
                   status: todo.status,
                   priority: todo.priority,
@@ -51,7 +56,7 @@ const layer = Layer.effect(
           }),
         )
         .pipe(Effect.orDie)
-      yield* events.publish(Event.Updated, input)
+      yield* events.publish(Event.Updated, { sessionID: input.sessionID, todos })
     })
 
     const get = Effect.fn("Todo.get")(function* (sessionID: SessionID) {
@@ -62,12 +67,7 @@ const layer = Layer.effect(
         .orderBy(asc(TodoTable.position))
         .all()
         .pipe(Effect.orDie)
-      return rows.map((row) => ({
-        content: row.content,
-        status: row.status,
-        priority: row.priority,
-        phase: row.phase ?? undefined,
-      }))
+      return ensureIds(rows.map(toInfo))
     })
 
     return Service.of({ update, get })

@@ -108,6 +108,7 @@ export const TodoTable = sqliteTable(
       .$type<SessionSchema.ID>()
       .notNull()
       .references(() => SessionTable.id, { onDelete: "cascade" }),
+    id: text().$type<SessionTodo.ID>(),
     content: text().notNull(),
     status: text().$type<SessionTodo.Info["status"]>().notNull(),
     priority: text().$type<SessionTodo.Info["priority"]>().notNull(),
@@ -118,6 +119,7 @@ export const TodoTable = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.session_id, table.position] }),
     index("todo_session_idx").on(table.session_id),
+    uniqueIndex("todo_session_id_idx").on(table.session_id, table.id),
   ],
 )
 

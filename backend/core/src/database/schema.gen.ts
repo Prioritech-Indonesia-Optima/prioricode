@@ -243,6 +243,7 @@ export default {
       yield* tx.run(`
         CREATE TABLE \`todo\` (
           \`session_id\` text NOT NULL,
+          \`id\` text,
           \`content\` text NOT NULL,
           \`status\` text NOT NULL,
           \`priority\` text NOT NULL,
@@ -306,6 +307,7 @@ export default {
       yield* tx.run(`CREATE INDEX \`session_workspace_idx\` ON \`session\` (\`workspace_id\`);`)
       yield* tx.run(`CREATE INDEX \`session_parent_idx\` ON \`session\` (\`parent_id\`);`)
       yield* tx.run(`CREATE INDEX \`todo_session_idx\` ON \`todo\` (\`session_id\`);`)
+      yield* tx.run(`CREATE UNIQUE INDEX \`todo_session_id_idx\` ON \`todo\` (\`session_id\`,\`id\`);`)
     })
   },
 } satisfies Omit<DatabaseMigration.Migration, "id">

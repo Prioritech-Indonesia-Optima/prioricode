@@ -37,6 +37,12 @@ const setup = Effect.gen(function* () {
     .pipe(Effect.orDie)
 })
 
+const withoutIds = (todos: ReadonlyArray<SessionTodo.Info>) =>
+  todos.map((todo) => {
+    const { id: _id, ...rest } = todo
+    return rest
+  })
+
 describe("SessionTodo", () => {
   it.effect("replaces persisted todos in order and publishes updates", () =>
     Effect.gen(function* () {
@@ -59,10 +65,13 @@ describe("SessionTodo", () => {
           { content: "first", status: "in_progress", priority: "high" },
         ],
       })
-      expect(yield* todos.get(sessionID)).toEqual([
+      const stored = yield* todos.get(sessionID)
+      expect(withoutIds(stored)).toEqual([
         { content: "second", status: "pending", priority: "low" },
         { content: "first", status: "in_progress", priority: "high" },
       ])
+      expect(stored.every((todo) => /^td_[0-9a-f]{8}$/.test(todo.id!))).toBe(true)
+      expect(new Set(stored.map((todo) => todo.id)).size).toBe(2)
       expect(
         (yield* db.select().from(TodoTable).orderBy(asc(TodoTable.position)).all().pipe(Effect.orDie)).map((row) => ({
           content: row.content,
@@ -73,8 +82,21 @@ describe("SessionTodo", () => {
         { content: "first", position: 1 },
       ])
 
-      yield* todos.update({ sessionID, todos: [{ content: "replacement", status: "completed", priority: "medium" }] })
-      expect(yield* todos.get(sessionID)).toEqual([{ content: "replacement", status: "completed", priority: "medium" }])
+      // carried-over ids survive a replacement write; only new items get minted ones
+      yield* todos.update({
+        sessionID,
+        todos: [
+          { id: stored[1].id, content: "first", status: "completed", priority: "high" },
+          { content: "replacement", status: "completed", priority: "medium" },
+        ],
+      })
+      const after = yield* todos.get(sessionID)
+      expect(withoutIds(after)).toEqual([
+        { content: "first", status: "completed", priority: "high" },
+        { content: "replacement", status: "completed", priority: "medium" },
+      ])
+      expect(after[0].id).toBe(stored[1].id)
+      expect(after[1].id).not.toBe(stored[1].id)
 
       yield* todos.update({ sessionID, todos: [] })
       expect(yield* todos.get(sessionID)).toEqual([])
@@ -82,13 +104,38 @@ describe("SessionTodo", () => {
         {
           sessionID,
           todos: [
-            { content: "second", status: "pending", priority: "low" },
-            { content: "first", status: "in_progress", priority: "high" },
+            { id: expect.stringMatching(/^td_[0-9a-f]{8}$/), content: "second", status: "pending", priority: "low" },
+            { id: expect.stringMatching(/^td_[0-9a-f]{8}$/), content: "first", status: "in_progress", priority: "high" },
           ],
         },
-        { sessionID, todos: [{ content: "replacement", status: "completed", priority: "medium" }] },
+        {
+          sessionID,
+          todos: [
+            { id: stored[1].id, content: "first", status: "completed", priority: "high" },
+            { id: expect.stringMatching(/^td_[0-9a-f]{8}$/), content: "replacement", status: "completed", priority: "medium" },
+          ],
+        },
         { sessionID, todos: [] },
       ])
+    }),
+  )
+
+  it.effect("lazily assigns ids to rows written without them", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const { db } = yield* Database.Service
+      const todos = yield* SessionTodo.Service
+      yield* db
+        .insert(TodoTable)
+        .values({ session_id: sessionID, content: "legacy", status: "pending", priority: "low", position: 0 })
+        .run()
+        .pipe(Effect.orDie)
+      const read = yield* todos.get(sessionID)
+      expect(read).toHaveLength(1)
+      expect(read[0]!.id).toStartWith("td_")
+      // the read repairs addressing in memory only; the stored row still has no id
+      const rows = yield* db.select().from(TodoTable).all().pipe(Effect.orDie)
+      expect(rows[0]!.id).toBeNull()
     }),
   )
 
@@ -102,12 +149,35 @@ describe("SessionTodo", () => {
         { content: "wiring", status: "pending" as const, priority: "low" as const, phase: "Phase 2: wiring" },
       ]
       yield* todos.update({ sessionID, todos: list })
-      expect(yield* todos.get(sessionID)).toEqual(list)
-      expect(SessionTodo.snapshot(yield* todos.get(sessionID))).toBe(
+      const stored = yield* todos.get(sessionID)
+      expect(withoutIds(stored)).toEqual(list)
+      expect(SessionTodo.snapshot(stored)).toBe(
         ["### Phase 1: schema", "1. [>] schema", "2. [ ] migration", "### Phase 2: wiring", "1. [ ] wiring"].join("\n"),
+      )
+      expect(SessionTodo.snapshot(stored, { ids: true })).toBe(
+        [
+          "### Phase 1: schema",
+          `1. [>] (${stored[0]!.id}) schema`,
+          `2. [ ] (${stored[1]!.id}) migration`,
+          "### Phase 2: wiring",
+          `1. [ ] (${stored[2]!.id}) wiring`,
+        ].join("\n"),
       )
     }),
   )
+})
+
+describe("SessionTodo.ensureIds", () => {
+  const todo = (content: string) => ({ content, status: "pending" as const, priority: "low" as const })
+
+  test("mints unique ids only for items missing them", () => {
+    const kept = { ...todo("kept"), id: SessionTodo.ID.create() }
+    const result = SessionTodo.ensureIds([kept, todo("minted"), todo("minted too")])
+    expect(result[0]!.id).toBe(kept.id)
+    expect(result[1]!.id).toMatch(/^td_[0-9a-f]{8}$/)
+    expect(result[2]!.id).toMatch(/^td_[0-9a-f]{8}$/)
+    expect(new Set(result.map((item) => item.id)).size).toBe(3)
+  })
 })
 
 describe("SessionTodo.validate", () => {

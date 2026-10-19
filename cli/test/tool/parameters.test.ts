@@ -253,7 +253,7 @@ describe("tool parameters", () => {
   describe("todo", () => {
     test("accepts todos array", () => {
       const parsed = parse(Todo, {
-        todos: [{ id: "t1", content: "do x", status: "pending", priority: "medium" }],
+        todos: [{ id: "td_00000001", content: "do x", status: "pending", priority: "medium" }],
       })
       expect(parsed.todos.length).toBe(1)
     })

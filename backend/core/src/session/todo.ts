@@ -11,6 +11,8 @@ import { TodoTable } from "./sql"
 
 export const Info = SessionTodo.Info
 export type Info = typeof Info.Type
+export const ID = SessionTodo.ID
+export type ID = SessionTodo.ID
 export const Event = SessionTodo.Event
 
 export const validate = (todos: ReadonlyArray<Info>) => {
@@ -22,9 +24,35 @@ export const validate = (todos: ReadonlyArray<Info>) => {
   return undefined
 }
 
+/** Assign a stable id to every item missing one, keeping ids unique within the list. */
+export const ensureIds = (todos: ReadonlyArray<Info>) => {
+  const taken = new Set<SessionTodo.ID>(todos.flatMap((todo) => (todo.id === undefined ? [] : [todo.id])))
+  const mint = () => {
+    let id = SessionTodo.ID.create()
+    while (taken.has(id)) id = SessionTodo.ID.create()
+    taken.add(id)
+    return id
+  }
+  return todos.map((todo) => (todo.id === undefined ? { ...todo, id: mint() } : todo))
+}
+
+export const toInfo = (row: {
+  id: string | null
+  content: string
+  status: Info["status"]
+  priority: Info["priority"]
+  phase: string | null
+}): Info => ({
+  ...(row.id === null ? {} : { id: row.id as SessionTodo.ID }),
+  content: row.content,
+  status: row.status,
+  priority: row.priority,
+  phase: row.phase ?? undefined,
+})
+
 const MARK: Record<Info["status"], string> = { pending: "[ ]", in_progress: "[>]", completed: "[x]", cancelled: "[-]" }
 
-export const snapshot = (todos: ReadonlyArray<Info>) => {
+export const snapshot = (todos: ReadonlyArray<Info>, options?: { readonly ids?: boolean }) => {
   if (todos.length === 0) return ""
   const lines: string[] = []
   let phase: string | undefined
@@ -36,7 +64,7 @@ export const snapshot = (todos: ReadonlyArray<Info>) => {
       if (phase) lines.push(`### ${phase}`)
     }
     index += 1
-    lines.push(`${index}. ${MARK[todo.status]} ${todo.content}`)
+    lines.push(`${index}. ${MARK[todo.status]}${options?.ids && todo.id ? ` (${todo.id})` : ""} ${todo.content}`)
   }
   return lines.join("\n")
 }
@@ -61,16 +89,18 @@ const layer = Layer.effect(
       readonly sessionID: SessionSchema.ID
       readonly todos: ReadonlyArray<Info>
     }) {
+      const todos = ensureIds(input.todos)
       yield* db
         .transaction((tx) =>
           Effect.gen(function* () {
             yield* tx.delete(TodoTable).where(eq(TodoTable.session_id, input.sessionID)).run()
-            if (input.todos.length === 0) return
+            if (todos.length === 0) return
             yield* tx
               .insert(TodoTable)
               .values(
-                input.todos.map((todo, position) => ({
+                todos.map((todo, position) => ({
                   session_id: input.sessionID,
+                  id: todo.id,
                   content: todo.content,
                   status: todo.status,
                   priority: todo.priority,
@@ -82,7 +112,7 @@ const layer = Layer.effect(
           }),
         )
         .pipe(Effect.orDie)
-      yield* events.publish(Event.Updated, input)
+      yield* events.publish(Event.Updated, { sessionID: input.sessionID, todos })
     })
 
     const get = Effect.fn("SessionTodo.get")(function* (sessionID: SessionSchema.ID) {
@@ -93,12 +123,7 @@ const layer = Layer.effect(
         .orderBy(asc(TodoTable.position))
         .all()
         .pipe(Effect.orDie)
-      return rows.map((row) => ({
-        content: row.content,
-        status: row.status,
-        priority: row.priority,
-        phase: row.phase ?? undefined,
-      }))
+      return ensureIds(rows.map(toInfo))
     })
 
     return Service.of({ update, get })

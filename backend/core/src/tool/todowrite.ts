@@ -23,7 +23,9 @@ export const Output = Schema.Struct({
 })
 export type Output = typeof Output.Type
 
-export const toModelOutput = (output: Output) => JSON.stringify(output.todos, null, 2)
+// Tool settlement hands `toModelOutput` the encoded side, where the branded id erases to a plain string.
+export const toModelOutput = (output: Schema.Codec.Encoded<typeof Output>) =>
+  JSON.stringify(output.todos, null, 2)
 
 const layer = Layer.effectDiscard(
   Effect.gen(function* () {

@@ -81,6 +81,12 @@ const call = (todos: ReadonlyArray<SessionTodo.Info>, id = "call-todowrite") => 
   call: { type: "tool-call" as const, id, name: TodoWriteTool.name, input: { todos } },
 })
 
+const withoutIds = (todos: ReadonlyArray<SessionTodo.Info>) =>
+  todos.map((todo) => {
+    const { id: _id, ...rest } = todo
+    return rest
+  })
+
 describe("TodoWriteTool", () => {
   it.effect("registers, approves the wildcard resource, persists todos, and returns typed output", () =>
     Effect.gen(function* () {
@@ -100,7 +106,7 @@ describe("TodoWriteTool", () => {
         },
       })
       expect(assertions).toMatchObject([{ sessionID, action: "todowrite", resources: ["*"], save: ["*"] }])
-      expect(yield* service.get(sessionID)).toEqual(todoList)
+      expect(withoutIds(yield* service.get(sessionID))).toEqual([...todoList])
     }),
   )
 
@@ -133,7 +139,7 @@ describe("TodoWriteTool", () => {
       ]
 
       yield* settleTool(registry, call(list))
-      expect(yield* service.get(sessionID)).toEqual(list)
+      expect(withoutIds(yield* service.get(sessionID))).toEqual([...list])
     }),
   )
 
@@ -151,7 +157,7 @@ describe("TodoWriteTool", () => {
         type: "error",
         value: expect.stringContaining("Blocked by permission rules"),
       })
-      expect(yield* service.get(sessionID)).toEqual([{ content: "keep", status: "pending", priority: "low" }])
+      expect(withoutIds(yield* service.get(sessionID))).toEqual([{ content: "keep", status: "pending", priority: "low" }])
       expect(assertions).toMatchObject([{ sessionID, action: "todowrite", resources: ["*"], save: ["*"] }])
     }),
   )
