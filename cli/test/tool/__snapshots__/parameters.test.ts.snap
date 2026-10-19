@@ -383,8 +383,139 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
+    "action": {
+      "description": "What to do: "view" the live list (read only), "add" items, "status" (checklist changes, batched), "edit" items, "remove" items, or "replace" the whole list (seeding a new objective or an acknowledged pivot only). Omitting action with a todos array means "replace"",
+      "enum": [
+        "view",
+        "add",
+        "status",
+        "edit",
+        "remove",
+        "replace",
+      ],
+      "type": "string",
+    },
+    "add": {
+      "description": "Items to add, in order",
+      "items": {
+        "properties": {
+          "after": {
+            "description": "id of the item to insert behind ("td_…"); omit to append",
+            "type": "string",
+          },
+          "content": {
+            "description": "Brief description of the task",
+            "type": "string",
+          },
+          "phase": {
+            "description": "Phase label for grouping",
+            "type": "string",
+          },
+          "priority": {
+            "description": "Defaults to medium",
+            "enum": [
+              "high",
+              "medium",
+              "low",
+            ],
+            "type": "string",
+          },
+          "status": {
+            "description": "Defaults to pending",
+            "enum": [
+              "pending",
+              "in_progress",
+              "completed",
+              "cancelled",
+            ],
+            "type": "string",
+          },
+        },
+        "required": [
+          "content",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+    "confirm": {
+      "description": "For replace: the exact unfinished ids being discarded, echoed from the rejection",
+      "items": {
+        "pattern": "^td_[0-9a-f]{8}$",
+        "type": "string",
+      },
+      "type": "array",
+    },
+    "edit": {
+      "description": "Field patches applied atomically",
+      "items": {
+        "properties": {
+          "content": {
+            "type": "string",
+          },
+          "id": {
+            "description": "Item id from the live list",
+            "pattern": "^td_[0-9a-f]{8}$",
+            "type": "string",
+          },
+          "phase": {
+            "description": "New phase label; "" clears it",
+            "type": "string",
+          },
+          "priority": {
+            "enum": [
+              "high",
+              "medium",
+              "low",
+            ],
+            "type": "string",
+          },
+        },
+        "required": [
+          "id",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
+    "remove": {
+      "description": "Item ids to delete",
+      "items": {
+        "pattern": "^td_[0-9a-f]{8}$",
+        "type": "string",
+      },
+      "type": "array",
+    },
+    "status": {
+      "description": "Status changes applied atomically to the live list",
+      "items": {
+        "properties": {
+          "id": {
+            "description": "Item id from the live list",
+            "pattern": "^td_[0-9a-f]{8}$",
+            "type": "string",
+          },
+          "status": {
+            "description": "New state",
+            "enum": [
+              "pending",
+              "in_progress",
+              "completed",
+              "cancelled",
+            ],
+            "type": "string",
+          },
+        },
+        "required": [
+          "id",
+          "status",
+        ],
+        "type": "object",
+      },
+      "type": "array",
+    },
     "todos": {
-      "description": "The complete updated todo list. Every task: content, one of pending|in_progress|completed|cancelled, priority high|medium|low, and an optional phase label that groups consecutive tasks into one collapsible section.",
+      "description": "Complete replacement list — only valid for action=replace",
       "items": {
         "properties": {
           "content": {
@@ -428,9 +559,6 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
       "type": "array",
     },
   },
-  "required": [
-    "todos",
-  ],
   "type": "object",
 }
 `;

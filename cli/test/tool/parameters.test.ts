@@ -251,14 +251,24 @@ describe("tool parameters", () => {
   })
 
   describe("todo", () => {
-    test("accepts todos array", () => {
+    test("accepts bare todos array (legacy replace shape)", () => {
       const parsed = parse(Todo, {
         todos: [{ id: "td_00000001", content: "do x", status: "pending", priority: "medium" }],
       })
-      expect(parsed.todos.length).toBe(1)
+      expect(parsed.todos!.length).toBe(1)
     })
-    test("rejects missing todos", () => {
-      expect(accepts(Todo, {})).toBe(false)
+    test("accepts an action-based op", () => {
+      expect(parse(Todo, { action: "status", status: [{ id: "td_00000002", status: "completed" }] }).action).toBe(
+        "status",
+      )
+      const pivot = parse(Todo, { action: "replace", todos: [], confirm: ["td_00000003"] })
+      expect(pivot.action).toBe("replace")
+      expect(pivot.confirm).toHaveLength(1)
+    })
+    test("rejects unknown action and bad ids", () => {
+      expect(accepts(Todo, { action: "purge" })).toBe(false)
+      expect(accepts(Todo, { remove: ["nope"] })).toBe(false)
+      expect(accepts(Todo, { todos: [{ content: "x", status: "waiting", priority: "medium" }] })).toBe(false)
     })
   })
 

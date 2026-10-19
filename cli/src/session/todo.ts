@@ -18,6 +18,7 @@ export const validate = SessionTodoCore.validate
 export const snapshot = SessionTodoCore.snapshot
 export const ensureIds = SessionTodoCore.ensureIds
 export const toInfo = SessionTodoCore.toInfo
+export const apply = SessionTodoCore.apply
 
 export interface Interface {
   readonly update: (input: { sessionID: SessionID; todos: ReadonlyArray<Info> }) => Effect.Effect<void>

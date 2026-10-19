@@ -28,6 +28,7 @@ describe("contract hygiene", () => {
     })
     expect(() => decode({ content: "ship", status: "waiting", priority: "high" })).toThrow()
     expect(() => decode({ content: "ship", status: "pending", priority: "urgent" })).toThrow()
+    expect(() => decode({ id: "nope", content: "ship", status: "pending", priority: "high" })).toThrow()
     expect(Schema.encodeSync(SessionTodo.Info)({ content: "ship", status: "pending", priority: "high" })).toEqual({
       content: "ship",
       status: "pending",
@@ -36,6 +37,17 @@ describe("contract hygiene", () => {
     expect(
       Schema.encodeSync(SessionTodo.Info)({ content: "ship", status: "pending", priority: "high", phase: "Phase 1" }),
     ).toEqual({ content: "ship", status: "pending", priority: "high", phase: "Phase 1" })
+  })
+
+  test("todo id is an optional branded td_ identifier", () => {
+    const id = SessionTodo.ID.create()
+    expect(id).toStartWith("td_")
+    expect(Schema.decodeUnknownSync(SessionTodo.Info)({ id, content: "ship", status: "pending", priority: "high" })).toEqual(
+      { id, content: "ship", status: "pending", priority: "high" },
+    )
+    expect(
+      Schema.encodeSync(SessionTodo.Info)({ id, content: "ship", status: "pending", priority: "high" }),
+    ).toEqual({ id, content: "ship", status: "pending", priority: "high" })
   })
 
   test("current ID constructors expose create", () => {

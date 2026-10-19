@@ -75,10 +75,10 @@ const setup = Effect.gen(function* () {
     .pipe(Effect.orDie)
 })
 
-const call = (todos: ReadonlyArray<SessionTodo.Info>, id = "call-todowrite") => ({
+const call = (input: Record<string, unknown>, id = "call-todowrite") => ({
   sessionID,
   ...toolIdentity,
-  call: { type: "tool-call" as const, id, name: TodoWriteTool.name, input: { todos } },
+  call: { type: "tool-call" as const, id, name: TodoWriteTool.name, input },
 })
 
 const withoutIds = (todos: ReadonlyArray<SessionTodo.Info>) =>
@@ -87,8 +87,19 @@ const withoutIds = (todos: ReadonlyArray<SessionTodo.Info>) =>
     return rest
   })
 
+// Result values are strings; extract once because matcher objects must not be re-asserted.
+const resultText = (result: { type: string; value: unknown }) => String(result.value)
+const structured = (output: unknown) => (output as { structured: { todos: SessionTodo.Info[]; text: string } }).structured
+
+const seed = (registry: ToolRegistry.Interface, list: ReadonlyArray<SessionTodo.Info>) =>
+  settleTool(registry, call({ todos: list })).pipe(
+    Effect.flatMap((settled) =>
+      settled.result.type === "error" ? Effect.die(settled.result.value) : Effect.succeed(settled),
+    ),
+  )
+
 describe("TodoWriteTool", () => {
-  it.effect("registers, approves the wildcard resource, persists todos, and returns typed output", () =>
+  it.effect("seeds via a bare todos array, returns an id-bearing checklist, and persists", () =>
     Effect.gen(function* () {
       yield* setup
       const registry = yield* ToolRegistry.Service
@@ -98,15 +109,227 @@ describe("TodoWriteTool", () => {
       ]
 
       expect((yield* toolDefinitions(registry)).map((tool) => tool.name)).toEqual([TodoWriteTool.name])
-      expect(yield* settleTool(registry, call(todoList))).toEqual({
-        result: { type: "text", value: JSON.stringify(todoList, null, 2) },
-        output: {
-          structured: { todos: todoList },
-          content: [{ type: "text", text: JSON.stringify(todoList, null, 2) }],
-        },
-      })
-      expect(assertions).toMatchObject([{ sessionID, action: "todowrite", resources: ["*"], save: ["*"] }])
-      expect(withoutIds(yield* service.get(sessionID))).toEqual([...todoList])
+      const settled = yield* seed(registry, todoList)
+      const text = resultText(settled.result)
+      expect(text).toContain("[>]")
+      expect(text).toContain("Implement slice")
+      const todos = structured(settled.output).todos
+      expect(withoutIds(todos)).toEqual([...todoList])
+      expect(text).toContain(`(${todos[0]!.id})`)
+      expect(todos[0]!.id).toMatch(/^td_[0-9a-f]{8}$/)
+      expect(assertions.length).toBe(1)
+      expect(assertions[0]!.action).toBe("todowrite")
+      expect(assertions[0]!.resources).toEqual(["*"])
+      expect(assertions[0]!.save).toEqual(["*"])
+      expect(assertions[0]!.sessionID).toBe(sessionID)
+      expect(yield* service.get(sessionID)).toEqual(todos)
+    }),
+  )
+
+  it.effect("view reads the live list without touching permissions or storage", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const service = yield* SessionTodo.Service
+      yield* service.update({ sessionID, todos: [{ content: "keep", status: "pending", priority: "low" }] })
+      assertions.length = 0
+
+      const result = yield* executeTool(registry, call({ action: "view" }))
+      expect(result.type).toBe("text")
+      const text = resultText(result)
+      expect(text).toContain("[ ]")
+      expect(text).toContain("keep")
+      expect(text).toMatch(/td_[0-9a-f]{8}/)
+      expect(assertions.length).toBe(0)
+    }),
+  )
+
+  it.effect("status completes the current task and starts the next in one batched call", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const service = yield* SessionTodo.Service
+      const settled = yield* seed(registry, [
+        { content: "first", status: "in_progress", priority: "high" },
+        { content: "second", status: "pending", priority: "medium" },
+      ])
+      const [first, second] = structured(settled.output).todos
+      assertions.length = 0
+
+      const result = yield* executeTool(
+        registry,
+        call({
+          action: "status",
+          status: [
+            { id: first!.id, status: "completed" },
+            { id: second!.id, status: "in_progress" },
+          ],
+        }),
+      )
+      expect(result.type).toBe("text")
+      expect(resultText(result)).toContain("Updated 2 item(s)")
+      const stored = yield* service.get(sessionID)
+      expect(stored.map((todo) => todo.status)).toEqual(["completed", "in_progress"])
+      expect(stored.map((todo) => todo.id)).toEqual([first!.id, second!.id])
+      expect(assertions.length).toBe(1)
+    }),
+  )
+
+  it.effect("status rejects unknown ids and re-grounds with the live list", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const settled = yield* seed(registry, [{ content: "real", status: "pending", priority: "low" }])
+      const live = structured(settled.output).todos[0]!.id!
+      assertions.length = 0
+
+      const result = yield* executeTool(
+        registry,
+        call({ action: "status", status: [{ id: "td_00000000", status: "completed" }] }),
+      )
+      expect(result.type).toBe("error")
+      const text = resultText(result)
+      expect(text).toContain("Unknown todo id")
+      expect(text).toContain(live)
+      expect(text).toContain("real")
+      expect(assertions.length).toBe(0)
+    }),
+  )
+
+  it.effect("replace guards unfinished items until the exact confirm set is echoed", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const service = yield* SessionTodo.Service
+      const settled = yield* seed(registry, [
+        { content: "carry on", status: "in_progress", priority: "high" },
+        { content: "later", status: "pending", priority: "low" },
+      ])
+      const before = structured(settled.output).todos
+      assertions.length = 0
+
+      const blocked = yield* executeTool(
+        registry,
+        call({ action: "replace", todos: [{ content: "pivot", status: "in_progress", priority: "high" }] }),
+      )
+      expect(blocked.type).toBe("error")
+      expect(resultText(blocked)).toContain("unfinished task(s)")
+      expect(resultText(blocked)).toContain(before[0]!.id!)
+
+      const wrongConfirm = yield* executeTool(
+        registry,
+        call({
+          action: "replace",
+          todos: [{ content: "pivot", status: "in_progress", priority: "high" }],
+          confirm: [before[0]!.id],
+        }),
+      )
+      expect(wrongConfirm.type).toBe("error")
+
+      const confirmed = yield* executeTool(
+        registry,
+        call({
+          action: "replace",
+          todos: [{ content: "pivot", status: "in_progress", priority: "high" }],
+          confirm: [before[0]!.id, before[1]!.id],
+        }),
+      )
+      expect(confirmed.type).toBe("text")
+      expect(resultText(confirmed)).toContain("Replaced the todo list")
+      const after = yield* service.get(sessionID)
+      expect(after).toHaveLength(1)
+      expect(after[0]!.id).not.toBe(before[0]!.id)
+      expect(withoutIds(after)).toEqual([{ content: "pivot", status: "in_progress", priority: "high" }])
+    }),
+  )
+
+  it.effect("replace on an empty or settled list seeds freely", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      yield* seed(registry, [{ content: "done thing", status: "completed", priority: "low" }])
+      assertions.length = 0
+
+      const result = yield* executeTool(
+        registry,
+        call({ action: "replace", todos: [{ content: "fresh", status: "pending", priority: "low" }] }),
+      )
+      expect(result.type).toBe("text")
+      expect(resultText(result)).toContain("Seeded")
+    }),
+  )
+
+  it.effect("add inserts after a target id and appends by default", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const service = yield* SessionTodo.Service
+      const settled = yield* seed(registry, [{ content: "anchor", status: "pending", priority: "low" }])
+      const anchor = structured(settled.output).todos[0]!.id!
+
+      yield* executeTool(
+        registry,
+        call({ action: "add", add: [{ content: "inserted", after: anchor }, { content: "tail" }] }),
+      )
+      const after = yield* service.get(sessionID)
+      expect(after.map((todo) => todo.content)).toEqual(["anchor", "inserted", "tail"])
+      expect(after[2]!.priority).toBe("medium")
+    }),
+  )
+
+  it.effect("edit rewords items and clears phases with an empty label", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const service = yield* SessionTodo.Service
+      const settled = yield* seed(registry, [
+        { content: "old text", status: "pending", priority: "low", phase: "Phase 1: schema" },
+      ])
+      const target = structured(settled.output).todos[0]!.id!
+
+      yield* executeTool(registry, call({ action: "edit", edit: [{ id: target, content: "new text", phase: "" }] }))
+      const after = yield* service.get(sessionID)
+      expect(after[0]!.content).toBe("new text")
+      expect(after[0]!.phase).toBeUndefined()
+      expect(after[0]!.id).toBe(target)
+    }),
+  )
+
+  it.effect("remove rejects a final list that violates the invariants", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const service = yield* SessionTodo.Service
+      const settled = yield* seed(registry, [
+        { content: "done", status: "completed", priority: "low" },
+        { content: "active", status: "in_progress", priority: "high" },
+        { content: "next", status: "pending", priority: "medium" },
+      ])
+      const active = structured(settled.output).todos[1]!.id!
+
+      const result = yield* executeTool(registry, call({ action: "remove", remove: [active] }))
+      expect(result.type).toBe("error")
+      expect(resultText(result)).toContain("invalid")
+      expect((yield* service.get(sessionID)).map((todo) => todo.content)).toEqual(["done", "active", "next"])
+    }),
+  )
+
+  it.effect("warns when a phase label appears in separate blocks", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const registry = yield* ToolRegistry.Service
+      const result = yield* executeTool(
+        registry,
+        call({
+          todos: [
+            { content: "a", status: "pending", priority: "low", phase: "P1" },
+            { content: "b", status: "in_progress", priority: "low", phase: "P2" },
+            { content: "c", status: "pending", priority: "low", phase: "P1" },
+          ],
+        }),
+      )
+      expect(result.type).toBe("text")
+      expect(resultText(result)).toContain('phase "P1" appears in separate blocks')
     }),
   )
 
@@ -118,28 +341,17 @@ describe("TodoWriteTool", () => {
 
       const result = yield* executeTool(
         registry,
-        call([
-          { content: "one", status: "in_progress", priority: "high" },
-          { content: "two", status: "in_progress", priority: "high" },
-        ]),
+        call({
+          todos: [
+            { content: "one", status: "in_progress", priority: "high" },
+            { content: "two", status: "in_progress", priority: "high" },
+          ],
+        }),
       )
-      expect(result).toEqual({ type: "error", value: expect.stringContaining("Only one task") })
+      expect(result.type).toBe("error")
+      expect(resultText(result)).toContain("Only one task")
       expect(assertions.length).toBe(0)
       expect(yield* service.get(sessionID)).toEqual([])
-    }),
-  )
-
-  it.effect("persists phase-grouped todos", () =>
-    Effect.gen(function* () {
-      yield* setup
-      const registry = yield* ToolRegistry.Service
-      const service = yield* SessionTodo.Service
-      const list: ReadonlyArray<SessionTodo.Info> = [
-        { content: "schema", status: "in_progress", priority: "high", phase: "Phase 1: schema" },
-      ]
-
-      yield* settleTool(registry, call(list))
-      expect(withoutIds(yield* service.get(sessionID))).toEqual([...list])
     }),
   )
 
@@ -148,17 +360,16 @@ describe("TodoWriteTool", () => {
       yield* setup
       const registry = yield* ToolRegistry.Service
       const service = yield* SessionTodo.Service
-      yield* service.update({ sessionID, todos: [{ content: "keep", status: "pending", priority: "low" }] })
+      yield* service.update({ sessionID, todos: [{ content: "blocked", status: "pending", priority: "low" }] })
       deny = true
 
-      expect(
-        yield* executeTool(registry, call([{ content: "blocked", status: "completed", priority: "high" }])),
-      ).toEqual({
-        type: "error",
-        value: expect.stringContaining("Blocked by permission rules"),
-      })
-      expect(withoutIds(yield* service.get(sessionID))).toEqual([{ content: "keep", status: "pending", priority: "low" }])
-      expect(assertions).toMatchObject([{ sessionID, action: "todowrite", resources: ["*"], save: ["*"] }])
+      const result = yield* executeTool(
+        registry,
+        call({ action: "add", add: [{ content: "new item" }] }),
+      )
+      expect(result.type).toBe("error")
+      expect(resultText(result)).toContain("Blocked by permission rules")
+      expect((yield* service.get(sessionID)).map((todo) => todo.content)).toEqual(["blocked"])
     }),
   )
 })

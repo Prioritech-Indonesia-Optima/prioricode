@@ -180,6 +180,105 @@ describe("SessionTodo.ensureIds", () => {
   })
 })
 
+describe("SessionTodo.apply", () => {
+  const info = SessionTodo.ensureIds([
+    { content: "active", status: "in_progress", priority: "high" },
+    { content: "next", status: "pending", priority: "low" },
+    { content: "done", status: "completed", priority: "low" },
+  ])
+  const id = (index: number) => info[index]!.id!
+
+  test("view renders the live list with ids and mutates nothing", () => {
+    const result = SessionTodo.apply(info, { action: "view" })
+    expect(result.ok).toBe(true)
+    expect(result.todos).toEqual(SessionTodo.ensureIds(info))
+    expect(result.text).toContain(`(${id(0)}) active`)
+  })
+
+  test("missing action without a todos list is rejected with the live list", () => {
+    const result = SessionTodo.apply(info, {})
+    expect(result.ok).toBe(false)
+    expect(result.text).toContain("Missing action")
+    expect(result.text).toContain("[>]")
+    expect(result.text).toContain("active")
+  })
+
+  test("replace confirm must be the exact unfinished set — subsets, supersets, and empties all fail", () => {
+    const fresh: SessionTodo.Info[] = [{ content: "pivot", status: "in_progress", priority: "high" }]
+    const subset = SessionTodo.apply(info, { action: "replace", todos: fresh, confirm: [id(0)] })
+    expect(subset.ok).toBe(false)
+    expect(subset.text).toContain("confirm")
+    const superset = SessionTodo.apply(info, {
+      action: "replace",
+      todos: fresh,
+      confirm: [id(0), id(1), id(2)],
+    })
+    expect(superset.ok).toBe(false)
+    const empty = SessionTodo.apply(info, { action: "replace", todos: fresh, confirm: [] })
+    expect(empty.ok).toBe(false)
+    const exact = SessionTodo.apply(info, { action: "replace", todos: fresh, confirm: [id(0), id(1)] })
+    expect(exact.ok).toBe(true)
+    expect(exact.text).toContain("Replaced")
+  })
+
+  test("add with an unknown after id rejects atomically", () => {
+    const result = SessionTodo.apply(info, { action: "add", add: [{ content: "x", after: "td_ffffffff" }] })
+    expect(result.ok).toBe(false)
+    expect(result.text).toContain("Unknown todo id")
+    expect(result.todos).toEqual(info)
+  })
+
+  test("removed ids are never re-minted into the same list", () => {
+    const removed = SessionTodo.apply(info, { action: "status", status: [{ id: id(1), status: "cancelled" }] })
+    expect(removed.ok).toBe(true)
+    const after = SessionTodo.apply(removed.todos, { action: "remove", remove: [id(1)] })
+    expect(after.ok).toBe(true)
+    const added = SessionTodo.apply(after.todos, { action: "add", add: [{ content: "new" }] })
+    expect(added.ok).toBe(true)
+    const ids = added.todos.map((todo) => todo.id)
+    expect(new Set(ids).size).toBe(ids.length)
+    expect(ids).not.toContain(id(1))
+  })
+
+  test("status batching avoids the one-in_progress deadlock", () => {
+    const result = SessionTodo.apply(info, {
+      action: "status",
+      status: [
+        { id: id(0), status: "completed" },
+        { id: id(1), status: "in_progress" },
+      ],
+    })
+    expect(result.ok).toBe(true)
+    expect(result.text).toContain("[x]")
+    expect(result.text).toContain("[>]")
+  })
+
+  test("single status without a partner hits the mid-flight rule with guidance", () => {
+    const result = SessionTodo.apply(info, { action: "status", status: [{ id: id(0), status: "completed" }] })
+    expect(result.ok).toBe(false)
+    expect(result.text).toContain("Batch the whole transition")
+  })
+
+  test("empty operation arrays are rejected", () => {
+    expect(SessionTodo.apply(info, { action: "status", status: [] }).ok).toBe(false)
+    expect(SessionTodo.apply(info, { action: "add", add: [] }).ok).toBe(false)
+    expect(SessionTodo.apply(info, { action: "edit", edit: [] }).ok).toBe(false)
+    expect(SessionTodo.apply(info, { action: "remove", remove: [] }).ok).toBe(false)
+  })
+
+  test("replace with a malformed final list is rejected before accept", () => {
+    const result = SessionTodo.apply([], {
+      action: "replace",
+      todos: [
+        { content: "a", status: "in_progress", priority: "low" },
+        { content: "b", status: "in_progress", priority: "low" },
+      ],
+    })
+    expect(result.ok).toBe(false)
+    expect(result.text).toContain("Only one task")
+  })
+})
+
 describe("SessionTodo.validate", () => {
   const todo = (status: SessionTodo.Info["status"]) => ({ content: status, status, priority: "low" as const })
 

@@ -1,14 +1,9 @@
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
-import DESCRIPTION_WRITE from "./todowrite.txt"
+import { TodoWriteInput } from "@prioricode/core/tool/todowrite-input"
 import { Todo } from "../session/todo"
 
-export const Parameters = Schema.Struct({
-  todos: Schema.mutable(Schema.Array(Todo.Info)).annotate({
-    description:
-      "The complete updated todo list. Every task: content, one of pending|in_progress|completed|cancelled, priority high|medium|low, and an optional phase label that groups consecutive tasks into one collapsible section.",
-  }),
-})
+export const Parameters = TodoWriteInput.Input
 
 type Metadata = {
   todos: Todo.Info[]
@@ -20,30 +15,32 @@ export const TodoWriteTool = Tool.define<typeof Parameters, Metadata, Todo.Servi
     const todo = yield* Todo.Service
 
     return {
-      description: DESCRIPTION_WRITE,
+      description: TodoWriteInput.DESCRIPTION,
       parameters: Parameters,
       execute: (params: Schema.Schema.Type<typeof Parameters>, ctx: Tool.Context<Metadata>) =>
         Effect.gen(function* () {
-          const problem = Todo.validate(params.todos)
-          if (problem) throw new Error(`Invalid todo list: ${problem}`)
+          const result = Todo.apply(yield* todo.get(ctx.sessionID), params)
+          if (!result.ok) throw new Error(result.text)
 
-          yield* ctx.ask({
-            permission: "todowrite",
-            patterns: ["*"],
-            always: ["*"],
-            metadata: {},
-          })
+          if (TodoWriteInput.isMutation(params)) {
+            yield* ctx.ask({
+              permission: "todowrite",
+              patterns: ["*"],
+              always: ["*"],
+              metadata: {},
+            })
 
-          yield* todo.update({
-            sessionID: ctx.sessionID,
-            todos: params.todos,
-          })
+            yield* todo.update({
+              sessionID: ctx.sessionID,
+              todos: result.todos,
+            })
+          }
 
           return {
-            title: `${params.todos.filter((x) => x.status !== "completed").length} todos`,
-            output: JSON.stringify(params.todos, null, 2),
+            title: `${result.todos.filter((x) => x.status !== "completed").length} todos`,
+            output: result.text,
             metadata: {
-              todos: params.todos,
+              todos: [...result.todos],
             },
           }
         }),
