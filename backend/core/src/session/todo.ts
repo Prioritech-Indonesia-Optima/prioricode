@@ -1,7 +1,7 @@
 export * as SessionTodo from "./todo"
 
 import { asc, eq } from "drizzle-orm"
-import { Context, Effect, Layer } from "effect"
+import { Clock, Context, Effect, Layer } from "effect"
 import { SessionTodo } from "@prioricode/schema/session-todo"
 import { Database } from "../database/database"
 import { makeLocationNode } from "../effect/app-node"
@@ -53,6 +53,22 @@ export const toInfo = (row: {
 })
 
 const MARK: Record<Info["status"], string> = { pending: "[ ]", in_progress: "[>]", completed: "[x]", cancelled: "[-]" }
+
+/** How long an unfinished, untouched todo list waits before it nags via context. */
+export const STALE_AFTER_MS = 120_000
+
+/** Stable prefix of the unattended-list reminder; dedup scanners match on it. */
+export const REMINDER_HEADER = "The session todo list has unfinished items and has gone unattended."
+
+export const reminderText = (todos: ReadonlyArray<Info>, touchedAt: number, now: number) => {
+  const open = todos.filter((todo) => todo.status === "pending" || todo.status === "in_progress")
+  if (open.length === 0 || touchedAt === 0 || now - touchedAt < STALE_AFTER_MS) return ""
+  return [
+    REMINDER_HEADER,
+    "The stored list — not your recollection — is the plan in force:\n\n" + snapshot(todos, { ids: true }),
+    'Mutate it in place with todowrite (status/add/edit/remove) as work progresses, and mark items completed only when they are truly done and verified.',
+  ].join("\n\n")
+}
 
 export const snapshot = (todos: ReadonlyArray<Info>, options?: { readonly ids?: boolean }) => {
   if (todos.length === 0) return ""
@@ -141,12 +157,7 @@ const phaseWarning = (todos: ReadonlyArray<Info>) => {
 const applied = (todos: ReadonlyArray<Info>, headline: string): ApplyResult => ({
   ok: true,
   todos,
-  text: [
-    `${headline} — ${summary(todos)}`,
-    ...phaseWarning(todos),
-    "",
-    render(todos),
-  ].join("\n"),
+  text: [`${headline} — ${summary(todos)}`, ...phaseWarning(todos), "", render(todos)].join("\n"),
 })
 
 /**
@@ -221,7 +232,8 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
     return applied(fresh, `Added ${input.add.length} item(s)`)
   }
   if (action === "status") {
-    if (!input.status || input.status.length === 0) return rejected("`status` needs at least one {id, status} change.", base)
+    if (!input.status || input.status.length === 0)
+      return rejected("`status` needs at least one {id, status} change.", base)
     const missing = [...new Set(input.status.map((change) => change.id))].filter(
       (id) => !base.some((todo) => todo.id === id),
     )
@@ -274,6 +286,8 @@ export interface Interface {
     readonly todos: ReadonlyArray<Info>
   }) => Effect.Effect<void>
   readonly get: (sessionID: SessionSchema.ID) => Effect.Effect<ReadonlyArray<Info>>
+  /** Reminder text when an unfinished list has gone unattended; "" when current. */
+  readonly reminder: (sessionID: SessionSchema.ID) => Effect.Effect<string>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/SessionTodo") {}
@@ -325,7 +339,20 @@ const layer = Layer.effect(
       return ensureIds(rows.map(toInfo))
     })
 
-    return Service.of({ update, get })
+    const reminder = Effect.fn("SessionTodo.reminder")(function* (sessionID: SessionSchema.ID) {
+      const rows = yield* db
+        .select({ status: TodoTable.status, updated: TodoTable.time_updated })
+        .from(TodoTable)
+        .where(eq(TodoTable.session_id, sessionID))
+        .all()
+        .pipe(Effect.orDie)
+      if (!rows.some((row) => row.status === "pending" || row.status === "in_progress")) return ""
+      const touched = Math.max(...rows.map((row) => row.updated))
+      const now = yield* Clock.currentTimeMillis
+      return reminderText(yield* get(sessionID), touched, now)
+    })
+
+    return Service.of({ update, get, reminder })
   }),
 )
 

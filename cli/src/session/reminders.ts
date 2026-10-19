@@ -6,9 +6,21 @@ import { FSUtil } from "@prioricode/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
 import { PartID } from "./schema"
 import { Session } from "./session"
+import { Todo } from "./todo"
 import BUILD_SWITCH from "./prompt/build-switch.txt"
 import PLAN_MODE from "./prompt/plan-mode.txt"
 import AUTO_MODE from "./prompt/auto-mode.txt"
+
+// A stale unattended todo list is re-anchored at most once until the model
+// touches the list again; the header marker identifies past injections.
+const recentlyNagged = (messages: SessionV1.WithParts[]) =>
+  messages
+    .slice(-24)
+    .some(
+      (message) =>
+        message.info.role === "user" &&
+        message.parts.some((part) => part.type === "text" && part.synthetic && part.text.startsWith(Todo.REMINDER_HEADER)),
+    )
 
 export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
   messages: SessionV1.WithParts[]
@@ -17,8 +29,22 @@ export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
 }) {
   const fsys = yield* FSUtil.Service
   const sessions = yield* Session.Service
+  const todo = yield* Todo.Service
   const userMessage = input.messages.findLast((msg) => msg.info.role === "user")
   if (!userMessage) return input.messages
+
+  const nag = yield* todo.reminder(input.session.id)
+  if (nag !== "" && !recentlyNagged(input.messages)) {
+    const part = yield* sessions.updatePart({
+      id: PartID.ascending(),
+      messageID: userMessage.info.id,
+      sessionID: userMessage.info.sessionID,
+      type: "text",
+      text: nag,
+      synthetic: true,
+    })
+    userMessage.parts.push(part)
+  }
 
   const assistantMessage = input.messages.findLast((msg) => msg.info.role === "assistant")
   const ctx = yield* InstanceState.context

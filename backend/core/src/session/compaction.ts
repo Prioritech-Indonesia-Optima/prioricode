@@ -350,7 +350,7 @@ export const buildPrompt = (input: {
     input.todos === undefined || input.todos.trim() === ""
       ? []
       : [
-          `The session's live todo list, read directly from storage — more authoritative than anything recalled from the conversation:\n\n<current-todos>\n${input.todos.trim()}\n</current-todos>\nCopy every open item into "Work State / Active" with its exact content and phase heading, finished items into "Completed", and base "Next Move" on the first open item in list order.`,
+          `The session's live todo list, read directly from storage — more authoritative than anything recalled from the conversation:\n\n<current-todos>\n${input.todos.trim()}\n</current-todos>\nCopy every open item into "Work State / Active" with its exact content, its (td_…) id, and its phase heading, finished items into "Completed" with their ids, and base "Next Move" on the first open item in list order. Post-compaction work addresses items by those ids — never lose one.`,
         ]
   const focus =
     input.instructions === undefined || input.instructions.trim() === ""
@@ -423,7 +423,7 @@ export const make = (dependencies: Dependencies) => {
     }
     const output = input.request?.generation?.maxTokens ?? input.model.route.defaults.limits?.output ?? 0
     const summaryOutput = Math.min(output || SUMMARY_OUTPUT_TOKENS, SUMMARY_OUTPUT_TOKENS)
-    const todosText = SessionTodo.snapshot(yield* dependencies.todos(input.sessionID))
+    const todosText = SessionTodo.snapshot(yield* dependencies.todos(input.sessionID), { ids: true })
     const prior = input.entries.find((entry) => entry.message.type === "compaction")?.message
     const planned = plan(
       input.entries,

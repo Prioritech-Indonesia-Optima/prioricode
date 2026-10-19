@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test"
 import { asc } from "drizzle-orm"
 import { Effect } from "effect"
+import * as TestClock from "effect/testing/TestClock"
 import { Database } from "@prioricode/core/database/database"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
@@ -105,14 +106,24 @@ describe("SessionTodo", () => {
           sessionID,
           todos: [
             { id: expect.stringMatching(/^td_[0-9a-f]{8}$/), content: "second", status: "pending", priority: "low" },
-            { id: expect.stringMatching(/^td_[0-9a-f]{8}$/), content: "first", status: "in_progress", priority: "high" },
+            {
+              id: expect.stringMatching(/^td_[0-9a-f]{8}$/),
+              content: "first",
+              status: "in_progress",
+              priority: "high",
+            },
           ],
         },
         {
           sessionID,
           todos: [
             { id: stored[1].id, content: "first", status: "completed", priority: "high" },
-            { id: expect.stringMatching(/^td_[0-9a-f]{8}$/), content: "replacement", status: "completed", priority: "medium" },
+            {
+              id: expect.stringMatching(/^td_[0-9a-f]{8}$/),
+              content: "replacement",
+              status: "completed",
+              priority: "medium",
+            },
           ],
         },
         { sessionID, todos: [] },
@@ -136,6 +147,23 @@ describe("SessionTodo", () => {
       // the read repairs addressing in memory only; the stored row still has no id
       const rows = yield* db.select().from(TodoTable).all().pipe(Effect.orDie)
       expect(rows[0]!.id).toBeNull()
+    }),
+  )
+
+  it.effect("reminder stays silent while the list is fresh and nags once unattended", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const todos = yield* SessionTodo.Service
+      const wallNow = Date.now()
+      yield* TestClock.setTime(wallNow + 1_000)
+      yield* todos.update({ sessionID, todos: [{ content: "open item", status: "pending", priority: "low" }] })
+      expect(yield* todos.reminder(sessionID)).toBe("")
+
+      yield* TestClock.setTime(wallNow + SessionTodo.STALE_AFTER_MS + 61_000)
+      const nag = yield* todos.reminder(sessionID)
+      expect(nag).toContain(SessionTodo.REMINDER_HEADER)
+      const stored = yield* todos.get(sessionID)
+      expect(nag).toContain(`(${stored[0]!.id}) open item`)
     }),
   )
 
@@ -276,6 +304,33 @@ describe("SessionTodo.apply", () => {
     })
     expect(result.ok).toBe(false)
     expect(result.text).toContain("Only one task")
+  })
+})
+
+describe("SessionTodo.reminderText", () => {
+  const list = SessionTodo.ensureIds([
+    { content: "open work", status: "pending", priority: "low", phase: "Phase 1: schema" },
+  ])
+
+  test("stays silent while the list is fresh, empty, or settled", () => {
+    const touched = 1_000_000
+    expect(SessionTodo.reminderText(list, touched, touched + SessionTodo.STALE_AFTER_MS - 1)).toBe("")
+    expect(SessionTodo.reminderText(list, 0, 10_000_000)).toBe("")
+    expect(SessionTodo.reminderText([], touched, touched + 999_999)).toBe("")
+    expect(
+      SessionTodo.reminderText(
+        [{ content: "done", status: "completed", priority: "low" }],
+        touched,
+        touched + 999_999,
+      ),
+    ).toBe("")
+  })
+
+  test("nags with the checklist and ids once unattended", () => {
+    const nag = SessionTodo.reminderText(list, 1_000_000, 1_000_000 + SessionTodo.STALE_AFTER_MS)
+    expect(nag).toStartWith(SessionTodo.REMINDER_HEADER)
+    expect(nag).toContain("### Phase 1: schema")
+    expect(nag).toContain(`(${list[0]!.id}) open work`)
   })
 })
 

@@ -54,6 +54,7 @@ import { Database } from "@prioricode/core/database/database"
 import { Model } from "@prioricode/core/model"
 import { Provider as ProviderSchema } from "@prioricode/core/provider"
 import { SessionReminders } from "./reminders"
+import { Todo } from "./todo"
 import { SessionTools } from "./tools"
 import { LLMEvent } from "@prioricode/llm"
 
@@ -120,6 +121,7 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const status = yield* SessionStatus.Service
     const sessions = yield* Session.Service
+    const todo = yield* Todo.Service
     const agents = yield* Agent.Service
     const provider = yield* Provider.Service
     const processor = yield* SessionProcessor.Service
@@ -1258,6 +1260,7 @@ const layer = Layer.effect(
             Effect.provideService(RuntimeFlags.Service, flags),
             Effect.provideService(FSUtil.Service, fsys),
             Effect.provideService(Session.Service, sessions),
+            Effect.provideService(Todo.Service, todo),
           )
 
           const msg: SessionV1.Assistant = {
@@ -1761,6 +1764,7 @@ export const node = LayerNode.make({
   deps: [
     SessionStatus.node,
     Session.node,
+    Todo.node,
     Agent.node,
     Provider.node,
     SessionProcessor.node,

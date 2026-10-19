@@ -453,7 +453,7 @@ const layer = Layer.effect(
       )
       const msgs = structuredClone(selected.head)
       yield* plugin.trigger("experimental.chat.messages.transform", {}, { messages: msgs })
-      const todosText = Todo.snapshot(yield* todo.get(input.sessionID))
+      const todosText = Todo.snapshot(yield* todo.get(input.sessionID), { ids: true })
       const shrunk = yield* shrinkHeadToFit({ head: msgs, cfg, model, previousSummary, todos: todosText || undefined })
       const conversation = shrunk.conversation
       const nextPrompt =

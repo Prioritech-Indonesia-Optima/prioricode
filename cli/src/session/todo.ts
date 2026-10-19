@@ -1,6 +1,6 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { SessionID } from "./schema"
-import { Effect, Layer, Context } from "effect"
+import { Clock, Effect, Layer, Context } from "effect"
 import { Database } from "@prioricode/core/database/database"
 import { eq } from "drizzle-orm"
 import { asc } from "drizzle-orm"
@@ -19,10 +19,15 @@ export const snapshot = SessionTodoCore.snapshot
 export const ensureIds = SessionTodoCore.ensureIds
 export const toInfo = SessionTodoCore.toInfo
 export const apply = SessionTodoCore.apply
+export const reminderText = SessionTodoCore.reminderText
+export const STALE_AFTER_MS = SessionTodoCore.STALE_AFTER_MS
+export const REMINDER_HEADER = SessionTodoCore.REMINDER_HEADER
 
 export interface Interface {
   readonly update: (input: { sessionID: SessionID; todos: ReadonlyArray<Info> }) => Effect.Effect<void>
   readonly get: (sessionID: SessionID) => Effect.Effect<Info[]>
+  /** Reminder text when an unfinished list has gone unattended; "" when current. */
+  readonly reminder: (sessionID: SessionID) => Effect.Effect<string>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/SessionTodo") {}
@@ -71,7 +76,20 @@ const layer = Layer.effect(
       return ensureIds(rows.map(toInfo))
     })
 
-    return Service.of({ update, get })
+    const reminder = Effect.fn("Todo.reminder")(function* (sessionID: SessionID) {
+      const rows = yield* db
+        .select({ status: TodoTable.status, updated: TodoTable.time_updated })
+        .from(TodoTable)
+        .where(eq(TodoTable.session_id, sessionID))
+        .all()
+        .pipe(Effect.orDie)
+      if (!rows.some((row) => row.status === "pending" || row.status === "in_progress")) return ""
+      const touched = Math.max(...rows.map((row) => row.updated))
+      const now = yield* Clock.currentTimeMillis
+      return reminderText(yield* get(sessionID), touched, now)
+    })
+
+    return Service.of({ update, get, reminder })
   }),
 )
 
