@@ -121,6 +121,9 @@ export const dict = {
   "command.project.index": "Անցնել նախագծին {{index}}",
   "command.provider.connect": "Միացեք մատակարարին",
   "command.server.switch": "Փոխարկել սերվեր",
+  "command.server.restart": "Վերագործարկել բեքենդը",
+  "command.server.restart.description":
+    "Վերբեռնել բեքենդը՝ հավելվածը չփակելով — վերամիացնում է MCP սերվերներն ու տերմինալները և հաշվի է առնում կազմաձևման փոփոխությունները",
   "command.settings.open": "Բացել կարգավորումները",
   "command.session.previous": "Նախորդ նիստ",
   "command.session.next": "Հաջորդ նիստ",
@@ -601,6 +604,8 @@ export const dict = {
   "toast.theme.title": "Թեմա է փոխվել",
   "toast.scheme.title": "Գունային սխեման",
   "toast.workspace.enabled.title": "Աշխատանքային տարածքները միացված են",
+  "toast.server.restart.title": "Բեքենդը վերագործարկվել է",
+  "toast.server.restart.failed": "Վերագործարկումը ձախողվեց",
   "toast.workspace.enabled.description": "Բազմաթիվ աշխատանքային ծառեր այժմ ցուցադրված են կողագոտում",
   "toast.workspace.disabled.title": "Աշխատանքային տարածքներն անջատված են",
   "toast.workspace.disabled.description": "Միայն հիմնական աշխատանքային ծառը ցուցադրված է կողագոտում",

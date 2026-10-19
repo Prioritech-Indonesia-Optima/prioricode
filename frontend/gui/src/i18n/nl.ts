@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "Ga naar project {{index}}",
   "command.provider.connect": "Verbinding maken met aanbieder",
   "command.server.switch": "Van server wisselen",
+  "command.server.restart": "Backend opnieuw opstarten",
+  "command.server.restart.description":
+    "Laad de backend opnieuw in zonder de app te sluiten — herverbindt met MCP-servers en terminals en neemt wijzigingen in de configuratie over",
   "command.settings.open": "Instellingen openen",
   "command.session.previous": "Vorige sessie",
   "command.session.next": "Volgende sessie",
@@ -603,6 +606,8 @@ export const dict = {
   "toast.theme.title": "Thema gewijzigd",
   "toast.scheme.title": "Kleurenschema",
   "toast.workspace.enabled.title": "Werkruimten ingeschakeld",
+  "toast.server.restart.title": "Backend opnieuw gestart",
+  "toast.server.restart.failed": "Opnieuw opstarten mislukt",
   "toast.workspace.enabled.description": "Er worden nu meerdere worktrees weergegeven in de zijbalk",
   "toast.workspace.disabled.title": "Werkruimten uitgeschakeld",
   "toast.workspace.disabled.description": "Alleen de hoofdworktree wordt weergegeven in de zijbalk",

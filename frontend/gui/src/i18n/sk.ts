@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "Prepnúť na projekt {{index}}",
   "command.provider.connect": "Pripojiť poskytovateľa",
   "command.server.switch": "Prepnúť server",
+  "command.server.restart": "Reštartovať backend",
+  "command.server.restart.description":
+    "Znova načíta backend bez zatvárania aplikácie — opätovne pripojí MCP servery a terminály a zohľadní zmeny konfigurácie",
   "command.settings.open": "Otvoriť nastavenia",
   "command.session.previous": "Predchádzajúca relácia",
   "command.session.next": "Ďalšia relácia",
@@ -596,6 +599,8 @@ export const dict = {
   "toast.theme.title": "Téma zmenená",
   "toast.scheme.title": "Farebná schéma",
   "toast.workspace.enabled.title": "Pracovné priestory povolené",
+  "toast.server.restart.title": "Backend reštartovaný",
+  "toast.server.restart.failed": "Reštart zlyhal",
   "toast.workspace.enabled.description": "Viac pracovných stromov je teraz zobrazených v postrannom paneli",
   "toast.workspace.disabled.title": "Pracovné priestory zakázané",
   "toast.workspace.disabled.description": "V postrannom paneli je zobrazený len hlavný pracovný strom",

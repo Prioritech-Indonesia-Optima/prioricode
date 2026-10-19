@@ -123,6 +123,9 @@ export const dict = {
   "command.project.index": "Skiptu yfir í verkefnið {{index}}",
   "command.provider.connect": "Tengja þjónustuveitu",
   "command.server.switch": "Skipta um netþjón",
+  "command.server.restart": "Endurræsa backend",
+  "command.server.restart.description":
+    "Endurhlaða backend-i án þess að loka forritinu — endurtengir MCP netþjóna og skjáhermi og virkjar breytingar á stillingum",
   "command.settings.open": "Opna stillingar",
   "command.session.previous": "Fyrri seta",
   "command.session.next": "Næsta seta",
@@ -601,6 +604,8 @@ export const dict = {
   "toast.theme.title": "Þema skipt",
   "toast.scheme.title": "Litasamsetning",
   "toast.workspace.enabled.title": "Vinnusvæði virkt",
+  "toast.server.restart.title": "Backend endurræstur",
+  "toast.server.restart.failed": "Endurræsing mistókst",
   "toast.workspace.enabled.description": "Mörg vinnutré eru nú sýnd í hliðarstikunni",
   "toast.workspace.disabled.title": "Vinnusvæði óvirk",
   "toast.workspace.disabled.description": "Aðeins aðalvinnutréð er sýnt í hliðarstikunni",

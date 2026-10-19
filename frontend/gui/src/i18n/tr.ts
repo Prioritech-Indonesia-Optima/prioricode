@@ -133,6 +133,9 @@ export const dict = {
   "command.project.index": "{{index}} numaralı projeye geç",
   "command.provider.connect": "Sağlayıcı bağla",
   "command.server.switch": "Sunucu değiştir",
+  "command.server.restart": "Backend'i yeniden başlat",
+  "command.server.restart.description":
+    "Uygulamayı kapatmadan backend'i yeniden yükleyin — MCP sunucularını ve terminalleri yeniden bağlar ve yapılandırma değişikliklerini alır",
   "command.settings.open": "Ayarları aç",
   "command.session.previous": "Önceki oturum",
   "command.session.next": "Sonraki oturum",
@@ -639,6 +642,8 @@ export const dict = {
   "toast.scheme.title": "Renk şeması",
 
   "toast.workspace.enabled.title": "Çalışma alanları etkinleştirildi",
+  "toast.server.restart.title": "Backend yeniden başlatıldı",
+  "toast.server.restart.failed": "Yeniden başlatma başarısız oldu",
   "toast.workspace.enabled.description": "Kenar çubuğunda birden fazla çalışma ağacı gösterilecek",
   "toast.workspace.disabled.title": "Çalışma alanları devre dışı bırakıldı",
   "toast.workspace.disabled.description": "Kenar çubuğunda yalnızca ana çalışma ağacı gösterilecek",

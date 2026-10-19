@@ -121,6 +121,9 @@ export const dict = {
   "command.project.index": "Canvia al projecte {{index}}",
   "command.provider.connect": "Connecta el proveïdor",
   "command.server.switch": "Canvia de servidor",
+  "command.server.restart": "Reinicia el backend",
+  "command.server.restart.description":
+    "Torna a carregar el backend sense tancar l'aplicació — torna a connectar els servidors MCP i els terminals i incorpora els canvis de configuració",
   "command.settings.open": "Obre la configuració",
   "command.session.previous": "Sessió anterior",
   "command.session.next": "Sessió següent",
@@ -600,6 +603,8 @@ export const dict = {
   "toast.language.description": "S'ha canviat a {{language}}",
   "toast.theme.title": "S'ha canviat el tema",
   "toast.scheme.title": "Esquema de colors",
+  "toast.server.restart.title": "S'ha reiniciat el backend",
+  "toast.server.restart.failed": "El reinici ha fallat",
   "toast.workspace.enabled.title": "Espais de treball habilitats",
   "toast.workspace.enabled.description": "Ara es mostren diversos arbres de treball a la barra lateral",
   "toast.workspace.disabled.title": "Espais de treball desactivats",

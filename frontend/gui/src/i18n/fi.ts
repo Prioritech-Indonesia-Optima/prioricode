@@ -26,6 +26,9 @@ export const dict = {
   "command.project.index": "Vaihda projektiin {{index}}",
   "command.provider.connect": "Yhdistä palveluntarjoaja",
   "command.server.switch": "Vaihda palvelinta",
+  "command.server.restart": "Käynnistä backend uudelleen",
+  "command.server.restart.description":
+    "Lataa backend uudelleen ilman sovelluksen sulkemista — yhdistää MCP-palvelimet ja terminaalit uudelleen ja ottaa vastaan määritysmuutokset",
   "command.settings.open": "Avaa asetukset",
   "command.session.previous": "Edellinen istunto",
   "command.session.next": "Seuraava istunto",
@@ -493,6 +496,8 @@ export const dict = {
   "toast.theme.title": "Teema vaihdettu",
   "toast.scheme.title": "Värimalli",
   "toast.workspace.enabled.title": "Työtilat käytössä",
+  "toast.server.restart.title": "Backend käynnistetty uudelleen",
+  "toast.server.restart.failed": "Uudelleenkäynnistys epäonnistui",
   "toast.workspace.enabled.description": "Sivupalkissa näkyy nyt useita työpuita",
   "toast.workspace.disabled.title": "Työtilat pois käytöstä",
   "toast.workspace.disabled.description": "Vain päätyöpuu näkyy sivupalkissa",

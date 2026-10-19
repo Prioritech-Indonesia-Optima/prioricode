@@ -120,6 +120,9 @@ export const dict = {
   "command.project.index": "Префрли се на проект {{index}}",
   "command.provider.connect": "Поврзете провајдер",
   "command.server.switch": "Префрли сервер",
+  "command.server.restart": "Рестартирајте го бекендот",
+  "command.server.restart.description":
+    "Вчитајте го повторно бекендот без да ја затворите апликацијата — ги поврзува повторно MCP серверите и терминалите и ги применува промените во конфигурацијата",
   "command.settings.open": "Отворете ги поставките",
   "command.session.previous": "Претходна сесија",
   "command.session.next": "Следна сесија",
@@ -600,6 +603,8 @@ export const dict = {
   "toast.theme.title": "Темата е сменета",
   "toast.scheme.title": "Шема на бои",
   "toast.workspace.enabled.title": "Работните простори се овозможени",
+  "toast.server.restart.title": "Бекендот е рестартиран",
+  "toast.server.restart.failed": "Рестартирањето не успеа",
   "toast.workspace.enabled.description": "Повеќе работни дрва сега се прикажани во страничната лента",
   "toast.workspace.disabled.title": "Работните простори се оневозможени",
   "toast.workspace.disabled.description": "Само главното работно дрво е прикажано во страничната лента",

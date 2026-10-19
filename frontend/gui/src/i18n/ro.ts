@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "Comută la proiectul {{index}}",
   "command.provider.connect": "Conectează furnizorul",
   "command.server.switch": "Comută serverul",
+  "command.server.restart": "Repornește backend-ul",
+  "command.server.restart.description":
+    "Reîncarcă backend-ul fără să închizi aplicația — reconectează serverele MCP și terminalele și ia în calcul modificările de configurație",
   "command.settings.open": "Deschide setările",
   "command.session.previous": "Sesiunea anterioară",
   "command.session.next": "Sesiunea următoare",
@@ -597,6 +600,8 @@ export const dict = {
   "toast.theme.title": "Tema a fost schimbată",
   "toast.scheme.title": "Paletă de culori",
   "toast.workspace.enabled.title": "Spații de lucru activate",
+  "toast.server.restart.title": "Backend repornit",
+  "toast.server.restart.failed": "Reporneală eșuată",
   "toast.workspace.enabled.description": "Mai multe worktree-uri sunt afișate acum în bara laterală",
   "toast.workspace.disabled.title": "Spații de lucru dezactivate",
   "toast.workspace.disabled.description": "Doar worktree-ul principal este afișat în bara laterală",

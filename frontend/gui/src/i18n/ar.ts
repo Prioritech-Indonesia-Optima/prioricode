@@ -125,6 +125,9 @@ export const dict = {
   "command.project.index": "التبديل إلى المشروع {{index}}",
   "command.provider.connect": "اتصال بموفر",
   "command.server.switch": "تبديل الخادم",
+  "command.server.restart": "إعادة تشغيل الطرف الخلفي",
+  "command.server.restart.description":
+    "إعادة تحميل الطرف الخلفي دون إغلاق التطبيق — يعيد الاتصال بخوادم MCP والمحطات الطرفية، ويطبّق تغييرات التكوين",
   "command.settings.open": "فتح الإعدادات",
   "command.session.previous": "الجلسة السابقة",
   "command.session.next": "الجلسة التالية",
@@ -593,6 +596,8 @@ export const dict = {
   "toast.language.description": "تم التبديل إلى {{language}}",
   "toast.theme.title": "تم تبديل السمة",
   "toast.scheme.title": "مخطط الألوان",
+  "toast.server.restart.title": "تمت إعادة تشغيل الطرف الخلفي",
+  "toast.server.restart.failed": "فشل إعادة التشغيل",
   "toast.workspace.enabled.title": "تم تمكين مساحات العمل",
   "toast.workspace.enabled.description": "تُعرض الآن عدة أشجار عمل في الشريط الجانبي",
   "toast.workspace.disabled.title": "تم تعطيل مساحات العمل",

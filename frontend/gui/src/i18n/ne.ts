@@ -120,6 +120,9 @@ export const dict: Record<string, string> = {
   "command.project.index": "परियोजना {{index}} मा स्विच गर्नुहोस्",
   "command.provider.connect": "प्रदायक जडान गर्नुहोस्",
   "command.server.switch": "सर्भर स्विच गर्नुहोस्",
+  "command.server.restart": "ब्यकएन्ड पुन: सुरु गरियो",
+  "command.server.restart.description":
+    "एप बन्द नगरी ब्यकएन्ड पुन: लोड गरियोहोस् — MCP सर्भरहरू र टर्मिनलहरू पुन: जडान गर्छ र कन्फिगररेसन परिवर्तनहरू ग्रहण गर्छ",
   "command.settings.open": "सेटिङ्हरू खोल्नुहोस्",
   "command.session.previous": "अघिल्लो सत्र",
   "command.session.next": "अर्को सत्र",
@@ -598,6 +601,8 @@ export const dict: Record<string, string> = {
   "toast.theme.title": "विषयवस्तु बदलियो",
   "toast.scheme.title": "रंग योजना",
   "toast.workspace.enabled.title": "कार्यस्थान सक्षम पारियो",
+  "toast.server.restart.title": "ब्यकएन्ड पुन: सुरु गरियो",
+  "toast.server.restart.failed": "पुन: सुरु गर्न असफल भयो",
   "toast.workspace.enabled.description": "बहु कार्य रूखहरू अब साइडबारमा देखाइएका छन्",
   "toast.workspace.disabled.title": "कार्यस्थान असक्षम पारियो",
   "toast.workspace.disabled.description": "साइडबारमा मुख्य कार्य रूख मात्र देखाइएको छ",

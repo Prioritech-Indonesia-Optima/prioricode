@@ -131,6 +131,9 @@ export const dict = {
   "command.project.index": "切換至專案 {{index}}",
   "command.provider.connect": "連線提供者",
   "command.server.switch": "切換伺服器",
+  "command.server.restart": "重新啟動後端",
+  "command.server.restart.description":
+    "重新載入後端而不關閉應用程式 — 重新連接 MCP 伺服器與終端機，並套用設定變更",
   "command.settings.open": "開啟設定",
   "command.session.previous": "上一個工作階段",
   "command.session.next": "下一個工作階段",
@@ -628,6 +631,8 @@ export const dict = {
   "toast.scheme.title": "配色方案",
 
   "toast.workspace.enabled.title": "工作區已啟用",
+  "toast.server.restart.title": "後端已重新啟動",
+  "toast.server.restart.failed": "重新啟動失敗",
   "toast.workspace.enabled.description": "側邊欄現在顯示多個工作樹",
   "toast.workspace.disabled.title": "工作區已停用",
   "toast.workspace.disabled.description": "側邊欄只顯示主工作樹",

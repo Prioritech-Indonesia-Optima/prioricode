@@ -120,6 +120,9 @@ export const dict = {
   "command.project.index": "Kalo te projekti {{index}}",
   "command.provider.connect": "Lidhni ofruesin",
   "command.server.switch": "Ndërro serverin",
+  "command.server.restart": "Rinis backend-in",
+  "command.server.restart.description":
+    "Ringarko backend-in pa mbyllur aplikacionin — rilidh serverët MCP dhe terminalët dhe zbaton ndryshimet e konfigurimit",
   "command.settings.open": "Hap cilësimet",
   "command.session.previous": "Sesioni i mëparshëm",
   "command.session.next": "Sesioni i ardhshëm",
@@ -599,6 +602,8 @@ export const dict = {
   "toast.theme.title": "Tema u ndërrua",
   "toast.scheme.title": "Skema e ngjyrave",
   "toast.workspace.enabled.title": "Hapësirat e punës janë aktivizuar",
+  "toast.server.restart.title": "Backend-i u rinis",
+  "toast.server.restart.failed": "Rinisja dështoi",
   "toast.workspace.enabled.description": "Pemët e shumta të punës shfaqen tani në shiritin anësor",
   "toast.workspace.disabled.title": "Hapësirat e punës janë çaktivizuar",
   "toast.workspace.disabled.description": "Vetëm pema kryesore e punës shfaqet në shiritin anësor",

@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "ወደ ፕሮጀክት {{index}}] ቀይር",
   "command.provider.connect": "አቅራቢን አገናኝ",
   "command.server.switch": "አገልጋይ ቀይር",
+  "command.server.restart": "ባክኤንድን ዳግም አስጀምር",
+  "command.server.restart.description":
+    "መተግበሪያውን ከመዝጋትዎ በፊት ባክኤንዱን ዳግም ይጫኑ — MCP አገልጋዮችን እና ተርሚናሎችን ዳግም ያገናኛል፣ የውቅር ለውጦችንም ይቀበላል",
   "command.settings.open": "ክፍት ቅንብሮች",
   "command.session.previous": "የቀድሞው ክፍለ ጊዜ",
   "command.session.next": "ቀጣይ ክፍለ ጊዜ",
@@ -589,6 +592,8 @@ export const dict = {
   "toast.theme.title": "ገጽታ ተቀይሯል",
   "toast.scheme.title": "የቀለም ንድፍ",
   "toast.workspace.enabled.title": "Workspace-ዎች ነቅተዋል",
+  "toast.server.restart.title": "ባክኤንዱ ዳግም ተጀምሯል",
+  "toast.server.restart.failed": "ዳግም ማስጀመር አልተሳካም",
   "toast.workspace.enabled.description": "በርካታ Git worktree-ዎች በጎን አሞሌ ላይ አሁን ይታያሉ",
   "toast.workspace.disabled.title": "Workspace-ዎች ተሰናክለዋል",
   "toast.workspace.disabled.description": "በጎን አሞሌው ላይ ዋናው Git worktree ብቻ ነው የሚታየው",

@@ -282,6 +282,11 @@ export const TuiThreadCommand = cmd({
             async saveTuiConfig(patch) {
               await TuiConfig.updatePatch(patch)
             },
+            // Same path as SIGUSR2: reload config from disk and dispose all instances;
+            // the event stream re-bootstraps the UI, like closing and reopening the app.
+            async restart() {
+              await withTimeout(client.call("reload", undefined), 15000)
+            },
             pluginHost: createLegacyTuiPluginHost(),
             directory: cwd,
             fetch: transport.fetch,

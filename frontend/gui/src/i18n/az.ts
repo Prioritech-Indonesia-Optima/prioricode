@@ -121,6 +121,9 @@ export const dict = {
   "command.project.index": "{{index}} nömrəli layihəyə keç",
   "command.provider.connect": "Provayderi qoş",
   "command.server.switch": "Serveri dəyiş",
+  "command.server.restart": "Backend-i yenidən başlat",
+  "command.server.restart.description":
+    "Tətbiqi bağlamadan backend-i yenidən yükləyin — MCP serverlərinə və terminallara yenidən qoşulur və konfiqurasiya dəyişikliklərini tətbiq edir",
   "command.settings.open": "Tənzimləmələri aç",
   "command.session.previous": "Əvvəlki sessiya",
   "command.session.next": "Növbəti sessiya",
@@ -604,6 +607,8 @@ export const dict = {
   "toast.theme.title": "Mövzu dəyişdirildi",
   "toast.scheme.title": "Rəng sxemi",
   "toast.workspace.enabled.title": "İş sahələri aktivləşdirildi",
+  "toast.server.restart.title": "Backend yenidən başlatıldı",
+  "toast.server.restart.failed": "Yenidən başlatma uğursuz oldu",
   "toast.workspace.enabled.description": "Birdən çox worktree indi yan paneldə göstərilir",
   "toast.workspace.disabled.title": "İş sahələri deaktiv edildi",
   "toast.workspace.disabled.description": "Yan paneldə yalnız əsas worktree göstərilir",

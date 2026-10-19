@@ -254,9 +254,12 @@ function SessionTimelineLoading(props: { serverKey: ServerConnection.Key }) {
   const remote = createMemo(() => !!conn() && !ServerConnection.local(conn()))
   const label = createMemo(() => (conn() ? serverName(conn()) : serverKeyLabel(props.serverKey)))
   return (
+    // size-full matches the contract SessionRouteFrame gives loaded content: the
+    // route outlet has a resolved height, but is not a flex parent, so flex-1
+    // here would collapse the block to the top-left instead of centering.
     <div
       data-component="session-timeline-loading"
-      class="flex-1 min-h-0 h-full flex flex-col items-center justify-center gap-4 p-6"
+      class="size-full flex flex-col items-center justify-center gap-4 p-6"
     >
       <LoaderV2 class="size-8" />
       <p class="text-14-regular text-text-weak text-center">

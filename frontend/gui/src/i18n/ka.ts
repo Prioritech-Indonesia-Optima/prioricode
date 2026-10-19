@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "პროექტზე გადართვა {{index}}",
   "command.provider.connect": "დააკავშირე პროვაიდერი",
   "command.server.switch": "სერვერის გადართვა",
+  "command.server.restart": "ბექენდის გადატვირთვა",
+  "command.server.restart.description":
+    "გადატვირთეთ ბექენდი აპის დახურვის გარეშე — ხელახლა აკავშირებს MCP სერვერებსა და ტერმინალებს და ანივთებს კონფიგურაციის ცვლილებებს",
   "command.settings.open": "გახსნა პარამეტრები",
   "command.session.previous": "წინა სესია",
   "command.session.next": "შემდეგი სესია",
@@ -597,6 +600,8 @@ export const dict = {
   "toast.theme.title": "თემა შეიცვალა",
   "toast.scheme.title": "ფერთა სქემა",
   "toast.workspace.enabled.title": "სამუშაო სივრცე ჩართულია",
+  "toast.server.restart.title": "ბექენდი გადატვირთულია",
+  "toast.server.restart.failed": "გადატვირთვა ვერ მოხერხდა",
   "toast.workspace.enabled.description": "მრავალი სამუშაო ხე ახლა ნაჩვენებია გვერდითა ზოლში",
   "toast.workspace.disabled.title": "სამუშაო სივრცე გამორთულია",
   "toast.workspace.disabled.description": "მხოლოდ ძირითადი სამუშაო ხე ნაჩვენებია გვერდითა ზოლში",

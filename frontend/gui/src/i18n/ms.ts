@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "Tukar ke projek {{index}}",
   "command.provider.connect": "Sambung penyedia",
   "command.server.switch": "Tukar pelayan",
+  "command.server.restart": "Mulakan semula pelayan belakang",
+  "command.server.restart.description":
+    "Muat semula pelayan belakang tanpa menutup aplikasi — menyambung semula pelayan MCP dan terminal serta mengambil perubahan konfigurasi",
   "command.settings.open": "Buka tetapan",
   "command.session.previous": "Sesi sebelum",
   "command.session.next": "Sesi seterusnya",
@@ -597,6 +600,8 @@ export const dict = {
   "toast.theme.title": "Tema telah ditukar",
   "toast.scheme.title": "Skema warna",
   "toast.workspace.enabled.title": "Ruang kerja diaktifkan",
+  "toast.server.restart.title": "Pelayan belakang telah dimulakan semula",
+  "toast.server.restart.failed": "Pemulakan semula gagal",
   "toast.workspace.enabled.description": "Beberapa worktree kini dipaparkan di bar sisi",
   "toast.workspace.disabled.title": "Ruang kerja dinyahaktifkan",
   "toast.workspace.disabled.description": "Hanya worktree utama dipaparkan di bar sisi",

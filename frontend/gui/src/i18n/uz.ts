@@ -121,6 +121,9 @@ export const dict = {
   "command.project.index": "{{index}} loyihasiga o'tish",
   "command.provider.connect": "Provayderga ulanish",
   "command.server.switch": "Serverni almashtirish",
+  "command.server.restart": "Backendni qayta ishga tushirish",
+  "command.server.restart.description":
+    "Ilovani yopmasdan backendni qayta yuklang — MCP serverlarni va terminalni qayta ulaydi va konfiguratsiya o'zgarishlarini qo'llaydi",
   "command.settings.open": "Sozlamalarni oching",
   "command.session.previous": "Oldingi sessiya",
   "command.session.next": "Keyingi sessiya",
@@ -600,6 +603,8 @@ export const dict = {
   "toast.theme.title": "Mavzu almashtirildi",
   "toast.scheme.title": "Rang sxemasi",
   "toast.workspace.enabled.title": "Ish joylari yoqilgan",
+  "toast.server.restart.title": "Backend qayta ishga tushirildi",
+  "toast.server.restart.failed": "Qayta ishga tushirish muvaffaqiyatsiz",
   "toast.workspace.enabled.description": "Endi yon panelda bir nechta ishchi daraxtlar ko'rsatilgan",
   "toast.workspace.disabled.title": "Ish joylari oʻchirilgan",
   "toast.workspace.disabled.description": "Yon panelda faqat asosiy ishchi daraxt ko'rsatilgan",

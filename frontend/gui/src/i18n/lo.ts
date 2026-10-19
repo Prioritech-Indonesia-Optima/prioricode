@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "ປ່ຽນເປັນໂຄງການ {{index}}",
   "command.provider.connect": "ເຊື່ອມຕໍ່ຜູ້ໃຫ້ບໍລິການ",
   "command.server.switch": "ສະຫຼັບເຊີບເວີ",
+  "command.server.restart": "ຣີສະຕາດເບັກອິງ",
+  "command.server.restart.description":
+    "ໂຫຼດເບັກອິງຄືນໃໝ່ໂດຍບໍ່ປິດແອັບ — ເຊື່ອມຕໍ່ເຊີບເວີ MCP ແລະສະຖານີຄືນ ແລະຮັບການປ່ຽນແປງການຕັ້ງຄ່າ",
   "command.settings.open": "ເປີດການຕັ້ງຄ່າ",
   "command.session.previous": "ເຊດຊັນທີ່ຜ່ານມາ",
   "command.session.next": "ເຊດຊັນຕໍ່ໄປ",
@@ -594,6 +597,8 @@ export const dict = {
   "toast.theme.title": "ປ່ຽນຮູບແບບສີສັນແລ້ວ",
   "toast.scheme.title": "ຮູບແບບສີ",
   "toast.workspace.enabled.title": "ພື້ນທີ່ເຮັດວຽກຖືກເປີດໃຊ້",
+  "toast.server.restart.title": "ເບັກອິງຣີສະຕາດແລ້ວ",
+  "toast.server.restart.failed": "ຣີສະຕາດບໍ່ສຳເລັດ",
   "toast.workspace.enabled.description": "ດຽວນີ້ Git worktree ຫຼາຍອັນສະແດງຢູ່ໃນແຖບດ້ານຂ້າງ",
   "toast.workspace.disabled.title": "ພື້ນທີ່ເຮັດວຽກຖືກປິດໄວ້",
   "toast.workspace.disabled.description": "ສະແດງສະເພາະ Git worktree ຫຼັກໃນແຖບດ້ານຂ້າງ",

@@ -120,6 +120,9 @@ export const dict = {
   "command.project.index": "به پروژه {{index}} بروید",
   "command.provider.connect": "ارائه دهنده را متصل کنید",
   "command.server.switch": "سوئیچ سرور",
+  "command.server.restart": "راه اندازی مجدد بک‌اند",
+  "command.server.restart.description":
+    "بارگذاری مجدد بک‌اند بدون بستن برنامه — دوباره سرورهای MCP و ترمینال‌ها را متصل می‌کند و تغییرات پیکربندی را اعمال می‌کند",
   "command.settings.open": "تنظیمات را باز کنید",
   "command.session.previous": "جلسه قبلی",
   "command.session.next": "جلسه بعدی",
@@ -597,6 +600,8 @@ export const dict = {
   "toast.theme.title": "تم عوض شد",
   "toast.scheme.title": "طرح رنگ",
   "toast.workspace.enabled.title": "فضاهای کاری فعال شد",
+  "toast.server.restart.title": "بک‌اند راه اندازی مجدد شد",
+  "toast.server.restart.failed": "راه اندازی مجدد ناموفق بود",
   "toast.workspace.enabled.description": "اکنون چندین ورک‌تری در نوار کناری نشان داده شده است",
   "toast.workspace.disabled.title": "فضاهای کاری غیرفعال است",
   "toast.workspace.disabled.description": "فقط ورک‌تری اصلی در نوار کناری نشان داده شده است",

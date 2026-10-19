@@ -120,6 +120,9 @@ export const dict = {
   "command.project.index": "Гузариш ба лоиҳа {{index}}",
   "command.provider.connect": "Провайдери пайвастшавӣ",
   "command.server.switch": "Гузаронидани сервер",
+  "command.server.restart": "Оғози дубораи бэкенд",
+  "command.server.restart.description":
+    "Бэкендро бемисли пӯшидани барнома аз нав оғоз кунед — серверҳои MCP ва терминаллоро дубора пайваст карда, тағйироти конфигуратсияро қабул мекунад",
   "command.settings.open": "Танзимотро кушоед",
   "command.session.previous": "Сессияи гузашта",
   "command.session.next": "Сеанси оянда",
@@ -600,6 +603,8 @@ export const dict = {
   "toast.theme.title": "Мавзӯъ иваз карда шуд",
   "toast.scheme.title": "Схемаи ранг",
   "toast.workspace.enabled.title": "Ҷойҳои корӣ фаъол карда шуданд",
+  "toast.server.restart.title": "Бэкенд дубора оғоз карда шуд",
+  "toast.server.restart.failed": "Оғози дубора муяссар нашуд",
   "toast.workspace.enabled.description": "Ҳоло дар панели паҳлӯ якчанд Git worktree нишон дода шудаанд",
   "toast.workspace.disabled.title": "Ҷойҳои корӣ ғайрифаъол",
   "toast.workspace.disabled.description": "Дар панели паҳлӯ танҳо Git worktree-и асосӣ нишон дода мешавад",

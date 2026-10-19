@@ -126,6 +126,9 @@ export const dict = {
   "command.project.index": "Chuyển sang dự án {{index}}",
   "command.provider.connect": "Kết nối nhà cung cấp",
   "command.server.switch": "Chuyển máy chủ",
+  "command.server.restart": "Khởi động lại backend",
+  "command.server.restart.description":
+    "Tải lại backend mà không cần đóng ứng dụng — kết nối lại các máy chủ MCP và terminal, đồng thời áp dụng các thay đổi cấu hình",
   "command.settings.open": "Mở cài đặt",
   "command.session.previous": "Phiên trước",
   "command.session.next": "Phiên tiếp theo",
@@ -607,6 +610,8 @@ export const dict = {
   "toast.theme.title": "Đã chuyển chủ đề",
   "toast.scheme.title": "Cách phối màu",
   "toast.workspace.enabled.title": "Đã bật không gian làm việc",
+  "toast.server.restart.title": "Đã khởi động lại backend",
+  "toast.server.restart.failed": "Không khởi động lại được",
   "toast.workspace.enabled.description": "Nhiều worktree hiện được hiển thị trên thanh bên",
   "toast.workspace.disabled.title": "Đã tắt không gian làm việc",
   "toast.workspace.disabled.description": "Chỉ worktree chính được hiển thị trong thanh bên",

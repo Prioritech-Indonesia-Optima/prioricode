@@ -190,7 +190,8 @@ export function modelVariants(output: string, model: string) {
   const rest = normalized.slice(start + marker.length)
   const next = rest.search(new RegExp(`^${escapeRegExp(provider)}/`, "m"))
   const metadata: unknown = JSON.parse((next < 0 ? rest : rest.slice(0, next)).trim())
-  if (!isRecord(metadata) || !isRecord(metadata.variants)) throw new Error(`Model variants not found: ${model}`)
+  if (!isRecord(metadata)) throw new Error(`Model variants not found: ${model}`)
+  if (!isRecord(metadata.variants)) return {}
   return metadata.variants
 }
 
@@ -280,10 +281,10 @@ Examples:
   const targets = pending.flatMap((plan) => plan.domains.map((domain) => domain.target))
   const baseline = await worktreeSnapshot()
   const variant = await resolveModelVariant(options.model, options.variant)
-  console.log(`Resolved ${options.model} (${options.variant}): ${JSON.stringify(variant)}`)
+  if (variant !== undefined) console.log(`Resolved ${options.model} (${options.variant}): ${JSON.stringify(variant)}`)
   const template = await commandTemplate()
   const results = await runPool(pending, options.concurrency, (plan) =>
-    translate(plan, template, options.model, options.variant).catch((error) => ({
+    translate(plan, template, options.model, variant === undefined ? undefined : options.variant).catch((error) => ({
       locale: plan.locale,
       code: 1,
       stdout: "",
@@ -391,7 +392,7 @@ async function translate(
   plan: { locale: Locale; language: string; domains: Domain[] },
   template: string,
   model: string,
-  variant: string,
+  variant: string | undefined,
 ) {
   const glossary = glossaryFile(plan.locale)
   const glossaryContent = (await Bun.file(path.join(root, glossary)).exists())
@@ -436,8 +437,7 @@ async function translate(
       agent,
       "--model",
       model,
-      "--variant",
-      variant,
+      ...(variant === undefined ? [] : ["--variant", variant]),
       "--title",
       `Translate app ${plan.locale}`,
       "--format",
@@ -529,6 +529,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 async function resolveModelVariant(model: string, variant: string) {
   const provider = model.split("/")[0]
   if (!provider || !model.includes("/")) throw new Error(`Model must use provider/model syntax: ${model}`)
+  // An explicit empty variant opts out of reasoning-effort selection entirely.
+  if (variant === "") return undefined
   const env = isolatedEnvironment()
   env.PRIORICODE_DISABLE_PROJECT_CONFIG = "1"
   const proc = Bun.spawn(["prioricode", "--pure", "models", provider, "--verbose"], {
@@ -541,6 +543,8 @@ async function resolveModelVariant(model: string, variant: string) {
   const result = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text(), proc.exited])
   if (result[2] !== 0) throw new Error(result[1] || `Unable to resolve model: ${model}`)
   const variants = modelVariants(result[0], model)
+  // Models that declare no reasoning variants (non-reasoning models) run without a variant.
+  if (Object.keys(variants).length === 0) return undefined
   if (!Object.hasOwn(variants, variant)) throw new Error(`Variant '${variant}' is not configured for ${model}.`)
   return variants[variant]
 }

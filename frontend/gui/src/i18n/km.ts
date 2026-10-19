@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "ប្តូរទៅគម្រោង {{index}}",
   "command.provider.connect": "ភ្ជាប់អ្នកផ្តល់សេវា",
   "command.server.switch": "ប្តូរម៉ាស៊ីនមេ",
+  "command.server.restart": "ចាប់ផ្ដើម backend ឡើងវិញ",
+  "command.server.restart.description":
+    "ផ្ទុក backend ឡើងវិញដោយមិនបិទកម្មវិធី — ភ្ជាប់ម៉ាស៊ីនមេ MCP និងស្ថានីយឡើងវិញ ហើយអនុវត្តការផ្លាស់ប្តូរការកំណត់",
   "command.settings.open": "បើកការកំណត់",
   "command.session.previous": "សម័យមុន។",
   "command.session.next": "សម័យបន្ទាប់",
@@ -595,6 +598,8 @@ export const dict = {
   "toast.language.description": "បានប្តូរទៅ {{language}}",
   "toast.theme.title": "បានប្តូររូបរាង",
   "toast.scheme.title": "ពណ៌ចម្រុះ",
+  "toast.server.restart.title": "បានចាប់ផ្ដើម backend ឡើងវិញ",
+  "toast.server.restart.failed": "ការចាប់ផ្ដើមឡើងវិញបានបរាជ័យ",
   "toast.workspace.enabled.title": "បានបើកកន្លែងធ្វើការ",
   "toast.workspace.enabled.description": "ឥឡូវនេះ Git worktree ជាច្រើនត្រូវបានបង្ហាញក្នុងរបារចំហៀង",
   "toast.workspace.disabled.title": "កន្លែងធ្វើការត្រូវបានបិទ",

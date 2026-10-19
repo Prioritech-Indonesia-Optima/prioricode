@@ -126,6 +126,9 @@ export const dict = {
   "command.project.index": "प्रोजेक्ट {{index}} पर स्विच करें",
   "command.provider.connect": "प्रोवाइडर कनेक्ट करें",
   "command.server.switch": "सर्वर स्विच करें",
+  "command.server.restart": "बैकएंड पुनः आरंभ करें",
+  "command.server.restart.description":
+    "बैकएंड को ऐप बंद किए बिना पुनः लोड करें — यह MCP सर्वर और टर्मिनल को फिर से कनेक्ट करता है और कॉन्फ़िगरेशन बदलावों को शामिल कर लेता है",
   "command.settings.open": "सेटिंग्स खोलें",
   "command.session.previous": "पिछला सेशन",
   "command.session.next": "अगला सेशन",
@@ -607,6 +610,8 @@ export const dict = {
   "toast.theme.title": "थीम स्विच किया गया",
   "toast.scheme.title": "रंग योजना",
   "toast.workspace.enabled.title": "वर्कस्पेस सक्षम",
+  "toast.server.restart.title": "बैकएंड पुनः आरंभ हो गया",
+  "toast.server.restart.failed": "पुनः आरंभ करने में विफल",
   "toast.workspace.enabled.description": "एकाधिक वर्कट्री अब साइडबार में दिखाए गए हैं",
   "toast.workspace.disabled.title": "वर्कस्पेस अक्षम",
   "toast.workspace.disabled.description": "साइडबार में केवल मुख्य वर्कट्री दिखाया गया है",

@@ -129,6 +129,9 @@ export const dict = {
   "command.project.index": "Перемкнути на проєкт {{index}}",
   "command.provider.connect": "Підключити провайдера",
   "command.server.switch": "Перемкнути сервер",
+  "command.server.restart": "Перезапустити бекенд",
+  "command.server.restart.description":
+    "Перезавантажити бекенд, не закриваючи програму — перепід'єднає сервери MCP та термінали і застосує зміни налаштувань",
   "command.settings.open": "Відкрити налаштування",
   "command.session.previous": "Попередня сесія",
   "command.session.next": "Наступна сесія",
@@ -649,6 +652,8 @@ export const dict = {
   "toast.scheme.title": "Кольорова схема",
 
   "toast.workspace.enabled.title": "Робочі області увімкнено",
+  "toast.server.restart.title": "Бекенд перезапущено",
+  "toast.server.restart.failed": "Не вдалося перезапустити",
   "toast.workspace.enabled.description": "Кілька робочих дерев тепер відображаються на бічній панелі",
   "toast.workspace.disabled.title": "Робочі області вимкнено",
   "toast.workspace.disabled.description": "Тільки головне робоче дерево відображається на бічній панелі",

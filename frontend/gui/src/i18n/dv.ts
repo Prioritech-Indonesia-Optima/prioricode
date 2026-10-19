@@ -122,6 +122,9 @@ export const dict = {
   "command.project.index": "ޕްރޮޖެކްޓް {{index}} އަށް ބަދަލުވާށެވެ",
   "command.provider.connect": "ޕްރޮވައިޑަރ ގުޅުވާށެވެ",
   "command.server.switch": "ސަރވަރ ބަދަލުކުރުން",
+  "command.server.restart": "ބެކެންޑް ރީސްޓާޓް ކުރުން",
+  "command.server.restart.description":
+    "އެޕް ނުބަންދު ކޮށް ބެކެންޑް ރީލޯޑް ކުރުން — MCP ސަރވަރތަކާއި ޓާމިނަލްތައް އަލުން ގުޅި، ކޮންފިގް ބަދަލުތައް ވެސް ލިޔިގަނުން",
   "command.settings.open": "ސެޓިންގސް ހުޅުވާލާށެވެ",
   "command.session.previous": "ކުރީ ސެޝަން",
   "command.session.next": "ދެން އޮންނަ ސެޝަން",
@@ -605,6 +608,8 @@ export const dict = {
   "toast.theme.title": "ތީމް ބަދަލުވިއެވެ",
   "toast.scheme.title": "ކުލަ ސްކީމް",
   "toast.workspace.enabled.title": "ވޯކްސްޕޭސްތައް އެނެބަލްކޮށްފައިވެއެވެ",
+  "toast.server.restart.title": "ބެކެންޑް ރީސްޓާޓް ކުރިއެވެ",
+  "toast.server.restart.failed": "ރީސްޓާޓް ފެއިލްވެއްޖެ",
   "toast.workspace.enabled.description": "މިހާރު ސައިޑްބާރގައި އެތައް ވޯކްޓްރީއެއް ފެނެއެވެ",
   "toast.workspace.disabled.title": "ވޯކްސްޕޭސްތައް ޑިސެބިލްކޮށްފައި",
   "toast.workspace.disabled.description": "ސައިޑްބާރގައި ދައްކާފައިވަނީ ހަމައެކަނި މައިގަނޑު ވޯކްޓްރީއެވެ",

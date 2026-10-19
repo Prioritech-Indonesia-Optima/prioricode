@@ -23,6 +23,9 @@ export const dict = {
   "command.project.open": "프로젝트 열기",
   "command.provider.connect": "공급자 연결",
   "command.server.switch": "서버 전환",
+  "command.server.restart": "백엔드 다시 시작",
+  "command.server.restart.description":
+    "앱을 닫지 않고 백엔드를 다시 로드합니다 — MCP 서버와 터미널을 다시 연결하고 구성 변경 사항을 적용합니다",
   "command.settings.open": "설정 열기",
   "command.session.previous": "이전 세션",
   "command.session.next": "다음 세션",
@@ -399,6 +402,8 @@ export const dict = {
   "toast.theme.title": "테마 전환됨",
   "toast.scheme.title": "색상 테마",
   "toast.workspace.enabled.title": "작업 공간 활성화됨",
+  "toast.server.restart.title": "백엔드가 다시 시작되었습니다",
+  "toast.server.restart.failed": "다시 시작 실패",
   "toast.workspace.enabled.description": "이제 사이드바에 여러 작업 트리가 표시됩니다",
   "toast.workspace.disabled.title": "작업 공간 비활성화됨",
   "toast.workspace.disabled.description": "사이드바에 메인 작업 트리만 표시됩니다",

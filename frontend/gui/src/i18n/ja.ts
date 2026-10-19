@@ -125,6 +125,9 @@ export const dict = {
   "command.project.index": "プロジェクト{{index}}に切り替え",
   "command.provider.connect": "プロバイダーに接続",
   "command.server.switch": "サーバーの切り替え",
+  "command.server.restart": "バックエンドを再起動",
+  "command.server.restart.description":
+    "アプリを閉じずにバックエンドを再読み込み — MCPサーバーとターミナルを再接続し、設定変更を反映",
   "command.settings.open": "設定を開く",
   "command.session.previous": "前のセッション",
   "command.session.next": "次のセッション",
@@ -596,6 +599,8 @@ export const dict = {
   "toast.theme.title": "テーマが切り替わりました",
   "toast.scheme.title": "配色",
   "toast.workspace.enabled.title": "ワークスペースが有効になりました",
+  "toast.server.restart.title": "バックエンドを再起動しました",
+  "toast.server.restart.failed": "再起動に失敗しました",
   "toast.workspace.enabled.description": "サイドバーに複数のワークツリーが表示されます",
   "toast.workspace.disabled.title": "ワークスペースが無効になりました",
   "toast.workspace.disabled.description": "サイドバーにはメインのワークツリーのみが表示されます",

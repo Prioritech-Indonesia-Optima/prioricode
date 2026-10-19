@@ -154,6 +154,7 @@ export type TuiInput = {
   config: TuiConfig.Resolved
   saveTuiConfig?: (patch: Partial<TuiConfig.Info>) => Promise<void>
   onSnapshot?: () => Promise<string[]>
+  restart?: () => Promise<void>
   directory?: string
   fetch?: typeof fetch
   headers?: RequestInit["headers"]
@@ -322,6 +323,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
                                                                   <LocationProvider>
                                                                     <App
                                                                       onSnapshot={input.onSnapshot}
+                                                                      restart={input.restart}
                                                                       pluginHost={input.pluginHost}
                                                                     />
                                                                   </LocationProvider>
@@ -367,7 +369,7 @@ export const run = Effect.fn("Tui.run")(function* (input: TuiInput) {
   })
 })
 
-function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPluginHost }) {
+function App(props: { onSnapshot?: () => Promise<string[]>; restart?: () => Promise<void>; pluginHost: TuiPluginHost }) {
   const startup = useTuiStartup()
   const tuiConfig = useTuiConfig()
   const route = useRoute()
@@ -879,6 +881,22 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashName: "exit",
         slashAliases: ["quit", "q"],
         run: () => exit(),
+        category: "System",
+      },
+      {
+        name: "app.restart",
+        title: "Restart the session backend",
+        slashName: "restart",
+        enabled: () => props.restart !== undefined,
+        run: async () => {
+          dialog.clear()
+          try {
+            await props.restart?.()
+            toast.show({ message: "Session restarted", variant: "info" })
+          } catch (error) {
+            toast.error(error)
+          }
+        },
         category: "System",
       },
       {

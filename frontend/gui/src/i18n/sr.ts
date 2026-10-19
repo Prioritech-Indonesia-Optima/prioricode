@@ -120,6 +120,9 @@ export const dict = {
   "command.project.index": "Пређи на пројекат {{index}}",
   "command.provider.connect": "Повежите добављача",
   "command.server.switch": "Промени сервер",
+  "command.server.restart": "Поновно покрени бекеонд",
+  "command.server.restart.description":
+    "Поновно учитајте бекеонд без затварања апликације — поново повезује MCP сервере и терминале и преузима промене конфигурације",
   "command.settings.open": "Отворите подешавања",
   "command.session.previous": "Претходна сесија",
   "command.session.next": "Следећа сесија",
@@ -598,6 +601,8 @@ export const dict = {
   "toast.theme.title": "Тема је промењена",
   "toast.scheme.title": "Шема боја",
   "toast.workspace.enabled.title": "Радни простори су омогућени",
+  "toast.server.restart.title": "Бекеонд је поново покренут",
+  "toast.server.restart.failed": "Покетање није успело",
   "toast.workspace.enabled.description": "Више стабала рада је сада приказано на бочној траци",
   "toast.workspace.disabled.title": "Радни простори су онемогућени",
   "toast.workspace.disabled.description": "На бочној траци је приказано само главно стабло рада",

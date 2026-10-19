@@ -129,6 +129,9 @@ export const dict = {
   "command.project.index": "Cambiar al proyecto {{index}}",
   "command.provider.connect": "Conectar proveedor",
   "command.server.switch": "Cambiar servidor",
+  "command.server.restart": "Reiniciar backend",
+  "command.server.restart.description":
+    "Recarga el backend sin cerrar la aplicación — reconecta los servidores MCP y las terminales e incorpora los cambios de configuración",
   "command.settings.open": "Abrir ajustes",
   "command.session.previous": "Sesión anterior",
   "command.session.next": "Siguiente sesión",
@@ -638,6 +641,8 @@ export const dict = {
   "toast.scheme.title": "Esquema de color",
 
   "toast.workspace.enabled.title": "Espacios de trabajo habilitados",
+  "toast.server.restart.title": "Backend reiniciado",
+  "toast.server.restart.failed": "Fallo al reiniciar",
   "toast.workspace.enabled.description": "Ahora se muestran varios worktrees en la barra lateral",
   "toast.workspace.disabled.title": "Espacios de trabajo deshabilitados",
   "toast.workspace.disabled.description": "Solo se muestra el worktree principal en la barra lateral",

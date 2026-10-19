@@ -120,6 +120,9 @@ export const dict = {
   "command.project.index": "Εναλλαγή στο έργο {{index}}",
   "command.provider.connect": "Σύνδεση παρόχου",
   "command.server.switch": "Εναλλαγή διακομιστή",
+  "command.server.restart": "Επανεκκίνηση back-end",
+  "command.server.restart.description":
+    "Επαναφόρτωση του back-end χωρίς κλείσιμο της εφαρμογής — ξανασυνδέει τους διακομιστές MCP και τα τερματικά και εφαρμόζει αλλαγές στη διαμόρφωση",
   "command.settings.open": "Άνοιγμα ρυθμίσεων",
   "command.session.previous": "Προηγούμενη συνεδρία",
   "command.session.next": "Επόμενη συνεδρία",
@@ -601,6 +604,8 @@ export const dict = {
   "toast.theme.title": "Εναλλαγή θέματος",
   "toast.scheme.title": "Χρωματικός συνδυασμός",
   "toast.workspace.enabled.title": "Οι χώροι εργασίας ενεργοποιημένοι",
+  "toast.server.restart.title": "Το back-end επανεκκινήθηκε",
+  "toast.server.restart.failed": "Η επανεκκίνηση απέτυχε",
   "toast.workspace.enabled.description": "Πολλά δέντρα εργασίας εμφανίζονται τώρα στην πλαϊνή γραμμή",
   "toast.workspace.disabled.title": "Οι χώροι εργασίας είναι απενεργοποιημένοι",
   "toast.workspace.disabled.description": "Μόνο το κύριο δέντρο εργασίας εμφανίζεται στην πλαϊνή γραμμή",

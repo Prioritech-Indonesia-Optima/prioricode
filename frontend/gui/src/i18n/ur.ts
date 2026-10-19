@@ -127,6 +127,9 @@ export const dict = {
   "command.project.index": "پروجیکٹ {{index}} پر سوئچ کریں۔",
   "command.provider.connect": "فراہم کنندہ منسلک کریں",
   "command.server.switch": "سرور تبدیل کریں",
+  "command.server.restart": "بیک اینڈ دوبارہ شروع کریں",
+  "command.server.restart.description":
+    "ایپ بند کیے بغیر بیک اینڈ دوبارہ لوڈ کریں — MCP سرورز اور ٹرمینلز دوبارہ منسلک ہوتے ہیں اور کنفیگریشن کی تبدیلیاں شامل ہو جاتی ہیں",
   "command.settings.open": "ترتیبات کھولیں۔",
   "command.session.previous": "پچھلا سیشن",
   "command.session.next": "اگلا سیشن",
@@ -609,6 +612,8 @@ export const dict = {
   "toast.theme.title": "تھیم تبدیل ہو گئی۔",
   "toast.scheme.title": "رنگ سکیم",
   "toast.workspace.enabled.title": "ورک اسپیسز فعال ہیں۔",
+  "toast.server.restart.title": "بیک اینڈ دوبارہ شروع ہو گیا۔",
+  "toast.server.restart.failed": "دوبارہ شروع کرنے میں ناکام",
   "toast.workspace.enabled.description": "متعدد ورک ٹری اب سائڈبار میں دکھائے گئے ہیں۔",
   "toast.workspace.disabled.title": "کام کی جگہیں غیر فعال ہیں۔",
   "toast.workspace.disabled.description": "سائڈبار میں صرف مین ورک ٹری کو دکھایا گیا ہے۔",

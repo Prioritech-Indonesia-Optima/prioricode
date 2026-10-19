@@ -121,6 +121,9 @@ export const dict = {
   "command.project.index": "ပရောဂျက် {{index}} သို့ ပြောင်းပါ။",
   "command.provider.connect": "ဝန်ဆောင်မှုပေးသူကို ချိတ်ဆက်ပါ။",
   "command.server.switch": "ဆာဗာပြောင်းပါ။",
+  "command.server.restart": "backend ကို ပြန်လည်စတင်ပါ။",
+  "command.server.restart.description":
+    "အက်ပ်ကို ပိတ်မဘဲ backend ကို ပြန်လည်စတင်ပါ — MCP ဆာဗာများနှင့် terminal များကို ပြန်လည်ချိတ်ဆက်ပြီး config ပြောင်းလဲမှုများကို သိမ်းစပ်ယူပါ။",
   "command.settings.open": "ဆက်တင်များကိုဖွင့်ပါ။",
   "command.session.previous": "ယခင်စက်ရှင်",
   "command.session.next": "နောက်ဆက်ရှင်",
@@ -603,6 +606,8 @@ export const dict = {
   "toast.theme.title": "အပြင်အဆင်ကို ပြောင်းထားသည်။",
   "toast.scheme.title": "အရောင်အစီအစဉ်",
   "toast.workspace.enabled.title": "အလုပ်နေရာများကို ဖွင့်ထားသည်။",
+  "toast.server.restart.title": "backend ကို ပြန်လည်စတင်ထားသည်။",
+  "toast.server.restart.failed": "ပြန်လည်စတင်ခြင်း မအောင်မြင်ပါ။",
   "toast.workspace.enabled.description": "ယခု Git worktree များကို ဘေးဘားတွင် ပြသထားသည်။",
   "toast.workspace.disabled.title": "အလုပ်နေရာများကို ပိတ်ထားသည်။",
   "toast.workspace.disabled.description": "ပင်မ Git worktree ကိုသာ ဘေးဘားတွင် ပြသထားသည်။",

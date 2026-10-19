@@ -127,6 +127,8 @@ export const dict = {
   "command.project.index": "สลับไปยังโปรเจกต์ {{index}}",
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
   "command.server.switch": "สลับเซิร์ฟเวอร์",
+  "command.server.restart": "รีสตาร์ทแบ็กเอนด์",
+  "command.server.restart.description": "โหลดแบ็กเอนด์ใหม่โดยไม่ปิดแอป — เชื่อมต่อเซิร์ฟเวอร์ MCP และเทอร์มินัลใหม่ และนำการเปลี่ยนแปลงการกำหนดค่ามาใช้",
   "command.settings.open": "เปิดการตั้งค่า",
   "command.session.previous": "เซสชันก่อนหน้า",
   "command.session.next": "เซสชันถัดไป",
@@ -631,6 +633,8 @@ export const dict = {
   "toast.scheme.title": "โทนสี",
 
   "toast.workspace.enabled.title": "เปิดใช้งานพื้นที่ทำงานแล้ว",
+  "toast.server.restart.title": "รีสตาร์ทแบ็กเอนด์แล้ว",
+  "toast.server.restart.failed": "การรีสตาร์ทล้มเหลว",
   "toast.workspace.enabled.description": "ตอนนี้จะแสดง worktree หลายรายการในแถบด้านข้าง",
   "toast.workspace.disabled.title": "ปิดใช้งานพื้นที่ทำงานแล้ว",
   "toast.workspace.disabled.description": "จะแสดงเฉพาะ worktree หลักในแถบด้านข้าง",

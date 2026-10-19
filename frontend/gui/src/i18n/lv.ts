@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "Pārslēgties uz projektu {{index}}",
   "command.provider.connect": "Pievienot pakalpojumu sniedzēju",
   "command.server.switch": "Pārslēgt serveri",
+  "command.server.restart": "Pārstartēt backend",
+  "command.server.restart.description":
+    "Pārlādēt backend, neatverot lietotni — atsavieno MCP serverus un termināļus un ielādē konfigurācijas izmaiņas",
   "command.settings.open": "Atvērt iestatījumus",
   "command.session.previous": "Iepriekšējā sesija",
   "command.session.next": "Nākamā sesija",
@@ -596,6 +599,8 @@ export const dict = {
   "toast.language.description": "Valoda nomainīta uz {{language}}",
   "toast.theme.title": "Tēma nomainīta",
   "toast.scheme.title": "Krāsu shēma",
+  "toast.server.restart.title": "Backend pārstartēts",
+  "toast.server.restart.failed": "Pārstartēšana neizdevās",
   "toast.workspace.enabled.title": "Darbtelpas ieslēgtas",
   "toast.workspace.enabled.description": "Sānu joslā tagad redzamas vairākas darba kopijas",
   "toast.workspace.disabled.title": "Darbtelpas izslēgtas",

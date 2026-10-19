@@ -123,6 +123,9 @@ export const dict = {
   "command.project.index": "Prijeđi na projekt {{index}}",
   "command.provider.connect": "Poveži pružatelja usluga",
   "command.server.switch": "Promijeni poslužitelj",
+  "command.server.restart": "Ponovno pokreni backend",
+  "command.server.restart.description":
+    "Ponovno učitaj backend bez zatvaranja aplikacije — ponovno povezuje MCP poslužitelje i terminale te primjenjuje promjene konfiguracije",
   "command.settings.open": "Otvori postavke",
   "command.session.previous": "Prethodna sesija",
   "command.session.next": "Sljedeća sesija",
@@ -603,6 +606,8 @@ export const dict = {
   "toast.theme.title": "Tema je promijenjena",
   "toast.scheme.title": "Shema boja",
   "toast.workspace.enabled.title": "Radni prostori omogućeni",
+  "toast.server.restart.title": "Backend ponovno pokrenut",
+  "toast.server.restart.failed": "Ponovno pokretanje nije uspjelo",
   "toast.workspace.enabled.description": "Više radnih stabala sada je prikazano na bočnoj traci",
   "toast.workspace.disabled.title": "Radni prostori onemogućeni",
   "toast.workspace.disabled.description": "Na bočnoj traci prikazano je samo glavno radno stablo",

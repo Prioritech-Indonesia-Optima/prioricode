@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "Preklopite na projekt {{index}}",
   "command.provider.connect": "Poveži ponudnika",
   "command.server.switch": "Zamenjaj strežnik",
+  "command.server.restart": "Znova zaženi strežnik",
+  "command.server.restart.description":
+    "Ponovno naloži strežnik, ne da bi zaprli aplikacijo — ponovno poveže MCP strežnike in terminale ter upošteva spremembe konfiguracije",
   "command.settings.open": "Odprite nastavitve",
   "command.session.previous": "Prejšnja seja",
   "command.session.next": "Naslednja seja",
@@ -598,6 +601,8 @@ export const dict = {
   "toast.theme.title": "Tema je zamenjana",
   "toast.scheme.title": "Barvna shema",
   "toast.workspace.enabled.title": "Delovni prostori omogočeni",
+  "toast.server.restart.title": "Strežnik je znova zagnan",
+  "toast.server.restart.failed": "Ponovni zagon ni uspel",
   "toast.workspace.enabled.description": "V stranski vrstici je zdaj prikazanih več delovnih dreves",
   "toast.workspace.disabled.title": "Delovni prostori so onemogočeni",
   "toast.workspace.disabled.description": "V stranski vrstici je prikazano samo glavno delovno drevo",

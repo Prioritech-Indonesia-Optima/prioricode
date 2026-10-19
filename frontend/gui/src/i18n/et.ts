@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "Lülitu projektile {{index}}",
   "command.provider.connect": "Ühendage pakkuja",
   "command.server.switch": "Vaheta serverit",
+  "command.server.restart": "Taaskäivitage backend",
+  "command.server.restart.description":
+    "Laadi backend uuesti, ilma rakendust sulgemata — ühendab uuesti MCP serverid ja terminalid ning rakendab konfigureerimise muudatused",
   "command.settings.open": "Ava seaded",
   "command.session.previous": "Eelmine seanss",
   "command.session.next": "Järgmine seanss",
@@ -595,6 +598,8 @@ export const dict = {
   "toast.theme.title": "Teema vahetatud",
   "toast.scheme.title": "Värvilahendus",
   "toast.workspace.enabled.title": "Tööruumid on lubatud",
+  "toast.server.restart.title": "Backend taaskäivitatud",
+  "toast.server.restart.failed": "Taaskäivitamine ebaõnnestus",
   "toast.workspace.enabled.description": "Nüüd kuvatakse külgribal mitu tööpuud",
   "toast.workspace.disabled.title": "Tööruumid on keelatud",
   "toast.workspace.disabled.description": "Külgribal kuvatakse ainult peamine tööpuud",

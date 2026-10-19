@@ -120,6 +120,9 @@ export const dict = {
   "command.project.index": "{{index}} taslamasyna geçiň",
   "command.provider.connect": "Prowaýderi birikdiriň",
   "command.server.switch": "Serwer",
+  "command.server.restart": "Backend-i gaýtadan başlaň",
+  "command.server.restart.description":
+    "Programmany ýapyşsyz backend-i täzeden ýükleň — MCP serwerlerini we terminallary gaýtadan birikdirýär we sazlamalaryň üýtgeşmelerini kabul edýär",
   "command.settings.open": "Sazlamalary açyň",
   "command.session.previous": "Öňki sessiýa",
   "command.session.next": "Indiki sessiýa",
@@ -598,6 +601,8 @@ export const dict = {
   "toast.theme.title": "Tema açyldy",
   "toast.scheme.title": "Reňk shemasy",
   "toast.workspace.enabled.title": "Workspace-lar açyk",
+  "toast.server.restart.title": "Backend gaýtadan başlatyldy",
+  "toast.server.restart.failed": "Gaýtadan başlatmak şowsuz boldy",
   "toast.workspace.enabled.description": "Indi gapdal panelde birnäçe Git worktree görkezilýär",
   "toast.workspace.disabled.title": "Workspace-lar ýapyk",
   "toast.workspace.disabled.description": "Gapdal panelde diňe esasy Git worktree görkezilýär",

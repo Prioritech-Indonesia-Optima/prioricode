@@ -125,6 +125,9 @@ export const dict = {
   "command.project.index": "پروجیکٹ {{index}} تے سوئچ کرو",
   "command.provider.connect": "پرووائیڈر نال جڑو",
   "command.server.switch": "سرور سوئچ کرو",
+  "command.server.restart": "بیک اینڈ دوبارہ شروع کرو",
+  "command.server.restart.description":
+    "ایپ بند کرن دے بغیر بیک اینڈ دوبارہ لوڈ کرو — MCP سرور تے ٹرمینل دوبارہ جڑدے نیں تے کنفیگ دیاں تبدیلیاں پاتھ چ آوندیاں نیں",
   "command.settings.open": "ترتیبات کھولو",
   "command.session.previous": "پچھلا سیشن",
   "command.session.next": "اگلا سیشن",
@@ -606,6 +609,8 @@ export const dict = {
   "toast.language.description": "{{language}} تے سوئچ کیتا گیا",
   "toast.theme.title": "تھیم سوئچ ہو گیا",
   "toast.scheme.title": "رنگ سکیم",
+  "toast.server.restart.title": "بیک اینڈ دوبارہ شروع ہو گیا",
+  "toast.server.restart.failed": "دوبارہ شروع ناکام ہویا",
   "toast.workspace.enabled.title": "ورک اسپیسز اینبلڈ نیں",
   "toast.workspace.enabled.description": "اک توں ودھ ورک ٹری ہن سائڈبار وچ دکھائے گئے نیں",
   "toast.workspace.disabled.title": "ورک سپیس بند نیں",

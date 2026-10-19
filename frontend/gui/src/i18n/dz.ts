@@ -122,6 +122,9 @@ export const dict: Record<string, string> = {
   "command.project.index": "ལས་འགུལ་ {{index}} ལུ་སོར་བསྒྱུར་འབད།",
   "command.provider.connect": "བྱིན་མི་མཐུད།",
   "command.server.switch": "སར་བར་སོར་བསྒྱུར་འབད།",
+  "command.server.restart": "Backend ལོག་འགོ་བཙུགས།",
+  "command.server.restart.description":
+    "Backend འདི་ གློག་རིམ་མ་བསྡམས་པར་ ཡང་བསྐྱར་མངོན་གསལ་འབད། — MCP སར་བར་དང་ ཊར་མི་ནཱལ་ཚུ་ ཡང་བསྐྱར་མཐུད་ དེ་ལས་ སྒྲིག་སྟངས་ཀྱི་འགྱུར་བ་ཚུ་ ལག་ལེན་འཐབ།",
   "command.settings.open": "སྒྲིག་སྟངས་ཁ་ཕྱེ།",
   "command.session.previous": "ཧེ་མའི་ལཱ་ཐེངས།",
   "command.session.next": "ལཱ་ཡུན་ཤུལ་མམ།",
@@ -606,6 +609,8 @@ export const dict: Record<string, string> = {
   "toast.theme.title": "བརྗོད་དོན་སོར་བསྒྱུར་འབད་ཡོདཔ།",
   "toast.scheme.title": "ཚོས་གཞིའི་འཆར་གཞི།",
   "toast.workspace.enabled.title": "ལཱ་གི་ས་སྒོ་ཚུ་ལྕོགས་ཅན་བཟོ་ཡོདཔ།",
+  "toast.server.restart.title": "Backend ལོག་འགོ་བཙུགས་ཡོདཔ།",
+  "toast.server.restart.failed": "ལོག་འགོ་བཙུགས་འཐུས་ཤོར་བྱུང་ཡོདཔ།",
   "toast.workspace.enabled.description": "Git worktree སྣ་མང་ད་ལྟོ་ཟུར་ཁའི་ཕྲ་རིང་ནང་སྟོནམ་ཨིན།",
   "toast.workspace.disabled.title": "ལཱ་གི་ས་སྒོ་ཚུ་ ལྕོགས་མིན་བཟོ་ཡོདཔ།",
   "toast.workspace.disabled.description": "ཟུར་ཁའི་ཕྲ་རིང་ནང་ Git worktree ངོ་མ་རྐྱངམ་ཅིག་སྟོནམ་ཨིན།",

@@ -119,6 +119,9 @@ export const dict: Record<string, string> = {
   "command.project.index": "{{index}} ව්‍යාපෘතියට මාරු වන්න",
   "command.provider.connect": "සපයන්නා සම්බන්ධ කරන්න",
   "command.server.switch": "සේවාදායකය මාරු කරන්න",
+  "command.server.restart": "බැක්එන්ඩ් යළි අරඹන්න",
+  "command.server.restart.description":
+    "යෙදුම නොවසා බැක්එන්ඩ් නැවත පූරණය කරන්න — MCP සේවාදායක සහ පර්යන්ත නැවත සම්බන්ධ කර වින්‍යාස වෙනස්කම් ලබා ගනී",
   "command.settings.open": "සැකසුම් විවෘත කරන්න",
   "command.session.previous": "පෙර සැසිය",
   "command.session.next": "ඊළඟ සැසිය",
@@ -595,6 +598,8 @@ export const dict: Record<string, string> = {
   "toast.language.description": "{{language}} වෙත මාරු විය",
   "toast.theme.title": "තේමාව මාරු විය",
   "toast.scheme.title": "වර්ණ පටිපාටිය",
+  "toast.server.restart.title": "බැක්එන්ඩ් යළි අරඹන ලදී",
+  "toast.server.restart.failed": "යළි අරඹීම අසාර්ථක විය",
   "toast.workspace.enabled.title": "වැඩබිම් සබල කර ඇත",
   "toast.workspace.enabled.description": "Git වර්ක්ට්‍රී කිහිපයක් දැන් පැති තීරුවේ පෙන්වයි",
   "toast.workspace.disabled.title": "වැඩබිම් අබල කර ඇත",

@@ -120,6 +120,9 @@ export const dict = {
   "command.project.index": "Byt till projekt {{index}}",
   "command.provider.connect": "Anslut leverantör",
   "command.server.switch": "Byt server",
+  "command.server.restart": "Starta om backenden",
+  "command.server.restart.description":
+    "Ladda om backenden utan att stänga appen — återansluter MCP-servrar och terminaler och tar in konfigurationsändringar",
   "command.settings.open": "Öppna inställningar",
   "command.session.previous": "Föregående session",
   "command.session.next": "Nästa session",
@@ -602,6 +605,8 @@ export const dict = {
   "toast.theme.title": "Tema har bytts",
   "toast.scheme.title": "Färgschema",
   "toast.workspace.enabled.title": "Arbetsytor aktiverade",
+  "toast.server.restart.title": "Backenden har startats om",
+  "toast.server.restart.failed": "Omstarten misslyckades",
   "toast.workspace.enabled.description": "Flera worktrees visas nu i sidofältet",
   "toast.workspace.disabled.title": "Arbetsytor inaktiverade",
   "toast.workspace.disabled.description": "Endast huvudworktreen visas i sidofältet",

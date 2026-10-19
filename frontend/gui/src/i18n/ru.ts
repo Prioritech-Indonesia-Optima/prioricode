@@ -128,6 +128,9 @@ export const dict = {
   "command.project.index": "Переключиться на проект {{index}}",
   "command.provider.connect": "Подключить провайдера",
   "command.server.switch": "Переключить сервер",
+  "command.server.restart": "Перезапустить бэкенд",
+  "command.server.restart.description":
+    "Перезагрузить бэкенд без закрытия приложения — переподключает MCP-серверы и терминалы и применяет изменения конфигурации",
   "command.settings.open": "Открыть настройки",
   "command.session.previous": "Предыдущая сессия",
   "command.session.next": "Следующая сессия",
@@ -640,6 +643,8 @@ export const dict = {
   "toast.permissions.autoaccept.off.description": "Запросы на разрешения будут требовать одобрения",
 
   "toast.workspace.enabled.title": "Рабочие пространства включены",
+  "toast.server.restart.title": "Бэкенд перезапущен",
+  "toast.server.restart.failed": "Перезапуск не удался",
   "toast.workspace.enabled.description": "В боковой панели теперь отображаются несколько рабочих деревьев",
   "toast.workspace.disabled.title": "Рабочие пространства отключены",
   "toast.workspace.disabled.description": "В боковой панели отображается только главное рабочее дерево",

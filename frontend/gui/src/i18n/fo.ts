@@ -119,6 +119,9 @@ export const dict = {
   "command.project.index": "Skift til verkætlan {{index}}",
   "command.provider.connect": "Set samband við veitara",
   "command.server.switch": "Skift ambætara",
+  "command.server.restart": "Endurbyrja backend",
+  "command.server.restart.description":
+    "Endurlesur backend uttan at lata appina — endurtengir MCP ambætarar og terminalar, og tekur uppsetingarbroytingar til",
   "command.settings.open": "Opna innstillingar",
   "command.session.previous": "Fyrra setan",
   "command.session.next": "Næsta seta",
@@ -597,6 +600,8 @@ export const dict = {
   "toast.theme.title": "Tema skift",
   "toast.scheme.title": "Litskipan",
   "toast.workspace.enabled.title": "Workspace virkin",
+  "toast.server.restart.title": "Backend endurbyrjað",
+  "toast.server.restart.failed": "Endurbyrjan miseydnaðist",
   "toast.workspace.enabled.description": "Fleiri Git worktrees eru nú víst í síðulinjuni",
   "toast.workspace.disabled.title": "Workspace sløkt",
   "toast.workspace.disabled.description": "Bert høvuðs-Git-worktree er víst í síðulinjuni.",

@@ -121,6 +121,9 @@ export const dict = {
   "command.project.index": "Төсөл рүү шилжих {{index}}",
   "command.provider.connect": "Үйлчилгээ үзүүлэгчийг холбоно уу",
   "command.server.switch": "Сервер солих",
+  "command.server.restart": "Бэкендийг дахин эхлүүлэх",
+  "command.server.restart.description":
+    "Програмыг хаахгүйгээр бэкендийг дахин ачаалах — MCP сервер болон терминалуудыг дахин холбож, тохиргооны өөрчлөлтийг авна",
   "command.settings.open": "Тохиргоог нээх",
   "command.session.previous": "Өмнөх сесс",
   "command.session.next": "Дараагийн сесс",
@@ -601,6 +604,8 @@ export const dict = {
   "toast.theme.title": "Загварыг өөрчилсөн",
   "toast.scheme.title": "Өнгөний схем",
   "toast.workspace.enabled.title": "Ажлын талбарыг идэвхжүүлсэн",
+  "toast.server.restart.title": "Бэкенд дахин эхэлтэн",
+  "toast.server.restart.failed": "Дахин эхлүүлэх амжилтгүй болсон",
   "toast.workspace.enabled.description": "Хэд хэдэн Git worktree-г хажуугийн мөрөнд харуулав",
   "toast.workspace.disabled.title": "Ажлын талбарыг идэвхгүй болгосон",
   "toast.workspace.disabled.description": "Хажуугийн мөрөнд зөвхөн үндсэн Git worktree-г харуулав",

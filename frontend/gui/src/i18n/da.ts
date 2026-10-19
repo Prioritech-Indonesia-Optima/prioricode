@@ -28,6 +28,9 @@ export const dict = {
   "command.project.index": "Skift til projekt {{index}}",
   "command.provider.connect": "Tilslut udbyder",
   "command.server.switch": "Skift server",
+  "command.server.restart": "Genstart backend",
+  "command.server.restart.description":
+    "Genindlæser backend uden at lukke appen — genopretter forbindelser til MCP-servere og terminaler og indlæser konfigurationsændringer",
   "command.settings.open": "Åbn indstillinger",
   "command.session.previous": "Forrige session",
   "command.session.next": "Næste session",
@@ -525,6 +528,9 @@ export const dict = {
   "toast.workspace.enabled.description": "Flere worktrees vises nu i sidepanelet",
   "toast.workspace.disabled.title": "Arbejdsområder deaktiveret",
   "toast.workspace.disabled.description": "Kun hoved-worktree vises i sidepanelet",
+
+  "toast.server.restart.title": "Backend genstartet",
+  "toast.server.restart.failed": "Genstart mislykkedes",
 
   "toast.model.none.title": "Ingen model valgt",
   "toast.model.none.description": "Forbind en udbyder for at opsummere denne session",

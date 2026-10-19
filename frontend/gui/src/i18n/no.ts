@@ -128,6 +128,9 @@ export const dict = {
   "command.project.open": "Åpne prosjekt",
   "command.provider.connect": "Koble til leverandør",
   "command.server.switch": "Bytt server",
+  "command.server.restart": "Start backenden på nytt",
+  "command.server.restart.description":
+    "Last inn backenden på nytt uten å lukke appen — tilkobler MCP-servere og terminaler på nytt og henter inn konfigurasjonssendringer",
   "command.settings.open": "Åpne innstillinger",
   "command.session.previous": "Forrige sesjon",
   "command.session.next": "Neste sesjon",
@@ -540,6 +543,8 @@ export const dict = {
   "toast.scheme.title": "Fargevalg",
 
   "toast.workspace.enabled.title": "Arbeidsområder aktivert",
+  "toast.server.restart.title": "Backenden startet på nytt",
+  "toast.server.restart.failed": "Omstart mislyktes",
   "toast.workspace.enabled.description": "Flere arbeidsområder vises nå i sidefeltet",
   "toast.workspace.disabled.title": "Arbeidsområder deaktivert",
   "toast.workspace.disabled.description": "Kun hovedarbeidsområdet vises i sidefeltet",

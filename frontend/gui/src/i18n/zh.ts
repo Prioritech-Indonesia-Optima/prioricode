@@ -134,6 +134,8 @@ export const dict = {
   "command.provider.connect": "连接提供商",
 
   "command.server.switch": "切换服务器",
+  "command.server.restart": "重启后端",
+  "command.server.restart.description": "重新加载后端而不关闭应用 —— 重新连接 MCP 服务器和终端，并加载配置变更",
 
   "command.settings.open": "打开设置",
 
@@ -643,6 +645,8 @@ export const dict = {
   "toast.theme.title": "主题已切换",
   "toast.scheme.title": "配色方案",
   "toast.workspace.enabled.title": "工作区已启用",
+  "toast.server.restart.title": "后端已重启",
+  "toast.server.restart.failed": "重启失败",
   "toast.workspace.enabled.description": "侧边栏现在显示多个工作树",
   "toast.workspace.disabled.title": "工作区已禁用",
   "toast.workspace.disabled.description": "侧边栏只显示主工作树",

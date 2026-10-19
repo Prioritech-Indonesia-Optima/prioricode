@@ -123,6 +123,9 @@ export const dict = {
   "command.project.index": "Perjunkite į projektą {{index}}",
   "command.provider.connect": "Prijungti teikėją",
   "command.server.switch": "Perjungti serverį",
+  "command.server.restart": "Paleisti backend iš naujo",
+  "command.server.restart.description":
+    "Įkelti backend iš naujo neuzdarius programos — iš naujo prijungiami MCP serveriai ir terminalai bei pritaikomi konfigūracijos pakeitimai",
   "command.settings.open": "Atidaryti nustatymus",
   "command.session.previous": "Ankstesnis seansas",
   "command.session.next": "Kitas seansas",
@@ -603,6 +606,8 @@ export const dict = {
   "toast.theme.title": "Tema perjungta",
   "toast.scheme.title": "Spalvų schema",
   "toast.workspace.enabled.title": "Darbo sritys įjungtos",
+  "toast.server.restart.title": "Backend paleistas iš naujo",
+  "toast.server.restart.failed": "Nepavyko paleisti iš naujo",
   "toast.workspace.enabled.description": "Dabar šoninėje juostoje rodomi keli darbo medžiai",
   "toast.workspace.disabled.title": "Darbo vietos išjungtos",
   "toast.workspace.disabled.description": "Šoninėje juostoje rodomas tik pagrindinis darbo medis",

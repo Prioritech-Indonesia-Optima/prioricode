@@ -123,6 +123,9 @@ export const dict = {
   "command.project.index": "Váltson a {{index}} projektre",
   "command.provider.connect": "Szolgáltató csatlakoztatása",
   "command.server.switch": "Kiszolgáló váltása",
+  "command.server.restart": "Háttérrendszer újraindítása",
+  "command.server.restart.description":
+    "Töltse újra a háttérrendszert az alkalmazás bezárása nélkül — újrapcsol a MCP-szerverekhez és a terminálokhoz, és a konfigurációs módosításokat is érvényesíti",
   "command.settings.open": "Beállítások megnyitása",
   "command.session.previous": "Előző munkamenet",
   "command.session.next": "Következő munkamenet",
@@ -603,6 +606,8 @@ export const dict = {
   "toast.scheme.title": "Színséma",
   "toast.workspace.enabled.title": "Munkaterületek engedélyezve",
   "toast.workspace.enabled.description": "Most több munkafa is megjelenik az oldalsávban",
+  "toast.server.restart.title": "Háttérrendszer újraindítva",
+  "toast.server.restart.failed": "Az újraindítás sikertelen",
   "toast.workspace.disabled.title": "Munkaterületek letiltva",
   "toast.workspace.disabled.description": "Csak a fő munkafa jelenik meg az oldalsávban",
   "toast.permissions.autoaccept.on.title": "Engedélyek automatikus elfogadása",

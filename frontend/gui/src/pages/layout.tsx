@@ -938,6 +938,23 @@ export default function LegacyLayout(props: ParentProps) {
         onSelect: () => openServer(),
       },
       {
+        id: "server.restart",
+        title: language.t("command.server.restart"),
+        description: language.t("command.server.restart.description"),
+        category: language.t("command.category.server"),
+        slash: "restart",
+        onSelect: async () => {
+          try {
+            // Same primitive as the TUI's /restart: dispose all server-side instances
+            // (MCP, PTYs, stuck drains). The global.disposed event re-bootstraps the UI.
+            await serverSDK().client.global.dispose()
+            showToast({ title: language.t("toast.server.restart.title"), variant: "success" })
+          } catch {
+            showToast({ title: language.t("toast.server.restart.failed"), variant: "error" })
+          }
+        },
+      },
+      {
         id: "settings.open",
         title: language.t("command.settings.open"),
         category: language.t("command.category.settings"),
