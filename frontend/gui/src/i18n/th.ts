@@ -128,7 +128,8 @@ export const dict = {
   "command.provider.connect": "เชื่อมต่อผู้ให้บริการ",
   "command.server.switch": "สลับเซิร์ฟเวอร์",
   "command.server.restart": "รีสตาร์ทแบ็กเอนด์",
-  "command.server.restart.description": "โหลดแบ็กเอนด์ใหม่โดยไม่ปิดแอป — เชื่อมต่อเซิร์ฟเวอร์ MCP และเทอร์มินัลใหม่ และนำการเปลี่ยนแปลงการกำหนดค่ามาใช้",
+  "command.server.restart.description":
+    "โหลดแบ็กเอนด์ใหม่โดยไม่ปิดแอป — เชื่อมต่อเซิร์ฟเวอร์ MCP และเทอร์มินัลใหม่ และนำการเปลี่ยนแปลงการกำหนดค่ามาใช้",
   "command.settings.open": "เปิดการตั้งค่า",
   "command.session.previous": "เซสชันก่อนหน้า",
   "command.session.next": "เซสชันถัดไป",

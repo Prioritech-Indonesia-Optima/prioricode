@@ -4,7 +4,7 @@ Every model-facing tool description in both runtimes (V1 `cli/src/tool/*.txt`, V
 `backend/core/src/tool/*.ts`) answers four questions, in this order:
 
 1. **Is** — first line: what the tool does and what it returns.
-2. **When** — the trigger that should invoke it *and* the sibling tool to prefer otherwise
+2. **When** — the trigger that should invoke it _and_ the sibling tool to prefer otherwise
    ("not for needle lookups — read a known path"). Tools with modes carry per-action triggers.
 3. **How** — mechanics the model cannot guess: argument shapes, batching, paging, ordering,
    output format, and hard limits.

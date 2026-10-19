@@ -132,8 +132,7 @@ export const dict = {
   "command.provider.connect": "連線提供者",
   "command.server.switch": "切換伺服器",
   "command.server.restart": "重新啟動後端",
-  "command.server.restart.description":
-    "重新載入後端而不關閉應用程式 — 重新連接 MCP 伺服器與終端機，並套用設定變更",
+  "command.server.restart.description": "重新載入後端而不關閉應用程式 — 重新連接 MCP 伺服器與終端機，並套用設定變更",
   "command.settings.open": "開啟設定",
   "command.session.previous": "上一個工作階段",
   "command.session.next": "下一個工作階段",
