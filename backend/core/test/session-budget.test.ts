@@ -303,3 +303,42 @@ describe("context economics in a live drain", () => {
     }),
   )
 })
+
+describe("overflow recovery", () => {
+  it.live("a hard context overflow is compacted and the turn re-issued without failing", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const session = yield* Session.Service
+      yield* session.prompt({ sessionID, prompt: Prompt.make({ text: "recover-me" }), resume: false })
+      responses = [
+        // turn 1: the provider rejects the request as a context overflow before any output
+        [
+          LLMEvent.stepStart({ index: 0 }),
+          LLMEvent.providerError({
+            message:
+              "This model's maximum context length is 262144 tokens; your prompt contains at least 245560 input tokens",
+            classification: "context-overflow",
+          }),
+          LLMEvent.finish({ reason: "stop" }),
+        ],
+        // the overflow-triggered compaction: a plain summarization request (no tools)
+        [LLMEvent.textDelta({ id: "c1", text: "COMPACTED-SUMMARY" }), LLMEvent.finish({ reason: "stop" })],
+        // the re-issued turn, rebuilt from the compacted history
+        turn([]),
+      ]
+      yield* session.resume(sessionID)
+
+      // turn(overflow) -> compaction summary -> re-issued turn
+      expect(requests).toHaveLength(3)
+      // the compaction request carries no tools, distinguishing it from the model turns
+      expect(requests[1]!.tools).toHaveLength(0)
+      // the re-issued turn resends the query from compacted history: summary + verbatim tail
+      const resent = JSON.stringify(requests[2]!.messages)
+      expect(resent).toContain("COMPACTED-SUMMARY")
+      expect(resent).toContain("recover-me")
+      // the durable session now holds a compaction message
+      const context = yield* session.context(sessionID)
+      expect(context.some((message) => message.type === "compaction")).toBe(true)
+    }),
+  )
+})

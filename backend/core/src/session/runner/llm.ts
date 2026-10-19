@@ -463,12 +463,10 @@ const layer = Layer.effect(
             stream._tag === "Failure" ? Option.getOrUndefined(Cause.findErrorOption(stream.cause)) : undefined
           if (
             recoverOverflow &&
-            budget.used < budget.max &&
             !publisher.hasAssistantStarted() &&
             isContextOverflowFailure(overflowFailure ?? failure) &&
             (yield* restore(recoverOverflow({ sessionID: session.id, entries, model, request })))
           ) {
-            budget.used++
             return yield* Effect.die(continueAfterOverflowCompaction(currentStep))
           }
           if (overflowFailure) yield* publish(overflowFailure)
