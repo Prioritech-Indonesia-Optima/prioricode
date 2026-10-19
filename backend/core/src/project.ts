@@ -48,7 +48,9 @@ export interface Interface {
   readonly commit: (input: { store: AbsolutePath; id: ID }) => Effect.Effect<void>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@prioricode/Project") {}
+// Tag must stay distinct from the legacy CLI `@prioricode/Project` service:
+// same tag = same runtime identity, which silently shadows one of the two.
+export class Service extends Context.Service<Service, Interface>()("@prioricode/ProjectV2") {}
 
 const layer = Layer.effect(
   Service,

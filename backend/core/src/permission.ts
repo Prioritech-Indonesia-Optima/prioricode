@@ -124,7 +124,9 @@ export interface Interface {
   readonly list: () => EffectRuntime.Effect<ReadonlyArray<Request>>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@prioricode/Permission") {}
+// Tag must stay distinct from the legacy CLI `@prioricode/Permission` service:
+// same tag = same runtime identity, which silently shadows one of the two.
+export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/Permission") {}
 
 interface Pending {
   readonly request: Request

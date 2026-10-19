@@ -40,7 +40,9 @@ export interface Interface extends State.Transformable<Draft> {
   readonly all: () => Effect.Effect<Info[]>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@prioricode/Agent") {}
+// Tag must stay distinct from the legacy CLI `@prioricode/Agent` service:
+// same tag = same runtime identity, which silently shadows one of the two.
+export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/Agent") {}
 
 const layer = Layer.effect(
   Service,

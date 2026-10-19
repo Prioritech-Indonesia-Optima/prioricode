@@ -26,7 +26,9 @@ export interface Interface {
   readonly wait: (id: ID) => Effect.Effect<void>
 }
 
-export class Service extends Context.Service<Service, Interface>()("@prioricode/Plugin") {}
+// Tag must stay distinct from the legacy CLI `@prioricode/Plugin` service:
+// same tag = same runtime identity, which silently shadows one of the two.
+export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/Plugin") {}
 
 const layer = Layer.effect(
   Service,

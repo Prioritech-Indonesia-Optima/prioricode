@@ -42,7 +42,9 @@ export interface Interface {
   >
 }
 
-export class Service extends Context.Service<Service, Interface>()("@prioricode/Image") {}
+// Tag must stay distinct from the legacy CLI `@prioricode/Image` service:
+// same tag = same runtime identity, which silently shadows one of the two.
+export class Service extends Context.Service<Service, Interface>()("@prioricode/v2/Image") {}
 
 const layer = Layer.effect(
   Service,
