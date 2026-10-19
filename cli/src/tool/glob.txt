@@ -1,4 +1,4 @@
-- Fast file pattern matching, any codebase size.
-- Glob patterns like "**/*.js" or "src/**/*.ts"; searches path or the working directory.
-- Returns matching file paths. Use when finding files by name.
-- Batch speculative patterns in a single message.
+Find files by glob pattern, returning matching paths — fast, any codebase size.
+
+When: you need files by name or location; batch speculative patterns as parallel calls in one message. To search file content use grep; when the exact path is known read it directly.
+How: patterns like "**/*.js" or "src/**/*.ts"; path is the directory to search — an absolute path or one relative to the working directory, which is the default search root.

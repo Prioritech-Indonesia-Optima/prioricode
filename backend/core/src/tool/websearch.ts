@@ -29,13 +29,12 @@ export const MAX_RESPONSE_BYTES = 256 * 1024
  * from provider-hosted web search tools, which remain route-owned and execute
  * at the model provider. Ownership of this compromise can be revisited later.
  */
-export const description = `Search the web using the session's local web search provider. Use this for current information beyond knowledge cutoff.
+export const description = `Real-time web search via the session's local web search provider — returns content from the most relevant sites, gathered live.
 
-This is a provider-independent local tool backed by Exa or Parallel. Provider-hosted web search tools are separate and execute at the model provider.
+When: anything beyond the knowledge cutoff — current events, recent releases, changing facts — and any URL or doc the user asked you to verify. Prefer searching over guessing from stale memory.
+How: this tool is provider-independent local search backed by Exa or Parallel; provider-hosted web search tools are separate and execute at the model provider. Optional controls: numResults (result count), livecrawl 'fallback' (cached first) or 'preferred' (live crawl), type 'auto', 'fast', or 'deep', contextMaxCharacters bounding the LLM-facing context; domain filtering supported.
 
-Optional controls support result count, live crawling ('fallback' or 'preferred'), search type ('auto', 'fast', or 'deep'), and maximum context characters.
-
-The current year is ${new Date().getFullYear()}. Use this year when searching for recent information or current events.`
+The current year is ${new Date().getFullYear()}. Append the year to queries for recent information — "latest AI news ${new Date().getFullYear()}", not an older year.`
 
 export const Input = Schema.Struct({
   query: Schema.String.annotate({ description: "Websearch query" }),

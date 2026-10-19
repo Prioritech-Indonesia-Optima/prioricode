@@ -1,8 +1,6 @@
-Real-time web search via the session's provider — returns content from the most relevant sites. Use it for anything beyond the knowledge cutoff: current events, recent releases, changing facts.
+Real-time web search via the session's local web search provider — returns content from the most relevant sites, gathered live.
 
-- numResults controls result count (default 8); context length is tuned for LLM consumption.
-- livecrawl (when available): 'fallback' (cached first) or 'preferred' (live crawl).
-- type (when available): 'auto', 'fast', 'deep'. Domain filtering supported.
+When: anything beyond the knowledge cutoff — current events, recent releases, changing facts — and any URL or doc the user asked you to verify. Prefer searching over guessing from stale memory.
+How: this tool is provider-independent local search backed by Exa or Parallel; provider-hosted web search tools are separate and execute at the model provider. Optional controls: numResults (result count), livecrawl 'fallback' (cached first) or 'preferred' (live crawl), type 'auto', 'fast', or 'deep', contextMaxCharacters bounding the LLM-facing context; domain filtering supported.
 
-The current year is {{year}}. Append the year to searches for recent information.
-- "latest AI news" → query "AI news {{year}}", not an older year.
+The current year is {{year}}. Append the year to queries for recent information — "latest AI news {{year}}", not an older year.

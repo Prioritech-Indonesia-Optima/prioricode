@@ -29,7 +29,7 @@ exports[`tool parameters JSON Schema (wire shape) bash 1`] = `
       "type": "string",
     },
     "timeout": {
-      "description": "Optional timeout in milliseconds",
+      "description": "Optional timeout in milliseconds (default 120000). Use background: true for long-running work instead of raising this",
       "exclusiveMinimum": 0,
       "maximum": 9007199254740991,
       "minimum": -9007199254740991,

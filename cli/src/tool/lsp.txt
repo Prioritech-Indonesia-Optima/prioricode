@@ -1,5 +1,7 @@
 Code intelligence via Language Server Protocol.
 
+When: symbol-level questions — exact definitions/implementations, all references, hover types, call hierarchies. For raw text patterns use grep; for file names use glob.
+
 Operations:
 - goToDefinition / goToImplementation: where a symbol is defined / implemented
 - findReferences: all references to a symbol

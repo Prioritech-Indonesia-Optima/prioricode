@@ -1,9 +1,9 @@
 Read a file or directory from the filesystem. Missing path → error.
 
-Usage:
+When: you know (or can derive) the path and want content or entries. Search content with grep, find paths by name with glob — do not loop reads to explore.
+How:
 - filePath must be absolute.
 - Up to 2000 lines by default; offset = 1-indexed line to start from, limit = max lines. Page with larger offsets instead of tiny repeated slices — if more context is needed, read a bigger window.
 - Text output prefixes every line `<n>: `. If a file contains `foo`, you receive `1: foo`. Lines longer than 2000 chars are truncated.
 - Directories list one entry per line, no prefix, trailing `/` for subdirectories.
 - Images and PDFs return as file attachments.
-- Search content with grep, find paths by name with glob.

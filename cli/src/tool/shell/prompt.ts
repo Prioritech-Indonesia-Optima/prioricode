@@ -15,7 +15,10 @@ export type Limits = {
 export function parameterSchema() {
   return Schema.Struct({
     command: Schema.String.annotate({ description: "The command to execute" }),
-    timeout: Schema.optional(PositiveInt).annotate({ description: "Optional timeout in milliseconds" }),
+    timeout: Schema.optional(PositiveInt).annotate({
+      description:
+        "Optional timeout in milliseconds (default 120000). Use background: true for long-running work instead of raising this",
+    }),
     workdir: Schema.optional(Schema.String).annotate({
       description: `The working directory to run the command in. Defaults to the current directory. Use this instead of 'cd' commands.`,
     }),

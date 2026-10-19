@@ -60,7 +60,9 @@ const layer = Layer.effectDiscard(
         [name]: Tool.withPermission(
           Tool.make({
             description:
-              "Write content to one file. Relative paths resolve within the active Location. Absolute paths inside the Location are accepted. Explicit external absolute paths require external_directory approval before edit approval.",
+              "Write content to one file, overwriting any existing content there.\n" +
+              "When: creating a new file or replacing a file wholesale — prefer edit for changing an existing file, and read a target file before overwriting it so unseen work is not lost.\n" +
+              "How: relative paths resolve within the active Location; absolute paths inside it are accepted; explicit external absolute paths require external_directory approval before edit approval.",
             input: Input,
             output: Output,
             toModelOutput: ({ output }) => [{ type: "text", text: toModelOutput(output) }],

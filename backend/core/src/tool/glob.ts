@@ -46,7 +46,9 @@ const layer = Layer.effectDiscard(
       .register({
         [name]: Tool.make({
           description:
-            "Find files by glob pattern within the active Location. Returns concise relative file resources. Use a relative path to narrow the search and limit to bound the result count.",
+            "Find files by glob pattern within the active Location, returning matching relative file resources — fast, any codebase size.\n" +
+            "When: you need files by name or location; batch speculative patterns as parallel calls in one message. To search file content use grep; when the exact path is known read it directly.\n" +
+            "How: patterns like \"**/*.js\" or \"src/**/*.ts\"; a relative path narrows the search directory; limit bounds the result count.",
           input: Input,
           output: Output,
           toModelOutput: ({ output }) => [

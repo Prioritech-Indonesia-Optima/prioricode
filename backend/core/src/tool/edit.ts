@@ -412,7 +412,9 @@ const layer = Layer.effectDiscard(
         [name]: Tool.withPermission(
           Tool.make({
             description:
-              "Replace exact text in one file. Relative paths resolve within the active Location. Absolute paths inside the Location are accepted. Explicit external absolute paths require external_directory approval before edit approval.",
+              "Replace exact text in one file — the tool errors unless oldString matches uniquely.\n" +
+              "When: changing an existing file; prefer it over write for anything short of a wholesale replacement.\n" +
+              "How: read the file in this conversation first — editing unseen content errors. oldString must match byte-for-byte including indentation (never include a read line-number prefix); several or zero matches fail, so add surrounding context to disambiguate or set replaceAll; newString must differ from oldString. Relative paths resolve within the active Location; external absolute paths require external_directory approval before edit approval.",
             input: Input,
             output: Output,
             toModelOutput: ({ input, output }) => [

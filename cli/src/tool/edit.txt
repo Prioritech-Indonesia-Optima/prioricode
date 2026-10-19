@@ -1,6 +1,8 @@
 Performs exact string replacements in files.
 
-Usage:
+When: changing part of an existing file — the tool errors unless oldString matches uniquely.
+How:
+- filePath must be absolute.
 - Read the file in this conversation first; editing without a prior read errors.
 - oldString must match the file byte-for-byte: preserve indentation exactly as it appears after the Read line-number prefix (the `1: ` part is not file content — never include it).
 - Not found → error. Multiple matches → error: add surrounding context to disambiguate or set replaceAll.

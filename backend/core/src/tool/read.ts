@@ -22,7 +22,7 @@ const LocationInput = Schema.Struct({
     description: "The 1-based directory entry or text line offset to start reading from",
   }),
   limit: ReadToolFileSystem.PageInput.fields.limit.annotate({
-    description: "The maximum number of directory entries or text lines to read",
+    description: `The maximum number of directory entries or text lines to read (default: ${ReadToolFileSystem.MAX_READ_LINES})`,
   }),
 })
 const Input = LocationInput
@@ -40,7 +40,9 @@ const layer = Layer.effectDiscard(
       .register({
         [name]: Tool.make({
           description:
-            "Read a text file or supported image, page through a large UTF-8 text file by line offset, or list a directory page. Relative paths resolve from the current location; absolute paths inside it are accepted, while external absolute paths require external_directory approval.",
+            "Read a file or directory from the active Location: a paged text window (up to 2000 lines), a paged directory listing, or an image/PDF returned as an attachment. Missing path → error.\n" +
+            "When: you know or can derive the path and want its content or entries. Search content with grep, find paths by name with glob — do not loop reads to explore.\n" +
+            "How: relative path values resolve from the active Location; absolute paths inside it are accepted; external absolute paths require external_directory approval. Page with larger offsets instead of tiny repeated slices — when more context is needed, read a bigger window.",
           input: Input,
           output: Output,
           toModelOutput: ({ input, output }) => {

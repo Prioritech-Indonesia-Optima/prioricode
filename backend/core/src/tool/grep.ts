@@ -62,7 +62,9 @@ const layer = Layer.effectDiscard(
       .register({
         [name]: Tool.make({
           description:
-            "Search file contents by regular expression within the active Location or an absolute managed tool-output file. Use a path to narrow the search, include to filter files by glob, and limit to bound the match count. Returns concise file resources, line numbers, and bounded line previews.",
+            "Search file contents by regular expression within the active Location (or one absolute managed tool-output file), returning file resources, line numbers, and bounded line previews — fast, any codebase size.\n" +
+            "When: locating code by symbol, pattern, or error text — not by file name (glob) or within one known file (read).\n" +
+            "How: pattern is a regular expression like \"log.*Error\"; include filters file names by glob like \"*.js\" or \"*.{ts,tsx}\"; path narrows the search directory; limit bounds the match count.",
           input: Input,
           output: Output,
           toModelOutput: ({ output }) => [

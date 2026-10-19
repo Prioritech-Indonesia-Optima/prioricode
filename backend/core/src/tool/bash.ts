@@ -107,7 +107,7 @@ const layer = Layer.effectDiscard(
     yield* tools
       .register({
         [name]: Tool.make({
-          description: `Execute one shell command string with the host user's filesystem, process, and network authority. The active Location is the default working directory. Relative workdir values resolve from that Location. External workdir values require external_directory approval; best-effort command-argument path warnings are advisory only. Timeout values are milliseconds (default: ${DEFAULT_TIMEOUT_MS}; maximum: ${MAX_TIMEOUT_MS}). Uses the configured shell when set; otherwise uses /bin/sh on POSIX and COMSPEC or cmd.exe on Windows.`,
+          description: `Execute one shell command string with the host user's filesystem, process, and network authority, returning captured output. The active Location is the default working directory.\nWhen: terminal operations — git, npm, docker, test runs. For file work (reading, editing, searching, finding) use the dedicated tools instead of cat/sed/grep in a shell.\nHow: relative workdir values resolve from the active Location; external workdir values require external_directory approval (command-argument paths get advisory warnings only). timeout values are milliseconds (default: ${DEFAULT_TIMEOUT_MS}; maximum: ${MAX_TIMEOUT_MS}) — raise it for long builds rather than rerunning. Uses the configured shell when set; otherwise /bin/sh on POSIX and COMSPEC or cmd.exe on Windows. Quote paths containing spaces; verify parent directories before creating nested files.`,
           input: Input,
           output: Output,
           structured: StructuredOutput,

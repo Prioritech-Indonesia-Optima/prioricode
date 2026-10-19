@@ -1,6 +1,7 @@
-Writes a file to the local filesystem.
+Writes a file to the local filesystem, overwriting the existing file at filePath.
 
-Usage:
-- Overwrites the existing file at filePath.
-- Existing file: Read it first — write fails without a prior read.
-- Prefer edit for changing existing files; use write for new files or full replacements.
+When: creating a new file or replacing content wholesale — prefer edit for changing an existing file.
+How:
+- filePath must be absolute.
+- Existing file: Read it first — write fails without a prior read, so unseen work is never lost.
+- content is written verbatim.

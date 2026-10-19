@@ -28,15 +28,31 @@ import { Tools } from "./tools"
 
 export * as PlanTool from "./plan"
 
-const ENTER_DESCRIPTION = `Use this tool to suggest switching to plan agent when the user's request would benefit from planning before implementation.
+const ENTER_DESCRIPTION = `Suggest switching to plan agent before implementing. The user is asked to confirm the switch.
 
-If they explicitly mention wanting to create a plan ALWAYS call this tool first.
+Call it when:
+- User explicitly asks for a plan — call this FIRST.
+- The request is complex enough that planning would help.
+- Work needs research or architectural decisions before changes.
 
-This tool will ask the user if they want to switch to plan agent.`
+Skip it for:
+- Simple, straightforward tasks.
+- Users who clearly want immediate implementation.`
 
-const EXIT_DESCRIPTION = `Use this tool when you have finished planning and the user should decide whether to begin implementing.
+const EXIT_DESCRIPTION = `Request approval of the finished plan and exit plan agent. The user is asked whether to switch to build agent.
 
-After presenting the plan, ask the user to approve switching to the build agent before writing any code. Do not call this tool without first describing the plan to the user.`
+Call it when:
+- The plan file is complete.
+- Open questions are resolved.
+- The plan is ready for implementation.
+
+Skip it when:
+- The plan is missing or unfinalized.
+- Implementation questions remain.
+- The user wants to keep planning.`
+
+// Exposed for the cross-runtime description-parity test.
+export const description = { enter: ENTER_DESCRIPTION, exit: EXIT_DESCRIPTION }
 
 const transition = Effect.fnUntraced(function* (
   question: Question.Interface,

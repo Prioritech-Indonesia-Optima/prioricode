@@ -1,5 +1,8 @@
 Edit files with a file-oriented patch format — all changes in one call.
 
+When: several related file changes belong in one step.
+How — the patch format:
+
 *** Begin Patch
 [ file sections ]
 *** End Patch

@@ -78,7 +78,9 @@ const layer = Layer.effectDiscard(
         [name]: Tool.withPermission(
           Tool.make({
             description:
-              "Apply one patch containing add, update, and delete file operations. Targets are resolved and operations are prepared into a diff preview before approval; a denied call discloses only the permission outcome. Operations apply sequentially; if a later operation fails, earlier operations remain applied and the failure reports them explicitly. Moves and atomic rollback are not supported yet.",
+              "Edit files with a file-oriented patch format — all add, update, and delete operations in one call, applied sequentially.\n" +
+              "When: several related file changes belong in one step. It is atomic in intent, not in effect: if a later operation fails, earlier ones remain applied and the failure reports them explicitly. Moves and rollback are not supported.\n" +
+              "How: wrap sections in '*** Begin Patch' / '*** End Patch'; per file '*** Add File: <path>' (every line prefixed '+'), '*** Update File: <path>' ('-' old lines, '+' new lines, optional '@@' context markers), or '*** Delete File: <path>'. Targets resolve within the active Location and are prepared into a diff preview before approval; a denied call discloses only the permission outcome.",
             input: Input,
             output: Output,
             toModelOutput: ({ output }) => [{ type: "text", text: toModelOutput(output) }],

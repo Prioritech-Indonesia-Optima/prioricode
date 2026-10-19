@@ -1,4 +1,5 @@
-- Fast content search, any codebase size (regex, powered by ripgrep).
-- Pattern like "log.*Error" or "function\s+\w+"; include filters files by glob ("*.js", "*.{ts,tsx}"); path is the search directory.
-- Returns file paths and line numbers of matches.
-- Counting or aggregating matches: run `rg` via bash directly. Never pipe shell `grep`/`find`/`cat`.
+Search file contents by regular expression, returning file paths and line numbers of matches — fast, any codebase size.
+
+When: locating code by symbol, pattern, or error text — not by file name (glob) or within one known file (read).
+How: pattern like "log.*Error" or "function\s+\w+"; include filters file names by glob ("*.js", "*.{ts,tsx}"); path is the search directory — an absolute path or one relative to the working directory.
+Counting or aggregating matches: run `rg` via bash directly. Never pipe shell `grep`/`find`/`cat` — this tool is the search surface.
