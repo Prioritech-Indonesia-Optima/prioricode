@@ -318,11 +318,7 @@ describe("SessionTodo.reminderText", () => {
     expect(SessionTodo.reminderText(list, 0, 10_000_000)).toBe("")
     expect(SessionTodo.reminderText([], touched, touched + 999_999)).toBe("")
     expect(
-      SessionTodo.reminderText(
-        [{ content: "done", status: "completed", priority: "low" }],
-        touched,
-        touched + 999_999,
-      ),
+      SessionTodo.reminderText([{ content: "done", status: "completed", priority: "low" }], touched, touched + 999_999),
     ).toBe("")
   })
 

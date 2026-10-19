@@ -66,7 +66,7 @@ export const reminderText = (todos: ReadonlyArray<Info>, touchedAt: number, now:
   return [
     REMINDER_HEADER,
     "The stored list — not your recollection — is the plan in force:\n\n" + snapshot(todos, { ids: true }),
-    'Mutate it in place with todowrite (status/add/edit/remove) as work progresses, and mark items completed only when they are truly done and verified.',
+    "Mutate it in place with todowrite (status/add/edit/remove) as work progresses, and mark items completed only when they are truly done and verified.",
   ].join("\n\n")
 }
 

@@ -19,7 +19,9 @@ const recentlyNagged = (messages: SessionV1.WithParts[]) =>
     .some(
       (message) =>
         message.info.role === "user" &&
-        message.parts.some((part) => part.type === "text" && part.synthetic && part.text.startsWith(Todo.REMINDER_HEADER)),
+        message.parts.some(
+          (part) => part.type === "text" && part.synthetic && part.text.startsWith(Todo.REMINDER_HEADER),
+        ),
     )
 
 export const apply = Effect.fn("SessionReminders.apply")(function* (input: {
