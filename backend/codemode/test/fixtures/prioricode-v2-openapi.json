@@ -21336,6 +21336,11 @@
       "Todo": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Stable server-assigned id used to address this item with todowrite ops. Omit it on new items; the server mints one and returns it in every response.",
+            "pattern": "^td_[0-9a-f]{8}$"
+          },
           "content": {
             "type": "string",
             "description": "Brief description of the task"

@@ -37,6 +37,13 @@ test.describe("session timeline projection", () => {
       patchPart("prt_patch"),
       toolPart("prt_todo", "todowrite", "completed", { todos: [{ content: "Hidden", status: "pending" }] }),
       toolPart(
+        "prt_todo_op",
+        "todowrite",
+        "completed",
+        { action: "add", add: [{ content: "Op shaped" }] },
+        { metadata: { todos: [{ id: "td_00000001", content: "Op shaped", status: "pending", priority: "low" }] } },
+      ),
+      toolPart(
         "prt_question",
         "question",
         "completed",
@@ -66,6 +73,7 @@ test.describe("session timeline projection", () => {
       await expect(page.locator(`[data-timeline-part-id="${id}"]`).first(), id).toBeVisible()
     }
     await expect(page.locator('[data-timeline-part-id="prt_todo"]')).toHaveCount(0)
+    await expect(page.locator('[data-timeline-part-id="prt_todo_op"]')).toHaveCount(0)
   })
 
   test("projects gaps, dividers, assistant parts, and errors together", async ({ page }) => {

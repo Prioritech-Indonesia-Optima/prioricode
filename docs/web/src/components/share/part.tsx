@@ -393,9 +393,11 @@ export function TodoWriteTool(props: ToolProps) {
     pending: 1,
     completed: 2,
   }
-  const todos = createMemo(() =>
-    ((props.state.input?.todos ?? []) as Todo[]).slice().sort((a, b) => priority[a.status] - priority[b.status]),
-  )
+  const todos = createMemo(() => {
+    const meta = props.state.metadata?.todos
+    const source = (Array.isArray(meta) && meta.length > 0 ? meta : props.state.input?.todos) ?? []
+    return (source as Todo[]).slice().sort((a, b) => priority[a.status] - priority[b.status])
+  })
   const starting = () => todos().every((t: Todo) => t.status === "pending")
   const finished = () => todos().every((t: Todo) => t.status === "completed")
 

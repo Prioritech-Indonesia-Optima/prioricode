@@ -374,12 +374,17 @@ function runTask(p: ToolProps<typeof TaskTool>): ToolInline {
   }
 }
 
+function todoItems(p: ToolProps<typeof TodoWriteTool>) {
+  const meta = list<{ status?: string; content?: string }>(p.metadata.todos)
+  return meta.length > 0 ? meta : list<{ status?: string; content?: string }>(p.frame.input.todos)
+}
+
 function runTodo(p: ToolProps<typeof TodoWriteTool>): ToolInline {
   return {
     icon: "#",
     title: "Todos",
     mode: "block",
-    body: list<{ status?: string; content?: string }>(p.frame.input.todos)
+    body: todoItems(p)
       .flatMap((item) => {
         const body = typeof item?.content === "string" ? item.content : ""
         if (!body) {
@@ -583,7 +588,7 @@ function snapTask(p: ToolProps<typeof TaskTool>): ToolSnapshot {
 }
 
 function snapTodo(p: ToolProps<typeof TodoWriteTool>): ToolSnapshot {
-  const items = list<{ status?: string; content?: string }>(p.frame.input.todos).flatMap((item) => {
+  const items = todoItems(p).flatMap((item) => {
     const content = typeof item?.content === "string" ? item.content : ""
     if (!content) {
       return []
@@ -793,7 +798,7 @@ function scrollTodoStart(_: ToolProps<typeof TodoWriteTool>): string {
 }
 
 function scrollTodoFinal(p: ToolProps<typeof TodoWriteTool>): string {
-  const items = list<{ status?: string }>(p.input.todos)
+  const items = todoItems(p)
   const time = span(p.frame.state)
   if (items.length === 0) {
     if (!time) {

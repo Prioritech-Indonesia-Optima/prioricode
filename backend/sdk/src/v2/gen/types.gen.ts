@@ -667,6 +667,7 @@ export type QuestionTool = {
 }
 
 export type Todo = {
+  id?: string
   /**
    * Brief description of the task
    */

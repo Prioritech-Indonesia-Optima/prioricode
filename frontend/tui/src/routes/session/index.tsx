@@ -2560,7 +2560,10 @@ function ApplyPatch(props: ToolProps) {
 }
 
 function TodoWrite(props: ToolProps) {
-  const todos = createMemo(() => parseTodos(props.input.todos))
+  const todos = createMemo(() => {
+    const meta = parseTodos(props.metadata.todos)
+    return meta.length > 0 ? meta : parseTodos(props.input.todos)
+  })
   const phases = createMemo(() => {
     const out: { phase: string | undefined; items: ReturnType<typeof parseTodos> }[] = []
     for (const todo of todos()) {
@@ -2572,7 +2575,7 @@ function TodoWrite(props: ToolProps) {
   })
   return (
     <Switch>
-      <Match when={parseTodos(props.metadata.todos).length}>
+      <Match when={todos().length}>
         <BlockTool title="# Todos" part={props.part}>
           <box>
             <For each={phases()}>

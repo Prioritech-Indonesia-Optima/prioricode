@@ -135,6 +135,46 @@ describe("applyGlobalEvent", () => {
 })
 
 describe("applyDirectoryEvent", () => {
+  test("reconciles todo.updated by stable id", () => {
+    const [store, setStore] = createStore(baseState())
+    applyDirectoryEvent({
+      event: {
+        type: "todo.updated",
+        properties: {
+          sessionID: "ses_1",
+          todos: [
+            { id: "td_00000001", content: "a", status: "pending", priority: "low" },
+            { id: "td_00000002", content: "b", status: "in_progress", priority: "high" },
+          ],
+        },
+      },
+      store,
+      setStore,
+      push() {},
+      directory: "/tmp",
+    } as never)
+    expect(store.todo.ses_1?.map((todo) => todo.id)).toEqual(["td_00000001", "td_00000002"])
+
+    applyDirectoryEvent({
+      event: {
+        type: "todo.updated",
+        properties: {
+          sessionID: "ses_1",
+          todos: [
+            { id: "td_00000001", content: "a", status: "completed", priority: "low" },
+            { id: "td_00000002", content: "b", status: "in_progress", priority: "high" },
+            { id: "td_00000003", content: "c", status: "pending", priority: "medium" },
+          ],
+        },
+      },
+      store,
+      setStore,
+      push() {},
+      directory: "/tmp",
+    } as never)
+    expect(store.todo.ses_1?.map((todo) => todo.status)).toEqual(["completed", "in_progress", "pending"])
+  })
+
   test("initializes text delta accumulation from the current part text", () => {
     const part = { ...textPart("part", "session", "message"), text: "existing" }
     const [store, setStore] = createStore(baseState({ part: { message: [part] } }))
