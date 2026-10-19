@@ -2,4 +2,4 @@ Search file contents by regular expression, returning file paths and line number
 
 When: locating code by symbol, pattern, or error text — not by file name (glob) or within one known file (read).
 How: pattern like "log.*Error" or "function\s+\w+"; include filters file names by glob ("*.js", "*.{ts,tsx}"); path is the search directory — an absolute path or one relative to the working directory.
-Counting or aggregating matches: run `rg` via bash directly. Never pipe shell `grep`/`find`/`cat` — this tool is the search surface.
+Counting or aggregating matches: `rg` via bash IF it is installed (check `command -v rg` — this tool bundles ripgrep internally, but plain `rg` may be absent from the shell PATH); with no rg, count results from this tool's output instead. Never use shell `grep`/`find`/`cat` to *search* — this tool is the search surface.
