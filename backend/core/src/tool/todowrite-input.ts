@@ -17,12 +17,14 @@ export const AddItem = Schema.Struct({
 })
 
 export const StatusChange = Schema.Struct({
-  id: SessionTodo.ID.annotate({ description: "Item id from the live list" }),
+  id: SessionTodo.ID.annotate({
+    description: "Item id — copy the exact td_… token (td_ + 8 hex) from the latest response; never invent it",
+  }),
   status: SessionTodo.Status.annotate({ description: "New state" }),
 })
 
 export const EditItem = Schema.Struct({
-  id: SessionTodo.ID.annotate({ description: "Item id from the live list" }),
+  id: SessionTodo.ID.annotate({ description: "Item id — the exact td_… token copied from the latest response" }),
   content: Schema.optional(Schema.String),
   phase: Schema.optional(Schema.String).annotate({ description: 'New phase label; "" clears it' }),
   priority: Schema.optional(SessionTodo.Priority),
@@ -34,7 +36,8 @@ export const Input = Schema.Struct({
       'What to do: "view" the live list (read only), "add" items, "status" (checklist changes, batched), "edit" items, "remove" items, or "replace" the whole list (seeding a new objective or an acknowledged pivot only). Omitting action with a todos array means "replace"',
   }),
   todos: Schema.optional(Schema.Array(SessionTodo.Info)).annotate({
-    description: "Complete replacement list — only valid for action=replace",
+    description:
+      "For action=replace ONLY — the complete new list. Items for other actions go in their own field (add→add, status→status, edit→edit, remove→remove), never here",
   }),
   confirm: Schema.optional(Schema.Array(SessionTodo.ID)).annotate({
     description: "For replace: the exact unfinished ids being discarded, echoed from the rejection",
@@ -44,7 +47,9 @@ export const Input = Schema.Struct({
     description: "Status changes applied atomically to the live list",
   }),
   edit: Schema.optional(Schema.Array(EditItem)).annotate({ description: "Field patches applied atomically" }),
-  remove: Schema.optional(Schema.Array(SessionTodo.ID)).annotate({ description: "Item ids to delete" }),
+  remove: Schema.optional(Schema.Array(SessionTodo.ID)).annotate({
+    description: "Item ids to delete (td_… tokens copied from the live list)",
+  }),
 })
 export type Input = typeof Input.Type
 

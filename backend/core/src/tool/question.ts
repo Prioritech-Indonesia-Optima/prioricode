@@ -20,7 +20,9 @@ export const description = `Ask the user questions mid-execution: gather prefere
 - A question is a tool call, not a closing line; never end a turn with a dangling one.`
 
 export const Input = Schema.Struct({
-  questions: Schema.Array(Question.Prompt).annotate({ description: "Questions to ask" }),
+  questions: Schema.Array(Question.Prompt).annotate({
+    description: "One or more question records, each with question, header, and options [{label, description}]",
+  }),
 })
 
 export const Output = Schema.Struct({

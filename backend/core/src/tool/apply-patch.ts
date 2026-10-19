@@ -20,7 +20,8 @@ export const name = "apply_patch"
 
 export const Input = Schema.Struct({
   patchText: Schema.String.annotate({
-    description: "The full patch text describing add, update, and delete operations",
+    description:
+      "The full patch text describing add, update, and delete operations — sections wrapped in '*** Begin Patch' and '*** End Patch'",
   }),
 })
 

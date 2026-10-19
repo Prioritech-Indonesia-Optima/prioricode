@@ -16,12 +16,14 @@ import { Tools } from "./tools"
 export const name = "glob"
 
 export const Input = Schema.Struct({
-  pattern: FileSystem.GlobInput.fields.pattern.annotate({ description: "Glob pattern to match files against" }),
+  pattern: FileSystem.GlobInput.fields.pattern.annotate({
+    description: 'Glob pattern to match files against, e.g. "**/*.js" or "src/**/*.ts" — "**" matches any depth',
+  }),
   path: RelativePath.pipe(Schema.optional).annotate({
     description: "Relative directory to search. Defaults to the active Location.",
   }),
   limit: FileSystem.GlobInput.fields.limit.annotate({
-    description: "Maximum results to return",
+    description: "Maximum results to return (positive integer; omit for the default bound)",
   }),
 })
 
@@ -48,7 +50,7 @@ const layer = Layer.effectDiscard(
           description:
             "Find files by glob pattern within the active Location, returning matching relative file resources — fast, any codebase size.\n" +
             "When: you need files by name or location; batch speculative patterns as parallel calls in one message. To search file content use grep; when the exact path is known read it directly.\n" +
-            "How: patterns like \"**/*.js\" or \"src/**/*.ts\"; a relative path narrows the search directory; limit bounds the result count.",
+            'How: patterns like "**/*.js" or "src/**/*.ts"; a relative path narrows the search directory; limit bounds the result count.',
           input: Input,
           output: Output,
           toModelOutput: ({ output }) => [

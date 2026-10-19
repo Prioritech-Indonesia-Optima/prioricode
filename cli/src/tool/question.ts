@@ -5,7 +5,9 @@ import { Session } from "@/session/session"
 import DESCRIPTION from "./question.txt"
 
 export const Parameters = Schema.Struct({
-  questions: Schema.mutable(Schema.Array(Question.Prompt)).annotate({ description: "Questions to ask" }),
+  questions: Schema.mutable(Schema.Array(Question.Prompt)).annotate({
+    description: "One or more question records, each with question, header, and options [{label, description}]",
+  }),
 })
 
 type Metadata = {

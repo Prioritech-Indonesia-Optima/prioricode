@@ -17,7 +17,10 @@ import { Tools } from "./tools"
 export const name = "read"
 const SUPPORTED_IMAGE_MIMES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"])
 const LocationInput = Schema.Struct({
-  path: Schema.String,
+  path: Schema.String.annotate({
+    description:
+      "File or directory path. Relative values resolve from the active Location; absolute paths inside it are accepted; external absolute paths require external_directory approval.",
+  }),
   offset: ReadToolFileSystem.PageInput.fields.offset.annotate({
     description: "The 1-based directory entry or text line offset to start reading from",
   }),

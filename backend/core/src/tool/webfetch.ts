@@ -28,12 +28,12 @@ export const description = `Fetch a URL and convert its content to text, markdow
 const Timeout = Schema.Number.check(Schema.isGreaterThan(0), Schema.isLessThanOrEqualTo(MAX_TIMEOUT_SECONDS))
 
 export const Input = Schema.Struct({
-  url: Schema.String.annotate({ description: "The HTTP or HTTPS URL to fetch content from" }),
+  url: Schema.String.annotate({ description: "The fully formed HTTP or HTTPS URL to fetch content from" }),
   format: Schema.Literals(["text", "markdown", "html"])
-    .annotate({ description: "The format to return the content in. Defaults to markdown." })
+    .annotate({ description: "The format to return the content in: markdown (default) | text | html." })
     .pipe(Schema.withDecodingDefault(Effect.succeed("markdown" as const))),
   timeout: Timeout.pipe(Schema.optional).annotate({
-    description: `Optional timeout in seconds (maximum: ${MAX_TIMEOUT_SECONDS})`,
+    description: `Optional timeout in seconds (default: ${DEFAULT_TIMEOUT_SECONDS}, maximum: ${MAX_TIMEOUT_SECONDS})`,
   }),
 })
 

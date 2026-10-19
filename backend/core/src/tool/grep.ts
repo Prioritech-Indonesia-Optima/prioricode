@@ -18,7 +18,7 @@ export const name = "grep"
 
 export const Input = Schema.Struct({
   pattern: FileSystem.GrepInput.fields.pattern.annotate({
-    description: "Regex pattern to search for in file contents",
+    description: 'Regex pattern to search for in file contents (ripgrep syntax), e.g. "log.*Error", "function\\s+\\w+"',
   }),
   path: RelativePath.pipe(Schema.optional).annotate({
     description: "Relative directory to search. Defaults to the active Location.",
@@ -27,7 +27,7 @@ export const Input = Schema.Struct({
     description: 'File glob to include in the search (for example, "*.js" or "*.{ts,tsx}")',
   }),
   limit: FileSystem.GrepInput.fields.limit.annotate({
-    description: "Maximum matches to return",
+    description: "Maximum matches to return (positive integer; omit for the default bound)",
   }),
 })
 
@@ -64,7 +64,7 @@ const layer = Layer.effectDiscard(
           description:
             "Search file contents by regular expression within the active Location (or one absolute managed tool-output file), returning file resources, line numbers, and bounded line previews — fast, any codebase size.\n" +
             "When: locating code by symbol, pattern, or error text — not by file name (glob) or within one known file (read).\n" +
-            "How: pattern is a regular expression like \"log.*Error\"; include filters file names by glob like \"*.js\" or \"*.{ts,tsx}\"; path narrows the search directory; limit bounds the match count.",
+            'How: pattern is a regular expression like "log.*Error"; include filters file names by glob like "*.js" or "*.{ts,tsx}"; path narrows the search directory; limit bounds the match count.',
           input: Input,
           output: Output,
           toModelOutput: ({ output }) => [

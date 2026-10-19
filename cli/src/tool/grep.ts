@@ -8,7 +8,10 @@ import DESCRIPTION from "./grep.txt"
 import * as Tool from "./tool"
 
 export const Parameters = Schema.Struct({
-  pattern: Schema.String.annotate({ description: "The regex pattern to search for in file contents" }),
+  pattern: Schema.String.annotate({
+    description:
+      'The regex pattern to search for in file contents (ripgrep syntax), e.g. "log.*Error", "function\\s+\\w+"',
+  }),
   path: Schema.optional(Schema.String).annotate({
     description: "The directory to search in. Defaults to the current working directory.",
   }),

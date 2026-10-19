@@ -18,7 +18,10 @@ import { Format } from "../format"
 import * as Bom from "@/util/bom"
 
 export const Parameters = Schema.Struct({
-  patchText: Schema.String.annotate({ description: "The full patch text that describes all changes to be made" }),
+  patchText: Schema.String.annotate({
+    description:
+      "The full patch text describing all changes — sections wrapped in '*** Begin Patch' / '*** End Patch'; Add File lines all prefixed '+', Update File lines prefixed '-' (old) or '+' (new)",
+  }),
 })
 
 export const ApplyPatchTool = Tool.define(

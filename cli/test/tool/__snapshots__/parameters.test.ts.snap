@@ -5,7 +5,7 @@ exports[`tool parameters JSON Schema (wire shape) apply_patch 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "patchText": {
-      "description": "The full patch text that describes all changes to be made",
+      "description": "The full patch text describing all changes — sections wrapped in '*** Begin Patch' / '*** End Patch'; Add File lines all prefixed '+', Update File lines prefixed '-' (old) or '+' (new)",
       "type": "string",
     },
   },
@@ -52,7 +52,7 @@ exports[`tool parameters JSON Schema (wire shape) edit 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "filePath": {
-      "description": "The absolute path to the file to modify",
+      "description": "The absolute path to the file to modify (must be absolute, not relative)",
       "type": "string",
     },
     "newString": {
@@ -60,7 +60,7 @@ exports[`tool parameters JSON Schema (wire shape) edit 1`] = `
       "type": "string",
     },
     "oldString": {
-      "description": "The text to replace",
+      "description": "The exact text to replace — must match the file byte-for-byte (including indentation, without any read line-number prefix) and match exactly one location; otherwise add surrounding context or set replaceAll",
       "type": "string",
     },
     "replaceAll": {
@@ -86,7 +86,7 @@ exports[`tool parameters JSON Schema (wire shape) glob 1`] = `
       "type": "string",
     },
     "pattern": {
-      "description": "The glob pattern to match files against",
+      "description": "The glob pattern to match files against, e.g. "**/*.js" or "src/**/*.ts" — "**" matches any depth",
       "type": "string",
     },
   },
@@ -110,7 +110,7 @@ exports[`tool parameters JSON Schema (wire shape) grep 1`] = `
       "type": "string",
     },
     "pattern": {
-      "description": "The regex pattern to search for in file contents",
+      "description": "The regex pattern to search for in file contents (ripgrep syntax), e.g. "log.*Error", "function\\s+\\w+"",
       "type": "string",
     },
   },
@@ -243,7 +243,7 @@ exports[`tool parameters JSON Schema (wire shape) question 1`] = `
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "properties": {
     "questions": {
-      "description": "Questions to ask",
+      "description": "One or more question records, each with question, header, and options [{label, description}]",
       "items": {
         "properties": {
           "header": {
@@ -454,7 +454,7 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
             "type": "string",
           },
           "id": {
-            "description": "Item id from the live list",
+            "description": "Item id — the exact td_… token copied from the latest response",
             "pattern": "^td_[0-9a-f]{8}$",
             "type": "string",
           },
@@ -479,7 +479,7 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
       "type": "array",
     },
     "remove": {
-      "description": "Item ids to delete",
+      "description": "Item ids to delete (td_… tokens copied from the live list)",
       "items": {
         "pattern": "^td_[0-9a-f]{8}$",
         "type": "string",
@@ -491,7 +491,7 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
       "items": {
         "properties": {
           "id": {
-            "description": "Item id from the live list",
+            "description": "Item id — copy the exact td_… token (td_ + 8 hex) from the latest response; never invent it",
             "pattern": "^td_[0-9a-f]{8}$",
             "type": "string",
           },
@@ -515,7 +515,7 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
       "type": "array",
     },
     "todos": {
-      "description": "Complete replacement list — only valid for action=replace",
+      "description": "For action=replace ONLY — the complete new list. Items for other actions go in their own field (add→add, status→status, edit→edit, remove→remove), never here",
       "items": {
         "properties": {
           "content": {
@@ -582,7 +582,7 @@ exports[`tool parameters JSON Schema (wire shape) webfetch 1`] = `
       "type": "number",
     },
     "url": {
-      "description": "The URL to fetch content from",
+      "description": "The fully formed URL to fetch — only from the user, local files, or earlier results; never generate or guess URLs",
       "type": "string",
     },
   },

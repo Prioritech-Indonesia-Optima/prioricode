@@ -28,7 +28,10 @@ export const Input = Schema.Struct({
     description:
       "File path to edit. Relative paths resolve within the active Location. Absolute paths inside that Location are accepted; external absolute paths require external_directory approval.",
   }),
-  oldString: Schema.String.annotate({ description: "Exact text to replace" }),
+  oldString: Schema.String.annotate({
+    description:
+      "Exact text to replace — must match the file byte-for-byte (including indentation, without any read line-number prefix) and match exactly one location; otherwise add surrounding context or set replaceAll",
+  }),
   newString: Schema.String.annotate({ description: "Replacement text, which must differ from oldString" }),
   replaceAll: Schema.Boolean.pipe(Schema.optional).annotate({
     description: "Replace all exact occurrences of oldString (default false)",

@@ -47,8 +47,13 @@ function lock(filePath: string) {
 }
 
 export const Parameters = Schema.Struct({
-  filePath: Schema.String.annotate({ description: "The absolute path to the file to modify" }),
-  oldString: Schema.String.annotate({ description: "The text to replace" }),
+  filePath: Schema.String.annotate({
+    description: "The absolute path to the file to modify (must be absolute, not relative)",
+  }),
+  oldString: Schema.String.annotate({
+    description:
+      "The exact text to replace — must match the file byte-for-byte (including indentation, without any read line-number prefix) and match exactly one location; otherwise add surrounding context or set replaceAll",
+  }),
   newString: Schema.String.annotate({
     description: "The text to replace it with (must be different from oldString)",
   }),

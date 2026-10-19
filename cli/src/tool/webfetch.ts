@@ -11,7 +11,10 @@ const DEFAULT_TIMEOUT = 30 * 1000 // 30 seconds
 const MAX_TIMEOUT = 120 * 1000 // 2 minutes
 
 export const Parameters = Schema.Struct({
-  url: Schema.String.annotate({ description: "The URL to fetch content from" }),
+  url: Schema.String.annotate({
+    description:
+      "The fully formed URL to fetch — only from the user, local files, or earlier results; never generate or guess URLs",
+  }),
   format: Schema.Literals(["text", "markdown", "html"])
     .annotate({
       description: "The format to return the content in (text, markdown, or html). Defaults to markdown.",
