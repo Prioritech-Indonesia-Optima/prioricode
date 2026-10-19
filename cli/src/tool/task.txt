@@ -1,12 +1,9 @@
 Launch a subagent for complex multistep work. It runs autonomously and returns one final message — invisible to the user, so relay a concise summary yourself.
 
-Usage:
-- subagent_type selects from "Available agent types" listed below; description is a 3-5 word label.
-- The subagent sees none of your context: the prompt must be self-contained — findings, file paths, constraints, and exactly what to return in its final message.
-- Say whether it writes code or only researches, and how it should verify.
+- subagent_type selects from the "Available agent types" listed in the system context; description is a short 3-5 word label. Use "general" for research and implementation, "explore" for read-only codebase questions, and state the thoroughness level you want — "quick" by default, escalate only when a first pass missed its target.
+- The subagent starts with no context from this conversation: the prompt must be self-contained — findings, file paths, constraints, and exactly what to return in its final message. Say whether it writes code or only researches, and how it should verify. It cannot ask the user questions.
 - task_id resumes that prior subagent with its context; without it, context is fresh.
-- background: true runs async; completion is announced automatically. Never sleep or poll it.
-- Launch independent subagents concurrently in one message.
+- background: true runs async and completion is announced automatically — never sleep or poll it. In foreground mode, launch independent subagents as parallel calls in one message.
 - After delegating, do not duplicate the work — take non-overlapping tasks or wait.
-- Prefer it for open-ended, multi-round codebase exploration; not for needle lookups: read a known path, grep a named symbol, glob a filename.
-- Ask for the minimum sufficient thoroughness: "quick" by default; "very thorough" only when a first pass missed its target or the survey is genuinely cross-cutting.
+- Prefer subagents for open-ended, multi-round exploration; not for needle lookups — read a known path, grep a named symbol, glob a filename.
+- Verify subagent output yourself before relying on it: it is advice from another agent, not ground truth.

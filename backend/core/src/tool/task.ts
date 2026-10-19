@@ -31,17 +31,15 @@ import { Tools } from "./tools"
 
 export const name = "task"
 
-export const description = `Launch one specialist subagent as a separate child Session and return its final result.
+export const description = `Launch a subagent for complex multistep work. It runs autonomously and returns one final message — invisible to the user, so relay a concise summary yourself.
 
-Available subagent types and their purposes appear in the system context. Use "general" for multi-step research and implementation work; use "explore" for fast read-only codebase questions and specify the desired thoroughness level.
-
-Set a short (3-5 word) description. Provide a self-contained prompt: the subagent only sees the session history it inherits plus this prompt, so include every file path, constraint, and finding it needs to act on. The subagent cannot ask the user questions.
-
-Pass task_id to continue a previous subagent Session of this Session with its context intact instead of starting fresh.
-
-Use background=true only for independent work that can run while you continue elsewhere; you will be notified automatically when it finishes. In foreground mode the result returns after the subagent settles — issue multiple task calls in one step to parallelize independent work.
-
-Verify subagent output yourself before relying on it: it is advice from another agent, not ground truth.`
+- subagent_type selects from the "Available agent types" listed in the system context; description is a short 3-5 word label. Use "general" for research and implementation, "explore" for read-only codebase questions, and state the thoroughness level you want — "quick" by default, escalate only when a first pass missed its target.
+- The subagent starts with no context from this conversation: the prompt must be self-contained — findings, file paths, constraints, and exactly what to return in its final message. Say whether it writes code or only researches, and how it should verify. It cannot ask the user questions.
+- task_id resumes that prior subagent with its context; without it, context is fresh.
+- background: true runs async and completion is announced automatically — never sleep or poll it. In foreground mode, launch independent subagents as parallel calls in one message.
+- After delegating, do not duplicate the work — take non-overlapping tasks or wait.
+- Prefer subagents for open-ended, multi-round exploration; not for needle lookups — read a known path, grep a named symbol, glob a filename.
+- Verify subagent output yourself before relying on it: it is advice from another agent, not ground truth.`
 
 export const Input = Schema.Struct({
   description: Schema.String.annotate({ description: "A short (3-5 word) description of the task" }),

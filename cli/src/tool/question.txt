@@ -1,5 +1,7 @@
-Ask the user a question mid-execution: gather preferences, clarify ambiguous instructions, decide implementation choices, offer directions.
+Ask the user questions mid-execution: gather preferences, clarify ambiguous instructions, decide implementation choices, offer directions.
 
 - Answers come back as arrays of labels; set multiple: true to allow several picks.
-- custom enabled (default) auto-adds a "Type your own answer" option — do not include "Other" or catch-alls.
-- Recommended option goes first with "(Recommended)" appended to its label.
+- custom is enabled by default and auto-adds a "Type your own answer" option — do not include "Other" or catch-alls.
+- Put the recommended option first and append "(Recommended)" to its label.
+- Ask only when the answer changes what you do — anything you can read, run, or search is not a question.
+- A question is a tool call, not a closing line; never end a turn with a dangling one.

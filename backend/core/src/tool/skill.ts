@@ -24,13 +24,11 @@ export const Output = Schema.Struct({
   output: Schema.String,
 })
 
-export const description = [
-  "Load a specialized skill when the task at hand matches one of the available skills in the system context.",
-  "",
-  "Use this tool to inject the skill's instructions and resources into the current conversation. The output may contain detailed workflow guidance as well as references to scripts, files, etc. in the same directory as the skill.",
-  "",
-  "The skill name must match one of the available skills in the system context.",
-].join("\n")
+export const description = `Load a specialized skill when the current task matches its description in the available skills list. A skill encodes an expert workflow that general knowledge would guess at — when one clearly matches, using it is not optional.
+
+- The name must exactly match one of the listed skills.
+- The loaded output contains the skill's instructions plus references to its scripts and files.
+- Do not load a skill that does not match the task; a mismatched skill just fills the context.`
 
 export const toModelOutput = (skill: Skill.Info, files: ReadonlyArray<string>) => {
   const directory = path.dirname(skill.location)

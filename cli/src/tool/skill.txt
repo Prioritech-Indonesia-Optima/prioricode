@@ -1,3 +1,5 @@
-Load a specialized skill whose description matches the current task. Injects the skill's instructions and resource references into this conversation; output may include workflow guidance plus scripts and files under the skill's directory.
+Load a specialized skill when the current task matches its description in the available skills list. A skill encodes an expert workflow that general knowledge would guess at — when one clearly matches, using it is not optional.
 
-The name must match a skill listed in the system prompt.
+- The name must exactly match one of the listed skills.
+- The loaded output contains the skill's instructions plus references to its scripts and files.
+- Do not load a skill that does not match the task; a mismatched skill just fills the context.
