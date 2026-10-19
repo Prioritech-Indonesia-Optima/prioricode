@@ -42,12 +42,15 @@ describe("contract hygiene", () => {
   test("todo id is an optional branded td_ identifier", () => {
     const id = SessionTodo.ID.create()
     expect(id).toStartWith("td_")
-    expect(Schema.decodeUnknownSync(SessionTodo.Info)({ id, content: "ship", status: "pending", priority: "high" })).toEqual(
-      { id, content: "ship", status: "pending", priority: "high" },
-    )
     expect(
-      Schema.encodeSync(SessionTodo.Info)({ id, content: "ship", status: "pending", priority: "high" }),
+      Schema.decodeUnknownSync(SessionTodo.Info)({ id, content: "ship", status: "pending", priority: "high" }),
     ).toEqual({ id, content: "ship", status: "pending", priority: "high" })
+    expect(Schema.encodeSync(SessionTodo.Info)({ id, content: "ship", status: "pending", priority: "high" })).toEqual({
+      id,
+      content: "ship",
+      status: "pending",
+      priority: "high",
+    })
   })
 
   test("current ID constructors expose create", () => {

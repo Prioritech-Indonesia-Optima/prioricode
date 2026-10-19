@@ -190,7 +190,7 @@ Because `execute`'s error channel is currently `ToolFailure`-only, leaves end wi
 | `webfetch`                      | the tool input (`{ url, format, timeout? }`)                     |
 | `websearch`                     | `{ ...input, provider }`                                         |
 
-Session-state built-ins differ: `todowrite` asserts a bare wildcard (`resources: ["*"], save: ["*"]`, no metadata), `question` asserts `resources: ["*"]` with deliberately no `save` (either agent-allowed or denied; a memorized wildcard adds nothing), and `goal`, `plan_enter`, `plan_exit`, `task` assert nothing — their availability is governed by definition filtering. File content for the `edit`/`apply_patch` diff preview is read before approval, but a denied call always settles as the permission outcome: read, match, and preparation state stay model-invisible until an approval decision.
+Session-state built-ins differ: `todowrite` asserts a bare wildcard (`resources: ["*"], save: ["*"]`, no metadata) for its mutating actions (`add`, `status`, `edit`, `remove`, `replace`), while the read-only `view` action settles without an assertion; `question` asserts `resources: ["*"]` with deliberately no `save` (either agent-allowed or denied; a memorized wildcard adds nothing), and `goal`, `plan_enter`, `plan_exit`, `task` assert nothing — their availability is governed by definition filtering. File content for the `edit`/`apply_patch` diff preview is read before approval, but a denied call always settles as the permission outcome: read, match, and preparation state stay model-invisible until an approval decision.
 
 ## Permission Precedence
 

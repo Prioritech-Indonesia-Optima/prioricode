@@ -1,5 +1,13 @@
 # V2 Schema Changelog
 
+## 2026-10-19: Addressable Todos and In-Place `todowrite` Operations
+
+- Add an optional branded `id` (`td_` + 8 hex) to `SessionTodo.Info` (`Todo`); migration `todo_id` adds the nullable `id` column, backfills existing rows, and creates a per-session unique index. The server mints ids on write, so ids survive across `todowrite` calls; legacy id-less rows are repaired lazily on read.
+- Replace `todowrite`'s complete-replacement input with an action union (`view`, `add`, `status`, `edit`, `remove`, `replace`). Granular ops address items by id and batch multiple changes into one atomic call validated on the final list; `status` completing the current task and starting the next is a single call. A `replace` with unfinished items is rejected once with the exact discarded-id set and accepted only when the model echoes those ids as `confirm`. Omitting `action` with a `todos` array still means `replace`.
+- The tool's model-facing output becomes the id-bearing checklist (`snapshot` with `ids`), not raw JSON; `metadata.todos` still carries the full post-op list for every action, and `todo.updated` still publishes a full snapshot — now with `id`.
+- Add the live list as a `session/todo` **Context Source** (V2) and an unattended-list reminder part (V1): an actively maintained list stays silent (no per-turn echo); a neglected unfinished list re-anchors its checklist into the System Context. Compaction `<current-todos>` injections now carry ids so post-compaction work addresses items by id.
+- Compatibility: `id` is optional on the wire, so stored events and pre-id sessions decode unchanged; old builds that write id-less rows only lose addressing convenience (re-minted on next read). The `todowrite` permission action, tool name, and `todo.updated` event shape are otherwise preserved.
+
 ## 2026-10-15: Phase-Structured Todos and Literal States
 
 - Add optional `phase` label to `SessionTodo.Info` (`Todo`), grouping consecutive tasks into one collapsible section across TUI, GUI dock, and timeline renderers; migration `todo_phase` adds the nullable `phase` text column.

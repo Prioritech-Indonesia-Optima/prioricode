@@ -89,7 +89,8 @@ const withoutIds = (todos: ReadonlyArray<SessionTodo.Info>) =>
 
 // Result values are strings; extract once because matcher objects must not be re-asserted.
 const resultText = (result: { type: string; value: unknown }) => String(result.value)
-const structured = (output: unknown) => (output as { structured: { todos: SessionTodo.Info[]; text: string } }).structured
+const structured = (output: unknown) =>
+  (output as { structured: { todos: SessionTodo.Info[]; text: string } }).structured
 
 const seed = (registry: ToolRegistry.Interface, list: ReadonlyArray<SessionTodo.Info>) =>
   settleTool(registry, call({ todos: list })).pipe(
@@ -363,10 +364,7 @@ describe("TodoWriteTool", () => {
       yield* service.update({ sessionID, todos: [{ content: "blocked", status: "pending", priority: "low" }] })
       deny = true
 
-      const result = yield* executeTool(
-        registry,
-        call({ action: "add", add: [{ content: "new item" }] }),
-      )
+      const result = yield* executeTool(registry, call({ action: "add", add: [{ content: "new item" }] }))
       expect(result.type).toBe("error")
       expect(resultText(result)).toContain("Blocked by permission rules")
       expect((yield* service.get(sessionID)).map((todo) => todo.content)).toEqual(["blocked"])

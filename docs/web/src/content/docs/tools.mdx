@@ -227,7 +227,7 @@ Manage todo lists during coding sessions.
 }
 ```
 
-Creates and updates task lists to track progress during complex operations. The LLM uses this to organize multi-step tasks.
+Maintains the session todo list — the plan in force, persisted outside the conversation. The agent seeds the list once, then mutates it in place by item id (`view`, `add`, `status`, `edit`, `remove`); a full `replace` is reserved for seeding a new objective and must explicitly confirm any unfinished items it discards.
 
 :::note
 This tool is disabled for subagents by default, but you can enable it manually. [Learn more](/docs/agents/#permissions)

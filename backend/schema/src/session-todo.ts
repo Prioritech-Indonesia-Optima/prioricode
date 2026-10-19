@@ -12,7 +12,10 @@ export const ID = Schema.String.check(Schema.isPattern(/^td_[0-9a-f]{8}$/)).pipe
   Schema.brand("TodoID"),
   statics((schema) => {
     const create = () =>
-      schema.make("td_" + Array.from(crypto.getRandomValues(new Uint8Array(4)), (byte) => byte.toString(16).padStart(2, "0")).join(""))
+      schema.make(
+        "td_" +
+          Array.from(crypto.getRandomValues(new Uint8Array(4)), (byte) => byte.toString(16).padStart(2, "0")).join(""),
+      )
     return { create }
   }),
 )

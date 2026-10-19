@@ -51,6 +51,10 @@ One request to a model provider and the response projected from that request.
 **Session Drain**:
 One process-local execution span that promotes eligible input and runs required **Provider Turns** until no immediate continuation remains. A Session Drain has no durable identity or transcript boundary.
 
+**Session Todo List**:
+The durable, per-session work checklist owned outside conversational memory; the plan in force. Agents mutate it in place through the `todowrite` tool by stable item id (`add`, `status`, `edit`, `remove`), and a full `replace` is gated behind an explicit confirmation of the unfinished items it discards. It is re-anchored into the **System Context** when unattended and read directly from storage during compaction, so the stored list always wins over an agent's recollection.
+_Avoid_: Todo plan, scratch list
+
 **Model Tool Output**:
 The bounded projection of a Core-executed tool result persisted in Session history and replayed to the model. A tool may shape this projection semantically, but the Tool Registry enforces the final size limit.
 
