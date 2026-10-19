@@ -55,6 +55,7 @@ import { ToolGuard } from "./tool-guard"
 import { SessionPrune } from "./prune"
 import { Snapshot } from "../../snapshot"
 import { SessionTodo } from "../todo"
+import { SessionTodoContext } from "../todo-context"
 import { makeLocationNode } from "../../effect/app-node"
 import { llmClient } from "../../effect/app-node-platform"
 
@@ -216,15 +217,23 @@ const layer = Layer.effect(
       new TurnTransitionError({ _tag: "RetryProviderTurn", step, attempt, delayMs })
 
     const loadSystemContext = (sessionID: SessionSchema.ID, agent: Agent.Selection, usagePercent: number) =>
-      Effect.all([systemContext.load(), skillGuidance.load(agent), referenceGuidance.load(), store.get(sessionID)], {
-        concurrency: "unbounded",
-      }).pipe(
-        Effect.map(([environment, skills, references, session]) =>
+      Effect.all(
+        [
+          systemContext.load(),
+          skillGuidance.load(agent),
+          referenceGuidance.load(),
+          store.get(sessionID),
+          sessionTodos.reminder(sessionID),
+        ],
+        { concurrency: "unbounded" },
+      ).pipe(
+        Effect.map(([environment, skills, references, session, todoReminder]) =>
           SystemContext.combine([
             environment,
             skills,
             references,
             SessionGoal.context(session?.goal),
+            SessionTodoContext.context(todoReminder),
             SystemContextBudget.context(usagePercent),
           ]),
         ),
