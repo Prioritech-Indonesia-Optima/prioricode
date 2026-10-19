@@ -110,6 +110,42 @@ export type Status = Schema.Schema.Type<typeof Status>
 type TransportWithAuth = StreamableHTTPClientTransport | SSEClientTransport
 const pendingOAuthTransports = new Map<string, { transport: TransportWithAuth; provider?: McpOAuthPendingProvider }>()
 
+// A stdio server's stderr is otherwise discarded by the SDK's un-drained PassThrough,
+// which deadlocks chatty servers once the pipe fills and leaves no trace of why a
+// server died. Keep a bounded tail per server for failure diagnostics.
+const STDERR_TAIL_BYTES = 16_384
+const STDERR_STATUS_CHARS = 500
+
+interface StderrCapture {
+  readonly tail: () => string
+  readonly stop: () => void
+}
+
+function captureStderr(transport: StdioClientTransport): StderrCapture {
+  const stream = transport.stderr
+  if (!stream) return { tail: () => "", stop: () => {} }
+  let buffer = ""
+  const onData = (chunk: Buffer) => {
+    buffer += chunk.toString("utf8")
+    if (buffer.length > STDERR_TAIL_BYTES) buffer = buffer.slice(-STDERR_TAIL_BYTES)
+  }
+  stream.on("data", onData)
+  return {
+    tail: () => buffer.trim(),
+    stop: () => stream.off("data", onData),
+  }
+}
+
+function statusTail(full: string) {
+  const lines = full
+    .slice(-STDERR_STATUS_CHARS)
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+  return lines.slice(-3).join("\n")
+}
+
+const stderrCaptures = new Map<string, StderrCapture>()
+
 // Prompt cache types
 type PromptInfo = Awaited<ReturnType<MCPClient["listPrompts"]>>["prompts"][number]
 type ResourceInfo = Awaited<ReturnType<MCPClient["listResources"]>>["resources"][number]
@@ -356,6 +392,8 @@ const layer = Layer.effect(
         },
       })
 
+      const capture = captureStderr(transport)
+      stderrCaptures.set(key, capture)
       const connectTimeout = mcp.timeout ?? DEFAULT_TIMEOUT
       return yield* connectTransport(transport, connectTimeout).pipe(
         Effect.map((client): { client: MCPClient | undefined; status: Status } => ({
@@ -364,7 +402,13 @@ const layer = Layer.effect(
         })),
         Effect.catch((error): Effect.Effect<{ client: MCPClient | undefined; status: Status }> => {
           const msg = error instanceof Error ? error.message : String(error)
-          return Effect.succeed({ client: undefined, status: { status: "failed", error: msg } })
+          const tail = capture.tail()
+          capture.stop()
+          stderrCaptures.delete(key)
+          return Effect.succeed({
+            client: undefined,
+            status: { status: "failed", error: tail ? `${msg}\n${statusTail(tail)}` : msg },
+          })
         }),
       )
     })
@@ -382,7 +426,12 @@ const layer = Layer.effect(
 
         if (!mcpClient) {
           if (status.status !== "connected" && status.status !== "disabled") {
-            yield* Effect.logWarning("server unavailable", { key, type: mcp.type, status: status.status })
+            yield* Effect.logWarning("server unavailable", {
+              key,
+              type: mcp.type,
+              status: status.status,
+              ...(status.status === "failed" ? { detail: status.error } : {}),
+            })
           }
           return { status } satisfies CreateResult
         }
@@ -442,12 +491,19 @@ const layer = Layer.effect(
     function watch(s: State, name: string, client: MCPClient, bridge: EffectBridge.Shape, timeout?: number) {
       client.onclose = () => {
         if (s.clients[name] !== client) return
+        const capture = stderrCaptures.get(name)
+        const tail = capture ? capture.tail() : ""
+        if (capture) capture.stop()
+        stderrCaptures.delete(name)
         delete s.clients[name]
         delete s.defs[name]
         delete s.instructions[name]
-        s.status[name] = { status: "failed", error: "Connection closed" }
+        s.status[name] = {
+          status: "failed",
+          error: tail ? `Connection closed\n${statusTail(tail)}` : "Connection closed",
+        }
         bridge.fork(
-          Effect.logWarning("MCP connection closed", { server: name }).pipe(
+          Effect.logWarning("MCP connection closed", { server: name, detail: tail }).pipe(
             Effect.andThen(events.publish(ToolsChanged, { server: name })),
             Effect.ignore,
           ),
@@ -551,6 +607,7 @@ const layer = Layer.effect(
                 }),
               { concurrency: "unbounded" },
             )
+            stderrCaptures.clear()
             pendingOAuthTransports.clear()
           }),
         )
@@ -561,6 +618,9 @@ const layer = Layer.effect(
 
     function closeClient(s: State, name: string) {
       const client = s.clients[name]
+      const capture = stderrCaptures.get(name)
+      if (capture) capture.stop()
+      stderrCaptures.delete(name)
       delete s.clients[name]
       delete s.defs[name]
       delete s.instructions[name]

@@ -120,6 +120,42 @@ type Outcome =
 const unavailable = (status: { readonly status: "failed" | "skipped"; readonly detail: string }) =>
   ({ _tag: "Unavailable", status }) as const
 
+// A stdio server's stderr is otherwise discarded by the SDK's un-drained
+// PassThrough, which deadlocks chatty servers once the pipe fills and leaves
+// no trace of why a server died. Keep a bounded tail for failure diagnostics.
+const STDERR_TAIL_BYTES = 16_384
+const STDERR_DETAIL_CHARS = 500
+
+interface StderrCapture {
+  readonly tail: () => string
+  readonly stop: () => void
+}
+
+const captureStderr = (transport: StdioClientTransport | StreamableHTTPClientTransport): StderrCapture => {
+  if (!(transport instanceof StdioClientTransport)) return { tail: () => "", stop: () => {} }
+  const stream = transport.stderr
+  if (stream === null) return { tail: () => "", stop: () => {} }
+  let buffer = ""
+  const onData = (chunk: Buffer) => {
+    buffer += chunk.toString("utf8")
+    if (buffer.length > STDERR_TAIL_BYTES) buffer = buffer.slice(-STDERR_TAIL_BYTES)
+  }
+  stream.on("data", onData)
+  return {
+    tail: () => buffer.trim(),
+    stop: () => stream.off("data", onData),
+  }
+}
+
+const stderrDetail = (detail: string, tail: string) => {
+  if (tail === "") return detail
+  const lines = tail
+    .slice(-STDERR_DETAIL_CHARS)
+    .split("\n")
+    .filter((line) => line.trim() !== "")
+  return `${detail}\n${lines.slice(-3).join("\n")}`
+}
+
 const buildTransport = (serverName: string, server: ConfigMCP.ServerType, directory: string) =>
   Effect.try({
     try: () =>
@@ -131,6 +167,7 @@ const buildTransport = (serverName: string, server: ConfigMCP.ServerType, direct
               command,
               args,
               cwd: server.cwd === undefined ? directory : path.resolve(directory, server.cwd),
+              stderr: "pipe",
               env:
                 server.environment === undefined ? baseEnvironment() : { ...baseEnvironment(), ...server.environment },
             })
@@ -154,6 +191,13 @@ const openServer = Effect.fn("MCPv2.openServer")(function* (
     return unavailable({ status: "skipped", detail: "OAuth is not supported by the V2 MCP client yet" })
   const transport = yield* buildTransport(serverName, server, directory)
   if (Option.isNone(transport)) return unavailable({ status: "failed", detail: "invalid local command or remote URL" })
+  const capture = captureStderr(transport.value)
+  const withStderr = (detail: string) => {
+    if (capture === undefined) return detail
+    const tail = capture.tail()
+    capture.stop()
+    return stderrDetail(detail, tail)
+  }
   const connection = yield* Effect.gen(function* () {
     const client = yield* Effect.acquireRelease(
       Effect.tryPromise({
@@ -182,9 +226,22 @@ const openServer = Effect.fn("MCPv2.openServer")(function* (
       ),
       client,
     } as const
-  }).pipe(Effect.timeoutOption(Duration.millis(startup + requestMs)))
-  if (Option.isNone(connection)) return unavailable({ status: "failed", detail: "connection or list timed out" })
-  return connection.value
+  }).pipe(
+    Effect.timeoutOption(Duration.millis(startup + requestMs)),
+    Effect.catch((error) =>
+      Effect.succeed(
+        Option.some(
+          unavailable({ status: "failed", detail: withStderr(error instanceof Error ? error.message : String(error)) }),
+        ),
+      ),
+    ),
+  )
+  if (Option.isNone(connection))
+    return unavailable({ status: "failed", detail: withStderr("connection or list timed out") })
+  const result = connection.value
+  if (result._tag === "Unavailable" && result.status.status === "failed")
+    return unavailable({ status: "failed", detail: withStderr(result.status.detail) })
+  return result
 })
 
 const registration = Layer.effectDiscard(
@@ -199,16 +256,7 @@ const registration = Layer.effectDiscard(
       ),
     ) as Record<string, ConfigMCP.ServerType>
     for (const [serverName, server] of Object.entries(servers)) {
-      const outcome: Outcome = yield* openServer(serverName, server, location.directory).pipe(
-        Effect.catch((error) =>
-          Effect.succeed(
-            unavailable({
-              status: "failed",
-              detail: error instanceof Error ? error.message : String(error),
-            }),
-          ),
-        ),
-      )
+      const outcome: Outcome = yield* openServer(serverName, server, location.directory)
       if (outcome._tag === "Connected") {
         yield* tools.register(Object.fromEntries(outcome.registrations)).pipe(Effect.catch(() => Effect.void))
         yield* Effect.addFinalizer(() => Effect.tryPromise(() => outcome.client.close()).pipe(Effect.ignore))
