@@ -294,6 +294,15 @@ describe("SessionTodo.apply", () => {
     expect(SessionTodo.apply(info, { action: "remove", remove: [] }).ok).toBe(false)
   })
 
+  test("add with items parked under todos gets a named crossup correction", () => {
+    const result = SessionTodo.apply([], {
+      action: "add",
+      todos: [{ content: "x", status: "pending", priority: "low" }],
+    })
+    expect(result.ok).toBe(false)
+    expect(result.text).toContain('move them under "add"')
+  })
+
   test("replace with a malformed final list is rejected before accept", () => {
     const result = SessionTodo.apply([], {
       action: "replace",

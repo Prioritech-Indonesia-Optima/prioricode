@@ -161,6 +161,18 @@ const applied = (todos: ReadonlyArray<Info>, headline: string): ApplyResult => (
 })
 
 /**
+ * When the model fills one action's payload into another action's array field
+ * (measured live: `add` with items under `todos`), the rejection must NAME the
+ * crossup — a generic "empty" complaint gets retried unchanged.
+ */
+const crossupHint = (given: OpInput, want: string) =>
+  given.todos !== undefined && want !== "replace"
+    ? ` Your items are under "todos", which only action=replace reads — move them under "${want}".`
+    : given.add !== undefined && want === "todos"
+      ? ' Your items are under "add" — replace reads them from "todos".'
+      : ""
+
+/**
  * Applies one todowrite operation to the live list, purely. `current` is the
  * stored list; ids are ensured so legacy id-less rows stay addressable. The
  * result text is model-facing: accepted ops echo the fresh checklist, rejected
@@ -178,7 +190,8 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
     )
   if (action === "view") return applied(base, "Current todo list")
   if (action === "replace") {
-    if (input.todos === undefined) return rejected("`replace` needs the complete new `todos` list.", base)
+    if (input.todos === undefined)
+      return rejected("`replace` needs the complete new `todos` list." + crossupHint(input, "todos"), base)
     const discarded = unfinished(base)
     if (discarded.length > 0) {
       const wanted = new Set(discarded.map((todo) => todo.id!))
@@ -206,7 +219,8 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
     return applied(fresh, "Seeded the todo list")
   }
   if (action === "add") {
-    if (!input.add || input.add.length === 0) return rejected("`add` needs at least one item.", base)
+    if (!input.add || input.add.length === 0)
+      return rejected("`add` needs at least one item." + crossupHint(input, "add"), base)
     const next = [...base]
     const offsets = new Map<string, number>()
     for (const item of input.add) {
@@ -233,7 +247,7 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
   }
   if (action === "status") {
     if (!input.status || input.status.length === 0)
-      return rejected("`status` needs at least one {id, status} change.", base)
+      return rejected("`status` needs at least one {id, status} change." + crossupHint(input, "status"), base)
     const missing = [...new Set(input.status.map((change) => change.id))].filter(
       (id) => !base.some((todo) => todo.id === id),
     )
@@ -251,7 +265,8 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
     return applied(next, `Updated ${input.status.length} item(s)`)
   }
   if (action === "edit") {
-    if (!input.edit || input.edit.length === 0) return rejected("`edit` needs at least one patch.", base)
+    if (!input.edit || input.edit.length === 0)
+      return rejected("`edit` needs at least one patch." + crossupHint(input, "edit"), base)
     const missing = [...new Set(input.edit.map((item) => item.id))].filter((id) => !base.some((todo) => todo.id === id))
     if (missing.length > 0) return rejected(`Unknown todo id(s): ${missing.join(", ")}`, base)
     const next = base.map((todo) => {
@@ -266,7 +281,8 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
     })
     return applied(next, `Edited ${input.edit.length} item(s)`)
   }
-  if (!input.remove || input.remove.length === 0) return rejected("`remove` needs at least one id.", base)
+  if (!input.remove || input.remove.length === 0)
+    return rejected("`remove` needs at least one id." + crossupHint(input, "remove"), base)
   const missing = [...new Set(input.remove)].filter((id) => !base.some((todo) => todo.id === id))
   if (missing.length > 0) return rejected(`Unknown todo id(s): ${missing.join(", ")}`, base)
   const set = new Set(input.remove)
