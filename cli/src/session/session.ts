@@ -27,9 +27,11 @@ import { PartTable, SessionTable } from "@prioricode/core/session/sql"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { MessageV2 } from "./message-v2"
 import type { InstanceContext } from "../project/instance-context"
+import { Config } from "@/config/config"
 import { InstanceState } from "@/effect/instance-state"
 import { Snapshot } from "@/snapshot"
 import { Project } from "@prioricode/core/project"
+import { SessionIsolation } from "@prioricode/core/session/isolation"
 import { Workspace } from "@prioricode/core/workspace"
 import { SessionID, MessageID, PartID } from "./schema"
 
@@ -503,7 +505,12 @@ export type Patch = Omit<Partial<Info>, "time" | "share" | "summary" | "revert" 
 const layer: Layer.Layer<
   Service,
   never,
-  BackgroundJob.Service | RuntimeFlags.Service | Database.Service | EventBridge.Service
+  | BackgroundJob.Service
+  | RuntimeFlags.Service
+  | Database.Service
+  | EventBridge.Service
+  | Config.Service
+  | SessionIsolation.Service
 > = Layer.effect(
   Service,
   Effect.gen(function* () {
@@ -512,6 +519,8 @@ const layer: Layer.Layer<
     const background = yield* BackgroundJob.Service
     const events = yield* EventBridge.Service
     const flags = yield* RuntimeFlags.Service
+    const config = yield* Config.Service
+    const isolation = yield* SessionIsolation.Service
 
     const createNext = Effect.fn("Session.createNext")(function* (input: {
       id?: SessionID
@@ -527,13 +536,28 @@ const layer: Layer.Layer<
       permissionMode?: Permission.Mode
     }) {
       const ctx = yield* InstanceState.context
+      const sessionID = SessionID.descending(input.id)
+      // Branch-per-session: give fresh top-level sessions their own branch +
+      // managed worktree. Children inherit the parent's tree; provision never fails.
+      const cfg = yield* config.get()
+      const isolated = yield* isolation.provision({
+        projectID: ctx.project.id,
+        sessionID,
+        directory: input.directory,
+        vcs: ctx.project.vcs,
+        parentID: input.parentID,
+        enabled: cfg.worktree?.isolateSessions ?? false,
+      })
       const result: Info = {
-        id: SessionID.descending(input.id),
+        id: sessionID,
         slug: Slug.create(),
         version: InstallationVersion,
         projectID: ctx.project.id,
-        directory: input.directory,
-        path: input.path,
+        directory: isolated.directory,
+        path:
+          isolated.plan !== undefined && isolated.plan.adopted === false
+            ? sessionPath(ctx.worktree, isolated.directory)
+            : input.path,
         workspaceID: input.workspaceID,
         parentID: input.parentID,
         title: input.title ?? (input.parentID ? childTitlePrefix : parentTitlePrefix) + new Date().toISOString(),
@@ -552,6 +576,15 @@ const layer: Layer.Layer<
       yield* Effect.logInfo("created", result)
 
       yield* events.publish(SessionV1.Event.Created, { sessionID: result.id, info: result })
+      // The binding row references the session, so it is recorded only after
+      // the Created event projected it. Provisioning itself already happened.
+      if (isolated.plan !== undefined)
+        yield* isolation.bind({
+          sessionID: result.id,
+          projectID: ctx.project.id,
+          plan: isolated.plan,
+          setupCommand: cfg.worktree?.setupCommand,
+        })
 
       return result
     })
@@ -1078,7 +1111,7 @@ function listByProject(
 export const node = LayerNode.make({
   service: Service,
   layer: layer,
-  deps: [BackgroundJob.node, RuntimeFlags.node, Database.node, EventBridge.node],
+  deps: [BackgroundJob.node, RuntimeFlags.node, Database.node, EventBridge.node, Config.node, SessionIsolation.node],
 })
 
 export * as Session from "./session"

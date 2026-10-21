@@ -212,6 +212,9 @@ const layer: Layer.Layer<
 
     const setup = Effect.fnUntraced(function* (info: Info) {
       const ctx = yield* InstanceState.context
+      // Forget stale registrations first so a deleted checkout directory does
+      // not permanently block the candidate name it was registered under.
+      yield* git(["worktree", "prune"], { cwd: ctx.worktree })
       const created = yield* git(
         info.branch
           ? ["worktree", "add", "--no-checkout", "-b", info.branch, info.directory]

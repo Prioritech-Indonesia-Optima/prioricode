@@ -24,6 +24,7 @@ import { SessionExecution } from "../session/execution"
 import { SessionMessage } from "../session/message"
 import { makeSessionOperations } from "../session/operations"
 import { SessionSchema } from "../session/schema"
+import { SessionIsolation } from "../session/isolation"
 import { SessionStore } from "../session/store"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
@@ -110,7 +111,8 @@ const layer = Layer.effectDiscard(
     const store = yield* SessionStore.Service
     const execution = yield* SessionExecution.Service
     const { db } = yield* Database.Service
-    const sessions = makeSessionOperations({ db, events, projects, store, execution })
+    const isolation = yield* SessionIsolation.Service
+    const sessions = makeSessionOperations({ db, events, projects, store, execution, isolation })
 
     const settle = Effect.fn("TaskTool.settle")(function* (sessionID: SessionSchema.ID) {
       const failed = yield* execution.resume(sessionID).pipe(
@@ -257,6 +259,7 @@ export const node = makeLocationNode({
     ToolRegistry.node,
     Agent.node,
     BackgroundJob.node,
+    SessionIsolation.node,
     Database.node,
     EventBus.node,
     Project.node,

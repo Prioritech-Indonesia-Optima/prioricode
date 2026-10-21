@@ -17,6 +17,7 @@ import { InstallationVersion } from "../installation/version"
 import { Location } from "../location"
 import { Model } from "../model"
 import { Project } from "../project"
+import { SessionIsolation } from "./isolation"
 import { ProjectTable } from "../project/sql"
 import { Slug } from "../util/slug"
 import { Workspace } from "../workspace"
@@ -37,6 +38,7 @@ export type SessionOperationsDeps = {
   readonly projects: Project.Interface
   readonly store: SessionStore.Interface
   readonly execution: SessionExecution.Interface
+  readonly isolation: SessionIsolation.Interface
 }
 
 export type SessionCreateInput = {
@@ -45,6 +47,8 @@ export type SessionCreateInput = {
   model?: Model.Ref
   location: Location.Ref
   parentID?: SessionSchema.ID
+  /** Per-session branch isolation override; env/flags still apply on top. */
+  isolation?: "worktree" | "shared"
   title?: string
 }
 
@@ -83,13 +87,22 @@ export const makeSessionOperations = (deps: SessionOperationsDeps) => {
       .run()
       .pipe(Effect.orDie)
     const now = Date.now()
+    const isolated = yield* deps.isolation.provision({
+      projectID: project.id,
+      sessionID,
+      directory: input.location.directory,
+      vcs: project.vcs?.type,
+      parentID: input.parentID,
+      isolation: input.isolation,
+      enabled: false,
+    })
     const info = SessionV1.SessionInfo.make({
       id: sessionID,
       slug: Slug.create(),
       version: InstallationVersion,
       projectID: project.id,
-      directory: input.location.directory,
-      path: path.relative(project.directory, input.location.directory).replaceAll("\\", "/"),
+      directory: isolated.directory,
+      path: path.relative(project.directory, isolated.directory).replaceAll("\\", "/"),
       workspaceID: input.location.workspaceID ? Workspace.ID.make(input.location.workspaceID) : undefined,
       title: input.title ?? `New session - ${new Date(now).toISOString()}`,
       agent: input.agent,
@@ -124,6 +137,8 @@ export const makeSessionOperations = (deps: SessionOperationsDeps) => {
         }),
       )
     if (projected.type === "existing") return projected.session
+    if (isolated.plan !== undefined)
+      yield* deps.isolation.bind({ sessionID, projectID: project.id, plan: isolated.plan })
     // TODO: Restore recorded sessions onto replacement synchronized workspaces in a future API slice.
     return yield* get(sessionID).pipe(Effect.orDie)
   })

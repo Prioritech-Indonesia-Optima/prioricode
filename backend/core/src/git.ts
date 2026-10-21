@@ -47,7 +47,7 @@ export class Worktree extends Schema.Class<Worktree>("Git.Worktree")({
 }) {}
 
 export class WorktreeError extends Schema.TaggedErrorClass<WorktreeError>()("Git.WorktreeError", {
-  operation: Schema.Literals(["create", "remove", "list"]),
+  operation: Schema.Literals(["create", "remove", "list", "prune"]),
   message: Schema.String,
   directory: Schema.optional(AbsolutePath),
   forceRequired: Schema.optional(Schema.Boolean),
@@ -115,7 +115,11 @@ export interface Interface {
     readonly create: (input: {
       repository: Repository
       directory: AbsolutePath
+      /** Create the worktree on a NEW branch rooted at HEAD instead of detaching. */
+      branch?: string
     }) => Effect.Effect<Repository, WorktreeError>
+    /** Forget registrations whose checkout directories are gone; touches no files. */
+    readonly prune: (repository: Repository) => Effect.Effect<void, WorktreeError>
     readonly remove: (input: {
       repository: Repository
       directory: AbsolutePath
@@ -853,7 +857,7 @@ const layer = Layer.effect(
     })
 
     const worktreeRun = Effect.fnUntraced(function* (
-      operation: "create" | "remove" | "list",
+      operation: "create" | "remove" | "list" | "prune",
       repository: Repository,
       args: string[],
       worktreeDirectory?: AbsolutePath,
@@ -879,11 +883,12 @@ const layer = Layer.effect(
     const worktreeCreate = Effect.fn("Git.worktree.create")(function* (input: {
       repository: Repository
       directory: AbsolutePath
+      branch?: string
     }) {
       yield* worktreeRun(
         "create",
         input.repository,
-        ["worktree", "add", "--detach", input.directory, "HEAD"],
+        ["worktree", "add", ...(input.branch ? ["-b", input.branch] : ["--detach"]), input.directory, "HEAD"],
         input.directory,
       )
       const repository = yield* discover(input.directory)
@@ -893,6 +898,10 @@ const layer = Layer.effect(
         directory: input.directory,
         message: "Created worktree could not be opened",
       })
+    })
+
+    const worktreePrune = Effect.fn("Git.worktree.prune")(function* (repository: Repository) {
+      yield* worktreeRun("prune", repository, ["worktree", "prune"], repository.worktree)
     })
 
     const worktreeRemove = Effect.fn("Git.worktree.remove")(function* (input: {
@@ -928,7 +937,7 @@ const layer = Layer.effect(
       history: { head, branch, defaultRemoteBranch: remoteHead, rootCommits: roots },
       sync: { fetchRemotes: fetch, fetchBranch, checkoutRemoteBranch: checkout, resetHard: reset },
       change: { capture, apply, discard },
-      worktree: { create: worktreeCreate, remove: worktreeRemove, list: worktreeList },
+      worktree: { create: worktreeCreate, remove: worktreeRemove, list: worktreeList, prune: worktreePrune },
       index: { refresh, ignored },
       tree: {
         capture: captureTree,
