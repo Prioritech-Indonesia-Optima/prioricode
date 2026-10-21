@@ -7,6 +7,7 @@ import { InstanceRef } from "@/effect/instance-ref"
 import { disposeInstance as runDisposers } from "@/effect/instance-registry"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Context, Deferred, Duration, Effect, Exit, Layer, Scope } from "effect"
+import { SessionGc } from "@prioricode/core/session/gc"
 import { type InstanceContext } from "./instance-context"
 import { InstanceBootstrap } from "./bootstrap-service"
 import * as Project from "./project"
@@ -34,11 +35,16 @@ interface Entry {
   readonly deferred: Deferred.Deferred<InstanceContext>
 }
 
-const layer: Layer.Layer<Service, never, Project.Service | InstanceBootstrap.Service> = Layer.effect(
+const layer: Layer.Layer<
+  Service,
+  never,
+  Project.Service | InstanceBootstrap.Service | SessionGc.Service
+> = Layer.effect(
   Service,
   Effect.gen(function* () {
     const project = yield* Project.Service
     const bootstrap = yield* InstanceBootstrap.Service
+    const gc = yield* SessionGc.Service
     const scope = yield* Scope.Scope
     const cache = new Map<string, Entry>()
 
@@ -74,6 +80,22 @@ const layer: Layer.Layer<Service, never, Project.Service | InstanceBootstrap.Ser
         const exit = yield* Effect.exit(boot({ ...input, directory }))
         if (Exit.isFailure(exit)) yield* removeEntry(directory, entry)
         yield* Deferred.done(entry.deferred, exit).pipe(Effect.asVoid)
+        // Boot GC: prune stale worktree registrations and retire landed trees
+        // for this project. Forked and best-effort — never blocks or fails a
+        // load; the deletion rules themselves are conservative (see SessionGc).
+        if (Exit.isSuccess(exit) && exit.value.project.vcs === "git")
+          yield* gc
+            .gc({ projectID: exit.value.project.id, directory: exit.value.project.worktree })
+            .pipe(
+              Effect.tap((report) =>
+                Effect.logInfo("worktree gc", {
+                  removed: report.removed.length,
+                  kept: report.kept.length,
+                }),
+              ),
+              Effect.catchCause(() => Effect.void),
+              Effect.forkIn(scope),
+            )
       })
 
     const emitDisposed = (input: { directory: string; project?: string }) =>
@@ -207,7 +229,7 @@ export const bootstrapNode = LayerNode.unbound(InstanceBootstrap.Service, Node.t
 export const node = makeGlobalNode({
   service: Service,
   layer: layer,
-  deps: [Project.node, bootstrapNode],
+  deps: [Project.node, bootstrapNode, SessionGc.node],
 })
 
 export * as InstanceStore from "./instance-store"

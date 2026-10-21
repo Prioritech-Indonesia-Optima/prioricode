@@ -10,6 +10,7 @@ import { FSUtil } from "../fs-util"
 import { Git } from "../git"
 import { AppProcess } from "../process"
 import { Project } from "../project"
+import { SessionGc } from "./gc"
 import { AbsolutePath } from "../schema"
 import { EffectFlock } from "../util/effect-flock"
 import { SessionIsolation } from "./isolation"
@@ -89,6 +90,7 @@ const layer = Layer.effect(
     const flock = yield* EffectFlock.Service
     const isolation = yield* SessionIsolation.Service
     const touches = yield* FileTouch.Service
+    const gc = yield* SessionGc.Service
 
     const raw = Effect.fnUntraced(function* (directory: string, args: string[]) {
       const result = yield* proc.run(
@@ -141,8 +143,20 @@ const layer = Layer.effect(
       return owners
     })
 
-    const accept = (result: { branch: string; mergeSha: string; checkout: "synced" | "stale"; note?: string }) =>
+    const accept = (result: { branch: string; mergeSha: string; checkout: "synced" | "stale"; note?: string; retired?: boolean }) =>
       ({ landed: true, ...result }) satisfies LandResult
+
+    const retire = (
+      gc: SessionGc.Interface,
+      input: Input,
+      binding: SessionIsolation.Binding,
+    ) =>
+      gc
+        .cleanupSession({ projectID: input.projectID, directory: binding.directory, sessionID: input.sessionID })
+        .pipe(
+          Effect.match({ onFailure: () => undefined, onSuccess: (done) => (done === undefined ? undefined : true) }),
+          Effect.map((done) => (done === undefined ? {} : { retired: true })),
+        )
     const refuse = (refusal: Refusal) => ({ landed: false, ...refusal }) satisfies LandResult
 
     const attempt = Effect.fnUntraced(function* (input: Input) {
@@ -256,7 +270,10 @@ const layer = Layer.effect(
         // is milliseconds. If reset itself fails, leave the checkout untouched
         // and report "stale" with instructions instead of forcing anything.
         const sync = yield* raw(mainDirectory, ["reset", "--hard", newSha])
-        if (sync.code === 0) return accept({ branch: binding.branch, mergeSha: newSha, checkout: "synced" })
+        if (sync.code === 0) {
+          const retired = yield* retire(gc, input, binding)
+          return accept({ branch: binding.branch, mergeSha: newSha, checkout: "synced", ...retired })
+        }
         return accept({
           branch: binding.branch,
           mergeSha: newSha,
@@ -297,5 +314,14 @@ const layer = Layer.effect(
 export const node = makeGlobalNode({
   service: Service,
   layer,
-  deps: [Database.node, Git.node, FSUtil.node, AppProcess.node, EffectFlock.node, SessionIsolation.node, FileTouch.node],
+  deps: [
+    Database.node,
+    Git.node,
+    FSUtil.node,
+    AppProcess.node,
+    EffectFlock.node,
+    SessionIsolation.node,
+    SessionGc.node,
+    FileTouch.node,
+  ],
 })

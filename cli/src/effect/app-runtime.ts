@@ -42,6 +42,7 @@ import { InstanceStore } from "@/project/instance-store"
 import { Project } from "@/project/project"
 import { Vcs } from "@/project/vcs"
 import { Workspace } from "@/control-plane/workspace"
+import { SessionGc } from "@prioricode/core/session/gc"
 import { Worktree } from "@/worktree"
 import { Installation } from "@/installation"
 import { ShareNext } from "@/share/share-next"
@@ -102,6 +103,7 @@ export const AppLayer = AppNodeBuilderV1.build(
     Vcs.node,
     Workspace.node,
     Worktree.node,
+    SessionGc.node,
     Installation.node,
     ShareNext.node,
     SessionShare.node,

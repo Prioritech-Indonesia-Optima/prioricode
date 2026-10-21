@@ -137,6 +137,14 @@ describe("SessionLand", () => {
       const { db } = yield* Database.Service
       const claims = yield* db.select().from(LandClaimTable).all().pipe(Effect.orDie)
       expect(claims.length).toBe(0)
+      // Auto-retire: the landed tree and its merged branch are cleaned up.
+      expect(fs.existsSync(plan.directory)).toBe(false)
+      const ref = (
+        yield* Effect.promise(async () =>
+          (await $`git show-ref --verify refs/heads/${plan.branch}`.cwd(repo).quiet().nothrow()),
+        )
+      ).exitCode
+      expect(ref).not.toBe(0)
     }),
   )
 

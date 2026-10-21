@@ -91,7 +91,9 @@ export interface Interface {
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/SessionIsolation") {}
 
-const managedRoot = (projectID: Project.ID) => path.join(Global.Path.data, "worktree", String(projectID))
+/** All product-created session worktrees for a project live here — the ONLY
+ * root the GC may ever delete from. */
+export const managedRoot = (projectID: Project.ID) => path.join(Global.Path.data, "worktree", String(projectID))
 
 const toBinding = (row: typeof SessionWorktreeTable.$inferSelect): Binding => ({
   sessionID: row.session_id,
