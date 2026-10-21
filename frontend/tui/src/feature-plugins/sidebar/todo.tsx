@@ -1,26 +1,48 @@
 import type { TuiPlugin, TuiPluginApi, TuiSidebarTodoItem } from "@prioricode/plugin/tui"
+import { progress } from "@prioricode/core/session/todo-tree"
 import type { BuiltinTuiPlugin } from "../builtins"
 import { createMemo, For, Show, createSignal } from "solid-js"
 import { createStore } from "solid-js/store"
-import { TodoItem, TodoPhaseHeader } from "../../component/todo-item"
+import { TodoItem } from "../../component/todo-item"
 
 const id = "internal:sidebar-todo"
 
+const keyOf = (item: TuiSidebarTodoItem) => item.id ?? item.content
+
 function View(props: { api: TuiPluginApi; session_id: string }) {
   const [open, setOpen] = createSignal(true)
-  const [groups, setGroups] = createStore<Record<string, boolean>>({})
+  const [closed, setClosed] = createStore<Record<string, boolean>>({})
   const theme = () => props.api.theme.current
   const list = createMemo(() => props.api.state.session.todo(props.session_id))
   const show = createMemo(() => list().length > 0 && list().some((item) => item.status !== "completed"))
-  const phases = createMemo(() => {
-    const out: { phase: string | undefined; items: TuiSidebarTodoItem[] }[] = []
-    for (const item of list()) {
-      const last = out[out.length - 1]
-      if (last && last.phase === item.phase) last.items.push(item)
-      else out.push({ phase: item.phase, items: [item] })
-    }
-    return out
-  })
+
+  // One row per item, positioned by its depth: parents collapse their subtree
+  // and show step-level progress.
+  const rows = createMemo(() =>
+    list().map((item, index) => {
+      const depth = item.depth ?? 0
+      const next = list()[index + 1]
+      const isParent = next !== undefined && (next.depth ?? 0) > depth
+      let hidden = false
+      for (let j = index - 1; j >= 0; j--) {
+        const above = list()[j]!
+        if ((above.depth ?? 0) < depth) {
+          hidden = closed[keyOf(above)] === false
+          break
+        }
+      }
+      const value = isParent ? progress(list(), index) : undefined
+      return {
+        item,
+        depth,
+        isParent,
+        hidden,
+        isOpen: closed[keyOf(item)] !== false,
+        done: value?.done ?? 0,
+        total: value?.total ?? 0,
+      }
+    }),
+  )
 
   return (
     <Show when={show()}>
@@ -34,25 +56,38 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
           </text>
         </box>
         <Show when={list().length <= 2 || open()}>
-          <For each={phases()}>
-            {(group) => (
-              <box>
-                <Show when={group.phase}>
-                  {(phase) => (
-                    <box onMouseDown={() => setGroups(phase(), (value) => (value !== false ? false : true))}>
-                      <TodoPhaseHeader
-                        label={phase()}
-                        done={group.items.filter((item) => item.status === "completed").length}
-                        total={group.items.length}
-                        open={groups[phase()] !== false}
-                      />
-                    </box>
-                  )}
-                </Show>
-                <Show when={!group.phase || groups[group.phase] !== false}>
-                  <For each={group.items}>{(item) => <TodoItem status={item.status} content={item.content} />}</For>
-                </Show>
-              </box>
+          <For each={rows()}>
+            {(row) => (
+              <Show when={!row.hidden}>
+                {(_) => (
+                  <box
+                    flexDirection="row"
+                    gap={0}
+                    onMouseDown={
+                      row.isParent
+                        ? () => setClosed(keyOf(row.item), (value) => (value !== false ? false : true))
+                        : undefined
+                    }
+                  >
+                    <Show when={row.isParent}>
+                      <text flexShrink={0} fg={theme().textMuted}>
+                        {" ".repeat(row.depth * 2)}
+                        {row.isOpen ? "▼" : "▶"}
+                      </text>
+                    </Show>
+                    <TodoItem
+                      status={row.item.status}
+                      content={row.item.content}
+                      indent={row.depth * 2 + 2}
+                    />
+                    <Show when={row.isParent}>
+                      <text flexShrink={0} fg={theme().textMuted}>
+                        {row.done}/{row.total}
+                      </text>
+                    </Show>
+                  </box>
+                )}
+              </Show>
             )}
           </For>
         </Show>

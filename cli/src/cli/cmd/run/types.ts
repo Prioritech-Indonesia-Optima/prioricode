@@ -137,6 +137,7 @@ export type ToolTodoSnapshot = {
   items: Array<{
     status: string
     content: string
+    depth?: number
   }>
   tail: string
 }

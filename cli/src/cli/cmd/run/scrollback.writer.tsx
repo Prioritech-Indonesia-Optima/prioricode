@@ -7,20 +7,21 @@ import { toolFiletype, toolStructuredFinal } from "./tool"
 import { RUN_THEME_FALLBACK, transparent, type RunTheme } from "./theme"
 import type { EntryLayout, RunEntryBody, ScrollbackOptions, StreamCommit } from "./types"
 
-function todoText(item: { status: string; content: string }): string {
+function todoText(item: { status: string; content: string; depth?: number }): string {
+  const indent = "  ".repeat(item.depth ?? 0)
   if (item.status === "completed") {
-    return `[✓] ${item.content}`
+    return `${indent}[✓] ${item.content}`
   }
 
   if (item.status === "cancelled") {
-    return `~[ ] ${item.content}~`
+    return `~${indent}[ ] ${item.content}~`
   }
 
   if (item.status === "in_progress") {
-    return `[•] ${item.content}`
+    return `${indent}[•] ${item.content}`
   }
 
-  return `[ ] ${item.content}`
+  return `${indent}[ ] ${item.content}`
 }
 
 function todoColor(theme: RunTheme, status: string) {

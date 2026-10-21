@@ -21352,6 +21352,15 @@
           "priority": {
             "type": "string",
             "description": "Priority level of the task: high, medium, low"
+          },
+          "depth": {
+            "type": "integer",
+            "allOf": [
+              {
+                "minimum": 0
+              }
+            ],
+            "description": "Nesting level in the plan outline: 0 = the objective, 1 = a stage, 2 = a concrete step. Keep it proportional to the work — most tasks are a 0 with a few 1s/2s; add stages only when the work genuinely has them. Never encode the level in content (no \"Phase 1:\" prefixes)."
           }
         },
         "required": ["content", "status", "priority"],

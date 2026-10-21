@@ -2568,20 +2568,18 @@ ToolRegistry.register({
     })
 
     const subtitle = createMemo(() => {
-      const list = todos()
+      const list = todos() as Todo[]
       if (list.length === 0) return ""
-      return `${list.filter((t: Todo) => t.status === "completed").length}/${list.length}`
+      // Count step-level leaves so nested parents don't inflate the total.
+      const leaves = list.filter((todo, i) => {
+        const next = list[i + 1]
+        return next === undefined || (next.depth ?? 0) <= (todo.depth ?? 0)
+      })
+      const required = leaves.filter((todo) => todo.status !== "cancelled")
+      return `${required.filter((todo) => todo.status === "completed").length}/${required.length}`
     })
 
-    const groups = createMemo(() => {
-      const out: { phase: string | undefined; todos: Todo[] }[] = []
-      for (const todo of todos() as Todo[]) {
-        const last = out[out.length - 1]
-        if (last && last.phase === todo.phase) last.todos.push(todo)
-        else out.push({ phase: todo.phase, todos: [todo] })
-      }
-      return out
-    })
+    const rows = createMemo(() => (todos() as Todo[]).map((todo) => ({ todo, depth: todo.depth ?? 0 })))
 
     return (
       <BasicTool
@@ -2595,26 +2593,17 @@ ToolRegistry.register({
       >
         <Show when={todos().length}>
           <div data-component="todos">
-            <For each={groups()}>
-              {(group) => (
-                <div>
-                  <Show when={group.phase}>
-                    <div data-slot="message-part-todo-phase" class="text-13-medium py-1">
-                      {group.phase}
-                    </div>
-                  </Show>
-                  <For each={group.todos}>
-                    {(todo) => (
-                      <Checkbox readOnly checked={todo.status === "completed"}>
-                        <span
-                          data-slot="message-part-todo-content"
-                          data-completed={todo.status === "completed" ? "completed" : undefined}
-                        >
-                          {todo.content}
-                        </span>
-                      </Checkbox>
-                    )}
-                  </For>
+            <For each={rows()}>
+              {(row) => (
+                <div style={{ "padding-inline-start": `${12 * row.depth}px` }}>
+                  <Checkbox readOnly checked={row.todo.status === "completed"}>
+                    <span
+                      data-slot="message-part-todo-content"
+                      data-completed={row.todo.status === "completed" ? "completed" : undefined}
+                    >
+                      {row.todo.content}
+                    </span>
+                  </Checkbox>
                 </div>
               )}
             </For>
