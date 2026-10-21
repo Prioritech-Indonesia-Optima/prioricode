@@ -50,7 +50,6 @@ export class Service extends ConfigService.Service<Service>()("@prioricode/Runti
   experimentalCodeMode: enabledByExperimental("PRIORICODE_EXPERIMENTAL_CODE_MODE"),
   experimentalEventSystem: enabledByExperimental("PRIORICODE_EXPERIMENTAL_EVENT_SYSTEM"),
   experimentalWorkspaces: enabledByExperimental("PRIORICODE_EXPERIMENTAL_WORKSPACES"),
-  disableCoordinationResponder: bool("PRIORICODE_DISABLE_COORDINATION_RESPONDER"),
   coordinationRateLimitPerMinute: positiveIntegerDefault("PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE", 10),
   coordinationDedupeWindowMs: positiveIntegerDefault("PRIORICODE_COORDINATION_DEDUPE_WINDOW_MS", 5 * 60_000),
   coordinationInboxCap: positiveIntegerDefault("PRIORICODE_COORDINATION_INBOX_CAP", 50),

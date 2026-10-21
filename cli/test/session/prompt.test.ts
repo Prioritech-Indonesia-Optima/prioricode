@@ -274,7 +274,6 @@ function makeHttpCoordination(flags?: Partial<RuntimeFlags.Info>) {
 
 const runtimeFlagsValue = { experimentalEventSystem: true }
 const coordinationIt = testEffect(makeHttpCoordination())
-const coordinationNoResponderIt = testEffect(makeHttpCoordination({ disableCoordinationResponder: true }))
 
 // Config that registers a custom "test" provider with a "test-model" model
 // so provider model lookup succeeds inside the loop.
@@ -2700,13 +2699,14 @@ describe("cross-session coordination", () => {
     15_000,
   )
 
- coordinationIt.instance(
+  coordinationIt.instance(
     "sweep escalates an unanswered request past its deadline and records it to the asker",
     () =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
         const coordination = yield* Coordination.Service
         const watcher = yield* CoordinationWatcher.Service
+        const status = yield* SessionStatus.Service
         const asker = yield* sessions.create({ title: "asker" })
         const target = yield* sessions.create({ title: "silent target" })
         const request = yield* coordination.post({
@@ -2718,19 +2718,22 @@ describe("cross-session coordination", () => {
         })
         // Past the 15-min escalation grace.
         yield* setCoordinationTimes(request.id, { timeCreated: Date.now() - 16 * 60_000 })
-        // Make the asker stale so the responder pass settles the aged request as
-        // ghost traffic instead of spawning a model turn — escalation is the SUT.
+        // Age the asker out of liveness so no other pass interferes — escalation is the SUT.
         yield* setLastActive(asker.id, Date.now() - 73 * 60 * 60_000)
+        // Hold the target busy so the wake pass skips it: escalation fires for a
+        // request nobody can answer at a boundary, without also spending a turn.
+        yield* status.set(target.id, { type: "busy" })
         yield* watcher.sweep()
         const records = yield* coordination.inbox({ sessionID: asker.id, kinds: ["record"] })
         expect(records).toHaveLength(1)
         expect(records[0].body).toContain("escalated")
+        yield* status.set(target.id, { type: "idle" })
       }),
     20_000,
   )
 
   coordinationIt.instance(
-    "send fails for an unknown target id without posting anything",
+    "query fails for an unknown target id without posting anything",
     () =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
@@ -2739,7 +2742,7 @@ describe("cross-session coordination", () => {
         const def = yield* Tool.init(yield* SessionsTool)
 
         const out = yield* def.execute(
-          { action: "send", target: SessionID.make("ses_does_not_exist"), message: "hello" },
+          { action: "query", target: SessionID.make("ses_does_not_exist"), message: "hello" },
           toolCtx(caller.id),
         )
         expect(out.title).toBe("sessions:error")
@@ -2747,14 +2750,14 @@ describe("cross-session coordination", () => {
 
         // A hallucinated target must not create an orphan queued note.
         expect(
-          yield* coordination.inbox({ sessionID: SessionID.make("ses_does_not_exist"), kinds: ["message"] }),
+          yield* coordination.inbox({ sessionID: SessionID.make("ses_does_not_exist"), kinds: ["request"] }),
         ).toHaveLength(0)
       }),
     15_000,
   )
 
   coordinationIt.instance(
-    "send to an archived sibling is refused",
+    "query to an archived sibling is refused",
     () =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
@@ -2763,7 +2766,7 @@ describe("cross-session coordination", () => {
         yield* sessions.setArchived({ sessionID: archived.id, time: Date.now() })
         const def = yield* Tool.init(yield* SessionsTool)
 
-        const out = yield* def.execute({ action: "send", target: archived.id, message: "hello" }, toolCtx(caller.id))
+        const out = yield* def.execute({ action: "query", target: archived.id, message: "hello" }, toolCtx(caller.id))
         expect(out.title).toBe("sessions:error")
         expect(out.output).toContain("archived")
       }),
@@ -2771,7 +2774,7 @@ describe("cross-session coordination", () => {
   )
 
   coordinationIt.instance(
-    "send posts durably to a recent sibling and states honest delivery + receipt semantics",
+    "query posts durably to a recent sibling and states the fire-and-forget contract",
     () =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
@@ -2780,20 +2783,24 @@ describe("cross-session coordination", () => {
         const peer = yield* sessions.create({ title: "recent peer" })
         const def = yield* Tool.init(yield* SessionsTool)
 
-        const out = yield* def.execute({ action: "send", target: peer.id, message: "COORD_SEND_1" }, toolCtx(caller.id))
+        const out = yield* def.execute(
+          { action: "query", target: peer.id, message: "COORD_SEND_1" },
+          toolCtx(caller.id),
+        )
         expect(out.output).toContain("queued")
         expect(out.output).toContain("wakes within seconds")
-        expect(out.output).toContain("Delivery is tracked in your outgoing coordination ledger")
+        expect(out.output).toContain("Do not wait or re-query")
+        expect(out.output).toContain("owes exactly one respond")
         expect(out.output).not.toContain("WARNING")
 
-        const unread = yield* coordination.inbox({ sessionID: peer.id, kinds: ["message"], unreadOnly: true })
+        const unread = yield* coordination.inbox({ sessionID: peer.id, kinds: ["request"], unreadOnly: true })
         expect(unread.map((item) => item.body)).toEqual(["COORD_SEND_1"])
       }),
     15_000,
   )
 
   coordinationIt.instance(
-    "send to a stale sibling still posts but warns the sender",
+    "query to a stale sibling still posts but warns the sender",
     () =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
@@ -2803,14 +2810,16 @@ describe("cross-session coordination", () => {
         yield* setLastActive(stale.id, Date.now() - 8 * 24 * 60 * 60 * 1000)
         const def = yield* Tool.init(yield* SessionsTool)
 
-        const out = yield* def.execute({ action: "send", target: stale.id, message: "COORD_STALE" }, toolCtx(caller.id))
+        const out = yield* def.execute(
+          { action: "query", target: stale.id, message: "COORD_STALE" },
+          toolCtx(caller.id),
+        )
         expect(out.output).toContain("WARNING")
         expect(out.output).toContain("abandoned")
-        expect(yield* coordination.inbox({ sessionID: stale.id, kinds: ["message"], unreadOnly: true })).toHaveLength(1)
+        expect(yield* coordination.inbox({ sessionID: stale.id, kinds: ["request"], unreadOnly: true })).toHaveLength(1)
       }),
     15_000,
   )
-
 })
 
 const countOccurrences = (haystack: string, needle: string) => haystack.split(needle).length - 1
@@ -2868,7 +2877,7 @@ describe("cross-session coordination stress", () => {
         const post = (t: number, i: number) =>
           coordination.post({
             projectID: targets[t].projectID,
-            kind: "message",
+            kind: "request",
             fromSession: sender.id,
             toSession: targets[t].id,
             body: `S2_T${t}_N${i}`,
@@ -2885,7 +2894,7 @@ describe("cross-session coordination stress", () => {
 
         for (let t = 0; t < 5; t++) {
           expect(
-            yield* coordination.inbox({ sessionID: targets[t].id, kinds: ["message"], unreadOnly: true }),
+            yield* coordination.inbox({ sessionID: targets[t].id, kinds: ["request"], unreadOnly: true }),
           ).toHaveLength(0)
           // Each target was woken (generic trigger in the transcript).
           const messages = yield* sessions.messages({ sessionID: targets[t].id })
@@ -2922,7 +2931,7 @@ describe("cross-session coordination stress", () => {
           for (let i = 0; i < 3; i++)
             yield* coordination.post({
               projectID: targets[t].projectID,
-              kind: "message",
+              kind: "request",
               fromSession: sender.id,
               toSession: targets[t].id,
               body: `P_T${t}_N${i}`,
@@ -2935,7 +2944,7 @@ describe("cross-session coordination stress", () => {
 
         for (let t = 0; t < 4; t++) {
           expect(
-            yield* coordination.inbox({ sessionID: targets[t].id, kinds: ["message"], unreadOnly: true }),
+            yield* coordination.inbox({ sessionID: targets[t].id, kinds: ["request"], unreadOnly: true }),
           ).toHaveLength(0)
           const messages = yield* sessions.messages({ sessionID: targets[t].id })
           const transcript = JSON.stringify(messages.map((message) => message.parts))
@@ -2967,7 +2976,7 @@ describe("cross-session coordination stress", () => {
         // First note triggers a wake whose model call we hold open past the boundary claim.
         yield* coordination.post({
           projectID: target.projectID,
-          kind: "message",
+          kind: "request",
           fromSession: sender.id,
           toSession: target.id,
           body: "MIDTURN_A",
@@ -2986,7 +2995,7 @@ describe("cross-session coordination stress", () => {
         // Second note arrives while the first turn is still running.
         yield* coordination.post({
           projectID: target.projectID,
-          kind: "message",
+          kind: "request",
           fromSession: sender.id,
           toSession: target.id,
           body: "MIDTURN_B",
@@ -2998,7 +3007,7 @@ describe("cross-session coordination stress", () => {
         expect(Exit.isSuccess(exit)).toBe(true)
         if (Exit.isSuccess(exit)) expect(exit.value).toBe(1)
 
-        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(
+        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["request"], unreadOnly: true })).toHaveLength(
           0,
         )
         const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
@@ -3009,7 +3018,7 @@ describe("cross-session coordination stress", () => {
   )
 
   coordinationIt.instance(
-    "parallel asks each receive exactly their own response",
+    "parallel queries each receive exactly their own response",
     () =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
@@ -3018,10 +3027,22 @@ describe("cross-session coordination stress", () => {
         const sender = yield* sessions.create({ title: "asker" })
         const target = yield* sessions.create({ title: "answerer" })
 
-        const asks = Array.from({ length: 5 }, (_, i) =>
-          def.execute({ action: "ask", target: target.id, message: `Q_${i}`, timeout: 20 }, toolCtx(sender.id)),
+        const outputs = yield* Effect.all(
+          Array.from({ length: 5 }, (_, i) =>
+            def.execute({ action: "query", target: target.id, message: `Q_${i}` }, toolCtx(sender.id)),
+          ),
+          { concurrency: "unbounded" },
         )
-        const fiber = yield* Effect.all(asks, { concurrency: "unbounded" }).pipe(Effect.forkChild)
+        // Fire-and-forget: every call returns as soon as the note is queued — no polling.
+        const noteIDs = new Set<string>()
+        outputs.forEach((out) => {
+          expect(out.title).toBe("sessions:query")
+          expect(out.output).toContain("queued")
+          const meta = out.metadata as { noteID?: string }
+          expect(meta.noteID).toBeString()
+          noteIDs.add(meta.noteID!)
+        })
+        expect(noteIDs.size).toBe(5)
 
         const pending = yield* pollWithTimeout(
           Effect.gen(function* () {
@@ -3034,31 +3055,24 @@ describe("cross-session coordination stress", () => {
         yield* Effect.forEach(
           pending,
           (request) =>
-            coordination.post({
-              projectID: target.projectID,
-              kind: "response",
-              fromSession: target.id,
-              toSession: sender.id,
-              body: `A_${request.body}`,
-              replyTo: request.id,
-            }),
+            def.execute(
+              { action: "respond", request_id: request.id, message: `A_${request.body}` },
+              toolCtx(target.id),
+            ),
           { concurrency: "unbounded" },
         )
 
-        const results = yield* Fiber.await(fiber)
-        expect(Exit.isSuccess(results)).toBe(true)
-        if (Exit.isSuccess(results)) {
-          results.value.forEach((out, i) => {
-            expect(out.output).toContain(`Response from ${target.id}`)
-            expect(out.output).toContain(`A_Q_${i}`)
-          })
-        }
+        // Each reply lands in the asker's ledger referencing exactly its own note.
+        const replies = yield* coordination.claimUnread(sender.id)
+        expect(replies).toHaveLength(5)
+        const byReplyTo = new Map(replies.map((row) => [row.replyTo, row.body]))
+        for (const request of pending) expect(byReplyTo.get(request.id)).toBe(`A_${request.body}`)
       }),
     30_000,
   )
 
   coordinationIt.instance(
-    "parallel sends validate targets independently",
+    "parallel queries validate targets independently",
     () =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
@@ -3071,8 +3085,8 @@ describe("cross-session coordination stress", () => {
           Array.from({ length: 10 }, (_, i) =>
             def.execute(
               i % 2 === 0
-                ? { action: "send", target: SessionID.make(`ses_missing_${i}`), message: `M_${i}` }
-                : { action: "send", target: real.id, message: `M_${i}` },
+                ? { action: "query", target: SessionID.make(`ses_missing_${i}`), message: `M_${i}` }
+                : { action: "query", target: real.id, message: `M_${i}` },
               toolCtx(caller.id),
             ),
           ),
@@ -3083,7 +3097,7 @@ describe("cross-session coordination stress", () => {
         expect(errors).toHaveLength(5)
         expect(ok).toHaveLength(5)
         for (const result of errors) expect(result.output).toContain("never guess or invent session ids")
-        expect(yield* coordination.inbox({ sessionID: real.id, kinds: ["message"], unreadOnly: true })).toHaveLength(5)
+        expect(yield* coordination.inbox({ sessionID: real.id, kinds: ["request"], unreadOnly: true })).toHaveLength(5)
       }),
     15_000,
   )
@@ -3106,7 +3120,7 @@ describe("cross-session coordination stress", () => {
         yield* watcher.init()
         yield* coordination.post({
           projectID: target.projectID,
-          kind: "message",
+          kind: "request",
           fromSession: sender.id,
           toSession: target.id,
           body: "PERIODIC_WAKE_1",
@@ -3121,7 +3135,7 @@ describe("cross-session coordination stress", () => {
           "the periodic watcher never delivered the note to the model",
           "15 seconds",
         )
-        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["message"], unreadOnly: true })).toHaveLength(
+        expect(yield* coordination.inbox({ sessionID: target.id, kinds: ["request"], unreadOnly: true })).toHaveLength(
           0,
         )
         const messages = yield* sessions.messages({ sessionID: target.id })
@@ -3218,7 +3232,7 @@ describe("coordination ack-ledger recovery", () => {
         const target = yield* sessions.create({ title: "zombie", permission: [...allowAll] })
         const note = yield* coordination.post({
           projectID: target.projectID,
-          kind: "message",
+          kind: "request",
           fromSession: sender.id,
           toSession: target.id,
           body: "RECOVER_ME_1",
@@ -3255,14 +3269,14 @@ describe("coordination ack-ledger recovery", () => {
         const target = yield* sessions.create({ title: "steady", permission: [...allowAll] })
         const fresh = yield* coordination.post({
           projectID: target.projectID,
-          kind: "message",
+          kind: "request",
           fromSession: sender.id,
           toSession: target.id,
           body: "LIVE_STEP_CLAIM",
         })
         const settled = yield* coordination.post({
           projectID: target.projectID,
-          kind: "message",
+          kind: "request",
           fromSession: sender.id,
           toSession: target.id,
           body: "ALREADY_ACKED",
@@ -3296,14 +3310,14 @@ describe("coordination ack-ledger recovery", () => {
         const child = yield* sessions.create({ title: "task child", parentID: parent.id })
         yield* coordination.post({
           projectID: child.projectID,
-          kind: "message",
+          kind: "request",
           fromSession: parent.id,
           toSession: child.id,
           body: "FOR_CHILD_ONLY",
         })
         const woken = yield* watcher.sweep()
         expect(woken).toBe(0)
-        expect(yield* coordination.inbox({ sessionID: child.id, kinds: ["message"], unreadOnly: true })).toHaveLength(1)
+        expect(yield* coordination.inbox({ sessionID: child.id, kinds: ["request"], unreadOnly: true })).toHaveLength(1)
         expect(yield* llm.calls).toBe(0)
       }),
     20_000,
@@ -3333,7 +3347,7 @@ describe("coordination ack-ledger recovery", () => {
         expect(woken).toBe(1)
         const requests = JSON.stringify((yield* llm.hits).map((hit) => hit.body))
         expect(requests).toContain("LATE_REPLY_X")
-        expect(requests).toContain("do not reply to this note")
+        expect(requests).toContain("NEVER respond to this reply")
       }),
     20_000,
   )
@@ -3379,271 +3393,8 @@ describe("coordination ack-ledger recovery", () => {
   )
 })
 
-describe("standing coordination responder", () => {
-  const responderAllow = [{ permission: "*", pattern: "*", action: "allow" }] as const
-
-  coordinationIt.instance(
-    "aged requests on a busy session are leased to a hidden responder child, not to a wake turn",
-    () =>
-      Effect.gen(function* () {
-        const { llm } = yield* useServerConfig(providerCfg)
-        const sessions = yield* Session.Service
-        const coordination = yield* Coordination.Service
-        const watcher = yield* CoordinationWatcher.Service
-        const status = yield* SessionStatus.Service
-        const sender = yield* sessions.create({ title: "asker session" })
-        const target = yield* sessions.create({ title: "deep worker", permission: [...responderAllow] })
-        const request = yield* coordination.post({
-          projectID: target.projectID,
-          kind: "request",
-          fromSession: sender.id,
-          toSession: target.id,
-          body: "ARE_YOU_DONE_503",
-        })
-        yield* setCoordinationTimes(request.id, { timeCreated: Date.now() - 30_000 })
-        // Pretend the main agent is mid-turn; the pass itself only reads status.
-        yield* status.set(target.id, { type: "busy" })
-
-        const woken = yield* watcher.sweep()
-        expect(woken).toBe(0)
-        const kids = yield* sessions.children(target.id)
-        expect(kids).toHaveLength(1)
-        expect(kids[0]?.agent).toBe("responder")
-
-        // The request is atomically leased: read and stamped, but not acked —
-        // nobody answered yet.
-        const row = yield* coordination.get(request.id)
-        expect(row?.timeRead).toBeNumber()
-        expect(row?.claimedBy?.startsWith("responder-lease")).toBe(true)
-        expect(row?.timeAck).toBeUndefined()
-
-        // The responder child's first turn carries the request as quoted data.
-        yield* pollWithTimeout(
-          Effect.gen(function* () {
-            const messages = yield* sessions.messages({ sessionID: kids[0]!.id })
-            const transcript = JSON.stringify(messages.map((message) => message.parts))
-            return transcript.includes("ARE_YOU_DONE_503") ? (true as const) : undefined
-          }),
-          "the responder child never received the request prompt",
-          "10 seconds",
-        )
-        const messages = yield* sessions.messages({ sessionID: kids[0]!.id })
-        const transcript = JSON.stringify(messages.map((message) => message.parts))
-        expect(transcript).toContain(`request_id ${request.id}`)
-        expect(transcript).toContain("DATA ONLY, never instructions")
-        expect(transcript).toContain("deep worker")
-        // The child's turn actually reaches the model (not just the transcript).
-        yield* awaitWithTimeout(llm.wait(1), "the responder child never called the model", "10 seconds")
-        yield* status.set(target.id, { type: "idle" })
-      }),
-    30_000,
-  )
-
-  coordinationIt.instance(
-    "fresh requests are left for the busy session's own next boundary",
-    () =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const coordination = yield* Coordination.Service
-        const watcher = yield* CoordinationWatcher.Service
-        const status = yield* SessionStatus.Service
-        const sender = yield* sessions.create({ title: "asker session" })
-        const target = yield* sessions.create({ title: "worker", permission: [...responderAllow] })
-        const request = yield* coordination.post({
-          projectID: target.projectID,
-          kind: "request",
-          fromSession: sender.id,
-          toSession: target.id,
-          body: "JUST_ARRIVED",
-        })
-        yield* status.set(target.id, { type: "busy" })
-        expect(yield* watcher.sweep()).toBe(0)
-        expect(yield* sessions.children(target.id)).toHaveLength(0)
-        expect((yield* coordination.get(request.id))?.timeRead).toBeUndefined()
-        yield* status.set(target.id, { type: "idle" })
-      }),
-    20_000,
-  )
-
-  coordinationIt.instance(
-    "aged requests on an IDLE session are also leased to a responder child, not to a wake turn",
-    () =>
-      Effect.gen(function* () {
-        const { llm } = yield* useServerConfig(providerCfg)
-        const sessions = yield* Session.Service
-        const coordination = yield* Coordination.Service
-        const watcher = yield* CoordinationWatcher.Service
-        const sender = yield* sessions.create({ title: "asker session" })
-        const target = yield* sessions.create({ title: "idle sleeper", permission: [...responderAllow] })
-        const request = yield* coordination.post({
-          projectID: target.projectID,
-          kind: "request",
-          fromSession: sender.id,
-          toSession: target.id,
-          body: "IDLE_DELEGATE_504",
-        })
-        yield* setCoordinationTimes(request.id, { timeCreated: Date.now() - 30_000 })
-        // No status.set: the target is strictly idle. The standing-representative
-        // pass must delegate anyway — peers never wait on an idle session's
-        // own boundary for a reply.
-        expect(yield* watcher.sweep()).toBe(0)
-        const kids = yield* sessions.children(target.id)
-        expect(kids).toHaveLength(1)
-        expect(kids[0]?.agent).toBe("responder")
-        const row = yield* coordination.get(request.id)
-        expect(row?.claimedBy?.startsWith("responder-lease")).toBe(true)
-        yield* pollWithTimeout(
-          Effect.gen(function* () {
-            const messages = yield* sessions.messages({ sessionID: kids[0]!.id })
-            const transcript = JSON.stringify(messages.map((message) => message.parts))
-            return transcript.includes("IDLE_DELEGATE_504") ? (true as const) : undefined
-          }),
-          "the idle-delegated responder never received the request",
-          "10 seconds",
-        )
-        yield* llm.text("answered")
-        yield* awaitWithTimeout(llm.wait(1), "the responder child never called the model", "10 seconds")
-      }),
-    30_000,
-  )
-
-  coordinationIt.instance(
-    "requests from abandoned askers are settled without spawning a responder",
-    () =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const coordination = yield* Coordination.Service
-        const watcher = yield* CoordinationWatcher.Service
-        const status = yield* SessionStatus.Service
-        const ghost = yield* sessions.create({ title: "abandoned terminal" })
-        yield* setLastActive(ghost.id, Date.now() - 8 * 24 * 60 * 60 * 1000)
-        const target = yield* sessions.create({ title: "worker", permission: [...responderAllow] })
-        const request = yield* coordination.post({
-          projectID: target.projectID,
-          kind: "request",
-          fromSession: ghost.id,
-          toSession: target.id,
-          body: "GHOST_ASK",
-        })
-        yield* setCoordinationTimes(request.id, { timeCreated: Date.now() - 30_000 })
-        yield* status.set(target.id, { type: "busy" })
-
-        expect(yield* watcher.sweep()).toBe(0)
-        expect(yield* sessions.children(target.id)).toHaveLength(0)
-        const row = yield* coordination.get(request.id)
-        // Settled in the ledger (acked) so recovery will never resurrect it.
-        expect(row?.timeAck).toBeNumber()
-        yield* status.set(target.id, { type: "idle" })
-      }),
-    20_000,
-  )
-
-  coordinationNoResponderIt.instance(
-    "the kill-switch disables the responder pass without touching delivery",
-    () =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const coordination = yield* Coordination.Service
-        const watcher = yield* CoordinationWatcher.Service
-        const status = yield* SessionStatus.Service
-        const sender = yield* sessions.create({ title: "asker session" })
-        const target = yield* sessions.create({ title: "worker", permission: [...responderAllow] })
-        const request = yield* coordination.post({
-          projectID: target.projectID,
-          kind: "request",
-          fromSession: sender.id,
-          toSession: target.id,
-          body: "NO_RESPONDER",
-        })
-        yield* setCoordinationTimes(request.id, { timeCreated: Date.now() - 30_000 })
-        yield* status.set(target.id, { type: "busy" })
-
-        expect(yield* watcher.sweep()).toBe(0)
-        expect(yield* sessions.children(target.id)).toHaveLength(0)
-        // Still queued untouched for the main agent's own next boundary.
-        expect((yield* coordination.get(request.id))?.timeRead).toBeUndefined()
-        yield* status.set(target.id, { type: "idle" })
-      }),
-    20_000,
-  )
-})
-
-describe("sessions tool receipts and delegation", () => {
+describe("sessions tool respond ownership", () => {
   const receiptsAllow = [{ permission: "*", pattern: "*", action: "allow" }] as const
-
-  coordinationIt.instance(
-    "end to end: a peer's ask is answered by the busy target's responder and the parent learns via a record",
-    () =>
-      Effect.gen(function* () {
-        const { llm } = yield* useServerConfig(providerCfg)
-        const prompt = yield* SessionPrompt.Service
-        const sessions = yield* Session.Service
-        const coordination = yield* Coordination.Service
-        const watcher = yield* CoordinationWatcher.Service
-        const status = yield* SessionStatus.Service
-        const def = yield* Tool.init(yield* SessionsTool)
-        const sender = yield* sessions.create({ title: "asker", permission: [...receiptsAllow] })
-        const target = yield* sessions.create({ title: "busy body", permission: [...receiptsAllow] })
-        yield* status.set(target.id, { type: "busy" })
-
-        // The asker is parked in `ask` (its poll blocks without a loop of ours).
-        const askFiber = yield* def
-          .execute({ action: "ask", target: target.id, message: "STATUS_ASK_9", timeout: 60 }, toolCtx(sender.id))
-          .pipe(Effect.forkChild)
-        const pending = yield* pollWithTimeout(
-          Effect.gen(function* () {
-            const items = yield* coordination.inbox({ sessionID: target.id, kinds: ["request"], unreadOnly: true })
-            return items.length === 1 ? items : undefined
-          }),
-          "the request never arrived",
-          "10 seconds",
-        )
-        const requestID = pending[0]!.id
-        yield* setCoordinationTimes(requestID, { timeCreated: Date.now() - 30_000 })
-
-        // The responder child answers via the tool; scripted to only match its
-        // own system prompt so no other session can consume the reply.
-        yield* llm.pushMatch(
-          (hit) => JSON.stringify(hit.body).includes("coordination responder for the PrioriCode session"),
-          reply()
-            .tool("sessions", { action: "respond", request_id: requestID, message: "part one is done" })
-            .text("answered"),
-        )
-        expect(yield* watcher.sweep()).toBe(0)
-
-        const out = yield* awaitWithTimeout(
-          Fiber.join(askFiber),
-          "the ask never received a delegated answer",
-          "30 seconds",
-        )
-        expect(out.output).toContain(`Response from ${target.id} (request ${requestID}`)
-        expect(out.output).toContain(`[answered by ${target.id}'s standing coordination responder`)
-        expect(out.output).toContain("part one is done")
-
-        // Ledger settled: the request is read AND acked.
-        const row = yield* coordination.get(requestID)
-        expect(row?.timeRead).toBeNumber()
-        expect(row?.timeAck).toBeNumber()
-        // The delegated response is attributed to the asked session, not the child.
-        const responses = yield* coordination.responsesTo(requestID)
-        expect(responses).toHaveLength(1)
-        expect(responses[0]?.fromSession).toBe(target.id)
-
-        // A record waits in the parent's inbox and lands in its next real turn.
-        const records = yield* coordination.inbox({ sessionID: target.id, kinds: ["record"] })
-        expect(records).toHaveLength(1)
-        expect(records[0]?.body).toContain("STATUS_ASK_9")
-        expect(records[0]?.body).toContain("part one is done")
-        yield* status.set(target.id, { type: "idle" })
-        yield* llm.text("noted, continuing")
-        yield* user(target.id, "anything from peers?")
-        yield* prompt.loop({ sessionID: target.id })
-        const lastBody = JSON.stringify((yield* llm.hits).at(-1)?.body)
-        expect(lastBody).toContain("handled for you")
-        expect(lastBody).toContain("STATUS_ASK_9")
-      }),
-    60_000,
-  )
 
   coordinationIt.instance(
     "a stranger session cannot answer a request addressed to someone else",
@@ -3675,7 +3426,7 @@ describe("sessions tool receipts and delegation", () => {
   )
 
   coordinationIt.instance(
-    "delegated answers are single-shot and the owner corrects via a message",
+    "one respond per note: a second respond is refused and corrections ride a new query",
     () =>
       Effect.gen(function* () {
         const sessions = yield* Session.Service
@@ -3683,11 +3434,6 @@ describe("sessions tool receipts and delegation", () => {
         const def = yield* Tool.init(yield* SessionsTool)
         const sender = yield* sessions.create({ title: "asker" })
         const target = yield* sessions.create({ title: "target", permission: [...receiptsAllow] })
-        const responder = yield* sessions.create({
-          parentID: target.id,
-          agent: "responder",
-          title: "responder child",
-        })
         const request = yield* coordination.post({
           projectID: target.projectID,
           kind: "request",
@@ -3695,66 +3441,34 @@ describe("sessions tool receipts and delegation", () => {
           toSession: target.id,
           body: "are you editing x.ts?",
         })
-        // The responder answers once, on the parent's behalf.
+        // The owner answers once; the note settles in the ledger (read + acked).
         const first = yield* def.execute(
           { action: "respond", request_id: request.id, message: "no, x.ts is free" },
-          toolCtx(responder.id),
+          toolCtx(target.id),
         )
         expect(first.title).toBe("sessions:respond")
         expect(yield* coordination.responsesTo(request.id)).toHaveLength(1)
-        // A second delegated answer is refused (idempotency).
+        const row = yield* coordination.get(request.id)
+        expect(row?.timeRead).toBeNumber()
+        expect(row?.timeAck).toBeNumber()
+        // A second respond is refused forever — one respond per note.
         const second = yield* def.execute(
-          { action: "respond", request_id: request.id, message: "correction from responder" },
-          toolCtx(responder.id),
-        )
-        expect(second.title).toBe("sessions:error")
-        expect(second.output).toContain("already answered")
-        // The main agent may NOT post a second response — at most one response
-        // row per request is the one-response invariant. It is told to correct
-        // via a message instead.
-        const third = yield* def.execute(
           { action: "respond", request_id: request.id, message: "update: actually I am on x.ts" },
           toolCtx(target.id),
         )
-        expect(third.title).toBe("sessions:error")
-        expect(third.output).toContain("already answered")
-        expect(third.output).toContain('use action "send"')
+        expect(second.title).toBe("sessions:error")
+        expect(second.output).toContain("already responded")
+        expect(second.output).toContain("new query")
         expect(yield* coordination.responsesTo(request.id)).toHaveLength(1)
-        // The owner's correction is a message referencing the request id.
+        // The correction goes as a fresh query referencing the note id.
         const corrected = yield* def.execute(
-          { action: "send", target: sender.id, message: `Correction on ${request.id}: actually I am on x.ts` },
+          { action: "query", target: sender.id, message: `Correction on ${request.id}: actually I am on x.ts` },
           toolCtx(target.id),
         )
-        expect(corrected.title).toBe("sessions:send")
-        // Exactly one record for the one delegation.
-        const records = yield* coordination.inbox({ sessionID: target.id, kinds: ["record"] })
-        expect(records).toHaveLength(1)
+        expect(corrected.title).toBe("sessions:query")
       }),
     15_000,
   )
-
-  coordinationIt.instance(
-    "a responder child is locked to action respond at the tool level",
-    () =>
-      Effect.gen(function* () {
-        const sessions = yield* Session.Service
-        const def = yield* Tool.init(yield* SessionsTool)
-        const target = yield* sessions.create({ title: "target" })
-        const responder = yield* sessions.create({
-          parentID: target.id,
-          agent: "responder",
-          title: "responder child",
-        })
-        const out = yield* def.execute(
-          { action: "send", target: target.id, message: "escalating beyond respond" },
-          toolCtx(responder.id),
-        )
-        expect(out.title).toBe("sessions:error")
-        expect(out.output).toContain('may only call action "respond"')
-      }),
-    15_000,
-  )
-
 })
 
 it.instance("provider media rejection replays the step with attachments stripped", () =>

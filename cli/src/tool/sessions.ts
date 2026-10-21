@@ -1,44 +1,40 @@
-import { Duration, Effect, Schema } from "effect"
+import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./sessions.txt"
+import { Identifier } from "@prioricode/core/id/id"
 import { Coordination } from "@/session/coordination"
 import { Session } from "@/session/session"
-import { SessionStatus } from "@/session/status"
 import { SessionID } from "../session/schema"
 
 export const Parameters = Schema.Struct({
-  action: Schema.Literals(["send", "ask", "respond", "broadcast"]).annotate({
+  action: Schema.Literals(["query", "respond", "broadcast"]).annotate({
     description: "Coordination action to perform against sibling sessions in this project",
   }),
   target: Schema.optional(Schema.String).annotate({
-    description: "Target session id for send/ask (from your injected <cross-session-presence> roster)",
+    description: "Target session id for query (from your injected <cross-session-presence> roster)",
   }),
   message: Schema.optional(Schema.String).annotate({
-    description: "Coordination text for send/ask/broadcast, or the answer for respond",
+    description: "Text for query/broadcast, or the answer for respond",
   }),
   request_id: Schema.optional(Schema.String).annotate({
-    description: "ID of a pending request to answer with respond",
+    description: "ID of a note to answer or ack with respond",
   }),
   thread_id: Schema.optional(Schema.String).annotate({
     description:
-      "For ask: the thread_id of a prior request to continue that negotiation with context instead of starting a new thread.",
-  }),
-  timeout: Schema.optional(Schema.Number).annotate({
-    description:
-      "For ask: maximum seconds to block for a response (default 60, max 300). For broadcast: seconds to wait for peer answers (default 30, max 120).",
+      "For query: the thread_id of a prior exchange to continue that negotiation with context instead of starting a new thread.",
   }),
 })
 
 type Metadata = {
   action: string
   target?: string
+  noteID?: string
   requestID?: string
+  threadID?: string
+  groupID?: string
+  recipients?: number
 }
 
-const DEFAULT_TIMEOUT_SECONDS = 60
-const MAX_TIMEOUT_SECONDS = 300
-const BROADCAST_DEFAULT_SECONDS = 30
-const BROADCAST_MAX_SECONDS = 120
 const STALE_AFTER_MS = 1000 * 60 * 60 * 72
 
 const agoLabel = (ms: number) => {
@@ -55,20 +51,12 @@ export const SessionsTool = Tool.define(
   Effect.gen(function* () {
     const coordination = yield* Coordination.Service
     const sessions = yield* Session.Service
-    const status = yield* SessionStatus.Service
 
     const run = Effect.fn("SessionsTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
       ctx: Tool.Context<Metadata>,
     ) {
       const self = yield* sessions.get(ctx.sessionID).pipe(Effect.orDie)
-
-      // A coordination responder child must never touch the channel except to
-      // answer the exact requests it was spawned for. Enforced here (tool
-      // level) as well as in its permission ruleset, because the child inherits
-      // its busy parent's — possibly permissive — session ruleset.
-      if (self.agent === "responder" && params.action !== "respond")
-        return failure('a coordination responder may only call action "respond"')
 
       yield* ctx.ask({
         permission: "sessions",
@@ -89,7 +77,7 @@ export const SessionsTool = Tool.define(
         if (found.time.archived)
           return {
             ok: false as const,
-            error: `Session ${target} ("${found.title}") is archived and will never wake. Message a recently active session from your roster instead.`,
+            error: `Session ${target} ("${found.title}") is archived and will never wake. Query a recently active session from your roster instead.`,
           }
         const idleFor = Date.now() - found.time.updated
         return { ok: true as const, session: found, stale: idleFor > STALE_AFTER_MS, idleFor }
@@ -99,49 +87,18 @@ export const SessionsTool = Tool.define(
         ` WARNING: session ${target} was last active ${agoLabel(idleFor)} and may be an abandoned session; ` +
         "confirm the user wants it woken before depending on a reply."
 
-      const send = Effect.fn("SessionsTool.send")(function* (
+      // Fire-and-forget: the note is durable and the recipient's owner answers
+      // at its own turn boundary (idle recipients are woken by the watcher).
+      // The reply arrives in YOUR context as an injected note — never poll for it.
+      const query = Effect.fn("SessionsTool.query")(function* (
         self: Session.Info,
         params: Schema.Schema.Type<typeof Parameters>,
+        ctx: Tool.Context<Metadata>,
       ) {
         const target = params.target
         const message = params.message
-        if (!target) return failure("send requires a target session id")
-        if (!message) return failure("send requires a message")
-        const resolved = yield* resolveTarget(target)
-        if (!resolved.ok) return failure(resolved.error)
-        const guard = yield* coordination.guardNote({
-          fromSession: self.id,
-          toSession: SessionID.make(target),
-          kind: "message",
-          body: message,
-        })
-        if (guard.blocked) return failure(guard.blocked)
-        yield* coordination.post({
-          projectID: self.projectID,
-          kind: "message",
-          fromSession: self.id,
-          toSession: SessionID.make(target),
-          body: message,
-        })
-        return result(
-          "send",
-          `Message queued in ${target} ("${resolved.session.title}")'s inbox. ` +
-            "An idle target wakes within seconds to read it; a busy target reads it at its next step boundary. " +
-            "Delivery is tracked in your outgoing ledger (the coordination view) — never re-send expecting an 'unread' check." +
-            (guard.warning ?? "") +
-            (resolved.stale ? staleWarning(target, resolved.idleFor) : ""),
-          { target },
-        )
-      })
-
-      const ask = Effect.fn("SessionsTool.ask")(function* (
-        self: Session.Info,
-        params: Schema.Schema.Type<typeof Parameters>,
-      ) {
-        const target = params.target
-        const message = params.message
-        if (!target) return failure("ask requires a target session id")
-        if (!message) return failure("ask requires a message")
+        if (!target) return failure("query requires a target session id")
+        if (!message) return failure("query requires a message")
         const resolved = yield* resolveTarget(target)
         if (!resolved.ok) return failure(resolved.error)
         const guard = yield* coordination.guardNote({
@@ -151,160 +108,120 @@ export const SessionsTool = Tool.define(
           body: message,
         })
         if (guard.blocked) return failure(guard.blocked)
-        const request = yield* coordination.post({
+        const note = yield* coordination.post({
           projectID: self.projectID,
           kind: "request",
           fromSession: self.id,
           toSession: SessionID.make(target),
           body: message,
+          originMessageId: ctx.messageID,
+          ...(ctx.callID !== undefined ? { originCallId: ctx.callID } : {}),
           ...(params.thread_id ? { threadId: params.thread_id } : {}),
         })
-        const seconds = Math.min(params.timeout ?? DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS)
-        const receipt = {
-          seenAt: undefined as number | undefined,
-          ackedAt: undefined as number | undefined,
-          claimedBy: undefined as string | undefined,
-        }
-        const response = yield* pollResponse(coordination, request.id, Date.now() + seconds * 1000, receipt)
-        if (!response) {
-          const beingAnswered = receipt.claimedBy?.startsWith(Coordination.RESPONDER_LEASE_PREFIX)
-          return result(
-            "ask",
-            `Request ${request.id} got no reply within ${seconds}s — ` +
-              (beingAnswered
-                ? "a reply is being generated by the peer's coordination responder; it will be delivered to your context when ready. "
-                : receipt.ackedAt
-                  ? `the peer received and processed it ${agoLabel(Date.now() - receipt.ackedAt)} but chose not to answer. `
-                  : receipt.seenAt
-                    ? `the peer received it at the edge of its context but has not finished the step that saw it. `
-                    : `the peer never saw it (likely deep in one long tool call, or abandoned). `) +
-              "Do not re-ask in a loop: it stays queued, the answer (or a responder's reply) will be delivered to your context when it lands." +
-              (resolved.stale ? staleWarning(target, resolved.idleFor) : ""),
-            { target, requestID: request.id },
-          )
-        }
-        // The poller is the consumer: settle both ledger stamps so delivery
-        // recovery can never resurrect an answer this turn already used.
-        yield* coordination.markRead([response.id])
-        yield* coordination.markAck([response.id])
         return result(
-          "ask",
-          `Response from ${target} (request ${request.id}${receipt.seenAt ? `, received after ${Math.max(1, Math.round((receipt.seenAt - request.timeCreated) / 1000))}s` : ""}): ${response.body}`,
-          { target, requestID: request.id },
+          "query",
+          `Note ${note.id} queued in ${target} ("${resolved.session.title}")'s inbox. ` +
+            "An idle target wakes within seconds to answer; a busy target answers at its next step boundary. " +
+            `Do not wait or re-query: the reply arrives in your context as [reply ... to your earlier note ${note.id}]. ` +
+            "Every note you receive owes exactly one respond — a short ack is a valid answer." +
+            (guard.warning ?? "") +
+            (resolved.stale ? staleWarning(target, resolved.idleFor) : ""),
+          { target, noteID: note.id, requestID: note.id, ...(note.threadId ? { threadID: note.threadId } : {}) },
         )
       })
 
+      // The universal reply+ACK: one respond per note, for answers AND plain
+      // acknowledgements. Only the session a note was addressed to may respond
+      // to it; a respond can never itself be responded to (its kind is not
+      // acceptable here), so reply chains terminate at depth two by structure.
       const respond = Effect.fn("SessionsTool.respond")(function* (
         self: Session.Info,
         params: Schema.Schema.Type<typeof Parameters>,
+        ctx: Tool.Context<Metadata>,
       ) {
-        const requestID = params.request_id
-        if (!requestID) return failure("respond requires request_id")
+        const noteID = params.request_id
+        if (!noteID) return failure("respond requires request_id")
         const answer = params.message
-        if (!answer) return failure("respond requires a message (the answer)")
-        const request = yield* coordination.get(requestID)
-        if (!request || request.kind !== "request") return failure(`No pending request with id ${requestID}`)
-        if (!request.toSession) return failure(`Request ${requestID} is not addressed to a session`)
-        const requester = request.fromSession
-
-        // Ownership: only the asked session may answer requests addressed to
-        // it — plus its own `responder` child, which answers while the main
-        // agent is mid-turn. (Today any session that learned a request id
-        // could answer it; this closes that.)
-        const owner = self.id === request.toSession
-        const delegate = !owner && self.parentID === request.toSession && self.agent === "responder"
-        if (!owner && !delegate)
+        if (!answer) return failure("respond requires a message (the answer or ack)")
+        const note = yield* coordination.get(noteID)
+        if (!note || (note.kind !== "request" && note.kind !== "message"))
+          return failure(`No query/announce note with id ${noteID} — only notes addressed to you can be answered`)
+        if (!note.toSession) return failure(`Note ${noteID} is not addressed to a session`)
+        if (self.id !== note.toSession)
           return failure(
-            `Request ${requestID} is addressed to ${request.toSession}, not to your session — only the asked session (or its coordination responder) may answer it.`,
+            `Note ${noteID} is addressed to ${note.toSession}, not to your session — only the recipient session may answer it.`,
           )
-        const existingResponses = yield* coordination.responsesTo(requestID)
-        if (delegate && existingResponses.length > 0)
+        const existing = yield* coordination.responsesTo(noteID)
+        if (existing.length > 0)
           return failure(
-            `Request ${requestID} was already answered — the main agent may correct it directly if needed.`,
+            `Note ${noteID} was already responded to. To correct or extend your answer, send a new query referencing the note id — never a second respond.`,
           )
-        // Owner-correction: at most one response row per request (enforced by
-        // the unique partial index). If the responder already answered, the
-        // owner must send a correction as a message, not a second response.
-        if (owner && existingResponses.length > 0)
-          return failure(
-            `Request ${requestID} was already answered (by your coordination responder). To correct it, use action "send" with a note referencing the request id.`,
-          )
-
-        const body = delegate
-          ? `[answered by ${request.toSession}'s standing coordination responder; treat as best-effort — the main agent may correct it] ${answer}`
-          : answer
-        yield* coordination.post({
-          projectID: request.projectID,
+        const response = yield* coordination.post({
+          projectID: note.projectID,
           kind: "response",
-          // The answer speaks AS the asked session in both paths: the peer
-          // asked that session, and its responder is a mouthpiece, not a
-          // party. Attribution to the delegation lives in the body prefix.
-          fromSession: request.toSession,
-          toSession: requester,
-          body,
-          replyTo: requestID,
-          ...(request.threadId ? { threadId: request.threadId } : {}),
+          fromSession: note.toSession,
+          toSession: note.fromSession,
+          body: answer,
+          replyTo: noteID,
+          originMessageId: ctx.messageID,
+          ...(ctx.callID !== undefined ? { originCallId: ctx.callID } : {}),
+          ...(note.threadId ? { threadId: note.threadId } : {}),
+          ...(note.groupId ? { groupId: note.groupId } : {}),
         })
-        yield* coordination.markRead([requestID])
-        yield* coordination.markAck([requestID])
-        if (delegate)
-          yield* coordination.post({
-            projectID: request.projectID,
-            kind: "record",
-            fromSession: request.toSession,
-            toSession: request.toSession,
-            body:
-              `Your coordination responder answered a peer request on your behalf because you had not answered it at your own boundary. ` +
-              `Request ${requestID} from session ${requester} asked: """${request.body}""". ` +
-              `Your responder replied: """${answer}""". ` +
-              `That reply was generated from a snapshot of your session and may be incomplete or wrong — if so, send a corrected answer with the sessions tool: action "send", target "${requester}", referencing request ${requestID} in the message (the request itself is already answered — only one response per request). Otherwise ignore this record; no action is needed.`,
-          })
+        // Settling the target row's stamps keeps the lifecycle honest: a note
+        // answered before it was ever injected still reads as delivered+acked.
+        yield* coordination.markRead([noteID])
+        yield* coordination.markAck([noteID])
         return result(
           "respond",
-          `Response delivered to ${requester}${delegate ? " (delegated by your responder)" : ""}.`,
+          `Response delivered to ${note.fromSession} (referencing note ${noteID}). It arrives in that session's context as a reply note.`,
           {
-            target: requester,
-            requestID,
+            target: note.fromSession,
+            requestID: noteID,
+            noteID: response.id,
+            ...(note.threadId ? { threadID: note.threadId } : {}),
           },
         )
       })
 
+      // Fire-and-forget fan-out: one query row per live root peer sharing a
+      // group id, so answers/objections attribute back to this broadcast. No
+      // waiting, no gate — peers that object will query you; proceed and let
+      // objections arrive. Unanswered rows escalate to the human after the
+      // normal deadline window.
       const broadcast = Effect.fn("SessionsTool.broadcast")(function* (
         self: Session.Info,
         params: Schema.Schema.Type<typeof Parameters>,
+        ctx: Tool.Context<Metadata>,
       ) {
         const message = params.message
         if (!message) return failure("broadcast requires a message")
-        const seconds = Math.min(params.timeout ?? BROADCAST_DEFAULT_SECONDS, BROADCAST_MAX_SECONDS)
-        const [siblings, statusMap] = yield* Effect.all([sessions.list({ limit: 100, roots: true }), status.list()])
+        const siblings = yield* sessions.list({ limit: 100, roots: true })
         const now = Date.now()
-        const peers = siblings.filter((session) => session.id !== self.id && !session.time.archived)
-        const active: Array<{ id: SessionID; title: string }> = []
+        const active: Session.Info[] = []
         const skipped: string[] = []
-        for (const peer of peers) {
+        for (const peer of siblings) {
+          if (peer.id === self.id || peer.time.archived) continue
           const idleFor = now - peer.time.updated
           if (idleFor > STALE_AFTER_MS) {
             skipped.push(`${peer.id} (stale, ${agoLabel(idleFor)})`)
             continue
           }
-          active.push({ id: peer.id, title: peer.title })
+          active.push(peer)
         }
         if (active.length === 0)
           return result(
             "broadcast",
-            `No active peers to broadcast to${skipped.length > 0 ? ` (skipped: ${skipped.join(", ")})` : ""}. ` +
-              "The shared-state action is safe to proceed.",
-            {},
+            `No live peers to announce to${skipped.length > 0 ? ` (skipped: ${skipped.join(", ")})` : ""}. Nothing is waiting on you.`,
+            { recipients: 0 },
           )
-        // Fan out one request per active peer. Requests — not messages — so a
-        // busy peer's standing coordination responder is guaranteed to answer
-        // even if its main agent never reaches a step boundary.
-        const requests: Coordination.Info[] = []
+        const groupID = Identifier.ascending("coordination")
+        const recipients: Coordination.Info[] = []
         const blocked: string[] = []
         for (const peer of active) {
           const guard = yield* coordination.guardNote({
             fromSession: self.id,
-            toSession: SessionID.make(peer.id),
+            toSession: peer.id,
             kind: "request",
             body: message,
           })
@@ -312,62 +229,44 @@ export const SessionsTool = Tool.define(
             blocked.push(`${peer.id}: ${guard.blocked}`)
             continue
           }
-          const request = yield* coordination.post({
-            projectID: self.projectID,
-            kind: "request",
-            fromSession: self.id,
-            toSession: SessionID.make(peer.id),
-            body: `[broadcast] ${message}`,
-            deadline: now + seconds * 1000,
-          })
-          requests.push(request)
+          recipients.push(
+            yield* coordination.post({
+              projectID: self.projectID,
+              kind: "request",
+              fromSession: self.id,
+              toSession: peer.id,
+              body: `[broadcast] ${message}`,
+              groupId: groupID,
+              originMessageId: ctx.messageID,
+              ...(ctx.callID !== undefined ? { originCallId: ctx.callID } : {}),
+            }),
+          )
         }
-        if (requests.length === 0) return failure(`Broadcast blocked for every peer: ${blocked.join(" | ")}`)
-        const receipts = new Map<string, { seenAt?: number; ackedAt?: number; claimedBy?: string }>()
-        const responses = yield* pollBroadcast(coordination, requests, Date.now() + seconds * 1000, receipts)
-        for (const row of responses.values()) {
-          yield* coordination.markRead([row.id])
-          yield* coordination.markAck([row.id])
-        }
-        const lines = requests.map((request) => {
-          const peer = active.find((p) => p.id === request.toSession)
-          const answer = responses.get(request.id)
-          if (answer) return `- ${peer?.id} "${peer?.title}": ANSWERED — ${answer.body}`
-          const receipt = receipts.get(request.id)
-          if (receipt?.claimedBy?.startsWith(Coordination.RESPONDER_LEASE_PREFIX))
-            return `- ${peer?.id} "${peer?.title}": reply being generated by its coordination responder`
-          if (receipt?.ackedAt) return `- ${peer?.id} "${peer?.title}": received and processed, no reply`
-          if (receipt?.seenAt) return `- ${peer?.id} "${peer?.title}": seen, no reply yet`
-          return `- ${peer?.id} "${peer?.title}": never saw it (busy in a long step, or unresponsive)`
-        })
-        const answered = responses.size
-        const busy = active.filter((peer) => statusMap.get(peer.id)?.type === "busy").map((peer) => peer.id)
+        if (recipients.length === 0) return failure(`Broadcast blocked for every peer: ${blocked.join(" | ")}`)
         return result(
           "broadcast",
           [
-            `Broadcast reached ${requests.length} active peer(s); ${answered}/${requests.length} answered within ${seconds}s.` +
-              (busy.length > 0 ? ` Busy peers: ${busy.join(", ")}.` : ""),
-            ...lines,
+            `Announcement ${groupID} queued for ${recipients.length} live peer(s): ${recipients
+              .map((row) => row.toSession)
+              .join(", ")}.`,
             ...(blocked.length > 0 ? [`Blocked (not sent): ${blocked.join(" | ")}`] : []),
             ...(skipped.length > 0 ? [`Skipped: ${skipped.join(", ")}`] : []),
             "",
-            "Gate rule: proceed with the shared-state action only if every active peer explicitly answered OK. " +
-              "Any unanswered, busy, or objecting peer means do NOT run the repo-wide operation — use `git worktree add` for an isolated tree instead. " +
-              "Unanswered requests escalate to the user after the window.",
+            "This does not wait for answers: idle peers wake and ack or object, busy peers see it at their next boundary. " +
+              "Proceed with the shared-state work; objections arrive in your context as queries referencing the broadcast — " +
+              "handle them as they land. Unanswered peers escalate to the user after the normal window.",
           ].join("\n"),
-          {},
+          { groupID, recipients: recipients.length },
         )
       })
 
       switch (params.action) {
-        case "send":
-          return yield* send(self, params)
-        case "ask":
-          return yield* ask(self, params)
+        case "query":
+          return yield* query(self, params, ctx)
         case "respond":
-          return yield* respond(self, params)
+          return yield* respond(self, params, ctx)
         case "broadcast":
-          return yield* broadcast(self, params)
+          return yield* broadcast(self, params, ctx)
       }
     })
 
@@ -379,74 +278,6 @@ export const SessionsTool = Tool.define(
     }
   }),
 )
-
-function pollResponse(
-  coordination: Coordination.Interface,
-  requestID: string,
-  deadline: number,
-  // Mutated as the poll observes the request's delivery ledger, so the caller
-  // can tell "never seen" apart from "seen but unanswered" on timeout.
-  receipt: { seenAt?: number; ackedAt?: number; claimedBy?: string },
-): Effect.Effect<Coordination.Info | undefined> {
-  return coordination.responsesTo(requestID).pipe(
-    Effect.flatMap((found) => {
-      if (found.length > 0) return Effect.succeed(found[0])
-      if (Date.now() >= deadline) return Effect.succeed(undefined)
-      return coordination
-        .get(requestID)
-        .pipe(
-          Effect.tap((row) =>
-            Effect.sync(() => {
-              if (row?.timeRead !== undefined && receipt.seenAt === undefined) receipt.seenAt = row.timeRead
-              if (row?.timeAck !== undefined && receipt.ackedAt === undefined) receipt.ackedAt = row.timeAck
-              if (row?.claimedBy !== undefined && receipt.claimedBy === undefined) receipt.claimedBy = row.claimedBy
-            }),
-          ),
-        )
-        .pipe(
-          Effect.andThen(Effect.sleep(Duration.millis(200))),
-          Effect.andThen(pollResponse(coordination, requestID, deadline, receipt)),
-        )
-    }),
-  )
-}
-
-// Batch variant of pollResponse: wait until every request in the set has a
-// response or the deadline passes, observing each request's delivery ledger so
-// the caller can tell "never seen" apart from "seen but unanswered".
-function pollBroadcast(
-  coordination: Coordination.Interface,
-  requests: ReadonlyArray<Coordination.Info>,
-  deadline: number,
-  receipts: Map<string, { seenAt?: number; ackedAt?: number; claimedBy?: string }>,
-): Effect.Effect<Map<string, Coordination.Info>> {
-  return coordination.responsesFor(requests.map((request) => request.id)).pipe(
-    Effect.flatMap((found) => {
-      const responses = new Map<string, Coordination.Info>()
-      for (const row of found) if (row.replyTo) responses.set(row.replyTo, row)
-      if (responses.size >= requests.length || Date.now() >= deadline) return Effect.succeed(responses)
-      return Effect.forEach(
-        requests.filter((request) => !responses.has(request.id)),
-        (request) =>
-          coordination.get(request.id).pipe(
-            Effect.tap((row) =>
-              Effect.sync(() => {
-                const receipt = receipts.get(request.id) ?? {}
-                if (row?.timeRead !== undefined && receipt.seenAt === undefined) receipt.seenAt = row.timeRead
-                if (row?.timeAck !== undefined && receipt.ackedAt === undefined) receipt.ackedAt = row.timeAck
-                if (row?.claimedBy !== undefined && receipt.claimedBy === undefined) receipt.claimedBy = row.claimedBy
-                receipts.set(request.id, receipt)
-              }),
-            ),
-          ),
-        { discard: true, concurrency: "unbounded" },
-      ).pipe(
-        Effect.andThen(Effect.sleep(Duration.millis(200))),
-        Effect.andThen(() => pollBroadcast(coordination, requests, deadline, receipts)),
-      )
-    }),
-  )
-}
 
 function result(action: string, output: string, metadata?: Omit<Metadata, "action">) {
   return { title: `sessions:${action}`, output, metadata: { ...(metadata ?? {}), action } }

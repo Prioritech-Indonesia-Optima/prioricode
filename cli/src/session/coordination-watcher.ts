@@ -1,15 +1,12 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
-import { Cause, Duration, Effect, Layer, Schedule, Scope, Context } from "effect"
+import { Cause, Duration, Effect, Layer, Schedule, Context } from "effect"
 import { InstanceState } from "@/effect/instance-state"
-import { RuntimeFlags } from "@/effect/runtime-flags"
-import { SessionV1 } from "@prioricode/core/v1/session"
 import { Session } from "./session"
 import { SessionID } from "./schema"
 import { SessionStatus } from "./status"
 import { SessionPresence } from "./presence"
 import { SessionPrompt } from "./prompt"
 import { Coordination } from "./coordination"
-import { Todo } from "./todo"
 
 // A claimed-but-unacked note older than this is treated as lost to a crash or
 // an errored/compaction-rejected request and is re-queued. Must exceed the
@@ -19,37 +16,13 @@ const ACK_RECOVERY_GRACE_MS = 15 * 60_000
 // Throttle for wakes triggered ONLY by reply rows, to keep two LLM sessions
 // from ping-ponging turn on turn over answered requests.
 const WAKE_COOLDOWN_MS = 10_000
-// Standing-representative grace (see the unanswered pass): a request younger
-// than this is left for the main agent to answer itself at its own next step
-// boundary; only requests that have aged unanswered are handed to the
-// responder child. Kept below the sessions tool's default ask timeout (60s)
-// so delegated answers arrive while the asker is still waiting.
-const RESPONDER_GRACE_MS = 20_000
-const RESPONDER_BATCH_LIMIT = 10
-const RESPONDERS_PER_SWEEP = 2
-const RESPONDER_SNAPSHOT_MESSAGES = 10
-const RESPONDER_SNAPSHOT_TODOS = 12
-// Requests from a session that has not been touched this long come from an
-// abandoned terminal; answering them spends model turns for nobody. Matches the
-// sessions tool's STALE heuristic.
-const RESPONDER_REQUESTER_STALE_MS = 72 * 60 * 60_000
-// After a responder turn dies (e.g. provider down), its requests are fast-
-// requeued but the parent backs off before another responder is attempted —
-// otherwise every 2s sweep would respawn, clone sessions, and burn tokens
-// against a broken provider. Backoff doubles per consecutive failure, capped.
-const RESPONDER_BACKOFF_BASE_MS = 30_000
-const RESPONDER_BACKOFF_MAX_MS = 5 * 60_000
-const responderBackoffMs = (count: number) =>
-  Math.min(RESPONDER_BACKOFF_BASE_MS * 2 ** Math.max(0, count - 1), RESPONDER_BACKOFF_MAX_MS)
 
 export interface Interface {
   /**
-   * One wake pass: for every idle session in this instance's directory that has
-   * unread coordination notes, surface them in a turn; re-queue notes that were
-   * injected but never acked; and, for sessions that are mid-turn with aged
-   * unanswered requests, hand those requests to a responder child session so
-   * peers are not blocked on a busy agent's next boundary. Returns the number
-   * of sessions woken (responder spawns are not wakes). Exposed for
+   * One sweep: re-queue notes that were injected but never acked (crash/errored
+   * turn), escalate and expire overdue unanswered queries, and for every
+   * durably idle session with unread wake-kind notes start exactly one
+   * coalesced turn. Returns the number of sessions woken. Exposed for
    * deterministic testing.
    */
   readonly sweep: () => Effect.Effect<number>
@@ -66,131 +39,11 @@ const layer = Layer.effect(
     const presence = yield* SessionPresence.Service
     const coordination = yield* Coordination.Service
     const prompt = yield* SessionPrompt.Service
-    const todo = yield* Todo.Service
-    const flags = yield* RuntimeFlags.Service
-    const scope = yield* Scope.Scope
 
-    // Per-process throttle for response-triggered wakes. Replies to a timed-out
-    // ask now wake the asker; without a cooldown two chatty sessions could ping-
-    // pong full model turns at each other. Message/request wakes keep the
-    // historical always-wake behavior.
+    // Per-process throttle for wakes triggered ONLY by reply rows, to keep two
+    // chatty sessions from ping-ponging full model turns at each other. Query
+    // wakes (a peer needs an answer) are never throttled.
     const lastWakeAt = new Map<SessionID, number>()
-    // Parents with a responder child currently running (one at a time per
-    // parent; cross-process duplicates are prevented by the atomic stale-claim).
-    const runningResponders = new Set<SessionID>()
-    // Parents whose last responder turn died; skipped until the (adaptive) backoff
-    // passes. `count` drives the exponential doubling.
-    const responderFailures = new Map<SessionID, { failedAt: number; count: number }>()
-    const recordResponderFailure = (id: SessionID) => {
-      const prev = responderFailures.get(id)
-      responderFailures.set(id, { failedAt: Date.now(), count: (prev?.count ?? 0) + 1 })
-    }
-
-    // Recent visible (non-synthetic) conversation of the parent and its todo
-    // list — everything a responder is allowed to answer from. The todo list is
-    // what keeps the representative's picture aligned with the main agent's own
-    // plan of record.
-    const responderSnapshot = Effect.fnUntraced(function* (parent: Session.Info) {
-      const messages = yield* sessions
-        .messages({ sessionID: parent.id, limit: RESPONDER_SNAPSHOT_MESSAGES * 3 })
-        .pipe(Effect.orDie)
-      const lines: string[] = []
-      for (const message of messages) {
-        if (message.info.role !== "user" && message.info.role !== "assistant") continue
-        const text = message.parts
-          .filter((part): part is SessionV1.TextPart => part.type === "text" && !part.synthetic && !part.ignored)
-          .map((part) => part.text.trim())
-          .filter((value) => value.length > 0)
-          .join("\n")
-        if (!text) continue
-        lines.push(`${message.info.role}: ${text.slice(0, 2_000)}`)
-      }
-      const todos = (yield* todo.get(parent.id)).slice(0, RESPONDER_SNAPSHOT_TODOS)
-      return (
-        (lines.length > 0 ? lines.slice(-RESPONDER_SNAPSHOT_MESSAGES).join("\n\n") : "(no visible conversation yet)") +
-        "\n\nCurrent todo list:\n" +
-        (todos.length > 0 ? Todo.snapshot(todos) : "(none)")
-      )
-    })
-
-    // Hand a session's aged unanswered requests to a hidden responder
-    // child session. The claim above already gave this process exclusive
-    // ownership of `requests` (exactly-once via SQL), so it doubles as the
-    // cross-process spawn lease. The child runs on its own runner, fully
-    // concurrent with the parent's turn — the parent is never interrupted.
-    const spawnResponder = Effect.fnUntraced(function* (parent: Session.Info, requests: Coordination.Info[]) {
-      runningResponders.add(parent.id)
-      const snapshot = yield* responderSnapshot(parent)
-      const child = yield* sessions.create({
-        parentID: parent.id,
-        title: `coordination responder (${parent.title})`,
-        agent: "responder",
-      })
-      yield* Effect.logInfo("spawning coordination responder", {
-        "session.id": parent.id,
-        "responder.id": child.id,
-        requests: requests.length,
-      })
-      const ids = requests.map((request) => request.id)
-      // Fetch each request's negotiation thread so the responder answers a
-      // follow-up with the prior rounds in view (consistent negotiation).
-      const threads: Record<string, Coordination.Info[]> = {}
-      for (const request of requests) {
-        if (!request.threadId) continue
-        const rows = yield* coordination.thread(request.threadId)
-        if (rows.length > 1) threads[request.id] = rows
-      }
-      yield* prompt
-        .prompt({
-          sessionID: child.id,
-          agent: "responder",
-          parts: [
-            {
-              type: "text",
-              synthetic: true,
-              text: Coordination.responderPrompt({
-                parent: { id: parent.id, title: parent.title },
-                requests,
-                snapshot,
-                threads,
-              }),
-            },
-          ],
-        })
-        .pipe(
-          Effect.tap((result) =>
-            // The child's turn died before replying: fast re-queue instead of
-            // waiting out the 15-minute recovery grace, then back this parent
-            // off so a broken provider cannot turn every sweep into a new
-            // responder spawn. Rows the responder already answered are acked
-            // and stay settled.
-            result.info.role === "assistant" && !result.info.error
-              ? Effect.sync(() => responderFailures.delete(parent.id)).pipe(
-                  Effect.andThen(Effect.logInfo("coordination responder finished", { "responder.id": child.id })),
-                )
-              : Effect.sync(() => recordResponderFailure(parent.id)).pipe(
-                  Effect.andThen(coordination.unclaimUnacked(ids)),
-                  Effect.asVoid,
-                ),
-          ),
-          Effect.catchCause((cause) =>
-            Effect.sync(() => recordResponderFailure(parent.id)).pipe(
-              Effect.andThen(
-                Effect.logWarning("coordination responder failed", {
-                  "session.id": parent.id,
-                  cause: Cause.pretty(cause),
-                }),
-              ),
-              Effect.andThen(coordination.unclaimUnacked(ids)),
-              Effect.asVoid,
-            ),
-          ),
-          Effect.ensuring(Effect.sync(() => void runningResponders.delete(parent.id))),
-          Effect.ignore,
-          Effect.forkIn(scope, { startImmediately: true }),
-        )
-    })
-
     const sweep = Effect.fn("CoordinationWatcher.sweep")(function* () {
       const ctx = yield* InstanceState.context
       const busy = yield* status.list()
@@ -217,7 +70,6 @@ const layer = Layer.effect(
       // (fresh heartbeat) is excluded, so we never double-run or takeover-steal a
       // peer another terminal is actively working.
       const idleSince = yield* presence.idleSince(roots.map((session) => session.id))
-      const durableIdleIDs = [...idleSince.keys()]
       // Keep locally-busy sessions' heartbeats fresh so a crash (no onIdle) makes
       // their busy row go stale after the grace, rather than reading idle forever.
       yield* presence.touch([...busy.keys()])
@@ -231,7 +83,7 @@ const layer = Layer.effect(
           kind: "record",
           fromSession: request.toSession ?? request.fromSession,
           toSession: request.fromSession,
-          body: `Your request ${request.id} to ${request.toSession} has gone unanswered past its deadline and was escalated — a human has been notified. You may continue without it or follow up directly.`,
+          body: `Your query ${request.id} to ${request.toSession} has gone unanswered past its deadline and was escalated — a human has been notified. You may continue without it or follow up directly.`,
         })
       }
       for (const request of yield* coordination.expireDue()) {
@@ -240,61 +92,8 @@ const layer = Layer.effect(
           kind: "record",
           fromSession: request.toSession ?? request.fromSession,
           toSession: request.fromSession,
-          body: `Your request ${request.id} to ${request.toSession} has expired unanswered. No further reply will arrive; re-ask only if it still matters.`,
+          body: `Your query ${request.id} to ${request.toSession} has expired unanswered. No further reply will arrive; re-query only if it still matters.`,
         })
-      }
-      // Unanswered pass first: a request that has aged past the grace with nobody
-      // answering it gets a reply from the session's standing responder child,
-      // regardless of whether the main agent is busy or idle. The main agent
-      // may still answer (or correct) at its own boundary — the atomic claim
-      // plus the already-answered guard make double replies impossible from
-      // the responder side, and a parent's later answer arrives as a
-      // correction. Fresh requests are deliberately left for the main agent's
-      // own next boundary.
-      // Run this BEFORE the wake pass so responder spawns are not delayed by
-      // long wake turns (the wake loop awaits each woken session's full turn).
-      if (!flags.disableCoordinationResponder) {
-        let launches = 0
-        const now = Date.now()
-        const idleIDs = durableIdleIDs
-        for (const session of roots) {
-          if (launches >= RESPONDERS_PER_SWEEP) break
-          if (runningResponders.has(session.id)) continue
-          const failure = responderFailures.get(session.id)
-          if (failure !== undefined && now - failure.failedAt < responderBackoffMs(failure.count)) continue
-          const leased = yield* coordination.claimUnanswered({
-            sessionID: session.id,
-            olderThanMs: RESPONDER_GRACE_MS,
-            limit: RESPONDER_BATCH_LIMIT,
-            claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}${session.id}:${Date.now()}`,
-          })
-          // Mid-injection takeover: also claim rows stuck in a live step for
-          // more than 60s, but only for sessions that are currently idle.
-          const orphaned = yield* coordination.claimOrphanedInjected({
-            sessionID: session.id,
-            idleSessionIDs: idleIDs,
-            limit: RESPONDER_BATCH_LIMIT - leased.length,
-            claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}${session.id}:${Date.now()}`,
-          })
-          const allLeased = [...leased, ...orphaned]
-          if (allLeased.length === 0) continue
-          const worthAnswering: Coordination.Info[] = []
-          for (const request of allLeased) {
-            const requester = yield* sessions
-              .get(request.fromSession)
-              .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
-            if (requester && !requester.time.archived && now - requester.time.updated < RESPONDER_REQUESTER_STALE_MS) {
-              worthAnswering.push(request)
-              continue
-            }
-            // Ghost traffic from a deleted or long-abandoned session: settle the
-            // ledger without spending model turns on it.
-            yield* coordination.markAck([request.id])
-          }
-          if (worthAnswering.length === 0) continue
-          launches++
-          yield* spawnResponder(session, worthAnswering)
-        }
       }
       let woken = 0
       for (const session of roots.filter((s) => idleSince.has(s.id))) {
@@ -312,23 +111,26 @@ const layer = Layer.effect(
         )
           continue
         woken++
-        // Loop so a note that arrives mid-turn gets its own follow-up turn.
+        // Loop so a note that arrives mid-turn gets its own follow-up turn. A
+        // wake that FAILS (no model, denied permission) must NOT be retried in
+        // this sweep — the note stays unread, so retrying would spin forever.
         while (pending.length > 0) {
           lastWakeAt.set(session.id, Date.now())
-          yield* prompt
+          const woke = yield* prompt
             .prompt({
               sessionID: session.id,
               parts: [{ type: "text", synthetic: true, display: "system", text: Coordination.wakePrompt }],
             })
             .pipe(
-              Effect.ignore,
+              Effect.as(true),
               Effect.catchCause((cause) =>
                 Effect.logWarning("coordination wake failed", {
                   "session.id": session.id,
                   cause: Cause.pretty(cause),
-                }),
+                }).pipe(Effect.as(false)),
               ),
             )
+          if (!woke) break
           pending = yield* unread(session.id)
         }
       }
@@ -359,15 +161,7 @@ const layer = Layer.effect(
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [
-    Session.node,
-    SessionStatus.node,
-    SessionPresence.node,
-    Coordination.node,
-    SessionPrompt.node,
-    Todo.node,
-    RuntimeFlags.node,
-  ],
+  deps: [Session.node, SessionStatus.node, SessionPresence.node, Coordination.node, SessionPrompt.node],
 })
 
 export * as CoordinationWatcher from "./coordination-watcher"

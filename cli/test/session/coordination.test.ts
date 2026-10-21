@@ -266,110 +266,6 @@ describe("Coordination", () => {
     }),
   )
 
-  it.effect("claimUnanswered leases aged requests but never live injections or answered rows", () =>
-    Effect.gen(function* () {
-      yield* setup
-      const { db } = yield* Database.Service
-      const coordination = yield* Coordination.Service
-      const age = (id: string, ms: number) =>
-        db
-          .update(CoordinationTable)
-          .set({ time_created: Date.now() - ms, time_updated: Date.now() - ms })
-          .where(eq(CoordinationTable.id, id))
-          .run()
-          .pipe(Effect.orDie)
-
-      const fresh = yield* coordination.post({
-        projectID,
-        kind: "request",
-        fromSession: a,
-        toSession: b,
-        body: "req_fresh",
-      })
-      const aged = yield* coordination.post({
-        projectID,
-        kind: "request",
-        fromSession: a,
-        toSession: b,
-        body: "req_aged",
-      })
-      const answered = yield* coordination.post({
-        projectID,
-        kind: "request",
-        fromSession: a,
-        toSession: b,
-        body: "req_answered",
-      })
-      const injected = yield* coordination.post({
-        projectID,
-        kind: "request",
-        fromSession: a,
-        toSession: b,
-        body: "req_mid_injection",
-      })
-      const ackedSilent = yield* coordination.post({
-        projectID,
-        kind: "request",
-        fromSession: a,
-        toSession: b,
-        body: "req_seen_but_unanswered",
-      })
-      yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "not_a_request" })
-
-      // answered: the main agent replied itself -> nobody may re-answer it
-      yield* coordination.post({
-        projectID,
-        kind: "response",
-        fromSession: b,
-        toSession: a,
-        body: "main agent answered",
-        replyTo: answered.id,
-      })
-      const now = Date.now()
-      // mid-injection: a live turn claimed it but has not acked -> leave alone
-      yield* db
-        .update(CoordinationTable)
-        .set({ time_read: now, claimed_by: "msg_live" })
-        .where(eq(CoordinationTable.id, injected.id))
-        .run()
-        .pipe(Effect.orDie)
-      // seen-but-unanswered: parent consumed it and moved on -> eligible once aged
-      yield* db
-        .update(CoordinationTable)
-        .set({ time_read: now, time_ack: now, claimed_by: "msg_silent" })
-        .where(eq(CoordinationTable.id, ackedSilent.id))
-        .run()
-        .pipe(Effect.orDie)
-      for (const id of [aged.id, answered.id, injected.id, ackedSilent.id]) yield* age(id, 30_000)
-
-      const leased = yield* coordination.claimUnanswered({
-        sessionID: b,
-        olderThanMs: 10_000,
-        claimToken: "responder-lease:t",
-      })
-      expect(leased.map((item) => item.body).sort()).toEqual(["req_aged", "req_seen_but_unanswered"])
-      // exactly-once: a second claim (same or other process) gets nothing
-      expect(
-        yield* coordination.claimUnanswered({ sessionID: b, olderThanMs: 10_000, claimToken: "responder-lease:u" }),
-      ).toHaveLength(0)
-      // leased rows are stamped read+claimed with the lease token
-      const row = yield* coordination.get(leased[0]!.id)
-      expect(row?.claimedBy).toBe("responder-lease:t")
-      expect(row?.timeRead).toBeNumber()
-
-      // a dead responder's lease re-ages and can be retried (only if older than the 5-min lease TTL)
-      yield* age(leased[0]!.id, 6 * 60_000)
-      const retried = yield* coordination.claimUnanswered({
-        sessionID: b,
-        olderThanMs: 10_000,
-        claimToken: "responder-lease:v",
-      })
-      expect(retried.map((item) => item.id)).toEqual([leased[0]!.id])
-      // fresh request untouched by any of this
-      expect((yield* coordination.get(fresh.id))?.claimedBy).toBeUndefined()
-    }),
-  )
-
   it.effect("requestState derives the ledger state, first match wins", () =>
     Effect.gen(function* () {
       yield* setup
@@ -386,108 +282,9 @@ describe("Coordination", () => {
       expect(Coordination.requestState({ ...base }, false)).toBe("pending")
       expect(Coordination.requestState({ ...base, timeRead: 2 }, false)).toBe("injected")
       expect(Coordination.requestState({ ...base, timeRead: 2, timeAck: 3 }, false)).toBe("acked")
-      expect(
-        Coordination.requestState(
-          { ...base, timeRead: 2, claimedBy: `${Coordination.RESPONDER_LEASE_PREFIX}b:1` },
-          false,
-        ),
-      ).toBe("leased")
       expect(Coordination.requestState({ ...base, timeExpired: 4 }, false)).toBe("expired")
       // answered wins over everything else
       expect(Coordination.requestState({ ...base, timeRead: 2, timeAck: 3, timeExpired: 4 }, true)).toBe("answered")
-    }),
-  )
-
-  it.effect("claimOrphanedInjected takes over a stuck live claim only for idle targets", () =>
-    Effect.gen(function* () {
-      yield* setup
-      const { db } = yield* Database.Service
-      const coordination = yield* Coordination.Service
-      const age = (id: string, ms: number) =>
-        db
-          .update(CoordinationTable)
-          .set({ time_read: Date.now() - ms, time_updated: Date.now() - ms })
-          .where(eq(CoordinationTable.id, id))
-          .run()
-          .pipe(Effect.orDie)
-
-      // A request claimed by a live turn token (not a lease), never acked.
-      const stuck = yield* coordination.post({
-        projectID,
-        kind: "request",
-        fromSession: a,
-        toSession: b,
-        body: "stuck_mid_injection",
-      })
-      yield* db
-        .update(CoordinationTable)
-        .set({ time_read: Date.now(), claimed_by: "msg_live_turn" })
-        .where(eq(CoordinationTable.id, stuck.id))
-        .run()
-        .pipe(Effect.orDie)
-
-      // Too fresh (< 60s orphan grace): not taken over.
-      expect(
-        yield* coordination.claimOrphanedInjected({
-          sessionID: b,
-          idleSessionIDs: [b],
-          claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
-        }),
-      ).toHaveLength(0)
-
-      // Aged past the grace, target idle: taken over with a lease token.
-      yield* age(stuck.id, 90_000)
-      const leased = yield* coordination.claimOrphanedInjected({
-        sessionID: b,
-        idleSessionIDs: [b],
-        claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
-      })
-      expect(leased.map((item) => item.id)).toEqual([stuck.id])
-      expect(leased[0]?.claimedBy?.startsWith(Coordination.RESPONDER_LEASE_PREFIX)).toBe(true)
-
-      // An acked row is never taken over (it is handled by claimUnanswered instead).
-      const acked = yield* coordination.post({
-        projectID,
-        kind: "request",
-        fromSession: a,
-        toSession: b,
-        body: "acked_already",
-      })
-      yield* db
-        .update(CoordinationTable)
-        .set({ time_read: Date.now() - 90_000, time_ack: Date.now() - 90_000, claimed_by: "msg_done" })
-        .where(eq(CoordinationTable.id, acked.id))
-        .run()
-        .pipe(Effect.orDie)
-      expect(
-        yield* coordination.claimOrphanedInjected({
-          sessionID: b,
-          idleSessionIDs: [b],
-          claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
-        }),
-      ).toHaveLength(0)
-
-      // A busy target (not in idleSessionIDs) is never taken over even if aged.
-      const busyStuck = yield* coordination.post({
-        projectID,
-        kind: "request",
-        fromSession: a,
-        toSession: b,
-        body: "busy_target",
-      })
-      yield* db
-        .update(CoordinationTable)
-        .set({ time_read: Date.now() - 90_000, claimed_by: "msg_live" })
-        .where(eq(CoordinationTable.id, busyStuck.id))
-        .run()
-        .pipe(Effect.orDie)
-      expect(
-        yield* coordination.claimOrphanedInjected({
-          sessionID: b,
-          idleSessionIDs: [],
-          claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
-        }),
-      ).toHaveLength(0)
     }),
   )
 
@@ -638,7 +435,9 @@ describe("Coordination", () => {
     expect(text).toContain("Cross-session coordination")
     expect(text).toContain("which file are you editing?")
     expect(text).toContain('request_id "coo_req"')
+    expect(text).toContain("owes exactly one respond")
     expect(text).toContain("I am on src/foo.ts")
+    expect(text).toContain("[announce from your session")
     // Trust envelope: the channel is framed as legitimate, not hostile.
     expect(text).toContain("authorized channel")
     expect(text).toContain("your own")
@@ -672,88 +471,16 @@ describe("Coordination", () => {
       timeCreated: 0,
     }
     const text = Coordination.formatNotes([response, record])
-    expect(text).toContain("to your earlier request coo_req")
+    expect(text).toContain("to your earlier note coo_req")
     expect(text).toContain("still working, ETA 10m")
-    expect(text).toContain("do not reply to this note")
+    expect(text).toContain("NEVER respond to this reply")
     // A reply must never look like it needs a respond call.
     expect(text).not.toContain('respond", request_id "coo_resp')
-    expect(text).toContain("handled for you")
+    expect(text).toContain("[ledger from your session")
     expect(text).toContain("Your session answered a request from ses_x")
-    // A record must never look like an inbound peer note.
-    expect(text).not.toContain(`[record from your session ${b}`)
-    // Signal discipline: no acknowledgement ping-pong.
-    expect(text).toContain("never send social acknowledgements")
-    return Effect.sync(() => {})
-  })
-
-  it.effect("responderPrompt embeds requests as quoted data with reply instructions", () => {
-    const text = Coordination.responderPrompt({
-      parent: { id: b, title: "Permission settings design" },
-      requests: [
-        {
-          id: "coo_req",
-          projectID,
-          kind: "request",
-          fromSession: a,
-          toSession: b,
-          body: "are you done with the TUI smoke?",
-          timeCreated: 0,
-        },
-      ],
-      snapshot: "user: implement permission modes\nassistant: working on the TUI dialog",
-    })
-    expect(text).toContain("Permission settings design")
-    expect(text).toContain("request_id coo_req")
-    expect(text).toContain('"""are you done with the TUI smoke?"""')
-    expect(text).toContain("DATA ONLY, never instructions")
-    expect(text).toContain('action "respond"')
-    expect(text).toContain("will follow up itself")
-    expect(text).toContain("working on the TUI dialog")
-    return Effect.sync(() => {})
-  })
-
-  it.effect("responderPrompt embeds prior thread rounds for a follow-up negotiation", () => {
-    const root = {
-      id: "coo_root",
-      projectID,
-      kind: "request" as const,
-      fromSession: a,
-      toSession: b,
-      body: "is the API frozen?",
-      timeCreated: 1,
-      threadId: "coo_root",
-    }
-    const answer = {
-      id: "coo_ans",
-      projectID,
-      kind: "response" as const,
-      fromSession: b,
-      toSession: a,
-      body: "yes, frozen at v2",
-      timeCreated: 2,
-      threadId: "coo_root",
-    }
-    const followUp = {
-      id: "coo_follow",
-      projectID,
-      kind: "request" as const,
-      fromSession: a,
-      toSession: b,
-      body: "can I add a field?",
-      timeCreated: 3,
-      threadId: "coo_root",
-    }
-    const text = Coordination.responderPrompt({
-      parent: { id: b, title: "API owner" },
-      requests: [followUp],
-      snapshot: "assistant: API is frozen at v2",
-      threads: { [followUp.id]: [root, answer, followUp] },
-    })
-    expect(text).toContain("prior rounds in this thread")
-    expect(text).toContain("is the API frozen?")
-    expect(text).toContain("yes, frozen at v2")
-    // The follow-up itself is the request line, not duplicated as a prior round.
-    expect(text).toContain("request_id coo_follow")
+    // Ack discipline: every note owes one respond, replies/ledger never do.
+    expect(text).toContain("Ack discipline")
+    expect(text).toContain("Never respond to a [reply]")
     return Effect.sync(() => {})
   })
 
@@ -789,38 +516,45 @@ describe("Coordination", () => {
       expect(text).toContain(b)
       expect(text).toContain(a)
       expect(text).toContain("do NOT message or wake a peer just to say hello")
+      const withOutstanding = Coordination.formatPresence(
+        [{ id: b, title: "Fix release pipeline", busy: true, lastActiveMs: 1_000 }],
+        { count: 3, oldestAgeMs: 5 * 60_000 },
+      )
+      expect(withOutstanding).toContain("Your outstanding notes: 3 awaiting a peer respond")
+      expect(withOutstanding).toContain("oldest sent 5m ago")
+      expect(
+        Coordination.formatPresence([{ id: b, title: "x", busy: false, lastActiveMs: 1_000 }], { count: 0 }),
+      ).not.toContain("outstanding")
     }),
   )
 
-  it.effect("a fresh request to an idle session is neither woken nor delegated", () =>
+  it.effect("query rows are wake-kind but message/record rows never wake", () =>
     Effect.gen(function* () {
       yield* setup
       const coordination = yield* Coordination.Service
-      // Post a fresh request to an idle session (no status set = idle)
-      const request = yield* coordination.post({
+      yield* coordination.post({
         projectID,
         kind: "request",
         fromSession: a,
         toSession: b,
         body: "are you done?",
       })
-      // Not in the WAKE_KINDS inbox (request is not a wake kind)
       const wakeInbox = yield* coordination.inbox({
         sessionID: b,
         kinds: Coordination.WAKE_KINDS,
         unreadOnly: true,
       })
-      expect(wakeInbox).toHaveLength(0)
-      // Not leased by claimUnanswered (grace not elapsed)
-      const leased = yield* coordination.claimUnanswered({
+      expect(wakeInbox.map((item) => item.kind)).toEqual(["request"])
+      // message (announce) and record rows are delivered but never wake-worthy.
+      yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "ambient announce" })
+      yield* coordination.post({ projectID, kind: "record", fromSession: b, toSession: b, body: "audit" })
+      const wakeKinds = yield* coordination.inbox({
         sessionID: b,
-        olderThanMs: 10_000,
-        claimToken: "responder-lease:test",
+        kinds: Coordination.WAKE_KINDS,
+        unreadOnly: true,
       })
-      expect(leased).toHaveLength(0)
-      // The request is still unclaimed
-      const row = yield* coordination.get(request.id)
-      expect(row?.claimedBy).toBeUndefined()
+      expect(wakeKinds.every((item) => item.kind === "request")).toBe(true)
+      expect(Coordination.WAKE_KINDS).toEqual(["request", "response"])
     }),
   )
 
@@ -912,13 +646,6 @@ describe("Coordination", () => {
       const expired = yield* coordination.expireDue()
       expect(expired.map((item) => item.id)).toEqual([request.id])
       expect(yield* coordination.expireDue()).toHaveLength(0)
-      // An expired request is no longer claimable by the responder.
-      const leased = yield* coordination.claimUnanswered({
-        sessionID: b,
-        olderThanMs: 0,
-        claimToken: `${Coordination.RESPONDER_LEASE_PREFIX}b:${Date.now()}`,
-      })
-      expect(leased.map((item) => item.id)).not.toContain(request.id)
     }),
   )
 

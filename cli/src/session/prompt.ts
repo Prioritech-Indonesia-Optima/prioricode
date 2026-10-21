@@ -1363,9 +1363,10 @@ const layer = Layer.effect(
             // session always sees who it shares the project with without polling
             // or being woken. Read-only; marks nothing.
             if (step === 1) {
-              const [siblings, statusMap] = yield* Effect.all([
+              const [siblings, statusMap, outstanding] = yield* Effect.all([
                 sessions.list({ limit: 50, roots: true }),
                 status.list(),
+                coordination.outstanding(sessionID),
               ])
               const now = Date.now()
               const peers: Coordination.PresencePeer[] = siblings
@@ -1379,7 +1380,7 @@ const layer = Layer.effect(
                   busy: statusMap.get(s.id)?.type === "busy",
                   lastActiveMs: now - s.time.updated,
                 }))
-              presenceBlock = Coordination.formatPresence(peers)
+              presenceBlock = Coordination.formatPresence(peers, outstanding)
             }
             const system = [
               ...env,

@@ -1,5 +1,5 @@
 import { describe, expect } from "bun:test"
-import { Effect, Fiber, Layer } from "effect"
+import { Effect, Layer } from "effect"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Database } from "@prioricode/core/database/database"
 import { Project } from "@prioricode/core/project"
@@ -7,7 +7,6 @@ import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { Coordination } from "@/session/coordination"
 import { Session } from "@/session/session"
-import { SessionStatus } from "@/session/status"
 import { SessionID, MessageID } from "@/session/schema"
 import { SessionsTool } from "@/tool/sessions"
 import { NotFoundError } from "@/storage/storage"
@@ -40,13 +39,11 @@ const staleInfo = info(staleID, "stale peer", now - 1000 * 60 * 60 * 100)
 const roster: { peers: Session.Info[] } = { peers: [selfInfo, activeInfo, staleInfo] }
 
 const sessionLayer = Layer.mock(Session.Service, {
-  get: (id: SessionID) =>
-    id === selfID ? Effect.succeed(selfInfo) : Effect.fail(new NotFoundError({ message: "not found" })),
+  get: (id: SessionID) => {
+    const found = [selfInfo, activeInfo, staleInfo].find((session) => session.id === id)
+    return found ? Effect.succeed(found) : Effect.fail(new NotFoundError({ message: "not found" }))
+  },
   list: () => Effect.succeed([selfInfo, ...roster.peers.filter((peer) => peer.id !== selfID)]),
-})
-
-const statusLayer = Layer.mock(SessionStatus.Service, {
-  list: () => Effect.succeed(new Map([[activeID, { type: "busy" } as const]])),
 })
 
 const it = testEffect(
@@ -57,7 +54,6 @@ const it = testEffect(
       Truncate.node,
       Agent.node,
       LayerNode.make({ service: Session.Service, layer: sessionLayer, deps: [] }),
-      LayerNode.make({ service: SessionStatus.Service, layer: statusLayer, deps: [] }),
     ]),
   ),
 )
@@ -88,63 +84,126 @@ const execute = Effect.fn("SessionsTest.execute")(function* (params: Record<stri
   return yield* tool.execute(params as never, ctx as never)
 })
 
-describe("tool.sessions.broadcast", () => {
-  it.instance("reaches active peers, skips stale ones, and reports the gate state", () =>
+describe("tool.sessions.query", () => {
+  it.instance("posts a durable request note with sender origin metadata", () =>
     Effect.gen(function* () {
       yield* setup
-      roster.peers = [activeInfo, staleInfo]
-      const result = yield* execute({
-        action: "broadcast",
-        message: "about to git stash for a clean e2e baseline",
-        timeout: 1,
+      const coordination = yield* Coordination.Service
+      const result = yield* execute({ action: "query", target: activeID, message: "what is your ETA?" })
+      expect(result.title).toBe("sessions:query")
+      expect(result.output).toContain("queued")
+      const meta = result.metadata as { noteID?: string }
+      expect(meta.noteID).toBeString()
+
+      const row = yield* coordination.get(meta.noteID!)
+      expect(row).toMatchObject({
+        kind: "request",
+        fromSession: selfID,
+        toSession: activeID,
+        body: "what is your ETA?",
       })
-      expect(result.output).toContain("1 active peer(s)")
-      expect(result.output).toContain("0/1 answered")
-      expect(result.output).toContain(`${activeID}`)
-      expect(result.output).toContain(`Skipped: ${staleID}`)
-      expect(result.output).toContain("git worktree add")
+      expect(row?.originMessageId).toBe("msg_bc")
+      expect(row?.threadId).toBe(meta.noteID)
+    }),
+  )
+})
+
+describe("tool.sessions.respond", () => {
+  it.instance("acking a message note settles its ledger stamps and links the reply", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      // Simulate a session-init announce addressed to the roster peer (self here).
+      yield* coordination.post({
+        id: "ann:peer:self",
+        projectID,
+        kind: "message",
+        fromSession: activeID,
+        toSession: selfID,
+        body: "a new sibling joined",
+        groupId: "ann:peer",
+      })
+      const result = yield* execute({ action: "respond", request_id: "ann:peer:self", message: "welcome" })
+      expect(result.title).toBe("sessions:respond")
+
+      const note = yield* coordination.get("ann:peer:self")
+      expect(note?.timeRead).toBeNumber()
+      expect(note?.timeAck).toBeNumber()
+      const replies = yield* coordination.responsesTo("ann:peer:self")
+      expect(replies).toHaveLength(1)
+      expect(replies[0]).toMatchObject({ kind: "response", fromSession: selfID, toSession: activeID, body: "welcome" })
+      // The respond itself is traced to the answering turn.
+      expect(replies[0]?.originMessageId).toBe("msg_bc")
+      // A second respond is refused — one respond per note.
+      const second = yield* execute({ action: "respond", request_id: "ann:peer:self", message: "again" })
+      expect(second.title).toBe("sessions:error")
+      expect(second.output).toContain("already responded")
     }),
   )
 
-  it.instance("reports safe to proceed when no active peers exist", () =>
+  it.instance("responding to a reply note is refused", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      const request = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: activeID,
+        toSession: selfID,
+        body: "peer question",
+      })
+      const reply = yield* coordination.post({
+        projectID,
+        kind: "response",
+        fromSession: selfID,
+        toSession: activeID,
+        body: "my answer",
+        replyTo: request.id,
+      })
+      const result = yield* execute({ action: "respond", request_id: reply.id, message: "thanks" })
+      expect(result.title).toBe("sessions:error")
+      expect(result.output).toContain("only notes addressed to you")
+    }),
+  )
+})
+
+describe("tool.sessions.broadcast", () => {
+  it.instance("fans out one grouped request row per live peer and returns immediately", () =>
+    Effect.gen(function* () {
+      yield* setup
+      roster.peers = [activeInfo, staleInfo]
+      const coordination = yield* Coordination.Service
+      const result = yield* execute({ action: "broadcast", message: "about to git stash for a clean e2e baseline" })
+      expect(result.title).toBe("sessions:broadcast")
+      const meta = result.metadata as { recipients?: number; groupID?: string }
+      expect(meta.recipients).toBe(1)
+      expect(meta.groupID).toBeString()
+      expect(result.output).toContain(`${activeID}`)
+      expect(result.output).toContain(`Skipped: ${staleID}`)
+      expect(result.output).toContain("does not wait")
+
+      const inbox = yield* pollWithTimeout(
+        Effect.gen(function* () {
+          const items = yield* coordination.inbox({ sessionID: activeID, kinds: ["request"], unreadOnly: true })
+          return items.length > 0 ? items : undefined
+        }),
+        "broadcast request never reached the peer inbox",
+      )
+      expect(inbox[0].body).toContain("[broadcast]")
+      expect(inbox[0].groupId).toBe(meta.groupID)
+      expect(inbox[0].originMessageId).toBe("msg_bc")
+      // No response rows are awaited: the tool returned without polling.
+      expect(yield* coordination.responsesTo(inbox[0].id)).toHaveLength(0)
+    }),
+  )
+
+  it.instance("reports zero recipients when only stale peers exist", () =>
     Effect.gen(function* () {
       yield* setup
       roster.peers = [staleInfo]
       const result = yield* execute({ action: "broadcast", message: "about to switch branches" })
-      expect(result.output).toContain("No active peers to broadcast to")
-      expect(result.output).toContain("safe to proceed")
-    }),
-  )
-
-  it.instance("reports a peer as answered once it responds", () =>
-    Effect.gen(function* () {
-      yield* setup
-      roster.peers = [activeInfo]
-      const coordination = yield* Coordination.Service
-      const fiber = yield* execute({
-        action: "broadcast",
-        message: "about to git reset, any objection?",
-        timeout: 10,
-      }).pipe(Effect.forkScoped)
-      const request = yield* pollWithTimeout(
-        Effect.gen(function* () {
-          const inbox = yield* coordination.inbox({ sessionID: activeID, kinds: ["request"], unreadOnly: true })
-          return inbox.length > 0 ? inbox[inbox.length - 1] : undefined
-        }),
-        "broadcast request never reached the peer inbox",
-      )
-      expect(request.body).toContain("[broadcast]")
-      yield* coordination.post({
-        projectID,
-        kind: "response",
-        fromSession: activeID,
-        toSession: selfID,
-        body: "OK, go ahead",
-        replyTo: request.id,
-      })
-      const result = yield* Fiber.join(fiber)
-      expect(result.output).toContain("1/1 answered")
-      expect(result.output).toContain("ANSWERED — OK, go ahead")
+      expect(result.output).toContain("No live peers to announce to")
+      expect((result.metadata as { recipients?: number }).recipients).toBe(0)
     }),
   )
 })
