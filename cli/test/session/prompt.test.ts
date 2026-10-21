@@ -264,7 +264,14 @@ const unix = process.platform !== "win32" ? it.instance : it.instance.skip
 const unixNoLLMServer = process.platform !== "win32" ? noLLMServer.instance : noLLMServer.instance.skip
 
 function makeHttpCoordination(flags?: Partial<RuntimeFlags.Info>) {
-  const root = LayerNode.group([promptRoot, testLLMServerNode, Coordination.node, CoordinationWatcher.node, FileAttribution.node, FileTouch.node])
+  const root = LayerNode.group([
+    promptRoot,
+    testLLMServerNode,
+    Coordination.node,
+    CoordinationWatcher.node,
+    FileAttribution.node,
+    FileTouch.node,
+  ])
   const replacements = [
     [SessionSummary.node, summary],
     [LSP.node, lsp],

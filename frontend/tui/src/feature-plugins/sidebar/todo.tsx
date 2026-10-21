@@ -75,11 +75,7 @@ function View(props: { api: TuiPluginApi; session_id: string }) {
                         {row.isOpen ? "▼" : "▶"}
                       </text>
                     </Show>
-                    <TodoItem
-                      status={row.item.status}
-                      content={row.item.content}
-                      indent={row.depth * 2 + 2}
-                    />
+                    <TodoItem status={row.item.status} content={row.item.content} indent={row.depth * 2 + 2} />
                     <Show when={row.isParent}>
                       <text flexShrink={0} fg={theme().textMuted}>
                         {row.done}/{row.total}
