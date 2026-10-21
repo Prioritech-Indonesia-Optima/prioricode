@@ -407,8 +407,14 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
             "description": "Brief description of the task",
             "type": "string",
           },
+          "depth": {
+            "description": "Nesting level in the outline: 0 = objective, 1 = stage, 2 = step; keep proportional",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer",
+          },
           "phase": {
-            "description": "Phase label for grouping",
+            "description": "Legacy grouping label — superseded by depth",
             "type": "string",
           },
           "priority": {
@@ -452,6 +458,12 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
         "properties": {
           "content": {
             "type": "string",
+          },
+          "depth": {
+            "description": "New nesting level: 0 = objective, 1 = stage, 2 = step",
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer",
           },
           "id": {
             "description": "Item id — the exact td_… token copied from the latest response",
@@ -521,6 +533,11 @@ exports[`tool parameters JSON Schema (wire shape) todo 1`] = `
           "content": {
             "description": "Brief description of the task",
             "type": "string",
+          },
+          "depth": {
+            "maximum": 9007199254740991,
+            "minimum": 0,
+            "type": "integer",
           },
           "id": {
             "pattern": "^td_[0-9a-f]{8}$",
