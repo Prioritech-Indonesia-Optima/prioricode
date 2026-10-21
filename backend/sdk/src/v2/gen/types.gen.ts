@@ -681,6 +681,7 @@ export type Todo = {
    */
   priority: "high" | "medium" | "low"
   phase?: string
+  depth?: number
 }
 
 export type SessionStatus =
@@ -10001,23 +10002,23 @@ export type SessionCoordinationResponses = {
     }
     incoming: Array<{
       id: string
-      fromSession: string
       body: string
       state: string
       ageMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      groupId?: string
+      originMessageId?: string
+      injectedBy?: string
+      fromSession: string
     }>
     outgoing: Array<{
       id: string
-      toSession: string
       body: string
       state: string
       ageMs: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
-    }>
-    notifies: Array<{
-      id: string
-      target: string
-      note: string
-      expires: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
+      groupId?: string
+      originMessageId?: string
+      injectedBy?: string
+      toSession: string
     }>
     escalated: number | "NaN" | "Infinity" | "-Infinity" | "Infinity" | "-Infinity" | "NaN"
   }

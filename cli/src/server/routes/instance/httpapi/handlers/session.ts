@@ -108,7 +108,9 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
       const unreadCounts: Record<string, number> = {}
       for (const row of unread) unreadCounts[row.kind] = (unreadCounts[row.kind] ?? 0) + 1
 
-      const incomingRows = (yield* coordinationSvc.inbox({ sessionID, kinds: ["request"] })).filter(
+      // Notes owed a respond: incoming queries/broadcasts (request rows) plus
+      // announces (message rows) addressed to this session.
+      const incomingRows = (yield* coordinationSvc.inbox({ sessionID, kinds: ["request", "message"] })).filter(
         (row) => row.toSession === sessionID,
       )
       const incomingResponses = yield* coordinationSvc.responsesFor(incomingRows.map((row) => row.id))
@@ -119,10 +121,13 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
         body: row.body.slice(0, 200),
         state: Coordination.requestState(row, answered.has(row.id)),
         ageMs: now - row.timeCreated,
+        ...(row.groupId !== undefined ? { groupId: row.groupId } : {}),
+        ...(row.originMessageId !== undefined ? { originMessageId: row.originMessageId } : {}),
+        ...(row.claimedBy !== undefined ? { injectedBy: row.claimedBy } : {}),
       }))
 
       const outgoingRows = (yield* coordinationSvc.sentBy({ sessionID, withinMs: 30 * 60_000 })).filter(
-        (row) => row.kind === "request" && row.toSession !== sessionID,
+        (row) => row.toSession !== sessionID,
       )
       const outgoingResponses = yield* coordinationSvc.responsesFor(outgoingRows.map((row) => row.id))
       const outgoingAnswered = new Set(outgoingResponses.map((row) => row.replyTo))
@@ -132,9 +137,10 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
         body: row.body.slice(0, 200),
         state: Coordination.requestState(row, outgoingAnswered.has(row.id)),
         ageMs: now - row.timeCreated,
+        ...(row.groupId !== undefined ? { groupId: row.groupId } : {}),
+        ...(row.originMessageId !== undefined ? { originMessageId: row.originMessageId } : {}),
+        ...(row.claimedBy !== undefined ? { injectedBy: row.claimedBy } : {}),
       }))
-
-      const notifies: Array<{ id: string; target: string; note: string; expires: number }> = []
 
       const escalated =
         incomingRows.filter((row) => row.timeEscalated !== undefined && !answered.has(row.id)).length +
@@ -145,7 +151,6 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
         unread: unreadCounts,
         incoming,
         outgoing,
-        notifies,
         escalated,
       }
     })

@@ -36,14 +36,15 @@ export function DialogCoordination() {
       <Show when={view()} fallback={<text fg={theme.textMuted}>No coordination data yet.</text>}>
         {(data) => (
           <>
-            <Show when={data().incoming.length > 0} fallback={<text fg={theme.textMuted}>No incoming requests.</text>}>
+            <Show when={data().incoming.length > 0} fallback={<text fg={theme.textMuted}>No incoming notes.</text>}>
               <box>
-                <text fg={theme.text}>Incoming requests ({data().incoming.length})</text>
+                <text fg={theme.text}>Notes awaiting your respond ({data().incoming.length})</text>
                 <For each={data().incoming}>
                   {(row) => (
                     <text fg={theme.text} wrapMode="word">
                       <span style={{ fg: theme.textMuted }}>
-                        [{row.state}, {ago(row.ageMs)}] from {row.fromSession}:{" "}
+                        [{row.state}, {ago(row.ageMs)}
+                        {row.groupId ? ", grouped" : ""}] from {row.fromSession}:{" "}
                       </span>
                       {row.body}
                     </text>
@@ -53,12 +54,13 @@ export function DialogCoordination() {
             </Show>
             <Show when={data().outgoing.length > 0}>
               <box>
-                <text fg={theme.text}>Requests you sent ({data().outgoing.length})</text>
+                <text fg={theme.text}>Notes you sent ({data().outgoing.length})</text>
                 <For each={data().outgoing}>
                   {(row) => (
                     <text fg={theme.text} wrapMode="word">
                       <span style={{ fg: theme.textMuted }}>
-                        [{row.state}, {ago(row.ageMs)}] to {row.toSession}:{" "}
+                        [{row.state}, {ago(row.ageMs)}
+                        {row.groupId ? ", grouped" : ""}] to {row.toSession}:{" "}
                       </span>
                       {row.body}
                     </text>
@@ -66,21 +68,8 @@ export function DialogCoordination() {
                 </For>
               </box>
             </Show>
-            <Show when={data().notifies.length > 0}>
-              <box>
-                <text fg={theme.text}>Waiting on idle ({data().notifies.length})</text>
-                <For each={data().notifies}>
-                  {(row) => (
-                    <text fg={theme.text} wrapMode="word">
-                      <span style={{ fg: theme.textMuted }}>{row.target}: </span>
-                      {row.note || "(no note)"}
-                    </text>
-                  )}
-                </For>
-              </box>
-            </Show>
             <Show when={data().escalated > 0}>
-              <text fg={theme.error}>{data().escalated} escalated request(s) awaiting attention.</text>
+              <text fg={theme.error}>{data().escalated} escalated note(s) awaiting attention.</text>
             </Show>
           </>
         )}

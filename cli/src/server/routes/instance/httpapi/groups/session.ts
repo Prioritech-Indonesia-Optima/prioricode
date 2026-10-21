@@ -47,35 +47,23 @@ export const MessagesQuery = Schema.Struct({
   before: Schema.optional(Schema.String),
 })
 export const StatusMap = Schema.Record(Schema.String, SessionStatus.Info)
+const coordinationRowFields = {
+  id: Schema.String,
+  body: Schema.String,
+  state: Schema.String,
+  ageMs: Schema.Number,
+  /** Fan-out attribution for broadcast/announce groups (undefined for direct notes). */
+  groupId: Schema.optional(Schema.String),
+  /** Sender-side traceability: the assistant message whose tool call produced the row. */
+  originMessageId: Schema.optional(Schema.String),
+  /** Delivery token: which receiver turn injected the row into its context. */
+  injectedBy: Schema.optional(Schema.String),
+}
 export const CoordinationView = Schema.Struct({
   sessionID: SessionID,
   unread: Schema.Record(Schema.String, Schema.Number),
-  incoming: Schema.Array(
-    Schema.Struct({
-      id: Schema.String,
-      fromSession: Schema.String,
-      body: Schema.String,
-      state: Schema.String,
-      ageMs: Schema.Number,
-    }),
-  ),
-  outgoing: Schema.Array(
-    Schema.Struct({
-      id: Schema.String,
-      toSession: Schema.String,
-      body: Schema.String,
-      state: Schema.String,
-      ageMs: Schema.Number,
-    }),
-  ),
-  notifies: Schema.Array(
-    Schema.Struct({
-      id: Schema.String,
-      target: Schema.String,
-      note: Schema.String,
-      expires: Schema.Number,
-    }),
-  ),
+  incoming: Schema.Array(Schema.Struct({ ...coordinationRowFields, fromSession: Schema.String })),
+  outgoing: Schema.Array(Schema.Struct({ ...coordinationRowFields, toSession: Schema.String })),
   escalated: Schema.Number,
 })
 export const UpdatePayload = Schema.Struct({
@@ -209,7 +197,7 @@ export const SessionApi = HttpApi.make("session")
             identifier: "session.coordination",
             summary: "Get session coordination state",
             description:
-              "Read-only view of a session's cross-session coordination: unread notes, pending incoming requests, requests it has sent, and active idle-subscriptions.",
+              "Read-only ledger of a session's cross-session coordination: unread notes, incoming notes awaiting your respond (with lifecycle state), notes you sent, and escalation counts.",
           }),
         ),
         HttpApiEndpoint.get("diff", SessionPaths.diff, {

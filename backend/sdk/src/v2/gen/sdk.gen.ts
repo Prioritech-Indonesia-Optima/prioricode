@@ -3677,7 +3677,7 @@ export class Session2 extends HeyApiClient {
   /**
    * Get session coordination state
    *
-   * Read-only view of a session's cross-session coordination: unread notes, pending incoming requests, requests it has sent, and active idle-subscriptions.
+   * Read-only ledger of a session's cross-session coordination: unread notes, incoming notes awaiting your respond (with lifecycle state), notes you sent, and escalation counts.
    */
   public coordination<ThrowOnError extends boolean = false>(
     parameters: {

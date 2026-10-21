@@ -73,9 +73,26 @@ const messageKey = (message: Message) => message.time.created + message.id
 
 export type CoordinationState = {
   unread: Record<string, number>
-  incoming: { id: string; fromSession: string; body: string; state: string; ageMs: number }[]
-  outgoing: { id: string; toSession: string; body: string; state: string; ageMs: number }[]
-  notifies: { id: string; target: string; note: string; expires: number }[]
+  incoming: {
+    id: string
+    fromSession: string
+    body: string
+    state: string
+    ageMs: number
+    groupId?: string
+    originMessageId?: string
+    injectedBy?: string
+  }[]
+  outgoing: {
+    id: string
+    toSession: string
+    body: string
+    state: string
+    ageMs: number
+    groupId?: string
+    originMessageId?: string
+    injectedBy?: string
+  }[]
   escalated: number
 }
 
@@ -713,7 +730,6 @@ export const {
           unread: Object.fromEntries(Object.entries(data.unread).map(([k, v]) => [k, Number(v) || 0])),
           incoming: data.incoming.map((row) => ({ ...row, ageMs: Number(row.ageMs) || 0 })),
           outgoing: data.outgoing.map((row) => ({ ...row, ageMs: Number(row.ageMs) || 0 })),
-          notifies: data.notifies.map((row) => ({ ...row, expires: Number(row.expires) || 0 })),
           escalated: Number(data.escalated) || 0,
         })
       },
