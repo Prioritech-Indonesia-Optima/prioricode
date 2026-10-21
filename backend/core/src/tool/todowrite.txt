@@ -4,16 +4,16 @@ Treat the list as sacred: mutate it IN PLACE, never rebuild it from memory. Addr
 
 Actions:
 - "view" — read the live list; changes nothing.
-- "add" — append items [{content, priority?, phase?, after?}]; after="<id>" inserts behind that item.
-- "status" — check items: batch [{id, status}] in ONE call (completing the current task and starting the next is one transition; the list must hold at most one in_progress, and none once work is finished).
-- "edit" — reword items [{id, content?, phase?, priority?}]; phase:"" clears the label.
-- "remove" — drop items by id when scope changes (set status "cancelled" instead when the user should see the drop).
+- "add" — append items [{content, depth?, priority?, after?}]; after="<id>" inserts behind that item.
+- "status" — check items: batch [{id, status}] in ONE call (completing the current task and starting the next is one transition; the list must hold at most one in_progress, and none once work is finished). Only steps — items with no subtasks — take a status; a stage/objective's status is derived from its steps.
+- "edit" — reword items [{id, content?, depth?, priority?}].
+- "remove" — drop items by id when scope changes (set status "cancelled" instead when the user should see the drop). Removing a stage/objective requires removing every step under it in the same call.
 - "replace" — a complete list, ONLY to seed the first todo of a new objective or a user-approved pivot. While unfinished tasks exist the call is rejected once with their exact ids; resubmit only with `confirm` listing exactly those ids. Never rebuild out of habit.
 
 Discipline (every one is mandatory):
 - Cross off — "status" to completed — the instant a task is truly done and verified. Never batched, never on intent.
 - Capture new instructions as todos immediately; append discovered follow-ups; remove or cancel dropped scope.
-- Structure: group work into phases — consecutive tasks sharing a `phase` label render as one collapsible group ("Phase 1: schema", "Phase 2: wiring"). Open a phase by adding its first task with that label; finish a phase's tasks before starting the next.
+- Structure: the list is an outline — depth 0 is the objective (or each independent objective), depth 1 a stage, depth 2 a concrete step. A parent is complete only when its steps are; check off steps, never a parent. Keep the outline proportional: a small task is a depth-0 item with a few direct steps — do not invent stages; a large task nests stages and steps. Never encode the level in content (no "Phase N:" prefixes).
 - Never end a modifying turn with unfinished tasks unless the user stopped you.
 - Preserve user-provided commands verbatim (flags, args, order); items specific and actionable.
 

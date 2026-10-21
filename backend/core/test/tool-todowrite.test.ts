@@ -315,7 +315,7 @@ describe("TodoWriteTool", () => {
     }),
   )
 
-  it.effect("warns when a phase label appears in separate blocks", () =>
+  it.effect("warns when a depth jump skips a level", () =>
     Effect.gen(function* () {
       yield* setup
       const registry = yield* ToolRegistry.Service
@@ -323,14 +323,14 @@ describe("TodoWriteTool", () => {
         registry,
         call({
           todos: [
-            { content: "a", status: "pending", priority: "low", phase: "P1" },
-            { content: "b", status: "in_progress", priority: "low", phase: "P2" },
-            { content: "c", status: "pending", priority: "low", phase: "P1" },
+            { content: "a", status: "pending", priority: "low" },
+            { content: "b", status: "in_progress", priority: "low", depth: 2 },
+            { content: "c", status: "pending", priority: "low" },
           ],
         }),
       )
       expect(result.type).toBe("text")
-      expect(resultText(result)).toContain('phase "P1" appears in separate blocks')
+      expect(resultText(result)).toContain('jumps to depth 2')
     }),
   )
 

@@ -1,6 +1,7 @@
 export * as TodoWriteInput from "./todowrite-input"
 
 import { Schema } from "effect"
+import { NonNegativeInt } from "../schema"
 import { SessionTodo } from "../session/todo"
 import DESCRIPTION from "./todowrite.txt"
 
@@ -10,7 +11,10 @@ export const AddItem = Schema.Struct({
   content: Schema.String.annotate({ description: "Brief description of the task" }),
   priority: Schema.optional(SessionTodo.Priority).annotate({ description: "Defaults to medium" }),
   status: Schema.optional(SessionTodo.Status).annotate({ description: "Defaults to pending" }),
-  phase: Schema.optional(Schema.String).annotate({ description: "Phase label for grouping" }),
+  phase: Schema.optional(Schema.String).annotate({ description: "Legacy grouping label — superseded by depth" }),
+  depth: Schema.optional(NonNegativeInt).annotate({
+    description: "Nesting level in the outline: 0 = objective, 1 = stage, 2 = step; keep proportional",
+  }),
   after: Schema.optional(Schema.String).annotate({
     description: 'id of the item to insert behind ("td_…"); omit to append',
   }),
@@ -27,6 +31,9 @@ export const EditItem = Schema.Struct({
   id: SessionTodo.ID.annotate({ description: "Item id — the exact td_… token copied from the latest response" }),
   content: Schema.optional(Schema.String),
   phase: Schema.optional(Schema.String).annotate({ description: 'New phase label; "" clears it' }),
+  depth: Schema.optional(NonNegativeInt).annotate({
+    description: "New nesting level: 0 = objective, 1 = stage, 2 = step",
+  }),
   priority: Schema.optional(SessionTodo.Priority),
 })
 

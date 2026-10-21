@@ -8,6 +8,7 @@ import { makeLocationNode } from "../effect/app-node"
 import { EventBus } from "../event"
 import { SessionSchema } from "./schema"
 import { TodoTable } from "./sql"
+import { depthOf, isLeaf, normalize, outlineWarning, subtree } from "./todo-tree"
 
 export const Info = SessionTodo.Info
 export type Info = typeof Info.Type
@@ -17,11 +18,15 @@ export const Status = SessionTodo.Status
 export const Priority = SessionTodo.Priority
 export const Event = SessionTodo.Event
 
+export { buildTree, depthOf, deriveStatus, isLeaf, normalize, outlineWarning, progress, subtree, subtreeLeaves } from "./todo-tree"
+export type { Node } from "./todo-tree"
+
 export const validate = (todos: ReadonlyArray<Info>) => {
-  const count = (status: Info["status"]) => todos.filter((todo) => todo.status === status).length
-  const active = count("in_progress")
+  const leafCount = (status: Info["status"]) =>
+    todos.filter((todo, index) => isLeaf(todos, index) && todo.status === status).length
+  const active = leafCount("in_progress")
   if (active > 1) return "Only one task may be in_progress at a time — set the other active tasks back to pending."
-  if (active === 0 && count("pending") > 0 && count("completed") + count("cancelled") > 0)
+  if (active === 0 && leafCount("pending") > 0 && leafCount("completed") + leafCount("cancelled") > 0)
     return "Work is mid-flight: mark exactly one pending task in_progress in this list."
   return undefined
 }
@@ -72,19 +77,24 @@ export const reminderText = (todos: ReadonlyArray<Info>, touchedAt: number, now:
   ].join("\n\n")
 }
 
+/**
+ * Render the list as an indented outline: two spaces per depth level,
+ * numbering restarts under every parent, and parents show their derived
+ * status (a step-level mark for leaves).
+ */
 export const snapshot = (todos: ReadonlyArray<Info>, options?: { readonly ids?: boolean }) => {
   if (todos.length === 0) return ""
   const lines: string[] = []
-  let phase: string | undefined
-  let index = 0
+  const counters: number[] = []
   for (const todo of todos) {
-    if (todo.phase !== phase) {
-      phase = todo.phase
-      index = 0
-      if (phase) lines.push(`### ${phase}`)
-    }
-    index += 1
-    lines.push(`${index}. ${MARK[todo.status]}${options?.ids && todo.id ? ` (${todo.id})` : ""} ${todo.content}`)
+    const depth = depthOf(todo)
+    counters[depth] = (counters[depth] ?? 0) + 1
+    for (let i = depth + 1; i < counters.length; i++) counters[i] = 0
+    lines.push(
+      `${"  ".repeat(depth)}${counters[depth]}. ${MARK[todo.status]}${options?.ids && todo.id ? ` (${todo.id})` : ""} ${
+        todo.content
+      }`,
+    )
   }
   return lines.join("\n")
 }
@@ -101,6 +111,7 @@ export interface OpInput {
     readonly priority?: Info["priority"]
     readonly status?: Info["status"]
     readonly phase?: string
+    readonly depth?: number
     readonly after?: string
   }>
   readonly status?: ReadonlyArray<{ readonly id: string; readonly status: Info["status"] }>
@@ -109,6 +120,7 @@ export interface OpInput {
     readonly content?: string
     readonly phase?: string
     readonly priority?: Info["priority"]
+    readonly depth?: number
   }>
   readonly remove?: ReadonlyArray<string>
 }
@@ -137,29 +149,10 @@ const summary = (todos: ReadonlyArray<Info>) => {
   )} cancelled (${todos.length} total)`
 }
 
-const phaseWarning = (todos: ReadonlyArray<Info>) => {
-  const blocks = new Map<string, number>()
-  let previous: string | undefined
-  for (const todo of todos) {
-    if (todo.phase === previous || todo.phase === undefined) {
-      previous = todo.phase
-      continue
-    }
-    previous = todo.phase
-    blocks.set(todo.phase, (blocks.get(todo.phase) ?? 0) + 1)
-  }
-  const split = [...blocks].filter(([, count]) => count > 1)
-  if (split.length === 0) return []
-  return split.map(
-    ([label]) =>
-      `Warning: phase "${label}" appears in separate blocks; renderers show one group per block. Keep its tasks consecutive or rename the later block.`,
-  )
-}
-
 const applied = (todos: ReadonlyArray<Info>, headline: string): ApplyResult => ({
   ok: true,
   todos,
-  text: [`${headline} — ${summary(todos)}`, ...phaseWarning(todos), "", render(todos)].join("\n"),
+  text: [`${headline} — ${summary(todos)}`, ...outlineWarning(todos), "", render(todos)].join("\n"),
 })
 
 /**
@@ -183,7 +176,7 @@ const crossupHint = (given: OpInput, want: string) =>
  * confirms the exact set of unfinished ids being discarded.
  */
 export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult => {
-  const base = ensureIds(current)
+  const base = normalize(ensureIds(current))
   const action = input.action ?? (input.todos === undefined ? undefined : "replace")
   if (action === undefined)
     return rejected(
@@ -210,12 +203,12 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
           )}. Otherwise mutate in place with add/status/edit/remove.`,
           base,
         )
-      const fresh = ensureIds(input.todos.map((todo) => ({ ...todo, id: undefined })))
+      const fresh = normalize(ensureIds(input.todos.map((todo) => ({ ...todo, id: undefined }))))
       const problem = validate(fresh)
       if (problem) return rejected(`Invalid replacement list: ${problem}`, base)
       return applied(fresh, "Replaced the todo list with a new plan")
     }
-    const fresh = ensureIds(input.todos)
+    const fresh = normalize(ensureIds(input.todos))
     const problem = validate(fresh)
     if (problem) return rejected(`Invalid todo list: ${problem}`, base)
     return applied(fresh, "Seeded the todo list")
@@ -240,9 +233,10 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
         status: item.status ?? "pending",
         priority: item.priority ?? "medium",
         phase: item.phase,
+        depth: item.depth,
       })
     }
-    const fresh = ensureIds(next)
+    const fresh = normalize(ensureIds(next))
     const problem = validate(fresh)
     if (problem) return rejected(`Adding these items leaves the list invalid: ${problem}`, base)
     return applied(fresh, `Added ${input.add.length} item(s)`)
@@ -250,14 +244,24 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
   if (action === "status") {
     if (!input.status || input.status.length === 0)
       return rejected("`status` needs at least one {id, status} change." + crossupHint(input, "status"), base)
-    const missing = [...new Set(input.status.map((change) => change.id))].filter(
-      (id) => !base.some((todo) => todo.id === id),
-    )
+    const ids = [...new Set(input.status.map((change) => change.id))]
+    const missing = ids.filter((id) => !base.some((todo) => todo.id === id))
     if (missing.length > 0) return rejected(`Unknown todo id(s): ${missing.join(", ")}`, base)
-    const next = base.map((todo) => {
-      const change = input.status!.find((candidate) => candidate.id === todo.id)
-      return change ? { ...todo, status: change.status } : todo
+    const parents = ids.filter((id) => {
+      const index = base.findIndex((todo) => todo.id === id)
+      return index !== -1 && !isLeaf(base, index)
     })
+    if (parents.length > 0)
+      return rejected(
+        `${parents.join(", ")} — those are stages/objectives, not steps: their status derives from the steps under them. Update the steps instead.`,
+        base,
+      )
+    const next = normalize(
+      base.map((todo) => {
+        const change = input.status!.find((candidate) => candidate.id === todo.id)
+        return change ? { ...todo, status: change.status } : todo
+      }),
+    )
     const problem = validate(next)
     if (problem)
       return rejected(
@@ -271,16 +275,19 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
       return rejected("`edit` needs at least one patch." + crossupHint(input, "edit"), base)
     const missing = [...new Set(input.edit.map((item) => item.id))].filter((id) => !base.some((todo) => todo.id === id))
     if (missing.length > 0) return rejected(`Unknown todo id(s): ${missing.join(", ")}`, base)
-    const next = base.map((todo) => {
-      const patch = input.edit!.find((candidate) => candidate.id === todo.id)
-      if (!patch) return todo
-      return {
-        ...todo,
-        content: patch.content ?? todo.content,
-        priority: patch.priority ?? todo.priority,
-        phase: patch.phase === undefined ? todo.phase : patch.phase === "" ? undefined : patch.phase,
-      }
-    })
+    const next = normalize(
+      base.map((todo) => {
+        const patch = input.edit!.find((candidate) => candidate.id === todo.id)
+        if (!patch) return todo
+        return {
+          ...todo,
+          content: patch.content ?? todo.content,
+          priority: patch.priority ?? todo.priority,
+          phase: patch.phase === undefined ? todo.phase : patch.phase === "" ? undefined : patch.phase,
+          depth: patch.depth === undefined ? todo.depth : patch.depth,
+        }
+      }),
+    )
     return applied(next, `Edited ${input.edit.length} item(s)`)
   }
   if (!input.remove || input.remove.length === 0)
@@ -288,7 +295,15 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
   const missing = [...new Set(input.remove)].filter((id) => !base.some((todo) => todo.id === id))
   if (missing.length > 0) return rejected(`Unknown todo id(s): ${missing.join(", ")}`, base)
   const set = new Set(input.remove)
-  const next = base.filter((todo) => !set.has(todo.id!))
+  const orphans = base.filter(
+    (todo, index) => set.has(todo.id!) && !isLeaf(base, index) && !subtree(base, index).every((item) => set.has(item.id!)),
+  )
+  if (orphans.length > 0)
+    return rejected(
+      `Removing ${orphans.map((todo) => todo.id).join(", ")} orphans the steps under it. Remove a stage/objective together with every step under it in the same call, or keep the parent.`,
+      base,
+    )
+  const next = normalize(base.filter((todo) => !set.has(todo.id!)))
   const problem = validate(next)
   if (problem)
     return rejected(
@@ -320,7 +335,7 @@ const layer = Layer.effect(
       readonly sessionID: SessionSchema.ID
       readonly todos: ReadonlyArray<Info>
     }) {
-      const todos = ensureIds(input.todos)
+      const todos = normalize(ensureIds(input.todos))
       yield* db
         .transaction((tx) =>
           Effect.gen(function* () {

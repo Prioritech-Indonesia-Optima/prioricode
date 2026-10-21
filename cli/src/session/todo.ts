@@ -19,6 +19,9 @@ export const snapshot = SessionTodoCore.snapshot
 export const ensureIds = SessionTodoCore.ensureIds
 export const toInfo = SessionTodoCore.toInfo
 export const apply = SessionTodoCore.apply
+export const normalize = SessionTodoCore.normalize
+export const buildTree = SessionTodoCore.buildTree
+export const progress = SessionTodoCore.progress
 export const reminderText = SessionTodoCore.reminderText
 export const STALE_AFTER_MS = SessionTodoCore.STALE_AFTER_MS
 export const REMINDER_HEADER = SessionTodoCore.REMINDER_HEADER
@@ -39,7 +42,7 @@ const layer = Layer.effect(
     const { db } = yield* Database.Service
 
     const update = Effect.fn("Todo.update")(function* (input: { sessionID: SessionID; todos: ReadonlyArray<Info> }) {
-      const todos = ensureIds(input.todos)
+      const todos = normalize(ensureIds(input.todos))
       yield* db
         .transaction((tx) =>
           Effect.gen(function* () {

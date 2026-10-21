@@ -179,16 +179,12 @@ describe("SessionTodo", () => {
       yield* todos.update({ sessionID, todos: list })
       const stored = yield* todos.get(sessionID)
       expect(withoutIds(stored)).toEqual(list.map((todo) => ({ ...todo, depth: 0 })))
-      expect(SessionTodo.snapshot(stored)).toBe(
-        ["### Phase 1: schema", "1. [>] schema", "2. [ ] migration", "### Phase 2: wiring", "1. [ ] wiring"].join("\n"),
-      )
+      expect(SessionTodo.snapshot(stored)).toBe(["1. [>] schema", "2. [ ] migration", "3. [ ] wiring"].join("\n"))
       expect(SessionTodo.snapshot(stored, { ids: true })).toBe(
         [
-          "### Phase 1: schema",
           `1. [>] (${stored[0]!.id}) schema`,
           `2. [ ] (${stored[1]!.id}) migration`,
-          "### Phase 2: wiring",
-          `1. [ ] (${stored[2]!.id}) wiring`,
+          `3. [ ] (${stored[2]!.id}) wiring`,
         ].join("\n"),
       )
     }),
@@ -316,6 +312,181 @@ describe("SessionTodo.apply", () => {
   })
 })
 
+describe("SessionTodo tree", () => {
+  const item = (content: string, depth: number, status: SessionTodo.Info["status"] = "pending") =>
+    SessionTodo.ensureIds([{ content, depth, status, priority: "low" as const }])[0]!
+
+  test("buildTree nests by depth", () => {
+    const a = item("objective", 0)
+    const b = item("stage one", 1)
+    const c = item("step", 2)
+    const d = item("stage two", 1)
+    const tree = SessionTodo.buildTree([a, b, c, d])
+    expect(tree).toHaveLength(1)
+    expect(tree[0]!.info).toBe(a)
+    expect(tree[0]!.children.map((node) => node.info)).toEqual([b, d])
+    expect(tree[0]!.children[0]!.children.map((node) => node.info)).toEqual([c])
+    expect(tree[0]!.children[1]!.children).toEqual([])
+  })
+
+  test("normalize derives parent status from descendant leaves and leaves steps untouched", () => {
+    const objective = item("objective", 0)
+    const stage = item("stage", 1)
+    const done = item("step done", 2, "completed")
+    const open = item("step open", 2)
+    const list = SessionTodo.normalize([objective, stage, done, open])
+    expect(list[2]!.status).toBe("completed")
+    expect(list[3]!.status).toBe("pending")
+    expect(list[1]!.status).toBe("pending")
+    expect(list[0]!.status).toBe("pending")
+  })
+
+  test("a parent completes only when every required step completes; all-cancelled derives cancelled", () => {
+    const objective = item("objective", 0)
+    const stage = item("stage", 1)
+    const list = SessionTodo.normalize([
+      objective,
+      stage,
+      item("a", 2, "completed"),
+      item("b", 2, "cancelled"),
+      item("c", 2, "completed"),
+    ])
+    expect(list[1]!.status).toBe("completed")
+    expect(list[0]!.status).toBe("completed")
+    const dropped = SessionTodo.normalize([item("o", 0), item("s", 1), item("x", 2, "cancelled")])
+    expect(dropped[1]!.status).toBe("cancelled")
+    expect(dropped[0]!.status).toBe("cancelled")
+  })
+
+  test("progress counts the required (non-cancelled) leaves under an item", () => {
+    const list = [
+      item("objective", 0),
+      item("stage", 1),
+      item("a", 2, "completed"),
+      item("b", 2, "cancelled"),
+      item("c", 2, "completed"),
+    ]
+    expect(SessionTodo.progress(list, 1)).toEqual({ done: 2, total: 2 })
+    expect(SessionTodo.progress(list, 0)).toEqual({ done: 2, total: 2 })
+    expect(SessionTodo.progress(list, 2)).toEqual({ done: 1, total: 1 })
+  })
+
+  test("snapshot renders an indented outline with per-parent numbering and derived parent marks", () => {
+    const list = SessionTodo.normalize([
+      item("objective", 0),
+      item("stage one", 1),
+      item("done step", 2, "completed"),
+      item("open step", 2, "in_progress"),
+      item("stage two", 1),
+    ])
+    expect(SessionTodo.snapshot(list)).toBe(
+      [
+        "1. [>] objective",
+        "  1. [>] stage one",
+        "    1. [x] done step",
+        "    2. [>] open step",
+        "  2. [ ] stage two",
+      ].join("\n"),
+    )
+  })
+
+  test("outlineWarning names a depth jump that skips a level", () => {
+    const warnings = SessionTodo.outlineWarning([item("a", 0), item("b", 2), item("c", 0)])
+    expect(warnings).toHaveLength(1)
+    expect(warnings[0]!).toContain('jumps to depth 2')
+    expect(SessionTodo.outlineWarning([item("a", 0), item("b", 1), item("c", 0)])).toEqual([])
+  })
+})
+
+describe("SessionTodo.apply hierarchy", () => {
+  const list = () =>
+    SessionTodo.ensureIds([
+      // stored statuses are derived (the step is in_progress)
+      { content: "objective", depth: 0, status: "in_progress" as const, priority: "medium" as const },
+      { content: "stage", depth: 1, status: "in_progress" as const, priority: "medium" as const },
+      { content: "step", depth: 2, status: "in_progress" as const, priority: "low" as const },
+    ])
+  const id = (todos: ReadonlyArray<SessionTodo.Info>, content: string) =>
+    todos.find((todo) => todo.content === content)!.id!
+
+  test("status on a stage or objective is rejected with a pointer to the steps", () => {
+    const current = list()
+    const result = SessionTodo.apply(current, {
+      action: "status",
+      status: [{ id: id(current, "stage"), status: "completed" }],
+    })
+    expect(result.ok).toBe(false)
+    expect(result.text).toContain("stages/objectives, not steps")
+    expect(result.todos).toEqual(current)
+  })
+
+  test("completing the last step rolls the stage and objective up in the stored result", () => {
+    const current = list()
+    const result = SessionTodo.apply(current, {
+      action: "status",
+      status: [{ id: id(current, "step"), status: "completed" }],
+    })
+    expect(result.ok).toBe(true)
+    expect(result.todos.map((todo) => todo.status)).toEqual(["completed", "completed", "completed"])
+    expect(result.text).toContain(`1. [x] (${id(current, "objective")}) objective`)
+    expect(result.text).toContain(`  1. [x] (${id(current, "stage")}) stage`)
+  })
+
+  test("a replace that over-claims a parent's status is corrected by derivation", () => {
+    const current = list()
+    const result = SessionTodo.apply(current, {
+      action: "replace",
+      todos: [
+        { content: "objective", depth: 0, status: "completed", priority: "medium" },
+        { content: "step", depth: 1, status: "pending", priority: "low" },
+      ],
+      confirm: [id(current, "objective"), id(current, "stage"), id(current, "step")],
+    })
+    expect(result.ok).toBe(true)
+    expect(result.todos.map((todo) => todo.status)).toEqual(["pending", "pending"])
+  })
+
+  test("removing a stage requires removing every step under it in the same call", () => {
+    const current = list()
+    const partial = SessionTodo.apply(current, {
+      action: "remove",
+      remove: [id(current, "stage")],
+    })
+    expect(partial.ok).toBe(false)
+    expect(partial.text).toContain("orphans the steps")
+    const whole = SessionTodo.apply(current, {
+      action: "remove",
+      remove: [id(current, "stage"), id(current, "step")],
+    })
+    expect(whole.ok).toBe(true)
+    expect(whole.todos.map((todo) => todo.content)).toEqual(["objective"])
+  })
+
+  test("add and edit carry depth, and the outline stays normalized", () => {
+    const seeded = SessionTodo.apply([], {
+      action: "replace",
+      todos: [{ content: "objective", depth: 0, status: "in_progress", priority: "medium" }],
+    })
+    expect(seeded.ok).toBe(true)
+    const added = SessionTodo.apply(seeded.todos, {
+      action: "add",
+      add: [{ content: "step", depth: 1, status: "in_progress" }],
+    })
+    // the objective was a leaf (in_progress); gaining a step re-derives it from that step
+    expect(added.ok).toBe(true)
+    expect(added.todos.map((todo) => [todo.depth, todo.status])).toEqual([
+      [0, "in_progress"],
+      [1, "in_progress"],
+    ])
+    const edited = SessionTodo.apply(added.todos, {
+      action: "edit",
+      edit: [{ id: id(added.todos, "step"), content: "renamed", depth: 2 }],
+    })
+    expect(edited.ok).toBe(true)
+    expect(edited.todos[1]).toEqual({ ...edited.todos[1]!, content: "renamed", depth: 2 })
+  })
+})
+
 describe("SessionTodo.reminderText", () => {
   const list = SessionTodo.ensureIds([
     { content: "open work", status: "pending", priority: "low", phase: "Phase 1: schema" },
@@ -334,8 +505,7 @@ describe("SessionTodo.reminderText", () => {
   test("nags with the checklist and ids once unattended", () => {
     const nag = SessionTodo.reminderText(list, 1_000_000, 1_000_000 + SessionTodo.STALE_AFTER_MS)
     expect(nag).toStartWith(SessionTodo.REMINDER_HEADER)
-    expect(nag).toContain("### Phase 1: schema")
-    expect(nag).toContain(`(${list[0]!.id}) open work`)
+    expect(nag).toContain(`1. [ ] (${list[0]!.id}) open work`)
   })
 })
 
