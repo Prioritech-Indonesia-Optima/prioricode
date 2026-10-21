@@ -1,7 +1,7 @@
 export * as ToolTouchRecord from "./touch-record"
 
 import { Effect, Option } from "effect"
-import { FileTouch, type FileTouchOp } from "../file-touch"
+import { FileTouch, relativePath as relativeOf, type FileTouchOp } from "../file-touch"
 import { FSUtil } from "../fs-util"
 import { Location } from "../location"
 import { Project } from "../project"
@@ -18,6 +18,8 @@ export interface Recorder {
   readonly fs: FSUtil.Interface
   readonly store: SessionStore.Interface
   readonly projectID: Project.ID
+  /** This checkout's root — repo-relative paths are computed against it. */
+  readonly worktreeRoot: string
 }
 
 /**
@@ -52,6 +54,7 @@ export const recordWrites = Effect.fn("ToolTouchRecord.recordWrites")(function* 
     yield* rec.touches.record({
       projectID: rec.projectID,
       path: write.path,
+      relativePath: relativeOf(rec.worktreeRoot, write.path),
       op: write.op,
       sessionID: String(context.sessionID),
       fingerprint,
@@ -72,5 +75,6 @@ export const makeRecorder = Effect.fn("ToolTouchRecord.makeRecorder")(function* 
     fs: yield* FSUtil.Service,
     store: yield* SessionStore.Service,
     projectID: location.project.id,
+    worktreeRoot: String(location.project.directory),
   } satisfies Recorder
 })

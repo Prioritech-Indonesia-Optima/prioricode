@@ -206,6 +206,10 @@ export const RunCommand = effectCmd({
         type: "string",
         describe: "directory to run in, path on remote server if attaching",
       })
+      .option("isolate", {
+        type: "boolean",
+        describe: "force branch-per-session isolation on (--no-isolate shares this checkout) regardless of config",
+      })
       .option("port", {
         type: "number",
         describe: "port for the local server (defaults to random port if no value provided)",
@@ -262,6 +266,8 @@ export const RunCommand = effectCmd({
         describe: "enable direct interactive demo slash commands; pass one as the message to run it immediately",
       }),
   handler: Effect.fn("Cli.run")(function* (args) {
+    if (args.isolate === true) process.env.PRIORICODE_WORKTREE_ISOLATE = "1"
+    else if (args.isolate === false) process.env.PRIORICODE_WORKTREE_ISOLATE = "0"
     const { Agent } = yield* Effect.promise(() => import("@/agent/agent"))
     const { RuntimeFlags } = yield* Effect.promise(() => import("@/effect/runtime-flags"))
     const { InstanceRef } = yield* Effect.promise(() => import("@/effect/instance-ref"))
@@ -1037,6 +1043,7 @@ export async function runMini(input: MiniCommandInput) {
     password: input.password,
     username: input.username,
     dir: input.directory,
+    isolate: undefined,
     port: undefined,
     variant: undefined,
     thinking: undefined,

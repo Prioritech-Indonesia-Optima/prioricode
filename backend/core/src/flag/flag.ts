@@ -75,4 +75,13 @@ export const Flag = {
   get PRIORICODE_DISABLE_FILE_TOUCH() {
     return truthy("PRIORICODE_DISABLE_FILE_TOUCH")
   },
+  get PRIORICODE_DISABLE_WORKTREE_ISOLATE() {
+    return truthy("PRIORICODE_DISABLE_WORKTREE_ISOLATE")
+  },
+  // Tri-state override from --isolate/--no-isolate: undefined = follow config.
+  get PRIORICODE_WORKTREE_ISOLATE() {
+    const value = process.env["PRIORICODE_WORKTREE_ISOLATE"]
+    if (value === undefined || value === "") return undefined
+    return value === "1" || value === "true"
+  },
 }

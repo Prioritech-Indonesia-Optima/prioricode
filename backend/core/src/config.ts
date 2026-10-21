@@ -19,6 +19,7 @@ import { ConfigFormatter } from "./config/formatter"
 import { ConfigGoal } from "./config/goal"
 import { ConfigHooks } from "./config/hooks"
 import { ConfigPrune } from "./config/prune"
+import { ConfigWorktree } from "./config/worktree"
 import { ConfigLoop } from "./config/loop"
 import { ConfigLSP } from "./config/lsp"
 import { ConfigMCP } from "./config/mcp"
@@ -103,6 +104,9 @@ export class Info extends Schema.Class<Info>("Config.Info")({
   }),
   prune: ConfigPrune.Info.pipe(Schema.optional).annotate({
     description: "Context-economics projection of stale tool output when provider requests approach the context window",
+  }),
+  worktree: ConfigWorktree.Info.pipe(Schema.optional).annotate({
+    description: "Branch-per-session isolation: give concurrent sessions their own branch + managed worktree",
   }),
   hooks: ConfigHooks.Info.pipe(Schema.optional).annotate({
     description:

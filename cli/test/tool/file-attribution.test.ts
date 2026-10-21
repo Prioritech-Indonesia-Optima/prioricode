@@ -141,4 +141,59 @@ describe("FileAttribution", () => {
         expect(result[1]?.status === "peer" && result[1].touch.op).toBe("delete")
       }),
   )
+  it.instance(
+    "finds a sibling worktree's touch by repo-relative path when the fingerprint matches", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const instance = yield* requireInstance
+      const fs = yield* FSUtil.Service
+      const touches = yield* FileTouch.Service
+      const attribution = yield* FileAttribution.Service
+      // The live file in THIS checkout:
+      const local = path.join(test.directory, "shared.txt")
+      yield* fs.writeWithDirs(local, "content both trees share\n")
+      const info = yield* fs.stat(local).pipe(Effect.orDie)
+      // The peer recorded its write in ITS OWN worktree path (different root,
+      // same repo-relative path, same fingerprint):
+      yield* touches.record({
+        projectID: instance.project.id,
+        path: path.join(test.directory, "..", "wt-peer", "shared.txt"),
+        relativePath: "shared.txt",
+        op: "modify",
+        sessionID: peer,
+        fingerprint: {
+          mtimeMs: Option.getOrElse(info.mtime, () => new Date(0)).getTime(),
+          size: Number(info.size),
+        },
+      })
+
+      const [result] = yield* classify(attribution, instance.project.id, test.directory, [local])
+      expect(result?.status).toBe("peer")
+      expect(result?.status === "peer" && result.touch.sessionID).toBe(peer)
+    }),
+  )
+
+  it.instance(
+    "does not claim ownership across worktrees when content drifted", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const instance = yield* requireInstance
+      const fs = yield* FSUtil.Service
+      const touches = yield* FileTouch.Service
+      const attribution = yield* FileAttribution.Service
+      const local = path.join(test.directory, "drifted.txt")
+      yield* fs.writeWithDirs(local, "mine now\n")
+      yield* touches.record({
+        projectID: instance.project.id,
+        path: path.join(test.directory, "..", "wt-peer", "drifted.txt"),
+        relativePath: "drifted.txt",
+        op: "modify",
+        sessionID: peer,
+        fingerprint: { mtimeMs: 5, size: 999 },
+      })
+
+      const [result] = yield* classify(attribution, instance.project.id, test.directory, [local])
+      expect(result?.status).toBe("unrecorded")
+    }),
+  )
 })

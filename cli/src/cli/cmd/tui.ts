@@ -105,6 +105,10 @@ export const TuiThreadCommand = cmd({
         type: "string",
         describe: "agent to use",
       })
+      .option("isolate", {
+        type: "boolean",
+        describe: "force branch-per-session isolation on (--no-isolate shares this checkout) regardless of config",
+      })
       .option("auto", {
         type: "boolean",
         describe: "auto-approve permissions that are not explicitly denied (dangerous!)",
@@ -142,6 +146,8 @@ export const TuiThreadCommand = cmd({
         hidden: true,
       }),
   handler: async (args) => {
+    if (args.isolate === true) process.env.PRIORICODE_WORKTREE_ISOLATE = "1"
+    else if (args.isolate === false) process.env.PRIORICODE_WORKTREE_ISOLATE = "0"
     if (args.replay === true) {
       UI.error("--replay is not supported; replay is enabled by default")
       process.exitCode = 1

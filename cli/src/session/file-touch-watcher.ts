@@ -54,6 +54,7 @@ const layer = Layer.effect(
             yield* touches.record({
               projectID: ctx.project.id,
               path: file,
+              relativePath: FileTouch.relativePath(ctx.worktree, file),
               op: "external-delete",
               fingerprint: { mtimeMs: 0, size: 0 },
             })
@@ -71,6 +72,7 @@ const layer = Layer.effect(
           yield* touches.record({
             projectID: ctx.project.id,
             path: file,
+            relativePath: FileTouch.relativePath(ctx.worktree, file),
             op: "external",
             fingerprint,
           })

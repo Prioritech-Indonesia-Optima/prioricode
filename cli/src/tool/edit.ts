@@ -195,6 +195,7 @@ export const EditTool = Tool.define(
           yield* touch.recordWrite({
             ctx,
             projectID: instance.project.id,
+            worktree: instance.worktree,
             filepath: filePath,
             op: params.oldString === "" ? "create" : "modify",
           })

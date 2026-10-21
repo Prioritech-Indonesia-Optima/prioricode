@@ -14,6 +14,8 @@ import * as Tool from "./tool"
 export interface WriteInput {
   readonly ctx: Tool.Context
   readonly projectID: Project.ID
+  /** The instance's worktree root this write's repo-relative form is computed against. */
+  readonly worktree: string
   readonly filepath: string
   readonly op: FileTouchOp
 }
@@ -41,6 +43,7 @@ export const make = Effect.fn("FileTouchRecord.make")(function* () {
     yield* touches.record({
       projectID: input.projectID,
       path: input.filepath,
+      relativePath: FileTouch.relativePath(input.worktree, input.filepath),
       op: input.op,
       sessionID: String(input.ctx.sessionID),
       fingerprint,

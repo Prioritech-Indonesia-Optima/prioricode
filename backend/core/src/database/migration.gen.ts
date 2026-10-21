@@ -52,5 +52,6 @@ export const migrations = (
     import("./migration/20261021043128_add_session_file_touch"),
     import("./migration/20261021044728_add_coordination_traceability"),
     import("./migration/20261021055030_todo_depth"),
+    import("./migration/20261021183909_add_worktree_isolation_ledgers"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]

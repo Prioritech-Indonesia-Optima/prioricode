@@ -277,6 +277,7 @@ export const ApplyPatchTool = Tool.define(
           yield* touch.recordWrite({
             ctx,
             projectID: instance.project.id,
+            worktree: instance.worktree,
             filepath: change.filePath,
             op: "create",
           })
@@ -286,6 +287,7 @@ export const ApplyPatchTool = Tool.define(
           yield* touch.recordWrite({
             ctx,
             projectID: instance.project.id,
+            worktree: instance.worktree,
             filepath: change.filePath,
             op: "modify",
           })
@@ -295,12 +297,14 @@ export const ApplyPatchTool = Tool.define(
           yield* touch.recordWrite({
             ctx,
             projectID: instance.project.id,
+            worktree: instance.worktree,
             filepath: change.movePath,
             op: "create",
           })
           yield* touch.recordWrite({
             ctx,
             projectID: instance.project.id,
+            worktree: instance.worktree,
             filepath: change.filePath,
             op: "delete",
           })
@@ -309,6 +313,7 @@ export const ApplyPatchTool = Tool.define(
           yield* touch.recordWrite({
             ctx,
             projectID: instance.project.id,
+            worktree: instance.worktree,
             filepath: change.filePath,
             op: "delete",
           })

@@ -46,8 +46,20 @@ const layer = Layer.effect(
       }
     })
 
-    const classifyOne = Effect.fnUntraced(function* (projectID: Project.ID, sessionID: string, filepath: string) {
-      const [row] = yield* touches.lookup({ projectID, paths: [filepath] })
+    const classifyOne = Effect.fnUntraced(function* (
+      projectID: Project.ID,
+      sessionID: string,
+      base: string,
+      filepath: string,
+    ) {
+      const [exact] = yield* touches.lookup({ projectID, paths: [filepath] })
+      // Cross-worktree fallback: a sibling session's write lives under a
+      // DIFFERENT absolute path but the same repo-relative path. Exact misses
+      // retry repo-wide; only a fingerprint that still matches the live file
+      // counts, so this never asserts an owner for drifted content.
+      const row =
+        exact ??
+        (yield* resolveAcrossWorktrees(projectID, base, filepath).pipe(Effect.catch(() => Effect.succeed(undefined))))
       if (row === undefined) return { path: filepath, status: "unrecorded" as const }
       const live = yield* liveFingerprint(filepath)
       // Present file: fingerprint must match. Gone file: a {0,0} row is a
@@ -61,11 +73,24 @@ const layer = Layer.effect(
       return { path: filepath, status: row.sessionID === sessionID ? ("self" as const) : ("peer" as const), touch: row }
     })
 
+    const resolveAcrossWorktrees = Effect.fnUntraced(function* (projectID: Project.ID, base: string, filepath: string) {
+      const relative = FileTouch.relativePath(base, filepath)
+      if (relative === undefined) return undefined
+      const rows = yield* touches.lookupRelative({ projectID, paths: [relative], limit: 10 })
+      const live = yield* liveFingerprint(filepath)
+      return rows.find(
+        (touch) =>
+          live !== undefined &&
+          touch.fingerprint.mtimeMs === live.mtimeMs &&
+          touch.fingerprint.size === live.size,
+      )
+    })
+
     return Service.of({
       classify: Effect.fn("FileAttribution.classify")(function* (input: ClassifyInput) {
         return yield* Effect.forEach(
           input.paths.map((item) => (path.isAbsolute(item) ? path.resolve(item) : path.resolve(input.base, item))),
-          (filepath) => classifyOne(input.projectID, input.sessionID, filepath),
+          (filepath) => classifyOne(input.projectID, input.sessionID, input.base, filepath),
           { concurrency: 8 },
         )
       }),

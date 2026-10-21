@@ -33,6 +33,15 @@ export const FileTouchTable = sqliteTable(
       .notNull()
       .references(() => ProjectTable.id, { onDelete: "cascade" }),
     path: text().notNull(),
+    /**
+     * Path relative to the project's PRIMARY worktree, when the absolute path
+     * lives under it. Two sessions in two isolated worktrees of one repo write
+     * different absolute paths for the same repo file; `relative_path` is what
+     * lets land-time conflict intelligence answer "who touched this repo path
+     * anywhere" instead of missing a sibling worktree's touch by exact-path key.
+     * NULL means "outside the primary tree" — exact-match-only, never a guess.
+     */
+    relative_path: text(),
     from_session: text(),
     op: text().$type<FileTouchOp>().notNull(),
     mtime_ms: integer().notNull(),
@@ -46,5 +55,6 @@ export const FileTouchTable = sqliteTable(
     primaryKey({ columns: [table.project_id, table.path] }),
     index("file_touch_project_session_idx").on(table.project_id, table.from_session),
     index("file_touch_project_time_idx").on(table.project_id, table.time_updated),
+    index("file_touch_project_relative_idx").on(table.project_id, table.relative_path),
   ],
 )

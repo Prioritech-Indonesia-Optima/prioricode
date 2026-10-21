@@ -45,6 +45,7 @@ export default {
         CREATE TABLE \`session_file_touch\` (
           \`project_id\` text NOT NULL,
           \`path\` text NOT NULL,
+          \`relative_path\` text,
           \`from_session\` text,
           \`op\` text NOT NULL,
           \`mtime_ms\` integer NOT NULL,
@@ -67,6 +68,38 @@ export default {
           \`pid\` integer,
           \`time_heartbeat\` integer NOT NULL,
           CONSTRAINT \`fk_session_presence_project_id_project_id_fk\` FOREIGN KEY (\`project_id\`) REFERENCES \`project\`(\`id\`) ON DELETE CASCADE
+        );
+      `)
+      yield* tx.run(`
+        CREATE TABLE \`land_claim\` (
+          \`id\` text PRIMARY KEY,
+          \`project_id\` text NOT NULL,
+          \`branch\` text NOT NULL,
+          \`session_id\` text NOT NULL,
+          \`status\` text NOT NULL,
+          \`base_oid\` text NOT NULL,
+          \`green_tree_oid\` text,
+          \`merge_oid\` text,
+          \`deadline\` integer NOT NULL,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL,
+          CONSTRAINT \`fk_land_claim_project_id_project_id_fk\` FOREIGN KEY (\`project_id\`) REFERENCES \`project\`(\`id\`) ON DELETE CASCADE
+        );
+      `)
+      yield* tx.run(`
+        CREATE TABLE \`session_worktree\` (
+          \`session_id\` text PRIMARY KEY,
+          \`project_id\` text NOT NULL,
+          \`directory\` text NOT NULL,
+          \`branch\` text NOT NULL,
+          \`base_sha\` text NOT NULL,
+          \`status\` text NOT NULL,
+          \`merge_sha\` text,
+          \`time_landed\` integer,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL,
+          CONSTRAINT \`fk_session_worktree_session_id_session_id_fk\` FOREIGN KEY (\`session_id\`) REFERENCES \`session\`(\`id\`) ON DELETE CASCADE,
+          CONSTRAINT \`fk_session_worktree_project_id_project_id_fk\` FOREIGN KEY (\`project_id\`) REFERENCES \`project\`(\`id\`) ON DELETE CASCADE
         );
       `)
       yield* tx.run(`
@@ -301,6 +334,15 @@ export default {
       )
       yield* tx.run(
         `CREATE INDEX \`file_touch_project_time_idx\` ON \`session_file_touch\` (\`project_id\`,\`time_updated\`);`,
+      )
+      yield* tx.run(
+        `CREATE INDEX \`file_touch_project_relative_idx\` ON \`session_file_touch\` (\`project_id\`,\`relative_path\`);`,
+      )
+      yield* tx.run(
+        `CREATE UNIQUE INDEX \`session_worktree_project_directory_idx\` ON \`session_worktree\` (\`project_id\`,\`directory\`);`,
+      )
+      yield* tx.run(
+        `CREATE INDEX \`session_worktree_project_status_idx\` ON \`session_worktree\` (\`project_id\`,\`status\`);`,
       )
       yield* tx.run(`CREATE UNIQUE INDEX \`event_aggregate_seq_idx\` ON \`event\` (\`aggregate_id\`,\`seq\`);`)
       yield* tx.run(`CREATE INDEX \`event_aggregate_type_seq_idx\` ON \`event\` (\`aggregate_id\`,\`type\`,\`seq\`);`)
