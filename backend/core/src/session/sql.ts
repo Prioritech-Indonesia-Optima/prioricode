@@ -113,6 +113,7 @@ export const TodoTable = sqliteTable(
     status: text().$type<SessionTodo.Info["status"]>().notNull(),
     priority: text().$type<SessionTodo.Info["priority"]>().notNull(),
     phase: text(),
+    depth: integer(),
     position: integer().notNull(),
     ...Timestamps,
   },

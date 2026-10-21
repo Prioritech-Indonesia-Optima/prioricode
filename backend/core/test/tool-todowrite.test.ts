@@ -123,7 +123,7 @@ describe("TodoWriteTool", () => {
       expect(assertions[0]!.resources).toEqual(["*"])
       expect(assertions[0]!.save).toEqual(["*"])
       expect(assertions[0]!.sessionID).toBe(sessionID)
-      expect(yield* service.get(sessionID)).toEqual(todos)
+      expect(yield* service.get(sessionID)).toEqual(todos.map((todo) => ({ ...todo, depth: 0 })))
     }),
   )
 
@@ -240,7 +240,7 @@ describe("TodoWriteTool", () => {
       const after = yield* service.get(sessionID)
       expect(after).toHaveLength(1)
       expect(after[0]!.id).not.toBe(before[0]!.id)
-      expect(withoutIds(after)).toEqual([{ content: "pivot", status: "in_progress", priority: "high" }])
+      expect(withoutIds(after)).toEqual([{ content: "pivot", status: "in_progress", priority: "high", depth: 0 }])
     }),
   )
 

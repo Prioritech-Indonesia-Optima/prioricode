@@ -68,8 +68,8 @@ describe("SessionTodo", () => {
       })
       const stored = yield* todos.get(sessionID)
       expect(withoutIds(stored)).toEqual([
-        { content: "second", status: "pending", priority: "low" },
-        { content: "first", status: "in_progress", priority: "high" },
+        { content: "second", status: "pending", priority: "low", depth: 0 },
+        { content: "first", status: "in_progress", priority: "high", depth: 0 },
       ])
       expect(stored.every((todo) => /^td_[0-9a-f]{8}$/.test(todo.id!))).toBe(true)
       expect(new Set(stored.map((todo) => todo.id)).size).toBe(2)
@@ -93,8 +93,8 @@ describe("SessionTodo", () => {
       })
       const after = yield* todos.get(sessionID)
       expect(withoutIds(after)).toEqual([
-        { content: "first", status: "completed", priority: "high" },
-        { content: "replacement", status: "completed", priority: "medium" },
+        { content: "first", status: "completed", priority: "high", depth: 0 },
+        { content: "replacement", status: "completed", priority: "medium", depth: 0 },
       ])
       expect(after[0].id).toBe(stored[1].id)
       expect(after[1].id).not.toBe(stored[1].id)
@@ -178,7 +178,7 @@ describe("SessionTodo", () => {
       ]
       yield* todos.update({ sessionID, todos: list })
       const stored = yield* todos.get(sessionID)
-      expect(withoutIds(stored)).toEqual(list)
+      expect(withoutIds(stored)).toEqual(list.map((todo) => ({ ...todo, depth: 0 })))
       expect(SessionTodo.snapshot(stored)).toBe(
         ["### Phase 1: schema", "1. [>] schema", "2. [ ] migration", "### Phase 2: wiring", "1. [ ] wiring"].join("\n"),
       )

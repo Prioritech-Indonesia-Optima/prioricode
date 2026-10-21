@@ -55,6 +55,7 @@ const layer = Layer.effect(
                   status: todo.status,
                   priority: todo.priority,
                   phase: todo.phase,
+                  depth: todo.depth,
                   position,
                 })),
               )

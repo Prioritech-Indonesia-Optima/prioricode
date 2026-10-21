@@ -44,12 +44,14 @@ export const toInfo = (row: {
   status: Info["status"]
   priority: Info["priority"]
   phase: string | null
+  depth: number | null
 }): Info => ({
   ...(row.id === null ? {} : { id: row.id as SessionTodo.ID }),
   content: row.content,
   status: row.status,
   priority: row.priority,
   phase: row.phase ?? undefined,
+  depth: row.depth ?? 0,
 })
 
 const MARK: Record<Info["status"], string> = { pending: "[ ]", in_progress: "[>]", completed: "[x]", cancelled: "[-]" }
@@ -334,6 +336,7 @@ const layer = Layer.effect(
                   status: todo.status,
                   priority: todo.priority,
                   phase: todo.phase,
+                  depth: todo.depth,
                   position,
                 })),
               )
