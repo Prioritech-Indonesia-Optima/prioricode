@@ -71,6 +71,65 @@ describe("Coordination", () => {
     }),
   )
 
+  it.effect("stamps and round-trips sender-origin and fan-out group metadata", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      const posted = yield* coordination.post({
+        projectID,
+        kind: "request",
+        fromSession: a,
+        toSession: b,
+        body: "grouped query",
+        originMessageId: "msg_sender_1",
+        originCallId: "call_sender_1",
+        groupId: "grp_1",
+      })
+      expect(posted).toMatchObject({ originMessageId: "msg_sender_1", originCallId: "call_sender_1", groupId: "grp_1" })
+
+      const stored = yield* coordination.get(posted.id)
+      expect(stored).toMatchObject({ originMessageId: "msg_sender_1", originCallId: "call_sender_1", groupId: "grp_1" })
+
+      // Rows without origin/group metadata stay undefined — no empty-string noise.
+      const bare = yield* coordination.post({ projectID, kind: "message", fromSession: a, toSession: b, body: "bare" })
+      const bareRow = yield* coordination.get(bare.id)
+      expect(bareRow && "originMessageId" in bareRow).toBe(false)
+      expect(bareRow && "groupId" in bareRow).toBe(false)
+    }),
+  )
+
+  it.effect("postOnce inserts a deterministic id exactly once across racing callers", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      const input = {
+        id: "ann:race",
+        projectID,
+        kind: "message" as const,
+        fromSession: a,
+        toSession: b,
+        body: "announce once",
+        groupId: "ann:a",
+      }
+      const first = yield* coordination.postOnce(input)
+      expect(first.inserted).toBe(true)
+      expect(first.row.id).toBe("ann:race")
+
+      // The racing caller (second process / next sweep) must NOT crash nor duplicate.
+      const second = yield* coordination.postOnce(input)
+      expect(second.inserted).toBe(false)
+
+      const { db } = yield* Database.Service
+      const rows = yield* db
+        .select()
+        .from(CoordinationTable)
+        .where(eq(CoordinationTable.id, "ann:race"))
+        .all()
+        .pipe(Effect.orDie)
+      expect(rows).toHaveLength(1)
+    }),
+  )
+
   it.effect("surfaces peer claims while excluding the caller's own claims", () =>
     Effect.gen(function* () {
       yield* setup

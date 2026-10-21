@@ -11,6 +11,18 @@ import { SessionID } from "./schema"
 export type { CoordinationKind }
 
 /**
+ * Stored kind literals are FROZEN vocabulary, not model-facing vocabulary.
+ * The `sessions` tool speaks query/respond/broadcast/announce; the mapping is:
+ * query → `request` (answer-owed, threads, escalates), respond → `response`
+ * (reply_to + one-per-row unique index), broadcast → per-peer `request` rows
+ * sharing `group_id`, session-init announce → per-peer `message` rows sharing
+ * `group_id`. Renaming the stored literals would silently disable every
+ * hardcoded filter that enforces rate limiting, dedupe, the ack ledger,
+ * escalation, receipts, and the unique partial index — and old/new builds
+ * share one SQLite database during rollouts. See CONTEXT.md "Cross-session
+ * coordination".
+ */
+/**
  * Kinds delivered into a session's model context by a turn-boundary claim:
  * peer notes and requests, plus late `response` rows (a reply that arrived
  * after the asker's poll gave up) and passive `record` rows (exchanges a
@@ -51,6 +63,12 @@ export interface Info {
   readonly timeEscalated?: number
   readonly timeExpired?: number
   readonly threadId?: string
+  /** Sender-side traceability: the assistant message that produced this row. */
+  readonly originMessageId?: string
+  /** Sender-side traceability: the provider tool-call id that produced this row. */
+  readonly originCallId?: string
+  /** Fan-out attribution: shared by all rows of one broadcast or session-init announcement. */
+  readonly groupId?: string
 }
 
 export interface PostInput {
@@ -63,6 +81,9 @@ export interface PostInput {
   readonly replyTo?: string
   readonly deadline?: number
   readonly threadId?: string
+  readonly originMessageId?: string
+  readonly originCallId?: string
+  readonly groupId?: string
 }
 
 export interface InboxInput {
@@ -88,6 +109,16 @@ export interface PresencePeer {
 
 export interface Interface {
   readonly post: (input: PostInput) => Effect.Effect<Info>
+  /**
+   * Deterministic-id insert that settles multi-process races at the primary
+   * key: `onConflictDoNothing` instead of `post()`'s raw insert, so a caller
+   * whose id already exists gets `inserted: false` instead of defecting the
+   * turn. Used by idempotent system fan-outs (session-init announce). The
+   * caller must supply `input.id`.
+   */
+  readonly postOnce: (
+    input: PostInput & { readonly id: string },
+  ) => Effect.Effect<{ readonly row: Info; readonly inserted: boolean }>
   readonly inbox: (input: InboxInput) => Effect.Effect<Info[]>
   /**
    * Notes already delivered into the session's context (marked read by a turn
@@ -362,6 +393,9 @@ const fromRow = (row: typeof CoordinationTable.$inferSelect): Info => ({
   ...(row.time_escalated === null ? {} : { timeEscalated: row.time_escalated }),
   ...(row.time_expired === null ? {} : { timeExpired: row.time_expired }),
   ...(row.thread_id === null ? {} : { threadId: row.thread_id }),
+  ...(row.origin_message_id === null ? {} : { originMessageId: row.origin_message_id }),
+  ...(row.origin_call_id === null ? {} : { originCallId: row.origin_call_id }),
+  ...(row.group_id === null ? {} : { groupId: row.group_id }),
 })
 
 const layer = Layer.effect(
@@ -369,6 +403,24 @@ const layer = Layer.effect(
   Effect.gen(function* () {
     const { db } = yield* Database.Service
     const flags = yield* RuntimeFlags.Service
+
+    // Pure projection of a post payload back into an Info (no re-read needed;
+    // ledger stamps are all absent on freshly inserted rows).
+    const postedInfo = (input: PostInput, id: string, now: number, threadId?: string): Info => ({
+      id,
+      projectID: input.projectID,
+      kind: input.kind,
+      fromSession: input.fromSession,
+      ...(input.toSession ? { toSession: input.toSession } : {}),
+      body: input.body,
+      ...(input.replyTo ? { replyTo: input.replyTo } : {}),
+      timeCreated: now,
+      ...(input.deadline !== undefined ? { deadline: input.deadline } : {}),
+      ...(threadId !== undefined ? { threadId } : {}),
+      ...(input.originMessageId ? { originMessageId: input.originMessageId } : {}),
+      ...(input.originCallId ? { originCallId: input.originCallId } : {}),
+      ...(input.groupId ? { groupId: input.groupId } : {}),
+    })
 
     const post = Effect.fn("Coordination.post")(function* (input: PostInput) {
       const id = input.id ?? Identifier.ascending("coordination")
@@ -390,21 +442,43 @@ const layer = Layer.effect(
           time_updated: now,
           deadline: input.deadline ?? null,
           thread_id: threadId ?? null,
+          origin_message_id: input.originMessageId ?? null,
+          origin_call_id: input.originCallId ?? null,
+          group_id: input.groupId ?? null,
         })
         .run()
         .pipe(Effect.orDie)
-      return {
-        id,
-        projectID: input.projectID,
-        kind: input.kind,
-        fromSession: input.fromSession,
-        ...(input.toSession ? { toSession: input.toSession } : {}),
-        body: input.body,
-        ...(input.replyTo ? { replyTo: input.replyTo } : {}),
-        timeCreated: now,
-        ...(input.deadline !== undefined ? { deadline: input.deadline } : {}),
-        ...(threadId !== undefined ? { threadId } : {}),
-      }
+      return postedInfo(input, id, now, threadId)
+    })
+
+    const postOnce = Effect.fn("Coordination.postOnce")(function* (input: PostInput & { readonly id: string }) {
+      const now = Date.now()
+      const threadId = input.threadId ?? (input.kind === "request" ? input.id : undefined)
+      // RETURNING with onConflictDoNothing yields a row only for the caller
+      // that actually won the primary-key race.
+      const won = yield* db
+        .insert(CoordinationTable)
+        .values({
+          id: input.id,
+          project_id: input.projectID,
+          kind: input.kind,
+          from_session: input.fromSession,
+          to_session: input.toSession ?? null,
+          body: input.body,
+          reply_to: input.replyTo ?? null,
+          time_created: now,
+          time_updated: now,
+          deadline: input.deadline ?? null,
+          thread_id: threadId ?? null,
+          origin_message_id: input.originMessageId ?? null,
+          origin_call_id: input.originCallId ?? null,
+          group_id: input.groupId ?? null,
+        })
+        .onConflictDoNothing()
+        .returning({ id: CoordinationTable.id })
+        .get()
+        .pipe(Effect.orDie)
+      return { row: postedInfo(input, input.id, now, threadId), inserted: won !== undefined }
     })
 
     // Loop protection for peer-authored notes (send/ask). Enforced at the tool
@@ -935,6 +1009,7 @@ const layer = Layer.effect(
 
     return Service.of({
       post,
+      postOnce,
       inbox,
       deliveredWithin,
       markRead,
