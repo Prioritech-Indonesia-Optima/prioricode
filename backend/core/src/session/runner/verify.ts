@@ -31,6 +31,24 @@ const MAX_OUTPUT_TAIL = 6_000
 const outputTail = (value: string) =>
   value.length <= MAX_OUTPUT_TAIL ? value : `... truncated ...\n${value.slice(-MAX_OUTPUT_TAIL)}`
 
+const verifyRunCommand = (cmd: string, directory: string, appProcess: AppProcess.Interface, timeoutMillis = 120_000) =>
+  appProcess
+    .run(
+      ChildProcess.make(cmd, [], {
+        cwd: directory,
+        shell: defaultShell(),
+        stdin: "ignore",
+        detached: process.platform !== "win32",
+        forceKillAfter: Duration.seconds(3),
+      }),
+      {
+        combineOutput: true,
+        timeout: Duration.millis(timeoutMillis),
+        maxOutputBytes: 64_000,
+      },
+    )
+    .pipe(Effect.catch(() => Effect.void))
+
 const output = (result: { readonly stdout: Buffer; readonly stderr: Buffer; readonly output?: Buffer }) =>
   outputTail(
     (result.output ?? Buffer.concat([result.stdout, result.stderr])).toString("utf8").trim() || "(no output captured)",
@@ -65,6 +83,37 @@ const detectCommand = Effect.fn("SessionVerify.detectCommand")(function* (fs: FS
   ] as const
   for (const [file, run] of managers) if (yield* fs.existsSafe(path.join(directory, file))) return run
   return "npm test"
+})
+
+export interface VerifyOnceResult {
+  readonly command?: string
+  readonly ok: boolean
+  readonly exit: number
+  readonly tail: string
+}
+
+/**
+ * Run a repository's verification command ONCE against an arbitrary tree and
+ * report the outcome. This is the land gate: the session tree must be green
+ * before its branch may move a shared ref. `command` overrides detection
+ * (projects with per-package suites), and an explicit `enabled: false` config
+ * passes trivially.
+ */
+export const runOnce = Effect.fn("SessionVerify.runOnce")(function* (deps: {
+  readonly fs: FSUtil.Interface
+  readonly process: AppProcess.Interface
+  readonly directory: string
+  readonly command?: string
+  readonly config?: ConfigVerify.Info
+}) {
+  if (deps.config?.enabled === false) return { ok: true, exit: 0, tail: "" } satisfies VerifyOnceResult
+  const command = deps.command ?? deps.config?.command ?? (yield* detectCommand(deps.fs, deps.directory))
+  if (command === undefined) return { ok: true, exit: 0, tail: "" } satisfies VerifyOnceResult
+  const result = yield* verifyRunCommand(command, deps.directory, deps.process, deps.config?.timeout ?? 900_000)
+  if (result === undefined)
+    return { command, ok: false, exit: -1, tail: "(verification command could not be run)" } satisfies VerifyOnceResult
+  if (result.exitCode === 0) return { command, ok: true, exit: 0, tail: "" } satisfies VerifyOnceResult
+  return { command, ok: false, exit: result.exitCode, tail: output(result) } satisfies VerifyOnceResult
 })
 
 /** Adapt the verification pass into the finish-gate pipeline. */
@@ -111,24 +160,8 @@ export const make = (deps: {
     const limit = config?.max_attempts ?? 1
     let command: string | undefined = config?.command
     let resolved = command !== undefined
-    const runCommand = Effect.fnUntraced(function* (cmd: string, directory: string, appProcess: AppProcess.Interface) {
-      return yield* appProcess
-        .run(
-          ChildProcess.make(cmd, [], {
-            cwd: directory,
-            shell: defaultShell(),
-            stdin: "ignore",
-            detached: process.platform !== "win32",
-            forceKillAfter: Duration.seconds(3),
-          }),
-          {
-            combineOutput: true,
-            timeout: Duration.millis(config?.timeout ?? 120_000),
-            maxOutputBytes: 64_000,
-          },
-        )
-        .pipe(Effect.catch(() => Effect.void))
-    })
+    const runCommand = (cmd: string, directory: string, appProcess: AppProcess.Interface) =>
+      verifyRunCommand(cmd, directory, appProcess, config?.timeout ?? 120_000)
 
     return {
       recordMutation: (toolName) => {

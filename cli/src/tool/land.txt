@@ -1,0 +1,22 @@
+Land your session's branch onto the project's main branch.
+
+Branch-per-session discipline: an isolated session works on `prioricode/<name>` inside a
+managed worktree, and `land` is the ONLY coordinated way to bring that work back. It runs a
+full safety pipeline and always returns a structured result:
+
+1. Green gate — the repository's verification command (auto-detected, or `command` override)
+   must pass on your tree. If it fails, fix your branch and land again.
+2. Conflict preview — a merge-tree dry check runs BEFORE anything moves. On conflict you get
+   the conflicting paths plus the sessions that last touched them (from the file-touch
+   ledger); nothing was changed. Negotiate via the `sessions` tool, rebase or coordinate who
+   merges first, then retry.
+3. Primary checkout gate — if the human's main checkout has local uncommitted changes, the
+   landing DEFERS with the dirty paths. Never ask the user to stash for you; report it and
+   retry once their work is committed or the checkout is clean.
+4. Atomic ref move — `update-ref` with compare-and-swap; a concurrent landing of the same
+   branch is refused ("claimed"), a racing main is refused ("cas-lost"). Retry after rebasing.
+5. NEVER pushes. Publishing main (a push here may trigger CI releases) stays a human
+   decision — tell the user the landing sha and let them push.
+
+Use `dryRun` to preview what would change (files + checkout state) without merging.
+Without isolation binding, `land` refuses with `no-binding`: merge that work as before.

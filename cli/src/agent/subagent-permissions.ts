@@ -28,6 +28,13 @@ export function deriveSubagentSessionPermission(input: {
     ),
     ...(canTodo ? [] : [{ permission: "todowrite" as const, pattern: "*" as const, action: "deny" as const }]),
     ...(canTask ? [] : [{ permission: "task" as const, pattern: "*" as const, action: "deny" as const }]),
-    ...(canSessions ? [] : [{ permission: "sessions" as const, pattern: "*" as const, action: "deny" as const }]),
+    // Landing moves the shared main ref; treat it as a coordination capability
+    // alongside `sessions`, denied to children unless explicitly granted.
+    ...(canSessions
+      ? []
+      : [
+          { permission: "sessions" as const, pattern: "*" as const, action: "deny" as const },
+          { permission: "land" as const, pattern: "*" as const, action: "deny" as const },
+        ]),
   ]
 }

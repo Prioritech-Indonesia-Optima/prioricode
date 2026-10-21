@@ -11,6 +11,8 @@ import { GlobTool } from "./glob"
 import { GrepTool } from "./grep"
 import { ReadTool } from "./read"
 import { TaskTool } from "./task"
+import { LandTool } from "./land"
+import { SessionLand } from "@prioricode/core/session/land"
 import { SessionsTool } from "./sessions"
 import { Database } from "@prioricode/core/database/database"
 import { FileTouch } from "@prioricode/core/file-touch"
@@ -109,6 +111,7 @@ const layer = Layer.effect(
     const invalid = yield* InvalidTool
     const task = yield* TaskTool
     const sessionsTool = yield* SessionsTool
+    const landTool = yield* LandTool
     const read = yield* ReadTool
     const question = yield* QuestionTool
     const todo = yield* TodoWriteTool
@@ -239,6 +242,7 @@ const layer = Layer.effect(
           write: Tool.init(writetool),
           task: Tool.init(task),
           sessions: Tool.init(sessionsTool),
+          land: Tool.init(landTool),
           fetch: Tool.init(webfetch),
           todo: Tool.init(todo),
           search: Tool.init(websearch),
@@ -265,6 +269,7 @@ const layer = Layer.effect(
             tool.write,
             tool.task,
             tool.sessions,
+            tool.land,
             tool.fetch,
             tool.todo,
             tool.search,
@@ -458,6 +463,7 @@ export const node = LayerNode.make({
   deps: [
     Config.node,
     Plugin.node,
+    SessionLand.node,
     Question.node,
     Todo.node,
     Agent.node,

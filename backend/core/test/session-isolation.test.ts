@@ -46,7 +46,7 @@ const withRepo = Effect.fnUntraced(function* () {
   return root.path
 })
 
-const seedRows = Effect.fnUntraced(function* (sessionID: string) {
+const seedRows = Effect.fnUntraced(function* (sessionID: SessionSchema.ID) {
   const { db } = yield* Database.Service
   yield* db
     .insert(ProjectTable)
@@ -69,7 +69,7 @@ const seedRows = Effect.fnUntraced(function* (sessionID: string) {
     .pipe(Effect.orDie)
 })
 
-const rowFor = Effect.fnUntraced(function* (sessionID: string) {
+const rowFor = Effect.fnUntraced(function* (sessionID: SessionSchema.ID) {
   const { db } = yield* Database.Service
   return yield* db
     .select()
@@ -146,13 +146,13 @@ describe("SessionIsolation", () => {
       // Files land synchronously via `worktree add` checkout.
       expect(fs.existsSync(path.join(result.directory, "README.md"))).toBe(true)
       const branch = (yield* Effect.promise(() => $`git branch --show-current`.cwd(result.directory).text())).trim()
-      expect(branch).toBe(plan?.branch)
+      expect(branch).toBe(plan?.branch ?? "")
 
       yield* seedRows(sessionID)
       yield* iso.bind({ sessionID, projectID: Project.ID.global, plan: plan! })
       const row = yield* rowFor(sessionID)
       expect(row?.status).toBe("active")
-      expect(row?.branch).toBe(plan?.branch)
+      expect(row?.branch ?? "").toBe(plan?.branch ?? "")
     }),
   )
 
@@ -268,7 +268,10 @@ describe("SessionIsolation", () => {
       })
       const row = yield* rowFor(sessionID)
       expect(row).toBeDefined()
-      const wait = Effect.fnUntraced(function* (status: string | undefined) {
+      const wait: (status: string | undefined) => Effect.Effect<string | undefined, never, Database.Service> =
+        Effect.fnUntraced(function* (
+        status: string | undefined,
+      ) {
         if (status !== "booting") return status
         yield* Effect.sleep("25 millis")
         return yield* wait((yield* rowFor(sessionID))?.status)
