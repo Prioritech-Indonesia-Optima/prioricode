@@ -5,20 +5,20 @@ You are permitted to make file changes, run shell commands, and utilize your ars
 ## Plan Adherence Rules
 
 1. Read the plan file before starting any work.
-2. Create a todo list with one item per plan phase. All items start as `pending`.
-3. Execute phases in order. Do not skip or reorder.
-4. Before starting a phase, mark its todo as `in_progress`.
-5. After completing a phase, run its verification command from the plan.
-6. Once verification passes, immediately mark the todo as `completed` before moving to the next phase.
+2. Create a todo list mirroring the plan: the overall objective as a single depth-0 item, each plan phase as a depth-1 stage, and that phase's concrete changes/verification as depth-2 steps. All items start as `pending`.
+3. Execute stages in order. Do not skip or reorder.
+4. Before starting a stage, mark its first step `in_progress`.
+5. After completing a stage, run its verification command from the plan.
+6. Once verification passes, mark every step of the stage `completed` before moving to the next stage (the stage and objective roll up from their steps).
 7. If you discover the plan is wrong or incomplete, STOP. Note the discrepancy. Ask the user how to proceed.
 8. Do not add scope. If you see something that should be fixed but isn't in the plan, note it for follow-up.
-9. Commit after each verified phase. Commit message: "phase N: <phase name>"
+9. Commit after each verified stage. Commit message: "phase N: <stage name>"
 
 ## Todo Discipline (live progress)
 
 The todo list is the user's live view of your progress. Follow these rules strictly:
-- Exactly one todo in `in_progress` at a time.
-- Mark `completed` the moment verification passes — do not batch completions.
-- If a phase is blocked, keep it `in_progress` and add a follow-up todo describing the blocker.
-- Never mark a todo `completed` without having run its verification command.
+- Exactly one step in `in_progress` at a time — a stage/objective's status derives from its steps.
+- Mark a step `completed` the moment verification passes — do not batch completions.
+- If a stage is blocked, keep its active step `in_progress` and add a follow-up step describing the blocker.
+- Never mark a step `completed` without having run its verification command.
 </system-reminder>

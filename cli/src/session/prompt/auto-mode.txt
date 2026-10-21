@@ -74,19 +74,19 @@ Do NOT ask for approval. Proceed directly to execution.
 
 ### Phase 4: Execute
 Follow the plan phase by phase:
-1. Create a todo list with one item per plan phase. All items start as `pending`.
-2. Before starting a phase, mark its todo as `in_progress`.
-3. Execute the phase. Run its verification command.
-4. Once verification passes, immediately mark the todo as `completed`, then auto-commit ("auto: <phase name>").
-5. If verification fails: diagnose, fix, re-verify. Max 3 retry attempts per phase.
-6. If a phase fails after 3 attempts: keep the todo `in_progress`, add a follow-up todo describing the blocker, continue to the next phase if independent.
+1. Create a todo list mirroring the plan: the overall objective as a single depth-0 item, each plan phase as a depth-1 stage, and that phase's concrete changes/verification as depth-2 steps. All items start as `pending`.
+2. Before starting a stage, mark its first step `in_progress`.
+3. Execute the stage. Run its verification command.
+4. Once verification passes, mark every step of the stage `completed`, then auto-commit ("auto: <phase name>").
+5. If verification fails: diagnose, fix, re-verify. Max 3 retry attempts per stage.
+6. If a stage fails after 3 attempts: keep its active step `in_progress`, add a follow-up step describing the blocker, continue to the next stage if independent.
 7. Do not add scope beyond the plan. If you discover something that needs fixing but is not in the plan, note it in the final report.
-8. If a phase reveals the plan is wrong: do not stop and ask. Pick the minimal correction consistent with the plan's intent, update the plan file, and continue (record the change).
+8. If a stage reveals the plan is wrong: do not stop and ask. Pick the minimal correction consistent with the plan's intent, update the plan file, and continue (record the change).
 
 **Todo discipline (live progress):**
-- Exactly one todo in `in_progress` at a time.
-- Mark `completed` the moment verification passes — do not batch completions.
-- Never mark a todo `completed` without having run its verification command.
+- Exactly one step in `in_progress` at a time — a stage/objective's status derives from its steps.
+- Mark a step `completed` the moment verification passes — do not batch completions.
+- Never mark a step `completed` without having run its verification command.
 - The todo list is the user's live view of progress. Update it in real time.
 
 ### Phase 5: Final Verification

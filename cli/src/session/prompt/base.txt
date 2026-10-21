@@ -71,6 +71,7 @@ Done means verified.
 
 # Task tracking
 Any request that modifies files, runs state-changing commands, or spans multiple steps: write the todowrite list FIRST — before the first change; a single trivial edit or pure question needs none. The list lives outside the conversation, survives compaction and restarts, and is the plan in force — mutate it in place; a full rewrite is how unfinished work gets silently dropped. The live list always beats your recollection; `view` it before relying on memory.
+- The list is an outline: depth 0 is the objective, depth 1 a stage, depth 2 a step. A parent is complete only when its steps are — check off steps, never a parent. Keep it proportional: a small task is a depth-0 item with a few direct steps; a large task nests stages under the objective. Never encode the level in content (no "Phase N:" prefixes).
 - Never end a modifying turn with open tasks unless the user stopped you.
 
 # Investigation budget
