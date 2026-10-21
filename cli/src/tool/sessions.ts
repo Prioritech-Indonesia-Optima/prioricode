@@ -1,10 +1,16 @@
 import { Effect, Schema } from "effect"
+import * as path from "path"
 import * as Tool from "./tool"
 import DESCRIPTION from "./sessions.txt"
 import { Identifier } from "@prioricode/core/id/id"
 import { Coordination } from "@/session/coordination"
+import { SessionV1 } from "@prioricode/core/v1/session"
+import { Database } from "@prioricode/core/database/database"
+import { FileTouch } from "@prioricode/core/file-touch"
+import { FileAttribution } from "./file-attribution"
+import { MessageV2 } from "@/session/message-v2"
+import { MessageID, SessionID } from "../session/schema"
 import { Session } from "@/session/session"
-import { SessionID } from "../session/schema"
 
 export const Parameters = Schema.Struct({
   action: Schema.Literals(["query", "respond", "broadcast"]).annotate({
@@ -22,6 +28,10 @@ export const Parameters = Schema.Struct({
   thread_id: Schema.optional(Schema.String).annotate({
     description:
       "For query: the thread_id of a prior exchange to continue that negotiation with context instead of starting a new thread.",
+  }),
+  paths: Schema.optional(Schema.Array(Schema.String)).annotate({
+    description:
+      "For query WITHOUT a target: ask the durable file-touch ledger who last wrote/added/deleted these files (workspace-relative or absolute paths, max 50) instead of guessing from git status.",
   }),
 })
 
@@ -51,6 +61,9 @@ export const SessionsTool = Tool.define(
   Effect.gen(function* () {
     const coordination = yield* Coordination.Service
     const sessions = yield* Session.Service
+    const attribution = yield* FileAttribution.Service
+    const database = yield* Database.Service
+    const touches = yield* FileTouch.Service
 
     const run = Effect.fn("SessionsTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
@@ -87,6 +100,107 @@ export const SessionsTool = Tool.define(
         ` WARNING: session ${target} was last active ${agoLabel(idleFor)} and may be an abandoned session; ` +
         "confirm the user wants it woken before depending on a reply."
 
+      // Local ledger answer: who last wrote each requested path, per the durable
+      // file-touch attribution. Paths need no peer — the database answers.
+      const attributionQuery = Effect.fn("SessionsTool.attribution")(function* (
+        self: Session.Info,
+        paths: ReadonlyArray<string>,
+      ) {
+        if (paths.length > 50) return failure("paths accepts at most 50 entries per call")
+        const owned = yield* attribution.classify({
+          projectID: self.projectID,
+          sessionID: String(self.id),
+          base: self.directory,
+          paths: paths.slice(0, 50),
+        })
+        const now = Date.now()
+        const rel = (value: string) => path.relative(self.directory, value).replaceAll("\\", "/") || value
+        // Evidence: clip the owning write's stored tool-part diff so the asker
+        // sees WHAT changed, not just who. Coordinates are as-of-write.
+        const hunkFor = Effect.fnUntraced(function* (messageID: string, callID: string | undefined, filepath: string) {
+          const parts = yield* MessageV2.parts(MessageID.make(messageID)).pipe(
+            Effect.provideService(Database.Service, database),
+            Effect.catch(() => Effect.succeed([] as SessionV1.Part[])),
+          )
+          for (const part of parts) {
+            if (part.type !== "tool") continue
+            if (callID !== undefined && part.callID !== callID) continue
+            const meta = part.state.status === "completed" ? part.state.metadata : undefined
+            const filediff = meta?.filediff as { file?: string; patch?: string } | undefined
+            const patch = filediff?.patch ?? (typeof meta?.diff === "string" ? (meta.diff as string) : undefined)
+            if (!patch) continue
+            if (filediff?.file !== undefined && path.resolve(filediff.file) !== path.resolve(filepath)) continue
+            return patch.split("\n").slice(0, 20).join("\n")
+          }
+          return undefined
+        })
+        const lines: string[] = []
+        for (const item of owned) {
+          if (item.status === "unrecorded") {
+            lines.push(
+              `- ${rel(item.path)} — NO RECORD: ${
+                item.staleTouch
+                  ? `the ledger's last row (${item.staleTouch.sessionID ?? "an out-of-band write"}, ${item.staleTouch.op}, ${agoLabel(now - item.staleTouch.timeUpdated)}) no longer matches the file — it changed without a fingerprinted write`
+                  : "never written by a tool and never seen by the watcher (predates attribution, or the file watcher is disabled)"
+              }. Likely the user's own edit or an older uncommitted change — ask the user.`,
+            )
+            continue
+          }
+          const touch = item.touch
+          const provenance = touch.provenance ?? {}
+          const when = agoLabel(now - touch.timeUpdated)
+          if (item.status === "self") {
+            lines.push(
+              `- ${rel(item.path)} — you wrote this (${touch.op}, ${when}${provenance.model ? `, model ${provenance.model}` : ""})${provenance.messageID ? `; your full diff: message ${provenance.messageID}` : ""}`,
+            )
+            if (provenance.messageID !== undefined) {
+              const excerpt = yield* hunkFor(provenance.messageID, provenance.callID, item.path)
+              if (excerpt !== undefined)
+                lines.push(excerpt.split("\n").map((row) => `    | ${row}`).join("\n"))
+            }
+            continue
+          }
+          if (item.status === "external") {
+            lines.push(
+              `- ${rel(item.path)} — changed OUTSIDE PrioriCode tools (${when}): the user's editor, a shell command, or another process. No session authored it — ask the user if it matters to your work.`,
+            )
+            continue
+          }
+          const ownerID = touch.sessionID as string
+          const owner = yield* sessions
+            .get(SessionID.make(ownerID))
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
+          lines.push(
+            `- ${rel(item.path)} — last written by peer ${ownerID}${owner ? ` "${owner.title}"` : " (unknown session — maybe archived)"} (${touch.op}, ${when}${provenance.model ? `, model ${provenance.model}` : ""})${provenance.messageID ? `; their diff: message ${provenance.messageID}${provenance.callID ? `, call ${provenance.callID}` : ""}` : ""}. Query the owner (action "query", target ${ownerID}) about whether it is finished and meant to ship — do NOT exclude it or absorb it on assumption.`,
+          )
+          if (provenance.messageID !== undefined) {
+            const excerpt = yield* hunkFor(provenance.messageID, provenance.callID, item.path)
+            if (excerpt !== undefined) lines.push(excerpt.split("\n").map((row) => `    | ${row}`).join("\n"))
+          }
+        }
+        const mine = yield* touches.recent({
+          projectID: self.projectID,
+          sessionIDs: [String(self.id)],
+          withinMs: 24 * 60 * 60_000,
+          limit: 100,
+        })
+        const minePaths = new Set(mine.map((item) => item.path))
+        const ownHint =
+          minePaths.size > 0
+            ? `Your own recent ledger writes: ${minePaths.size} path(s), latest ${agoLabel(now - mine[0]!.timeUpdated)}.`
+            : "You have no ledger-recorded writes in the last 24h."
+        return result(
+          "query",
+          [
+            `File-touch attribution for ${owned.length} path(s) (durable ledger of fingerprinted writes + watcher-recorded external changes):`,
+            ownHint,
+            ...lines,
+            "",
+            "Rule: peer-owned → query the owner before you commit or stage around it; external/unrecorded → ask the user. Never silently narrow a ship to your own subset, and never commit a peer's work-in-progress without its OK. A direct user instruction to ship overrides this rule.",
+          ].join("\n"),
+        )
+      })
+
       // Fire-and-forget: the note is durable and the recipient's owner answers
       // at its own turn boundary (idle recipients are woken by the watcher).
       // The reply arrives in YOUR context as an injected note — never poll for it.
@@ -95,6 +209,10 @@ export const SessionsTool = Tool.define(
         params: Schema.Schema.Type<typeof Parameters>,
         ctx: Tool.Context<Metadata>,
       ) {
+        if (params.paths !== undefined && params.paths.length > 0) {
+          if (params.target) return failure("paths is a local ledger query — omit target (and message) to use it")
+          return yield* attributionQuery(self, params.paths)
+        }
         const target = params.target
         const message = params.message
         if (!target) return failure("query requires a target session id")

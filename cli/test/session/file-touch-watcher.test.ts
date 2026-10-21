@@ -109,7 +109,10 @@ describe("FileTouchWatcher", () => {
   it.instance("ignores paths outside the worktree and .git internals", () =>
     Effect.gen(function* () {
       const { events, touches, projectID, test } = yield* setup
-      yield* events.publish(Watcher.Event.Updated, { file: path.join(test.directory, ".git", "COMMIT_EDITMSG"), event: "change" })
+      yield* events.publish(Watcher.Event.Updated, {
+        file: path.join(test.directory, ".git", "COMMIT_EDITMSG"),
+        event: "change",
+      })
       yield* events.publish(Watcher.Event.Updated, { file: "/somewhere/else/file.txt", event: "change" })
 
       const found = yield* touches.recent({ projectID, withinMs: 60_000, limit: 10 })

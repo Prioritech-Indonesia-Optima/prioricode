@@ -27,6 +27,8 @@ import { Question } from "../../src/question"
 import { Todo } from "../../src/session/todo"
 import { Session } from "@/session/session"
 import { Coordination } from "@/session/coordination"
+import { FileAttribution } from "@/tool/file-attribution"
+import { FileTouch } from "@prioricode/core/file-touch"
 import { CoordinationWatcher } from "@/session/coordination-watcher"
 import { SessionMessageTable, SessionTable } from "@prioricode/core/session/sql"
 import { CoordinationTable } from "@prioricode/core/session/coordination.sql"
@@ -262,7 +264,7 @@ const unix = process.platform !== "win32" ? it.instance : it.instance.skip
 const unixNoLLMServer = process.platform !== "win32" ? noLLMServer.instance : noLLMServer.instance.skip
 
 function makeHttpCoordination(flags?: Partial<RuntimeFlags.Info>) {
-  const root = LayerNode.group([promptRoot, testLLMServerNode, Coordination.node, CoordinationWatcher.node])
+  const root = LayerNode.group([promptRoot, testLLMServerNode, Coordination.node, CoordinationWatcher.node, FileAttribution.node, FileTouch.node])
   const replacements = [
     [SessionSummary.node, summary],
     [LSP.node, lsp],

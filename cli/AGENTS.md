@@ -141,6 +141,7 @@ Concurrent sessions on one project coordinate through a durable, cross-process c
 - **Presence is the cross-process truth for busy/idle.** `SessionStatus` (in-memory, per-process) mirrors every transition into `session_presence`; a crashed owner reads as idle once its heartbeat goes stale.
 - **Announce is idempotent by deterministic PK.** The watcher announces a born root once per (newcomer, peer) via `postOnce` (`ann:<sid>:<peer>` id, group `ann:<sid>`); restarts and racing processes settle at the primary key and never defect the sweep.
 - **The ledger is stamp-only.** Lifecycle columns (read/ack/escalate/expire) move forward only; recovery goes through unclaim/requeue, never rewrites.
+- **File touches are fact, not intent.** `session_file_touch` holds one latest-writer row per (project, path) — written only by the tool-write paths (v1/v2 edit/write/apply_patch) and the watcher's external pass, fingerprinted so surfaces can prove the row still describes the live file. Claims (intent) stay manual and separate; nothing auto-claims from a touch. Kill switch: `PRIORICODE_DISABLE_FILE_TOUCH`.
 
 Schema changes go through `bun run script/migration.ts` from `backend/core` and must be idempotent (cross-process migration race). After changing any HttpApi route, regenerate the SDK: `bun run build` from `backend/sdk/js`.
 

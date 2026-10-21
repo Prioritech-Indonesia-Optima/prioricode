@@ -283,3 +283,12 @@ _Avoid_: liveness, heartbeat (the heartbeat is an input to it)
 **Live Peer**:
 A root **Session** in the same project that is unarchived and not stale — the only valid targets for **Query** and the audience of **Broadcast** and **Announcement**. Children (subagents) are never peers.
 _Avoid_: sibling session (roster wording), neighbor
+
+## File touch attribution
+
+**File Touch**:
+The durable, per-path last-writer fingerprint in the `session_file_touch` ledger — which **Session** (or the watcher, for out-of-band edits) most recently created/modified/deleted a file, with the operation, model, timestamp, and the stored write's message/call pointers. One row per (project, path); the mtime+size fingerprint makes every claim about current file state falsifiable — surfaces only assert ownership while the fingerprint still matches. Line-level history is deliberately excluded: stored tool-part diffs already carry exact hunks, and committed lines are blameable via the `PrioriCode-Session` trailer.
+_Avoid_: claim (a claim is stated intent; a touch is an observed fact — never auto-created from writes), lock, snapshot
+
+**Attribution Advisory**:
+The model-facing surfaces that consult the **File Touch** ledger: collision notices on edit, the `sessions` `query`+`paths` local ledger read, and the dirty-path notice on repo-wide `git status`/`add`/`commit`/`push`/`stash`. Advisory by contract — attribution never blocks, and a direct user instruction to ship overrides the etiquette it teaches.

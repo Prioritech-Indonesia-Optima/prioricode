@@ -116,27 +116,29 @@ describe("FileAttribution", () => {
     }),
   )
 
-  it.instance("an external row matching live state is external; a recorded peer delete of a gone file stays authoritative", () =>
-    Effect.gen(function* () {
-      const { fs, touches, attribution, projectID, test } = yield* setup
-      const edited = path.join(test.directory, "editor.txt")
-      yield* fs.writeWithDirs(edited, "user typed")
-      const info = yield* fs.stat(edited)
-      yield* touches.record({ projectID, path: edited, op: "external", fingerprint: fingerprintOf(info) })
+  it.instance(
+    "an external row matching live state is external; a recorded peer delete of a gone file stays authoritative",
+    () =>
+      Effect.gen(function* () {
+        const { fs, touches, attribution, projectID, test } = yield* setup
+        const edited = path.join(test.directory, "editor.txt")
+        yield* fs.writeWithDirs(edited, "user typed")
+        const info = yield* fs.stat(edited)
+        yield* touches.record({ projectID, path: edited, op: "external", fingerprint: fingerprintOf(info) })
 
-      const gone = path.join(test.directory, "gone.txt")
-      yield* touches.record({
-        projectID,
-        path: gone,
-        op: "delete",
-        sessionID: peer,
-        fingerprint: { mtimeMs: 0, size: 0 },
-      })
+        const gone = path.join(test.directory, "gone.txt")
+        yield* touches.record({
+          projectID,
+          path: gone,
+          op: "delete",
+          sessionID: peer,
+          fingerprint: { mtimeMs: 0, size: 0 },
+        })
 
-      const result = yield* classify(attribution, projectID, test.directory, [edited, gone])
-      expect(result[0]?.status).toBe("external")
-      // sessionID set + {0,0} fingerprint: a peer delete is still that peer's fact.
-      expect(result[1]?.status === "peer" && result[1].touch.op).toBe("delete")
-    }),
+        const result = yield* classify(attribution, projectID, test.directory, [edited, gone])
+        expect(result[0]?.status).toBe("external")
+        // sessionID set + {0,0} fingerprint: a peer delete is still that peer's fact.
+        expect(result[1]?.status === "peer" && result[1].touch.op).toBe("delete")
+      }),
   )
 })

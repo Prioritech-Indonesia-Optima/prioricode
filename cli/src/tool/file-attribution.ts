@@ -46,11 +46,7 @@ const layer = Layer.effect(
       }
     })
 
-    const classifyOne = Effect.fnUntraced(function* (
-      projectID: Project.ID,
-      sessionID: string,
-      filepath: string,
-    ) {
+    const classifyOne = Effect.fnUntraced(function* (projectID: Project.ID, sessionID: string, filepath: string) {
       const [row] = yield* touches.lookup({ projectID, paths: [filepath] })
       if (row === undefined) return { path: filepath, status: "unrecorded" as const }
       const live = yield* liveFingerprint(filepath)

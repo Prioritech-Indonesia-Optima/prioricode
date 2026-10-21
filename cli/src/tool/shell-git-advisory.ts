@@ -84,11 +84,13 @@ export const make = Effect.fn("ShellGitAdvisory.make")(function* () {
     if (input.instance.project.vcs !== "git") return [] as string[]
     const matches = input.shapes
       .map((shape) => ({ shape, match: matchGitCommand(shape.tokens) }))
-      .filter((item): item is { shape: GitCommandShape; match: { sub: string; repoDir?: string } } => item.match !== undefined)
+      .filter(
+        (item): item is { shape: GitCommandShape; match: { sub: string; repoDir?: string } } =>
+          item.match !== undefined,
+      )
     if (matches.length === 0) return [] as string[]
 
     const listed = yield* sessions.list({ limit: 50, roots: true })
-    console.log("DEBUG list", listed.map((s) => ({ id: String(s.id), p: String(s.projectID), up: Date.now() - s.time.updated, arch: s.time.archived })))
     const siblings = listed.filter(
       (session) =>
         session.id !== input.sessionID &&
@@ -103,7 +105,8 @@ export const make = Effect.fn("ShellGitAdvisory.make")(function* () {
       self: String(input.sessionID),
     })
 
-    const repoDir = matches[0]?.match.repoDir === undefined ? input.cwd : path.resolve(input.cwd, matches[0].match.repoDir)
+    const repoDir =
+      matches[0]?.match.repoDir === undefined ? input.cwd : path.resolve(input.cwd, matches[0].match.repoDir)
     const roots = yield* input.runGit(repoDir, ["rev-parse", "--show-toplevel"])
     const root = roots[0]?.trim()
     if (root === undefined || root === "") return [] as string[]
@@ -132,7 +135,8 @@ export const make = Effect.fn("ShellGitAdvisory.make")(function* () {
       const statusMap = yield* status.list()
       const now = Date.now()
       const rel = (item: FileAttribution.Attribution) => path.relative(root, item.path).replaceAll("\\", "/")
-      const rank = (item: FileAttribution.Attribution) => (item.status === "unrecorded" ? 2 : item.status === "external" ? 1 : 0)
+      const rank = (item: FileAttribution.Attribution) =>
+        item.status === "unrecorded" ? 2 : item.status === "external" ? 1 : 0
       const describe = (item: FileAttribution.Attribution): string => {
         if (item.status === "unrecorded")
           return `  · ${rel(item)} — no attribution record (predates the ledger, unwatched writer, or reverted file)`
@@ -170,7 +174,9 @@ export const make = Effect.fn("ShellGitAdvisory.make")(function* () {
         lines.push(
           `Commit provenance: this commit lands lines your session wrote (${authored
             .map((item) => path.relative(root, item.path).replaceAll("\\", "/"))
-            .join(", ")}). Add a \`PrioriCode-Session: ${String(input.sessionID)}\` trailer so git blame resolves those lines back to your session.`,
+            .join(
+              ", ",
+            )}). Add a \`PrioriCode-Session: ${String(input.sessionID)}\` trailer so git blame resolves those lines back to your session.`,
         )
       }
     }

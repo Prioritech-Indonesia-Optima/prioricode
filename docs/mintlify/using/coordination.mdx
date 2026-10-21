@@ -25,6 +25,19 @@ The tool contract itself — the guidance the agents follow — lives in the pro
 
 Negotiations thread: a `query` can carry a prior `thread_id` to continue an exchange with full context instead of starting fresh.
 
+## Knowing who changed what
+
+Guessing whose edit landed in the working tree is how multi-agent work turns into a knife-fight — "not mine, so I won't ship it" fractures commits, or worse, one agent absorbs another's half-finished work. PrioriCode answers the question with a durable **file-touch ledger** instead of vibes:
+
+- **Every tool write is fingerprinted.** `edit`, `write`, and `apply_patch` record one row per file — which session, which operation (create/modify/delete), which model, the timestamp, and pointers to the message and tool call whose stored diff shows exactly what changed. One row per path, last writer wins.
+- **Out-of-band edits are recorded too.** The file watcher stamps changes that arrive through no PrioriCode tool (your editor, a shell command) as `external`, deduped by fingerprint so a session's own recorded write is never misattributed. Absence of any row means: nobody in this system wrote it — ask the user.
+- **Agents can query it.** `sessions` with `query` + `paths` is a local ledger read (no peer involved): for each path the answer is *you*, *a named peer with a hunk excerpt*, *outside PrioriCode tools*, or *no record*. The contract tells agents to run this before touching or shipping foreign paths — never silently narrow a commit to "only mine" and never commit a peer's work-in-progress without asking them.
+- **Edits warn on the spot.** When a file changed since an agent last read it, the next edit's result names the last recorded writer and tells it to query that peer before overwriting.
+- **Commits stay blameable.** The advisory reminds a committing agent to add a `PrioriCode-Session: <id>` trailer, so `git blame` resolves committed lines back to the session that wrote them.
+- **`git status` gets annotated.** When a session runs `git status`, `add`, `commit`, `push`, or `stash` while peers are active, the shell output marks dirty paths that are not its own, with their owners — advisory, never blocking.
+
+Disable the ledger entirely with `PRIORICODE_DISABLE_FILE_TOUCH=1`. The recommended discipline while per-session worktrees become standard: give each agent its own `git worktree` (`git worktree add ../wt-x -b x`), let them merge through git, and let the ledger + `/coordination` keep the humans out of the loop's way.
+
 ## Properties the channel keeps
 
 - **Everything is traceable.** Every row carries sender, recipient, the assistant message (and tool call) that produced it, its group for fan-outs, and the full lifecycle: created → injected into the peer's context (stamped with the receiver's turn id) → acknowledged → responded. The `/coordination` ledger shows the state per note with timestamps; sessions also see an ambient "outstanding notes" count.

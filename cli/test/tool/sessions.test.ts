@@ -1,4 +1,5 @@
 import { describe, expect } from "bun:test"
+import path from "path"
 import { Effect, Layer } from "effect"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Database } from "@prioricode/core/database/database"
@@ -6,6 +7,11 @@ import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { Coordination } from "@/session/coordination"
+import { FileAttribution } from "@/tool/file-attribution"
+import { FileTouch } from "@prioricode/core/file-touch"
+import { FSUtil } from "@prioricode/core/fs-util"
+import { TestInstance } from "../fixture/fixture"
+import { Option } from "effect"
 import { Session } from "@/session/session"
 import { SessionID, MessageID } from "@/session/schema"
 import { SessionsTool } from "@/tool/sessions"
@@ -51,6 +57,9 @@ const it = testEffect(
     LayerNode.group([
       Database.node,
       Coordination.node,
+      FileAttribution.node,
+      FileTouch.node,
+      FSUtil.node,
       Truncate.node,
       Agent.node,
       LayerNode.make({ service: Session.Service, layer: sessionLayer, deps: [] }),
@@ -204,6 +213,49 @@ describe("tool.sessions.broadcast", () => {
       const result = yield* execute({ action: "broadcast", message: "about to switch branches" })
       expect(result.output).toContain("No live peers to announce to")
       expect((result.metadata as { recipients?: number }).recipients).toBe(0)
+    }),
+  )
+})
+
+describe("tool.sessions.query paths", () => {
+  it.instance("answers from the durable ledger: self, peer, and no-record paths", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const test = yield* TestInstance
+      const fs = yield* FSUtil.Service
+      const touches = yield* FileTouch.Service
+      const mine = path.join(test.directory, "mine.txt")
+      const theirs = path.join(test.directory, "theirs.txt")
+      const stranger = path.join(test.directory, "stranger.txt")
+      yield* fs.writeWithDirs(mine, "mine")
+      yield* fs.writeWithDirs(theirs, "theirs")
+      const fp = (filepath: string) =>
+        Effect.gen(function* () {
+          const info = yield* fs.stat(filepath)
+          return {
+            mtimeMs: Option.getOrElse(info.mtime, () => new Date(0)).getTime(),
+            size: Number(info.size),
+          }
+        })
+      yield* touches.record({ projectID, path: mine, op: "modify", sessionID: String(selfID), fingerprint: yield* fp(mine) })
+      yield* touches.record({ projectID, path: theirs, op: "create", sessionID: String(activeID), fingerprint: yield* fp(theirs) })
+
+      const result = yield* execute({ action: "query", paths: [mine, theirs, stranger] })
+      expect(result.title).toBe("sessions:query")
+      expect(result.output).toContain("you wrote this")
+      expect(result.output).toContain(`last written by peer ${activeID}`)
+      expect(result.output).toContain("active peer")
+      expect(result.output).toContain("NO RECORD")
+      expect(result.output).toContain("Never silently narrow a ship")
+    }),
+  )
+
+  it.instance("rejects paths combined with a target (local ledger read vs peer note)", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const result = yield* execute({ action: "query", target: activeID, message: "x", paths: ["a.ts"] })
+      expect(result.title).toBe("sessions:error")
+      expect(result.output).toContain("local ledger query")
     }),
   )
 })
