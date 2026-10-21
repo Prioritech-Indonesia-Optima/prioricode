@@ -4,6 +4,7 @@ import { Format } from "../format"
 import { LSP } from "@/lsp/lsp"
 import { Snapshot } from "../snapshot"
 import { CoordinationWatcher } from "@/session/coordination-watcher"
+import { FileTouchWatcher } from "@/session/file-touch-watcher"
 import * as Project from "./project"
 import * as Vcs from "./vcs"
 import { InstanceState } from "@/effect/instance-state"
@@ -30,6 +31,7 @@ const layer = Layer.effect(
     const shareNext = yield* ShareNext.Service
     const snapshot = yield* Snapshot.Service
     const coordinationWatcher = yield* CoordinationWatcher.Service
+    const fileTouchWatcher = yield* FileTouchWatcher.Service
     const vcs = yield* Vcs.Service
     const hooks = yield* Hook.Service
 
@@ -43,7 +45,7 @@ const layer = Layer.effect(
       // Each service self-manages its own slow work via Effect.forkScoped against
       // its per-instance state scope. We just await materialization here.
       yield* Effect.forEach(
-        [lsp, shareNext, format, vcs, snapshot, coordinationWatcher, project, hooks],
+        [lsp, shareNext, format, vcs, snapshot, coordinationWatcher, fileTouchWatcher, project, hooks],
         (s) => s.init().pipe(Effect.catchCause((cause) => Effect.logWarning("init failed", { cause }))),
         { concurrency: "unbounded", discard: true },
       ).pipe(Effect.withSpan("InstanceBootstrap.init"))
@@ -65,6 +67,7 @@ export const node = makeGlobalNode({
     ShareNext.node,
     Snapshot.node,
     CoordinationWatcher.node,
+    FileTouchWatcher.node,
     Vcs.node,
     Hook.node,
   ],
