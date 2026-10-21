@@ -4,6 +4,10 @@ import { fileURLToPath } from "url"
 import { describe, expect, test } from "bun:test"
 import { Effect, Layer } from "effect"
 import { FileMutation } from "@prioricode/core/file-mutation"
+import { FileTouch } from "@prioricode/core/file-touch"
+import { Database } from "@prioricode/core/database/database"
+import { ProjectTable } from "@prioricode/core/project/sql"
+import { Project } from "@prioricode/core/project"
 import { AppNodeBuilder } from "@prioricode/core/effect/app-node-builder"
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { FSUtil } from "@prioricode/core/fs-util"
@@ -76,6 +80,8 @@ const withTool = <A, E, R>(directory: string, body: (registry: ToolRegistry.Inte
           LocationMutation.node,
           FileMutation.node,
           WriteTool.node,
+          FileTouch.node,
+          Database.node,
         ]),
         [
           [FSUtil.node, filesystem],
@@ -300,4 +306,36 @@ test("keeps the locked write schema, semantics docstring, and deferred UX TODOs 
   ]) {
     expect(source).toContain(`TODO: ${todo}`)
   }
+})
+
+describe("WriteTool touch attribution", () => {
+  it.live("records a create touch naming the session for the written file", () =>
+    Effect.acquireUseRelease(
+      Effect.promise(() => tmpdir()),
+      (tmp) =>
+        withTool(tmp.path, (registry) => {
+          reset()
+          return Effect.gen(function* () {
+            const { db } = yield* Database.Service
+            yield* db
+              .insert(ProjectTable)
+              .values({ id: Project.ID.global, worktree: AbsolutePath.make(tmp.path), sandboxes: [] })
+              .onConflictDoNothing()
+              .run()
+              .pipe(Effect.orDie)
+            const settled = yield* settleTool(registry, call({ path: "touch.txt", content: "hello" }, "call-touch"))
+            expect(settled.result).toEqual({ type: "text", value: "Created file successfully: touch.txt" })
+            const target = path.join(yield* Effect.promise(() => fs.realpath(tmp.path)), "touch.txt")
+            const touches = yield* FileTouch.Service
+            const found = yield* touches.lookup({ projectID: Project.ID.global, paths: [target] })
+            expect(found).toHaveLength(1)
+            expect(found[0]?.sessionID).toBe(sessionID)
+            expect(found[0]?.op).toBe("create")
+            expect(found[0]?.provenance?.messageID).toBe(toolIdentity.assistantMessageID)
+            expect(found[0]?.fingerprint.size).toBe(5)
+          })
+        }),
+      (tmp) => Effect.promise(() => tmp[Symbol.asyncDispose]()),
+    ),
+  )
 })

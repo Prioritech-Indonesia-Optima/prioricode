@@ -5,7 +5,8 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Cause, Deferred, Effect, Exit, Fiber, Layer } from "effect"
 import { EditTool } from "../../src/tool/edit"
 import { FileCollision } from "../../src/tool/file-collision"
-import { disposeAllInstances, TestInstance } from "../fixture/fixture"
+import { FileTouch } from "@prioricode/core/file-touch"
+import { disposeAllInstances, requireInstance, TestInstance } from "../fixture/fixture"
 import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Format } from "../../src/format"
@@ -15,6 +16,10 @@ import { Truncate } from "@/tool/truncate"
 import { SessionID, MessageID } from "../../src/session/schema"
 import * as Tool from "../../src/tool/tool"
 import { testEffect } from "../lib/effect"
+import { Database } from "@prioricode/core/database/database"
+import { ProjectTable } from "@prioricode/core/project/sql"
+import { AbsolutePath } from "@prioricode/core/schema"
+import { Project } from "@prioricode/core/project"
 import { Watcher } from "@prioricode/core/filesystem/watcher"
 
 const ctx = {
@@ -41,6 +46,8 @@ const layer = LayerNode.compile(
     Truncate.node,
     Agent.node,
     FileCollision.node,
+    FileTouch.node,
+    Database.node,
   ]),
 )
 
@@ -626,4 +633,47 @@ describe("tool.edit", () => {
       }),
     )
   })
+})
+
+const ensureProject = Effect.fn("EditTouchTest.ensureProject")(function* (projectID: Project.ID, directory: string) {
+  const { db } = yield* Database.Service
+  yield* db
+    .insert(ProjectTable)
+    .values({ id: projectID, worktree: AbsolutePath.make(directory), sandboxes: [] })
+    .onConflictDoNothing()
+    .run()
+    .pipe(Effect.orDie)
+})
+
+describe("tool.edit touch attribution", () => {
+  it.instance("records a create touch when oldString is empty on a new file", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const instance = yield* requireInstance
+      yield* ensureProject(instance.project.id, test.directory)
+      const filepath = path.join(test.directory, "edit-created.txt")
+      yield* run({ filePath: filepath, oldString: "", newString: "brand new" })
+      const touches = yield* FileTouch.Service
+      const found = yield* touches.lookup({ projectID: instance.project.id, paths: [filepath] })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.sessionID).toBe(ctx.sessionID)
+      expect(found[0]?.op).toBe("create")
+      expect(found[0]?.provenance?.messageID).toBe(ctx.messageID)
+    }),
+  )
+
+  it.instance("records a modify touch for a replacement edit", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const instance = yield* requireInstance
+      yield* ensureProject(instance.project.id, test.directory)
+      const filepath = path.join(test.directory, "edit-modified.txt")
+      yield* put(filepath, "alpha beta\n")
+      yield* run({ filePath: filepath, oldString: "alpha beta", newString: "alpha gamma" })
+      const touches = yield* FileTouch.Service
+      const found = yield* touches.lookup({ projectID: instance.project.id, paths: [filepath] })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.op).toBe("modify")
+    }),
+  )
 })

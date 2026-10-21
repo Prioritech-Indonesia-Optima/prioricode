@@ -36,7 +36,10 @@ describe("FileTouch", () => {
         provenance: { messageID: "msg_1", callID: "call_1", model: "provider/model-x" },
       })
 
-      const found = yield* touches.lookup({ projectID: Project.ID.global, paths: ["/project/a.ts", "/project/missing"] })
+      const found = yield* touches.lookup({
+        projectID: Project.ID.global,
+        paths: ["/project/a.ts", "/project/missing"],
+      })
       expect(found).toHaveLength(1)
       expect(found[0]).toMatchObject({
         path: "/project/a.ts",

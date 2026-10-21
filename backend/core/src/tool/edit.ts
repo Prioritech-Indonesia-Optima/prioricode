@@ -13,13 +13,17 @@ import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
 import { EditObserver } from "../edit-observer"
 import { FileMutation } from "../file-mutation"
+import { FileTouch } from "../file-touch"
 import { FSUtil } from "../fs-util"
+import { Location } from "../location"
 import { LocationMutation } from "../location-mutation"
 import { Permission } from "../permission"
+import { SessionStore } from "../session/store"
 import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
+import { ToolTouchRecord } from "./touch-record"
 
 export const name = "edit"
 
@@ -409,6 +413,7 @@ const layer = Layer.effectDiscard(
     const fs = yield* FSUtil.Service
     const permission = yield* Permission.Service
     const observer = yield* EditObserver.Service
+    const recorder = yield* ToolTouchRecord.makeRecorder()
 
     yield* tools
       .register({
@@ -542,6 +547,7 @@ const layer = Layer.effectDiscard(
                   }),
                 )
                 const observation = yield* observer.afterEdit([result.target])
+                yield* ToolTouchRecord.recordWrites(recorder, context, [{ path: result.target, op: "modify" }])
                 return {
                   files: [
                     {
@@ -572,5 +578,15 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/edit",
   layer,
-  deps: [ToolRegistry.node, LocationMutation.node, FileMutation.node, FSUtil.node, Permission.node, EditObserver.node],
+  deps: [
+    ToolRegistry.node,
+    LocationMutation.node,
+    FileMutation.node,
+    FSUtil.node,
+    Permission.node,
+    EditObserver.node,
+    FileTouch.node,
+    Location.node,
+    SessionStore.node,
+  ],
 })

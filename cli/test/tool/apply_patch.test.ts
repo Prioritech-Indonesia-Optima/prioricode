@@ -6,15 +6,20 @@ import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Cause, Effect, Exit, Layer, Schema } from "effect"
 import { ApplyPatchTool } from "../../src/tool/apply_patch"
 import { FileCollision } from "../../src/tool/file-collision"
+import { FileTouch } from "@prioricode/core/file-touch"
 import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { Format } from "../../src/format"
 import { Agent } from "../../src/agent/agent"
 import { EventBridge } from "../../src/event-v2-bridge"
 import { Truncate } from "@/tool/truncate"
-import { TestInstance } from "../fixture/fixture"
+import { requireInstance, TestInstance } from "../fixture/fixture"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { testEffect } from "../lib/effect"
+import { Database } from "@prioricode/core/database/database"
+import { ProjectTable } from "@prioricode/core/project/sql"
+import { AbsolutePath } from "@prioricode/core/schema"
+import { Project } from "@prioricode/core/project"
 
 const it = testEffect(
   LayerNode.compile(
@@ -26,6 +31,8 @@ const it = testEffect(
       Truncate.node,
       Agent.node,
       FileCollision.node,
+      FileTouch.node,
+      Database.node,
     ]),
   ),
 )
@@ -595,6 +602,48 @@ EOF`
         ctx,
       )
       expect(result.output).not.toContain("changed since you last read it")
+    }),
+  )
+})
+
+describe("tool.apply_patch touch attribution", () => {
+  const ensureProject = Effect.fn("ApplyTouchTest.ensureProject")(function* (projectID: Project.ID, directory: string) {
+    const { db } = yield* Database.Service
+    yield* db
+      .insert(ProjectTable)
+      .values({ id: projectID, worktree: AbsolutePath.make(directory), sandboxes: [] })
+      .onConflictDoNothing()
+      .run()
+      .pipe(Effect.orDie)
+  })
+
+  it.instance("records create/modify/delete rows for a combined patch", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const instance = yield* requireInstance
+      yield* ensureProject(instance.project.id, test.directory)
+      const modifyPath = path.join(test.directory, "touch-modify.txt")
+      const deletePath = path.join(test.directory, "touch-delete.txt")
+      yield* Effect.promise(() => fs.writeFile(modifyPath, "line1\nline2\n"))
+      yield* Effect.promise(() => fs.writeFile(deletePath, "obsolete\n"))
+
+      const { ctx } = makeCtx()
+      const patchText =
+        "*** Begin Patch\n*** Add File: touch-add.txt\n+created\n*** Delete File: touch-delete.txt\n*** Update File: touch-modify.txt\n@@\n-line2\n+changed\n*** End Patch"
+      yield* execute({ patchText }, ctx)
+
+      const touches = yield* FileTouch.Service
+      const found = yield* touches.lookup({
+        projectID: instance.project.id,
+        paths: [path.join(test.directory, "touch-add.txt"), deletePath, modifyPath],
+      })
+      expect(found).toHaveLength(3)
+      const byPath = new Map(found.map((item) => [item.path, item]))
+      expect(byPath.get(path.join(test.directory, "touch-add.txt"))?.op).toBe("create")
+      expect(byPath.get(deletePath)?.op).toBe("delete")
+      expect(byPath.get(modifyPath)?.op).toBe("modify")
+      expect(byPath.get(deletePath)?.fingerprint).toEqual({ mtimeMs: 0, size: 0 })
+      expect(byPath.get(modifyPath)?.sessionID).toBe(ctx.sessionID)
     }),
   )
 })

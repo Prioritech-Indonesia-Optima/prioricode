@@ -8,6 +8,7 @@ import { Patch } from "../patch"
 import { createTwoFilesPatch, diffLines } from "diff"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { FileCollision } from "./file-collision"
+import { FileTouchRecord } from "./touch-record"
 import { trimDiff } from "./edit"
 import { LSP } from "@/lsp/lsp"
 import { LspDiagnostics } from "./lsp-diagnostics"
@@ -32,6 +33,7 @@ export const ApplyPatchTool = Tool.define(
     const format = yield* Format.Service
     const events = yield* EventBridge.Service
     const collision = yield* FileCollision.Service
+    const touch = yield* FileTouchRecord.make()
 
     const run = Effect.fn("ApplyPatchTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
@@ -270,9 +272,47 @@ export const ApplyPatchTool = Tool.define(
       }
 
       for (const change of fileChanges) {
-        if (change.type === "add") yield* collision.record(change.filePath, ctx.sessionID)
-        if (change.type === "update") yield* collision.record(change.filePath, ctx.sessionID)
-        if (change.type === "move" && change.movePath) yield* collision.record(change.movePath, ctx.sessionID)
+        if (change.type === "add") {
+          yield* collision.record(change.filePath, ctx.sessionID)
+          yield* touch.recordWrite({
+            ctx,
+            projectID: instance.project.id,
+            filepath: change.filePath,
+            op: "create",
+          })
+        }
+        if (change.type === "update") {
+          yield* collision.record(change.filePath, ctx.sessionID)
+          yield* touch.recordWrite({
+            ctx,
+            projectID: instance.project.id,
+            filepath: change.filePath,
+            op: "modify",
+          })
+        }
+        if (change.type === "move" && change.movePath) {
+          yield* collision.record(change.movePath, ctx.sessionID)
+          yield* touch.recordWrite({
+            ctx,
+            projectID: instance.project.id,
+            filepath: change.movePath,
+            op: "create",
+          })
+          yield* touch.recordWrite({
+            ctx,
+            projectID: instance.project.id,
+            filepath: change.filePath,
+            op: "delete",
+          })
+        }
+        if (change.type === "delete") {
+          yield* touch.recordWrite({
+            ctx,
+            projectID: instance.project.id,
+            filepath: change.filePath,
+            op: "delete",
+          })
+        }
       }
 
       // Publish file change events

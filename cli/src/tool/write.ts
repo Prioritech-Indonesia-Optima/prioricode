@@ -12,6 +12,7 @@ import { Format } from "../format"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { InstanceState } from "@/effect/instance-state"
 import { FileCollision } from "./file-collision"
+import { FileTouchRecord } from "./touch-record"
 import { trimDiff } from "./edit"
 import { assertExternalDirectoryEffect } from "./external-directory"
 import { MAX_PROJECT_DIAGNOSTICS_FILES } from "./lsp-diagnostics"
@@ -32,6 +33,7 @@ export const WriteTool = Tool.define(
     const events = yield* EventBridge.Service
     const format = yield* Format.Service
     const collision = yield* FileCollision.Service
+    const touch = yield* FileTouchRecord.make()
 
     return {
       description: DESCRIPTION,
@@ -70,6 +72,12 @@ export const WriteTool = Tool.define(
             yield* Bom.syncFile(fs, filepath, desiredBom)
           }
           yield* collision.record(filepath, ctx.sessionID)
+          yield* touch.recordWrite({
+            ctx,
+            projectID: instance.project.id,
+            filepath,
+            op: exists ? "modify" : "create",
+          })
           yield* events.publish(FileSystem.Event.Edited, { file: filepath })
           yield* events.publish(Watcher.Event.Updated, {
             file: filepath,

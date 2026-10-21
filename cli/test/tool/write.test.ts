@@ -5,6 +5,7 @@ import path from "path"
 import fs from "fs/promises"
 import { WriteTool } from "../../src/tool/write"
 import { FileCollision } from "../../src/tool/file-collision"
+import { FileTouch } from "@prioricode/core/file-touch"
 import { LSP } from "@/lsp/lsp"
 import { FSUtil } from "@prioricode/core/fs-util"
 import { EventBridge } from "../../src/event-v2-bridge"
@@ -14,8 +15,13 @@ import { Tool } from "@/tool/tool"
 import { Agent } from "../../src/agent/agent"
 import { SessionID, MessageID } from "../../src/session/schema"
 import { CrossSpawnSpawner } from "@prioricode/core/cross-spawn-spawner"
-import { disposeAllInstances, TestInstance } from "../fixture/fixture"
+import { disposeAllInstances, requireInstance, TestInstance } from "../fixture/fixture"
 import { testEffect } from "../lib/effect"
+
+import { Database } from "@prioricode/core/database/database"
+import { ProjectTable } from "@prioricode/core/project/sql"
+import { AbsolutePath } from "@prioricode/core/schema"
+import { Project } from "@prioricode/core/project"
 
 const ctx = {
   sessionID: SessionID.make("ses_test-write-session"),
@@ -43,6 +49,8 @@ const it = testEffect(
       Truncate.node,
       Agent.node,
       FileCollision.node,
+      FileTouch.node,
+      Database.node,
     ]),
   ),
 )
@@ -307,4 +315,52 @@ describe("tool.write", () => {
       }),
     )
   })
+})
+
+import { Database } from "@prioricode/core/database/database"
+import { ProjectTable } from "@prioricode/core/project/sql"
+import { AbsolutePath } from "@prioricode/core/schema"
+
+const ensureProject = Effect.fn("WriteTouchTest.ensureProject")(function* (projectID: Project.ID, directory: string) {
+  const { db } = yield* Database.Service
+  yield* db
+    .insert(ProjectTable)
+    .values({ id: projectID, worktree: AbsolutePath.make(directory), sandboxes: [] })
+    .onConflictDoNothing()
+    .run()
+    .pipe(Effect.orDie)
+})
+
+describe("tool.write touch attribution", () => {
+  it.instance("records a create touch naming the session with diff provenance", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const instance = yield* requireInstance
+      yield* ensureProject(instance.project.id, test.directory)
+      const filepath = path.join(test.directory, "touch-attribution.txt")
+      yield* run({ filePath: filepath, content: "hello" })
+      const touches = yield* FileTouch.Service
+      const found = yield* touches.lookup({ projectID: instance.project.id, paths: [filepath] })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.sessionID).toBe(ctx.sessionID)
+      expect(found[0]?.op).toBe("create")
+      expect(found[0]?.provenance?.messageID).toBe(ctx.messageID)
+      expect(found[0]?.fingerprint.size).toBe(5)
+    }),
+  )
+
+  it.instance("overwrite of an existing file records modify", () =>
+    Effect.gen(function* () {
+      const test = yield* TestInstance
+      const instance = yield* requireInstance
+      yield* ensureProject(instance.project.id, test.directory)
+      const filepath = path.join(test.directory, "existing-touch.txt")
+      yield* run({ filePath: filepath, content: "first" })
+      yield* run({ filePath: filepath, content: "second content" })
+      const touches = yield* FileTouch.Service
+      const found = yield* touches.lookup({ projectID: instance.project.id, paths: [filepath] })
+      expect(found).toHaveLength(1)
+      expect(found[0]?.op).toBe("modify")
+    }),
+  )
 })

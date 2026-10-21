@@ -13,6 +13,7 @@ import { ReadTool } from "./read"
 import { TaskTool } from "./task"
 import { SessionsTool } from "./sessions"
 import { Database } from "@prioricode/core/database/database"
+import { FileTouch } from "@prioricode/core/file-touch"
 import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
@@ -463,6 +464,7 @@ export const node = LayerNode.make({
     Session.node,
     Coordination.node,
     FileCollision.node,
+    FileTouch.node,
     SessionStatus.node,
     BackgroundJob.node,
     Provider.node,

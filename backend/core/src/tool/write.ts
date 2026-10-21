@@ -10,12 +10,17 @@ import { Effect, Layer, Schema } from "effect"
 import { makeLocationNode } from "../effect/app-node"
 import { EditObserver } from "../edit-observer"
 import { FileMutation } from "../file-mutation"
+import { FileTouch } from "../file-touch"
+import { FSUtil } from "../fs-util"
+import { Location } from "../location"
 import { LocationMutation } from "../location-mutation"
 import { Permission } from "../permission"
+import { SessionStore } from "../session/store"
 import { PermissionFailure } from "./permission-failure"
 import { ToolRegistry } from "./registry"
 import { Tool } from "./tool"
 import { Tools } from "./tools"
+import { ToolTouchRecord } from "./touch-record"
 
 export const name = "write"
 
@@ -54,6 +59,7 @@ const layer = Layer.effectDiscard(
     const files = yield* FileMutation.Service
     const permission = yield* Permission.Service
     const observer = yield* EditObserver.Service
+    const recorder = yield* ToolTouchRecord.makeRecorder()
 
     yield* tools
       .register({
@@ -97,6 +103,9 @@ const layer = Layer.effectDiscard(
                   .pipe(Effect.mapError(PermissionFailure.fromError))
                 const result = yield* files.writeTextPreservingBom({ target, content: input.content })
                 const observation = yield* observer.afterEdit([result.target])
+                yield* ToolTouchRecord.recordWrites(recorder, context, [
+                  { path: result.target, op: result.existed ? "modify" : "create" },
+                ])
                 return { ...result, ...observation }
               }).pipe(
                 Effect.mapError((error) =>
@@ -114,5 +123,15 @@ const layer = Layer.effectDiscard(
 export const node = makeLocationNode({
   name: "tool/write",
   layer,
-  deps: [ToolRegistry.node, LocationMutation.node, FileMutation.node, Permission.node, EditObserver.node],
+  deps: [
+    ToolRegistry.node,
+    LocationMutation.node,
+    FileMutation.node,
+    Permission.node,
+    EditObserver.node,
+    FileTouch.node,
+    FSUtil.node,
+    Location.node,
+    SessionStore.node,
+  ],
 })

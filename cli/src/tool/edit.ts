@@ -14,6 +14,7 @@ import { Watcher } from "@prioricode/core/filesystem/watcher"
 import { EventBridge } from "@/event-v2-bridge"
 import { Format } from "../format"
 import { FileCollision } from "./file-collision"
+import { FileTouchRecord } from "./touch-record"
 import { InstanceState } from "@/effect/instance-state"
 import { Snapshot } from "@/snapshot"
 import { assertExternalDirectoryEffect } from "./external-directory"
@@ -70,6 +71,7 @@ export const EditTool = Tool.define(
     const format = yield* Format.Service
     const events = yield* EventBridge.Service
     const collision = yield* FileCollision.Service
+    const touch = yield* FileTouchRecord.make()
 
     return {
       description: DESCRIPTION,
@@ -190,6 +192,12 @@ export const EditTool = Tool.define(
             }),
           )
           yield* collision.record(filePath, ctx.sessionID)
+          yield* touch.recordWrite({
+            ctx,
+            projectID: instance.project.id,
+            filepath: filePath,
+            op: params.oldString === "" ? "create" : "modify",
+          })
 
           let additions = 0
           let deletions = 0
