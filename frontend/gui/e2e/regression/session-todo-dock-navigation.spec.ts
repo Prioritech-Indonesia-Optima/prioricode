@@ -16,6 +16,14 @@ const activeTodos = [
   { id: "todo-3", content: "Close after the final todo", status: "in_progress", priority: "high" },
 ]
 
+// One objective, one stage, two steps: the header counts the objective only.
+const hierarchicalTodos = [
+  { id: "todo-h1", content: "Outline objective", status: "in_progress", priority: "high", depth: 0 },
+  { id: "todo-h2", content: "Outline stage", status: "in_progress", priority: "medium", depth: 1 },
+  { id: "todo-h3", content: "First step", status: "completed", priority: "low", depth: 2 },
+  { id: "todo-h4", content: "Second step", status: "in_progress", priority: "low", depth: 2 },
+]
+
 type EventPayload = {
   directory: string
   payload: Record<string, unknown>
@@ -100,6 +108,22 @@ test("animates todo lifecycle without replaying it across session tabs", async (
   events.push(todoEvent(sourceID, completedTodos))
   await expect(dock).toHaveCount(0)
   expect((await closing).some((sample) => sample.opacity > 0.05 && sample.opacity < 0.95)).toBe(true)
+
+  // A hierarchical outline reopens the dock: the header counts the single
+  // objective (not the four nested items), and both parent rows (objective and
+  // stage) show the same step-level progress over their shared two steps.
+  todos[sourceID] = hierarchicalTodos
+  events.push(todoEvent(sourceID, hierarchicalTodos))
+  await expect(dock).toBeVisible()
+  // The header number is an animated odometer whose visible text keeps rolling,
+  // so assert the stable accessible label: it counts the single objective.
+  await expect(dock.locator('span[aria-label*="todos completed"]')).toHaveAttribute(
+    "aria-label",
+    "0 of 1 todos completed",
+  )
+  await expect(dock.getByText("1/2", { exact: true })).toHaveCount(2)
+  await expect(dock.locator('[data-state="in_progress"]')).toHaveCount(3)
+
   todos[sourceID] = []
   events.push(todoEvent(sourceID, []))
 

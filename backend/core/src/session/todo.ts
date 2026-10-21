@@ -18,7 +18,17 @@ export const Status = SessionTodo.Status
 export const Priority = SessionTodo.Priority
 export const Event = SessionTodo.Event
 
-export { buildTree, depthOf, deriveStatus, isLeaf, normalize, outlineWarning, progress, subtree, subtreeLeaves } from "./todo-tree"
+export {
+  buildTree,
+  depthOf,
+  deriveStatus,
+  isLeaf,
+  normalize,
+  outlineWarning,
+  progress,
+  subtree,
+  subtreeLeaves,
+} from "./todo-tree"
 export type { Node } from "./todo-tree"
 
 export const validate = (todos: ReadonlyArray<Info>) => {
@@ -296,7 +306,8 @@ export const apply = (current: ReadonlyArray<Info>, input: OpInput): ApplyResult
   if (missing.length > 0) return rejected(`Unknown todo id(s): ${missing.join(", ")}`, base)
   const set = new Set(input.remove)
   const orphans = base.filter(
-    (todo, index) => set.has(todo.id!) && !isLeaf(base, index) && !subtree(base, index).every((item) => set.has(item.id!)),
+    (todo, index) =>
+      set.has(todo.id!) && !isLeaf(base, index) && !subtree(base, index).every((item) => set.has(item.id!)),
   )
   if (orphans.length > 0)
     return rejected(

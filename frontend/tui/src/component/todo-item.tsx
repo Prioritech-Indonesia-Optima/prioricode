@@ -3,10 +3,13 @@ import { useTheme } from "../context/theme"
 export interface TodoItemProps {
   status: string
   content: string
+  /** Spaces of indent before the status glyph (outline depth). */
+  indent?: number
 }
 
 export function TodoItem(props: TodoItemProps) {
   const { theme } = useTheme()
+  const indent = " ".repeat(props.indent ?? 0)
 
   return (
     <box flexDirection="row" gap={0}>
@@ -16,7 +19,7 @@ export function TodoItem(props: TodoItemProps) {
           fg: props.status === "in_progress" ? theme.warning : theme.textMuted,
         }}
       >
-        [{props.status === "completed" ? "✓" : props.status === "in_progress" ? "•" : " "}]{" "}
+        {indent}[{props.status === "completed" ? "✓" : props.status === "in_progress" ? "•" : " "}]{" "}
       </text>
       <text
         flexGrow={1}
@@ -26,31 +29,6 @@ export function TodoItem(props: TodoItemProps) {
         }}
       >
         {props.content}
-      </text>
-    </box>
-  )
-}
-
-export interface TodoGroupProps {
-  label: string
-  done: number
-  total: number
-  open: boolean
-}
-
-export function TodoPhaseHeader(props: TodoGroupProps) {
-  const { theme } = useTheme()
-
-  return (
-    <box flexDirection="row" gap={0}>
-      <text flexShrink={0} style={{ fg: theme.text }}>
-        {props.open ? "▼ " : "▶ "}
-      </text>
-      <text flexGrow={1} wrapMode="word" style={{ fg: theme.text }}>
-        <b>{props.label}</b>
-      </text>
-      <text flexShrink={0} style={{ fg: theme.textMuted }}>
-        {props.done}/{props.total}
       </text>
     </box>
   )

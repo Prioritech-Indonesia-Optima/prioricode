@@ -189,6 +189,35 @@ describe("SessionTodo", () => {
       )
     }),
   )
+
+  it.effect("persists a hierarchical outline: raw depths round-trip and parents re-derive on step updates", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const { db } = yield* Database.Service
+      const todos = yield* SessionTodo.Service
+      const objective = { content: "objective", depth: 0, status: "in_progress" as const, priority: "high" as const }
+      const stage = { content: "stage", depth: 1, status: "in_progress" as const, priority: "medium" as const }
+      const stepOne = { content: "step one", depth: 2, status: "in_progress" as const, priority: "low" as const }
+      const stepTwo = { content: "step two", depth: 2, status: "pending" as const, priority: "low" as const }
+      yield* todos.update({ sessionID, todos: [objective, stage, stepOne, stepTwo] })
+      const stored = yield* todos.get(sessionID)
+      expect(withoutIds(stored)).toEqual([objective, stage, stepOne, stepTwo].map((todo) => ({ ...todo })))
+      const rows = (yield* db.select().from(TodoTable).orderBy(asc(TodoTable.position)).all().pipe(Effect.orDie)).map(
+        (row) => row.depth,
+      )
+      expect(rows).toEqual([0, 1, 2, 2])
+      // completing step one hands the active leaf to step two and re-derives the parents
+      const id = (content: string) => stored.find((todo) => todo.content === content)!.id!
+      const applied = SessionTodo.apply(stored, {
+        action: "status",
+        status: [{ id: id("step one"), status: "completed" }, { id: id("step two"), status: "in_progress" }],
+      })
+      expect(applied.ok).toBe(true)
+      yield* todos.update({ sessionID, todos: applied.todos })
+      const after = yield* todos.get(sessionID)
+      expect(after.map((todo) => todo.status)).toEqual(["in_progress", "in_progress", "completed", "in_progress"])
+    }),
+  )
 })
 
 describe("SessionTodo.ensureIds", () => {
@@ -393,7 +422,7 @@ describe("SessionTodo tree", () => {
   test("outlineWarning names a depth jump that skips a level", () => {
     const warnings = SessionTodo.outlineWarning([item("a", 0), item("b", 2), item("c", 0)])
     expect(warnings).toHaveLength(1)
-    expect(warnings[0]!).toContain('jumps to depth 2')
+    expect(warnings[0]!).toContain("jumps to depth 2")
     expect(SessionTodo.outlineWarning([item("a", 0), item("b", 1), item("c", 0)])).toEqual([])
   })
 })

@@ -330,7 +330,7 @@ describe("TodoWriteTool", () => {
         }),
       )
       expect(result.type).toBe("text")
-      expect(resultText(result)).toContain('jumps to depth 2')
+      expect(resultText(result)).toContain("jumps to depth 2")
     }),
   )
 

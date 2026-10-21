@@ -375,8 +375,8 @@ function runTask(p: ToolProps<typeof TaskTool>): ToolInline {
 }
 
 function todoItems(p: ToolProps<typeof TodoWriteTool>) {
-  const meta = list<{ status?: string; content?: string }>(p.metadata.todos)
-  return meta.length > 0 ? meta : list<{ status?: string; content?: string }>(p.frame.input.todos)
+  const meta = list<{ status?: string; content?: string; depth?: number }>(p.metadata.todos)
+  return meta.length > 0 ? meta : list<{ status?: string; content?: string; depth?: number }>(p.frame.input.todos)
 }
 
 function runTodo(p: ToolProps<typeof TodoWriteTool>): ToolInline {
@@ -391,8 +391,9 @@ function runTodo(p: ToolProps<typeof TodoWriteTool>): ToolInline {
           return []
         }
 
+        const indent = "  ".repeat(typeof item?.depth === "number" ? item.depth : 0)
         const mark = item.status === "completed" ? "[✓]" : item.status === "in_progress" ? "[•]" : "[ ]"
-        return [`${mark} ${body}`]
+        return [`${indent}${mark} ${body}`]
       })
       .join("\n"),
   }
@@ -598,6 +599,7 @@ function snapTodo(p: ToolProps<typeof TodoWriteTool>): ToolSnapshot {
       {
         status: typeof item.status === "string" ? item.status : "",
         content,
+        depth: typeof item.depth === "number" ? item.depth : undefined,
       },
     ]
   })

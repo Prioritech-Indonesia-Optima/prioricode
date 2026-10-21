@@ -34,7 +34,7 @@ export const Info = Schema.Struct({
   }),
   depth: optional(NonNegativeInt).annotate({
     description:
-      "Nesting level in the plan outline: 0 = the objective, 1 = a stage, 2 = a concrete step. Keep it proportional to the work — most tasks are a 0 with a few 1s/2s; add stages only when the work genuinely has them. Never encode the level in content (no \"Phase 1:\" prefixes).",
+      'Nesting level in the plan outline: 0 = the objective, 1 = a stage, 2 = a concrete step. Keep it proportional to the work — most tasks are a 0 with a few 1s/2s; add stages only when the work genuinely has them. Never encode the level in content (no "Phase 1:" prefixes).',
   }),
 }).annotate({ identifier: "Todo" })
 export interface Info extends Schema.Schema.Type<typeof Info> {}

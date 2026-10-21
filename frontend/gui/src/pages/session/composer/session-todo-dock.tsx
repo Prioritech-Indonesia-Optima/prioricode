@@ -1,3 +1,4 @@
+import { progress } from "@prioricode/core/session/todo-tree"
 import type { Todo } from "@prioricode/sdk/v2"
 import { AnimatedNumber } from "@prioricode/ui/animated-number"
 import { Checkbox } from "@prioricode/ui/checkbox"
@@ -55,8 +56,10 @@ export function SessionTodoDock(props: {
     height: 78,
   })
 
-  const total = createMemo(() => props.todos.length)
-  const done = createMemo(() => props.todos.filter((todo) => todo.status === "completed").length)
+  // The header counts top-level objectives, not every nested step.
+  const objectives = createMemo(() => props.todos.filter((todo) => (todo.depth ?? 0) === 0))
+  const total = createMemo(() => objectives().length)
+  const done = createMemo(() => objectives().filter((todo) => todo.status === "completed").length)
   const label = createMemo(() => language.t("session.todo.progress", { done: done(), total: total() }))
   const progress = createMemo(() =>
     language
@@ -216,21 +219,40 @@ export function SessionTodoDock(props: {
   )
 }
 
+const idOf = (todo: Todo) => todo.id ?? todo.content
+
 function TodoList(props: { todos: Todo[] }) {
   const [store, setStore] = createStore({
     stuck: false,
     closed: {} as Record<string, boolean>,
   })
 
-  const groups = createMemo(() => {
-    const out: { phase: string | undefined; todos: Todo[] }[] = []
-    for (const todo of props.todos) {
-      const last = out[out.length - 1]
-      if (last && last.phase === todo.phase) last.todos.push(todo)
-      else out.push({ phase: todo.phase, todos: [todo] })
-    }
-    return out
-  })
+  // One row per item, positioned by its depth: parents (items with a deeper
+  // following sibling) collapse their subtree and show step-level progress.
+  const rows = createMemo(() =>
+    props.todos.map((todo, index) => {
+      const depth = todo.depth ?? 0
+      const isParent = index + 1 < props.todos.length && (props.todos[index + 1]!.depth ?? 0) > depth
+      let hidden = false
+      for (let j = index - 1; j >= 0; j--) {
+        const above = props.todos[j]!
+        if ((above.depth ?? 0) < depth) {
+          hidden = store.closed[idOf(above)] === false
+          break
+        }
+      }
+      const progressValue = isParent ? progress(props.todos, index) : undefined
+      return {
+        todo,
+        depth,
+        isParent,
+        hidden,
+        open: store.closed[idOf(todo)] !== false,
+        done: progressValue?.done ?? 0,
+        total: progressValue?.total ?? 0,
+      }
+    }),
+  )
 
   return (
     <div class="relative">
@@ -241,77 +263,80 @@ function TodoList(props: { todos: Todo[] }) {
           setStore("stuck", e.currentTarget.scrollTop > 0)
         }}
       >
-        <For each={groups()}>
-          {(group) => (
-            <div class="flex flex-col gap-1.5">
-              <Show when={group.phase}>
-                {(phase) => {
-                  const open = () => !store.closed[phase()]
-                  const done = () => group.todos.filter((todo) => todo.status === "completed").length
-                  return (
-                    <button
-                      type="button"
-                      data-action="session-todo-phase-toggle"
-                      data-phase={phase()}
-                      aria-expanded={open()}
-                      onClick={() => setStore("closed", phase(), (value) => !value)}
-                      class="flex items-center gap-1.5 py-0.5 text-left cursor-pointer select-none"
-                    >
-                      <svg
-                        viewBox="0 0 12 12"
-                        width="12"
-                        height="12"
-                        class="shrink-0 transition-transform duration-150"
-                        style={{ transform: open() ? "rotate(0deg)" : "rotate(-90deg)" }}
-                        aria-hidden="true"
+        <For each={rows()}>
+          {(row) => (
+            <Show when={!row.hidden}>
+              {(_) => {
+                const todo = row.todo
+                const toggleKey = idOf(todo)
+                return (
+                  <div class="flex items-start gap-1.5" style={{ "padding-inline-start": `${12 * row.depth}px` }}>
+                    <Show when={row.isParent} keyed>
+                      <button
+                        type="button"
+                        data-action="session-todo-node-toggle"
+                        data-id={toggleKey}
+                        aria-expanded={row.open}
+                        onClick={() => setStore("closed", toggleKey, (value) => (value !== false ? false : true))}
+                        class="shrink-0 p-0 mt-0.5 cursor-pointer select-none"
                       >
-                        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" />
-                      </svg>
-                      <span class="text-13-regular font-medium text-text-strong min-w-0 break-words">{phase()}</span>
-                      <span class="text-12-regular text-text-weak shrink-0">
-                        {done()}/{group.todos.length}
-                      </span>
-                    </button>
-                  )
-                }}
-              </Show>
-              <Show when={!group.phase || !store.closed[group.phase]}>
-                <Index each={group.todos}>
-                  {(todo) => (
-                    <Checkbox
-                      readOnly
-                      checked={todo().status === "completed"}
-                      indeterminate={todo().status === "in_progress"}
-                      data-in-progress={todo().status === "in_progress" ? "" : undefined}
-                      data-state={todo().status}
-                      icon={dot(todo().status)}
-                      style={{
-                        "--checkbox-align": "flex-start",
-                        "--checkbox-offset": "1px",
-                        transition: "opacity 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1))",
-                        opacity: todo().status === "pending" ? "0.94" : "1",
-                      }}
-                    >
-                      <TextStrikethrough
-                        active={todo().status === "completed" || todo().status === "cancelled"}
-                        text={todo().content}
-                        class="text-14-regular min-w-0 break-words"
+                        <svg
+                          viewBox="0 0 12 12"
+                          width="12"
+                          height="12"
+                          class="shrink-0 transition-transform duration-150"
+                          style={{ transform: row.open ? "rotate(0deg)" : "rotate(-90deg)" }}
+                          aria-hidden="true"
+                        >
+                          <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" fill="none" />
+                        </svg>
+                      </button>
+                    </Show>
+                    <Show when={!row.isParent} keyed>
+                      <span class="w-3 shrink-0" />
+                    </Show>
+                    <div class="min-w-0 flex-1 flex items-start gap-1.5">
+                      <Checkbox
+                        readOnly
+                        checked={todo.status === "completed"}
+                        indeterminate={todo.status === "in_progress"}
+                        data-in-progress={todo.status === "in_progress" ? "" : undefined}
+                        data-state={todo.status}
+                        icon={dot(todo.status)}
                         style={{
-                          "line-height": "var(--line-height-normal)",
-                          transition:
-                            "color 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)), opacity 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1))",
-                          color:
-                            todo().status === "completed" || todo().status === "cancelled"
-                              ? "var(--text-weak)"
-                              : "var(--text-strong)",
-                          opacity: todo().status === "pending" ? "0.92" : "1",
+                          "--checkbox-align": "flex-start",
+                          "--checkbox-offset": "1px",
+                          flex: "1 1 auto",
+                          transition: "opacity 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1))",
+                          opacity: todo.status === "pending" ? "0.94" : "1",
                         }}
-                      />
-                    </Checkbox>
-                  )}
-                </Index>
-              </Show>
-            </div>
+                      >
+                        <TextStrikethrough
+                          active={todo.status === "completed" || todo.status === "cancelled"}
+                          text={todo.content}
+                          class="text-14-regular min-w-0 break-words"
+                          style={{
+                            "line-height": "var(--line-height-normal)",
+                            transition:
+                              "color 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1)), opacity 220ms var(--tool-motion-ease, cubic-bezier(0.22, 1, 0.36, 1))",
+                            color:
+                              todo.status === "completed" || todo.status === "cancelled"
+                                ? "var(--text-weak)"
+                                : "var(--text-strong)",
+                            opacity: todo.status === "pending" ? "0.92" : "1",
+                          }}
+                        />
+                      </Checkbox>
+                      <Show when={row.isParent} keyed>
+                        <span class="text-12-regular text-text-weak shrink-0 mt-1.5">
+                          {row.done}/{row.total}
+                        </span>
+                      </Show>
+                    </div>
+                  </div>
+                )
+              }}
+            </Show>
           )}
         </For>
       </div>

@@ -55,6 +55,10 @@ One process-local execution span that promotes eligible input and runs required 
 The durable, per-session work checklist owned outside conversational memory; the plan in force. Agents mutate it in place through the `todowrite` tool by stable item id (`add`, `status`, `edit`, `remove`), and a full `replace` is gated behind an explicit confirmation of the unfinished items it discards. It is re-anchored into the **System Context** when unattended and read directly from storage during compaction, so the stored list always wins over an agent's recollection.
 _Avoid_: Todo plan, scratch list
 
+**Todo Outline**:
+The hierarchical shape of a **Session Todo List**: a flat, ordered array whose structure comes from each item's `depth` (0 = the objective, 1 = a stage, 2 = a concrete step). Leaves — items with no deeper following siblings — are the unit of completion: only a leaf may be `in_progress`, and a parent's status is derived from its descendant leaves (complete only when every required step is; cancelled when every step is dropped), re-derived on every write. Progress at any level counts its required (non-cancelled) descendant steps; top-level summaries count depth-0 objectives.
+_Avoid_: Todo tree (it is stored flat), phase (a retired flat grouping label retained for compatibility)
+
 **Model Tool Output**:
 The bounded projection of a Core-executed tool result persisted in Session history and replayed to the model. A tool may shape this projection semantically, but the Tool Registry enforces the final size limit.
 
