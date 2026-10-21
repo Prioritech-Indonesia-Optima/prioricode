@@ -1,42 +1,41 @@
 ---
 title: "Cross-session coordination"
-description: "Run several PrioriCode sessions on one project and let them discover each other, message, ask, claim files, and avoid collisions via the sessions tool."
+description: "Run several PrioriCode sessions on one project and let them query each other, ack each other, and announce repo-wide moves via the sessions tool."
 ---
 
 You can run five agents on one repo. Whether they finish the feature or merge into a knife-fight depends on whether they know about each other. PrioriCode gives them that: a durable, cross-process coordination channel built into the product.
 
 ## The setup
 
-Start multiple `prioricode` processes in the same project (two terminals, tmux panes, whatever). They share state through the project's local database — session presence, messages, and file claims live in a `session_coordination` channel backed by SQLite (WAL mode), so coordination works across processes and survives a crash.
+Start multiple `prioricode` processes in the same project (two terminals, tmux panes, whatever). They share state through the project's local database — session presence and messages live in a `session_coordination` ledger backed by SQLite (WAL mode), so coordination works across processes and survives a crash.
 
-Each session can see its siblings: id, title, busy/idle, last-active, and what files they've claimed. In the TUI, `/coordination` opens the roster and inbox; a footer indicator marks unread items and pending requests.
+Every session automatically knows who its siblings are: a read-only roster (id, title, busy/idle) is injected into each agent's context on every turn — no polling. And whenever a **new session** receives its first user message, it announces itself to every live peer: session id, title, and a gist of its first task. Peers learn about new arrivals without anyone asking. In the TUI, `/coordination` opens the ledger; a footer indicator marks unread notes and escalations.
 
-## What sessions say to each other
+## The three actions
 
-From inside a session, the agent uses the `sessions` tool:
+From inside a session, the agent uses the `sessions` tool — and it has exactly three verbs:
 
-| Action              | Kind            | What it does                                                                                                                                                                             |
-| ------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `discover`          | read            | The roster: siblings, their state and claims, unread mail, and the receipt ledger of what you sent.                                                                                      |
-| `send`              | fire-and-forget | A note into a peer's inbox. A busy peer reads it at its next step boundary; an idle peer is woken within seconds.                                                                        |
-| `ask`               | needs an answer | Blocks up to `timeout` s (default 60, max 300) for a reply, then reports exactly how far delivery got. `thread_id` continues a negotiation.                                              |
-| `respond`           | answer          | Replies to a request by `request_id`. Exactly one response per request — enforced at the database level.                                                                                 |
-| `wait`              | poll            | Re-check an outstanding `ask` by request id without spamming the peer.                                                                                                                   |
-| `notify`            | completion      | "Tell me when this peer goes idle" — a one-shot subscription (default expiry 12 h), optionally with a reminder note. This is how you wait for someone to _finish_ work without blocking. |
-| `claim` / `release` | advisory locks  | Declare the paths (or logical resources, like `release:main`) you're actively editing. Peers see claims in the roster and are expected to re-read before touching them.                  |
+| Action     | Kind            | What it does                                                                                                                                                                                          |
+| ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `query`    | ask or tell     | A durable note into one peer's inbox, with or without a question in it. Fire-and-forget: a busy peer reads it at its next step boundary, an idle peer wakes within seconds. The answer arrives back in the asker's own context later — nothing blocks. |
+| `respond`  | reply + ACK     | The universal answer primitive, keyed by `request_id`. **Every note a session receives owes exactly one respond** — a real answer or a one-line ack. Exactly one respond per note, enforced at the database level. Corrections ride a new `query`.  |
+| `broadcast`| announce        | Fires a `query` to every live peer at once (sharing one group id) before a big shared-state move — `git stash`, `git reset`, branch switches, pushes to shared branches. It does not wait and there is no approval gate: peers whose work is affected query the broadcaster with an objection, and objections are handled as they land. |
 
-The tool contract itself — the guidance the agents follow — lives in the product at `cli/src/tool/sessions.txt`. It reads like good office etiquette: don't wake anyone to say hi, don't ask in a loop after a timeout, never send social acknowledgements ("noted", "thanks") — silence means noted.
+The tool contract itself — the guidance the agents follow — lives in the product at `cli/src/tool/sessions.txt`. It reads like good office etiquette: don't wake anyone to say hi, don't re-query after a timeout, never respond to a reply.
+
+Negotiations thread: a `query` can carry a prior `thread_id` to continue an exchange with full context instead of starting fresh.
 
 ## Properties the channel keeps
 
-- **One response per request.** A peer's standing "responder" may answer on its behalf; the owner can then post a correction with `send`, but a second `respond` is impossible by construction.
-- **Nothing is silently dropped.** Notes move queued → seen → received with durable delivery; a crashed delivery is re-queued. A request that ages past its deadline is **escalated to you** (the human) before it expires — the channel's built-in escape hatch.
-- **Records don't wake; messages do.** Bookkeeping entries never trigger a wake turn — that's the loop-breaker that keeps chatty sessions from infinite-looping each other.
-- **Presence is cross-process truth.** Each process mirrors busy/idle transitions into a presence table with heartbeats; a crashed session reads as idle after its heartbeat goes stale (72 h marks roster entries STALE).
-- **A watcher does the boring waiting.** A lightweight watcher (2-second cycle) delivers notes and spawns responder children under leases, so idle peers actually get woken — no polling loops.
+- **Everything is traceable.** Every row carries sender, recipient, the assistant message (and tool call) that produced it, its group for fan-outs, and the full lifecycle: created → injected into the peer's context (stamped with the receiver's turn id) → acknowledged → responded. The `/coordination` ledger shows the state per note with timestamps; sessions also see an ambient "outstanding notes" count.
+- **Nothing is silently dropped.** Delivery is exactly-once at turn boundaries; a crashed delivery is re-queued and re-delivered.
+- **Silence escalates — once.** A query nobody answers past the deadline is **escalated to you** (the human), then expires (terminal) after a further grace. Broadcasts and announces never escalate; only direct queries do.
+- **Only queries and replies wake.** Ambient rows (announcements, ledger records) never burn a model turn — the loop-breaker that keeps chatty sessions from infinite-looping each other. Reply chains also terminate by structure: you cannot respond to a response.
+- **Presence is cross-process truth.** Each process mirrors busy/idle transitions into a presence table with heartbeats; a crashed session reads as idle after its heartbeat goes stale (72 h marks roster entries stale and skips them as announce targets).
+- **A watcher does the boring waiting.** A lightweight watcher (2-second cycle) wakes idle peers with unread queries, recovers crashed deliveries, escalates and expires overdue notes, and posts the session-init announces — no polling loops anywhere.
 
 <Note>
-  Rate limits keep things sane: 10 messages/minute per sender (tune `PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE`),
+  Rate limits keep things sane: 10 notes/minute per sender-recipient pair (tune `PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE`),
   5-minute dedupe window for identical repeats while the original is unprocessed, inbox cap of 50, and a 15-minute
   escalation deadline (`PRIORICODE_COORDINATION_ESCALATION_MS`).
 </Note>
@@ -45,10 +44,9 @@ The tool contract itself — the guidance the agents follow — lives in the pro
 
 You benefit from coordination even if you never touch the tool:
 
-- **Split the work.** "You two: one does the migration, one does the UI" — the sessions claim paths, and the tool's file lists act as collision warnings before edits happen, not after.
-- **Hand off.** A session that finishes phase 1 can `notify`-subscribe to phase 2's owner and continue other work meanwhile, instead of babysitting.
-- **Audit.** `/coordination` shows what's pending, delivered, and answered; each request has a readable lifecycle state (pending, injected, leased, acked, answered, escalated, expired).
-- **Stay in charge of escalation.** If a peer can't answer, the request surfaces to you. The responder child answers out-of-band with a best-effort note prefixed `[answered by … coordination responder …]` — treat those as leads to verify, not gospel. The main agent gets a `[handled for you]` record and can post a correction.
+- **Split the work.** "You two: one does the migration, one does the UI" — each session can simply `query` its sibling about what it's touching and negotiate, and edit-time collision notices nudge agents to re-read before overwriting.
+- **Stay in charge of escalation.** If a peer can't answer, the query surfaces to you; `/coordination` counts them and the footer shows a warning.
+- **Audit.** `/coordination` shows every note you received and sent with its lifecycle state (`pending`, `injected`, `acked`, `answered`, `escalated`, `expired`), group attribution for broadcasts, and ages.
 
 ## Try it for real
 
@@ -61,12 +59,10 @@ cd your-project && prioricode
 cd your-project && prioricode
 ```
 
-In A: _"Ask your sibling session what it's working on and report back."_ Watch B's footer light up; the reply lands in A. Then have A `claim` a file and check that B's roster shows it.
+In A: _"Ask your sibling session what it's working on and report back."_ A's agent `query`s B; B's footer lights up; the reply lands in A's context and the agent reports it. Now start a third session C and give it a task — A and B each receive C's announce within seconds, and owe it one short ack.
 
 <Note>
-  Coordination is opt-out-able for the paranoid or the single-process: `PRIORICODE_DISABLE_COORDINATION_RESPONDER=1`
-  turns off responder children (you'll answer requests yourself, or they escalate). The tool is also permission-gated
-  per action — like everything else in [permissions](/using/permissions), the agent asks before it messages.
+  Coordination is permission-gated per action — like everything else in [permissions](/using/permissions), the agent asks before it messages. Older saved rules keyed to the removed actions (`send`, `ask`, `wait`, `notify`, `claim`, `release`) no longer match anything; re-grant them for `query`/`respond`/`broadcast` if you had per-action rules.
 </Note>
 
 ## Related

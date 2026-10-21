@@ -117,7 +117,7 @@ PrioriCode keeps the entire OpenCode core — the terminal UI, desktop app, agen
 | Tunable context compaction                   |    ✓     |     ✓      |
 | Cross-session coordination (`sessions` tool) |    —     |     ✓      |
 
-**Cross-session coordination.** Concurrent PrioriCode sessions working on the same project can coordinate through a built-in `sessions` tool: discover sibling sessions, claim files to avoid edit collisions, send messages, and ask questions with a bounded wait. Notes are durable and delivered automatically — a background watcher wakes an idle session so it reads a peer's note without polling.
+**Cross-session coordination.** Concurrent PrioriCode sessions working on the same project coordinate through a built-in `sessions` tool with three verbs: `query` (ask or tell a peer), `respond` (the reply every received note is owed), and `broadcast` (announce a repo-wide move to all live peers). Each session also auto-announces itself to its siblings when its first user message arrives. Notes are durable and delivered exactly-once — a background watcher wakes an idle session so it reads a peer's note without polling, and every note is traceable through its pending → injected → acked → responded lifecycle.
 
 **Tunable context compaction.** Control how a full context window is handled with the `compaction` config: reserve a token buffer, enable or disable automatic compaction, and tune how many recent turns or tokens are preserved verbatim.
 

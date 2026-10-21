@@ -227,3 +227,59 @@ Before stabilizing the client API:
 ## Flagged ambiguities
 
 - Legacy `experimental.chat.system.transform` can mutate the assembled baseline system prompt arbitrarily, but V2 plugins do not yet expose an equivalent hook. Decide separately whether to port it, replace dynamic uses with plugin-defined **Context Sources**, or narrow its semantics.
+
+## Cross-session coordination
+
+Concurrent **Session** processes that share one project coordinate through one durable channel. This is inter-_process_ negotiation between peers — distinct from **Session Drain** and tool-level delegation, which are process-_local_ execution coordination.
+
+**Coordination Channel**:
+The durable, cross-process ledger (`session_coordination`) through which sibling **Session** processes negotiate shared work. Every row is readable and writable by any process attached to the shared database, so no in-memory bus exists to lose messages to. Its stored `kind` literals are frozen vocabulary; the model-facing verbs map onto them (query→`request`, respond→`response`, announce→`message`) and must never be renamed.
+_Avoid_: message bus, queue (it is a stamp-only ledger, not a stream)
+
+**Note**:
+One row of the **Coordination Channel** — a single traced unit of peer exchange carrying sender, recipient, originating assistant message and tool call, lifecycle timestamps, and optional **Thread** and **Group** attribution.
+_Avoid_: message (reserved for conversational content), mail
+
+**Query**:
+A **Note** from one session to another that owes an answer or acknowledgement — the ask, the tell, and the per-peer leg of a **Broadcast** alike. Fire-and-forget: the asker's next turns receive the **Response** as an injected note; nothing blocks.
+_Avoid_: ask, send, request (the stored kind name is an implementation detail)
+
+**Respond**:
+The universal reply-and-acknowledgement **Note**: every **Query** or **Announcement** a session receives owes exactly one **Respond** from its owner — an answer or a short ack. Exactly one per note, enforced by a unique index; a reply chain terminates at depth two because a **Response** is never itself respondable.
+_Avoid_: ack (an ack is just a short Respond), reply
+
+**Broadcast**:
+A one-way announcement of a repo-wide shared-state move, fanned out as one **Query** per live peer sharing a **Group** id. It waits for nobody and gates nothing; objections arrive as ordinary **Query** rows.
+_Avoid_: warning, poll, gate
+
+**Announcement**:
+The ambient **Note** each new root **Session** posts to every live peer once its first real user message exists — id, title, and a gist of the task. **Announcement** rows never wake a session and never escalate; idempotency is settled by a deterministic per-recipient primary key.
+_Avoid_: join message, presence ping
+
+**Ack Ledger**:
+The stamp triple each **Note** carries through delivery — injected (`time_read`), acknowledged (`time_ack`), and the optional escalation/expiry stamps — moving forward only. Delivery recovery re-queues claimed-but-unacked rows; it never rewinds a stamp.
+_Avoid_: receipt log, status table
+
+**Delivery Token**:
+The receiver's assistant-message id that carried a **Note** injection; the **Ack Ledger** acks only claims bearing the same token, so a finished turn can never settle another turn's re-claim.
+_Avoid_: claim id, lease (the retired responder lease was a different thing)
+
+**Thread**:
+The shared spine id linking a **Query** with its **Response** and any follow-up **Query** rounds, so a negotiation carries its own context.
+_Avoid_: conversation
+
+**Group**:
+The fan-out attribution id shared by all per-recipient rows of one **Broadcast** or **Announcement**, so responses and ledger views aggregate per announcement.
+_Avoid_: thread (a Thread continues one exchange; a Group is one announcement spread across many)
+
+**Escalation**:
+The human-facing escape hatch: a **Query** unanswered past its deadline is stamped once and surfaced in the coordination view; after a further grace it **Expires** terminally. Only **Query** rows escalate — **Announcement** and lifecycle records never do.
+_Avoid_: alert, timeout
+
+**Presence**:
+The durable cross-process busy/idle truth of a **Session**, mirrored from in-memory status with heartbeats; a crashed owner reads as idle once its heartbeat goes stale. Wake decisions and announce audiences are computed from Presence, never from a single process's status map.
+_Avoid_: liveness, heartbeat (the heartbeat is an input to it)
+
+**Live Peer**:
+A root **Session** in the same project that is unarchived and not stale — the only valid targets for **Query** and the audience of **Broadcast** and **Announcement**. Children (subagents) are never peers.
+_Avoid_: sibling session (roster wording), neighbor

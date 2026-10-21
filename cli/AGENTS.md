@@ -133,14 +133,15 @@ Plain async code should pass explicit context or stay inside an Effect fiber; do
 
 ## Cross-session coordination (the `sessions` tool)
 
-Concurrent sessions on one project coordinate through a durable, cross-process channel: the `session_coordination` table (shared SQLite, WAL). The model-facing contract is `src/tool/sessions.txt`; the mechanism is `src/session/{coordination,coordination-watcher,presence}.ts`. Invariants that must hold:
+Concurrent sessions on one project coordinate through a durable, cross-process channel: the `session_coordination` ledger (shared SQLite, WAL). The model-facing contract is `src/tool/sessions.txt`; the mechanism is `src/session/{coordination,coordination-watcher,presence}.ts`. The tool has exactly three actions — `query` (ask/tell, fire-and-forget), `respond` (the universal reply+ACK), `broadcast` (per-peer query fan-out sharing a `group_id`) — over stored kind literals that are **frozen vocabulary** (query→`request`, respond→`response`, announce→`message`; never rename the stored kinds — every rate-limit/dedupe/escalation/index filter keys on them, and old/new builds share one DB). Invariants that must hold:
 
-- **One response per request.** A unique partial index on `reply_to WHERE kind='response'` enforces it. A session's standing responder may answer on its behalf; the owner corrects via `send`, never a second `respond`.
-- **A lease is a spawn permit.** The atomic `claimUnanswered` / `claimOrphanedInjected` claim doubles as the cross-process lock that lets exactly one watcher spawn a responder child. Lease tokens carry a spawn timestamp and are only re-aged past `RESPONDER_LEASE_TTL`.
-- **Records and lifecycle notices never wake.** Only `message` / `response` rows justify a wake turn — this is the loop breaker.
+- **One respond per note.** A unique partial index on `reply_to WHERE kind='response'` enforces it; a second respond is refused by the tool, and corrections ride a new `query` referencing the note id. Reply chains terminate at depth two — `respond` only accepts `request`/`message` rows.
+- **Injection is exactly-once.** `claimUnread` with the receiver's assistant-message id as delivery token is the single delivery point; `markAck` settles the step that consumed the note, and `unclaimStaleUnacked` re-queues crashed deliveries.
+- **Only `request` and `response` rows wake.** Queries and broadcast rows wake idle peers (their owner is the only possible answerer); `message` (session-init announce) and `record` (escalation/expiry audit) rows never spend a wake turn — this is the loop breaker.
 - **Presence is the cross-process truth for busy/idle.** `SessionStatus` (in-memory, per-process) mirrors every transition into `session_presence`; a crashed owner reads as idle once its heartbeat goes stale.
-- **`notify` is the completion primitive.** Waiting for a peer to finish work uses a one-shot `notify` subscription (then keep working), not a long blocking `ask`.
+- **Announce is idempotent by deterministic PK.** The watcher announces a born root once per (newcomer, peer) via `postOnce` (`ann:<sid>:<peer>` id, group `ann:<sid>`); restarts and racing processes settle at the primary key and never defect the sweep.
+- **The ledger is stamp-only.** Lifecycle columns (read/ack/escalate/expire) move forward only; recovery goes through unclaim/requeue, never rewrites.
 
 Schema changes go through `bun run script/migration.ts` from `backend/core` and must be idempotent (cross-process migration race). After changing any HttpApi route, regenerate the SDK: `bun run build` from `backend/sdk/js`.
 
-Tests: `bun test test/session/coordination.test.ts test/session/presence.test.ts test/session/prompt.test.ts`. The full lifecycle (ask→responder, notify→idle→wake, mid-injection takeover, escalation) runs in-process against the real 2s watcher via `coordinationIt` in `test/session/prompt.test.ts`.
+Tests: `bun test test/session/coordination.test.ts test/session/presence.test.ts test/session/prompt.test.ts`. The full lifecycle (query→wake→respond, announce idempotency, mid-turn follow-up turns, escalation→expiry) runs in-process against the real 2s watcher via `coordinationIt` in `test/session/prompt.test.ts`.

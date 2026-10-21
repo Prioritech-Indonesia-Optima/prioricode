@@ -40,7 +40,7 @@ Tools are the agent's hands. Each one is permission-gated by its name (see the `
 | **websearch**            | `query`, `numResults?` (8), `livecrawl?`, `type?` (`auto/fast/deep`), `contextMaxCharacters?` (10,000) | Backends: Exa or Parallel over MCP; chosen by `PRIORICODE_WEBSEARCH_PROVIDER` / enable flags / deterministic session split. Gate: hosted PrioriCode provider or Exa/Parallel enabled. |
 | **skill**                | `name`                                                                                                 | Loads a discovered skill's body into context (plus base dir + 10-file sample listing). Permission pattern = skill name.                                                               |
 | **lsp** _(experimental)_ | `operation`, `filePath`, `line`, `character`, `query?`                                                 | 9 navigation ops (definition, references, hover, symbols, implementation, call hierarchy). Gate: `PRIORICODE_EXPERIMENTAL_LSP_TOOL`.                                                  |
-| **sessions**             | `action: discover\|send\|ask\|respond\|wait\|notify\|claim\|release`, + per-action params              | Cross-session coordination ([full page](/using/coordination)): ask timeout default 60 s/max 300 s; notify expiry 12 h; permission pattern = action name.                              |
+| **sessions**             | `action: query\|respond\|broadcast`, + `target`/`message`/`request_id`/`thread_id` per action            | Cross-session coordination ([full page](/using/coordination)): every note owes one `respond`; `broadcast` fans out to live peers with a shared group id; permission pattern = action name.                              |
 
 ## Conditional & special
 

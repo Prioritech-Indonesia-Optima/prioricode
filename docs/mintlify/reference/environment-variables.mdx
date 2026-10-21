@@ -84,11 +84,10 @@ Truthiness for on/off vars: `1` or `true` (case-insensitive). Grouped by what th
 
 | Variable                                        | Effect                                             | Default           |
 | ----------------------------------------------- | -------------------------------------------------- | ----------------- |
-| `PRIORICODE_DISABLE_COORDINATION_RESPONDER`     | no responder children; requests escalate to humans | off               |
 | `PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE` | per-sender send budget                             | `10`              |
 | `PRIORICODE_COORDINATION_DEDUPE_WINDOW_MS`      | identical-repeat suppression window                | `300000`          |
 | `PRIORICODE_COORDINATION_INBOX_CAP`             | max unread inbox rows                              | `50`              |
-| `PRIORICODE_COORDINATION_ESCALATION_MS`         | unanswered-request escalation deadline             | `900000` (15 min) |
+| `PRIORICODE_COORDINATION_ESCALATION_MS`         | unanswered-query escalation deadline             | `900000` (15 min) |
 | `PRIORICODE_COORDINATION_EXPIRY_GRACE_MS`       | grace after escalation before expiry               | `900000`          |
 
 ## Experimental (flag-gated features)
