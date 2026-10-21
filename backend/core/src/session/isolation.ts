@@ -289,7 +289,9 @@ const layer = Layer.effect(
 
     const provisionSafe = (input: ProvisionInput) =>
       provision(input).pipe(
-        Effect.catch((cause) =>
+        // The never-fail contract is TOTAL: typed errors AND defects (a fake
+        // or unreadable directory makes platform calls die, not fail).
+        Effect.catchCause((cause) =>
           Effect.logWarning("worktree provisioning failed; session stays on the shared checkout", {
             sessionID: input.sessionID,
             cause,

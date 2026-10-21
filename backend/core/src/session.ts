@@ -244,7 +244,7 @@ const layer = Layer.effect(
           Effect.map(config.entries(), (entries) => Config.latest(entries, "worktree")),
         ).pipe(
           Effect.provide(locations.get(input.location)),
-          Effect.catch(() => Effect.succeed(undefined)),
+          Effect.catchCause(() => Effect.succeed(undefined)),
         )
         const isolated = yield* isolation.provision({
           projectID: project.id,
