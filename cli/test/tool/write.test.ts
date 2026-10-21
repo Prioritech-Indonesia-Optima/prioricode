@@ -317,10 +317,6 @@ describe("tool.write", () => {
   })
 })
 
-import { Database } from "@prioricode/core/database/database"
-import { ProjectTable } from "@prioricode/core/project/sql"
-import { AbsolutePath } from "@prioricode/core/schema"
-
 const ensureProject = Effect.fn("WriteTouchTest.ensureProject")(function* (projectID: Project.ID, directory: string) {
   const { db } = yield* Database.Service
   yield* db
