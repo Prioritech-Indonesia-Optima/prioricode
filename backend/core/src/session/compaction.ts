@@ -350,7 +350,7 @@ export const buildPrompt = (input: {
     input.todos === undefined || input.todos.trim() === ""
       ? []
       : [
-          `The session's live todo list, read directly from storage — more authoritative than anything recalled from the conversation:\n\n<current-todos>\n${input.todos.trim()}\n</current-todos>\nCopy every open item into "Work State / Active" with its exact content, its (td_…) id, and its phase heading, finished items into "Completed" with their ids, and base "Next Move" on the first open item in list order. Post-compaction work addresses items by those ids — never lose one.`,
+          `The session's live todo list, read directly from storage — more authoritative than anything recalled from the conversation:\n\n<current-todos>\n${input.todos.trim()}\n</current-todos>\nCopy every open item into "Work State / Active" with its exact content, its (td_…) id, and its indentation (the outline is objective → stage → step), finished items into "Completed" with their ids, and base "Next Move" on the first open item in list order. Post-compaction work addresses items by those ids — never lose one.`,
         ]
   const focus =
     input.instructions === undefined || input.instructions.trim() === ""
