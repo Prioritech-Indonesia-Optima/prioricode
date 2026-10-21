@@ -73,7 +73,8 @@ export const Info = Schema.Struct({
       setupCommand: Schema.optional(Schema.String),
     }),
   ).annotate({
-    description: "Branch-per-session isolation: concurrent sessions get their own branch + managed worktree",
+    description:
+      "Branch-per-session isolation: fresh top-level sessions get their own branch + managed worktree (default true; opt out with false or PRIORICODE_WORKTREE_ISOLATE=0)",
   }),
   snapshot: Schema.optional(Schema.Boolean).annotate({
     description:

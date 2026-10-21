@@ -44,6 +44,13 @@ export type Refusal =
   | { readonly reason: "primary-dirty"; readonly paths: ReadonlyArray<string> }
   | { readonly reason: "claimed" }
   | { readonly reason: "cas-lost" }
+  | {
+      readonly reason: "merged-verify-failed"
+      readonly command: string
+      readonly exit: number
+      readonly tail: string
+      readonly reverted: boolean
+    }
   | { readonly reason: "preview"; readonly files: ReadonlyArray<string>; readonly dirtyPrimary: ReadonlyArray<string> }
   | { readonly reason: "error"; readonly message: string }
 
@@ -143,20 +150,19 @@ const layer = Layer.effect(
       return owners
     })
 
-    const accept = (result: { branch: string; mergeSha: string; checkout: "synced" | "stale"; note?: string; retired?: boolean }) =>
-      ({ landed: true, ...result }) satisfies LandResult
+    const accept = (result: {
+      branch: string
+      mergeSha: string
+      checkout: "synced" | "stale"
+      note?: string
+      retired?: boolean
+    }) => ({ landed: true, ...result }) satisfies LandResult
 
-    const retire = (
-      gc: SessionGc.Interface,
-      input: Input,
-      binding: SessionIsolation.Binding,
-    ) =>
-      gc
-        .cleanupSession({ projectID: input.projectID, directory: binding.directory, sessionID: input.sessionID })
-        .pipe(
-          Effect.match({ onFailure: () => undefined, onSuccess: (done) => (done === undefined ? undefined : true) }),
-          Effect.map((done) => (done === undefined ? {} : { retired: true })),
-        )
+    const retire = (gc: SessionGc.Interface, input: Input, binding: SessionIsolation.Binding) =>
+      gc.cleanupSession({ projectID: input.projectID, directory: binding.directory, sessionID: input.sessionID }).pipe(
+        Effect.match({ onFailure: () => undefined, onSuccess: (done) => (done === undefined ? undefined : true) }),
+        Effect.map((done) => (done === undefined ? {} : { retired: true })),
+      )
     const refuse = (refusal: Refusal) => ({ landed: false, ...refusal }) satisfies LandResult
 
     const attempt = Effect.fnUntraced(function* (input: Input) {
@@ -164,7 +170,9 @@ const layer = Layer.effect(
       if (binding === undefined)
         return refuse({
           reason: "no-binding",
-          next: ["this session is not isolated on its own branch; merge its work manually or reland from an isolated session"],
+          next: [
+            "this session is not isolated on its own branch; merge its work manually or reland from an isolated session",
+          ],
         })
       if (binding.status === "landed")
         return accept({ branch: binding.branch, mergeSha: binding.mergeSha ?? binding.baseSha, checkout: "stale" })
@@ -254,7 +262,10 @@ const layer = Layer.effect(
           `merge ${binding.branch} (prioricode land ${String(input.sessionID)})`,
         ])
         if (commit.code !== 0)
-          return refuse({ reason: "error", message: commit.stderr.trim() || commit.stdout.trim() || "commit-tree failed" })
+          return refuse({
+            reason: "error",
+            message: commit.stderr.trim() || commit.stdout.trim() || "commit-tree failed",
+          })
         const newSha = commit.stdout.trim()
         if (newSha === "") return refuse({ reason: "error", message: "commit-tree produced no object" })
 
@@ -271,6 +282,31 @@ const layer = Layer.effect(
         // and report "stale" with instructions instead of forcing anything.
         const sync = yield* raw(mainDirectory, ["reset", "--hard", newSha])
         if (sync.code === 0) {
+          // Merged-tree re-check: the branch was green and main was green, but
+          // the COMBINATION is the tree we just put on main. Verification runs
+          // in the synced primary checkout (real environment: installed deps);
+          // a red merged tree is rolled back with a reverse CAS and the caller
+          // gets the failure to fix on their branch.
+          const recheck = yield* SessionVerify.runOnce({
+            fs,
+            process: proc,
+            directory: mainDirectory,
+            command: check.command,
+          })
+          if (!recheck.ok) {
+            const rollback = yield* raw(mainDirectory, ["update-ref", `refs/heads/${mainBranch}`, oldSha, newSha])
+            if (rollback.code === 0) {
+              yield* raw(mainDirectory, ["reset", "--hard", oldSha])
+              yield* isolation.setStatus(input.sessionID, "active")
+            }
+            return refuse({
+              reason: "merged-verify-failed",
+              command: recheck.command ?? check.command ?? "",
+              exit: recheck.exit,
+              tail: recheck.tail,
+              reverted: rollback.code === 0,
+            })
+          }
           const retired = yield* retire(gc, input, binding)
           return accept({ branch: binding.branch, mergeSha: newSha, checkout: "synced", ...retired })
         }
@@ -290,13 +326,11 @@ const layer = Layer.effect(
     })
 
     const land = Effect.fn("SessionLand.land")(function* (input: Input) {
-      return yield* flock
-        .acquire(`land:${String(input.projectID)}`)
-        .pipe(
-          Effect.flatMap(() => attempt(input)),
-          Effect.scoped,
-          Effect.catch(() => Effect.succeed(refuse({ reason: "claimed" }))),
-        )
+      return yield* flock.acquire(`land:${String(input.projectID)}`).pipe(
+        Effect.flatMap(() => attempt(input)),
+        Effect.scoped,
+        Effect.catch(() => Effect.succeed(refuse({ reason: "claimed" }))),
+      )
     })
 
     const landSafe = (input: Input) =>

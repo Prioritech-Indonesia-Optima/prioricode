@@ -53,7 +53,8 @@ const repo = Effect.gen(function* () {
   return root.path
 })
 
-const headSha = (directory: string) => Effect.promise(async () => (await $`git rev-parse HEAD`.cwd(directory).text()).trim())
+const headSha = (directory: string) =>
+  Effect.promise(async () => (await $`git rev-parse HEAD`.cwd(directory).text()).trim())
 
 const addTree = Effect.fnUntraced(function* (directory: string, where: string, branch: string, commit?: string) {
   yield* Effect.promise(async () => {
@@ -97,53 +98,57 @@ const bind = Effect.fnUntraced(function* (
 })
 
 const refExists = (directory: string, branch: string) =>
-  Effect.promise(async () => (await $`git show-ref --verify --quiet refs/heads/${branch}`.cwd(directory).nothrow()).exitCode === 0)
+  Effect.promise(
+    async () => (await $`git show-ref --verify --quiet refs/heads/${branch}`.cwd(directory).nothrow()).exitCode === 0,
+  )
 
 describe("SessionGc", () => {
-  it.live("removes landed, keeps live, force-retires discarded; never touches foreign", () =>
-    Effect.gen(function* () {
-      const directory = yield* repo
-      const base = yield* headSha(directory)
-      const root = managedRoot(projectID)
+  it.live(
+    "removes landed, keeps live, force-retires discarded; never touches foreign",
+    () =>
+      Effect.gen(function* () {
+        const directory = yield* repo
+        const base = yield* headSha(directory)
+        const root = managedRoot(projectID)
 
-      // landed: merged into main, ledger says landed -> retire tree + branch
-      const landed = yield* addTree(directory, path.join(root, "alpha"), "prioricode/alpha", "alpha.txt")
-      yield* Effect.promise(() => $`git merge --no-ff -m land prioricode/alpha`.cwd(directory).quiet())
-      yield* bind("ses_gc_landed", landed, "prioricode/alpha", base, "landed")
+        // landed: merged into main, ledger says landed -> retire tree + branch
+        const landed = yield* addTree(directory, path.join(root, "alpha"), "prioricode/alpha", "alpha.txt")
+        yield* Effect.promise(() => $`git merge --no-ff -m land prioricode/alpha`.cwd(directory).quiet())
+        yield* bind("ses_gc_landed", landed, "prioricode/alpha", base, "landed")
 
-      // live session still working: kept regardless
-      const live = yield* addTree(directory, path.join(root, "bravo"), "prioricode/bravo", "bravo.txt")
-      yield* bind("ses_gc_live", live, "prioricode/bravo", base, "active")
+        // live session still working: kept regardless
+        const live = yield* addTree(directory, path.join(root, "bravo"), "prioricode/bravo", "bravo.txt")
+        yield* bind("ses_gc_live", live, "prioricode/bravo", base, "active")
 
-      // discarded with uncommitted junk: force-retired (user intent)
-      const junk = yield* addTree(directory, path.join(root, "charlie"), "prioricode/charlie")
-      yield* Effect.promise(() => fs.promises.writeFile(path.join(junk, "dirty.txt"), "junk\n"))
-      yield* bind("ses_gc_discarded", junk, "prioricode/charlie", base, "discarded")
+        // discarded with uncommitted junk: force-retired (user intent)
+        const junk = yield* addTree(directory, path.join(root, "charlie"), "prioricode/charlie")
+        yield* Effect.promise(() => fs.promises.writeFile(path.join(junk, "dirty.txt"), "junk\n"))
+        yield* bind("ses_gc_discarded", junk, "prioricode/charlie", base, "discarded")
 
-      // orphan registered tree WITHOUT unique commits: removable
-      const orphan = yield* addTree(directory, path.join(root, "delta"), "prioricode/delta")
+        // orphan registered tree WITHOUT unique commits: removable
+        const orphan = yield* addTree(directory, path.join(root, "delta"), "prioricode/delta")
 
-      // foreign tree outside the managed root: reported only, never touched
-      const foreign = yield* addTree(directory, `${directory}-foreign`, "feature/handmade")
+        // foreign tree outside the managed root: reported only, never touched
+        const foreign = yield* addTree(directory, `${directory}-foreign`, "feature/handmade")
 
-      const gc = yield* SessionGc.Service
-      const report = yield* gc.gc({ projectID, directory, foreign: true })
+        const gc = yield* SessionGc.Service
+        const report = yield* gc.gc({ projectID, directory, foreign: true })
 
-      expect(report.removed.map((item) => item.branch)).toContain("prioricode/alpha")
-      expect(report.removed.map((item) => item.branch)).toContain("prioricode/charlie")
-      expect(report.removed.map((item) => item.branch)).toContain("prioricode/delta")
-      expect(fs.existsSync(landed)).toBe(false)
-      expect(fs.existsSync(junk)).toBe(false)
-      expect(fs.existsSync(orphan)).toBe(false)
-      expect(yield* refExists(directory, "prioricode/alpha")).toBe(false)
-      // discarded force-retire still refuses the un-merged branch delete (-d only)
-      expect(fs.existsSync(live)).toBe(true)
-      expect(report.kept.map((item) => item.directory)).toContain(live)
-      expect(fs.existsSync(foreign)).toBe(true)
-      expect(report.foreign.map((item) => item.directory)).toContain(foreign)
-      // foreign branch is intact
-      expect(yield* refExists(directory, "feature/handmade")).toBe(true)
-    }),
+        expect(report.removed.map((item) => item.branch)).toContain("prioricode/alpha")
+        expect(report.removed.map((item) => item.branch)).toContain("prioricode/charlie")
+        expect(report.removed.map((item) => item.branch)).toContain("prioricode/delta")
+        expect(fs.existsSync(landed)).toBe(false)
+        expect(fs.existsSync(junk)).toBe(false)
+        expect(fs.existsSync(orphan)).toBe(false)
+        expect(yield* refExists(directory, "prioricode/alpha")).toBe(false)
+        // discarded force-retire still refuses the un-merged branch delete (-d only)
+        expect(fs.existsSync(live)).toBe(true)
+        expect(report.kept.map((item) => item.directory)).toContain(live)
+        expect(fs.existsSync(foreign)).toBe(true)
+        expect(report.foreign.map((item) => item.directory)).toContain(foreign)
+        // foreign branch is intact
+        expect(yield* refExists(directory, "feature/handmade")).toBe(true)
+      }),
     30_000,
   )
 

@@ -1,0 +1,62 @@
+---
+title: "Branch-per-session isolation"
+description: "Every PrioriCode session works on its own branch inside a hidden git worktree, lands back with a gated `land` tool, and is garbage-collected when merged."
+---
+
+Concurrent agents sharing one checkout is how multi-session work becomes a knife-fight: interleaved edits, half-stashed work, and `git status` that belongs to nobody. Since v0.3.11 PrioriCode gives every fresh top-level session **its own branch** — `prioricode/<name>` — backed by a hidden linked worktree under the data directory. The user-visible unit is the branch; the worktree is plumbing you never have to look at.
+
+## What happens on session create
+
+- A new root session in a **git** project gets its own branch and tree, provisioned synchronously — files are checked out before the session's first tool runs, so there is no "waiting for the sandbox".
+- Your human checkout (the directory you launched from) is never moved: sessions isolate, you stay on `main`.
+- Child sessions (subagents, `task` children) inherit the parent's tree — one branch per root session, not per agent.
+- A directory that is _already_ a linked worktree (an agent you spawned inside an isolated tree, or a hand-rolled `git worktree add`) is **adopted**: it gets a ledger binding so `land` and GC can see it, and nothing new is created.
+- The tree is created with the repository's `HEAD` checked out and registered in `session_worktree` — the binding ledger (`directory`, `branch`, `base_sha`, `status`).
+
+Setup-heavy repos can run a one-time command in each fresh tree:
+
+```json
+{ "worktree": { "setupCommand": "bun install" } }
+```
+
+The session starts immediately (`booting` → `active` when setup finishes); setup failures are logged, never block the session.
+
+## Landing: the only way back to main
+
+The `land` tool moves a session branch onto your main branch through a gated pipeline:
+
+1. **Green gate** — the repository's verification command (auto-detected from `package.json` scripts + lockfile, or `worktree.verify`; per-call `command` override) must pass on the session tree first. No detectable test command is a refusal, not a pass-through.
+2. **Conflict preview** — `git merge-tree` computes the would-be merge without touching any working tree. On conflict, `land` refuses with the conflicting paths and the sessions that last wrote them (from the file-touch ledger) — the agent negotiates via the `sessions` tool and retries. Nothing moved.
+3. **Primary-clean gate** — if your main checkout has uncommitted changes at the instant of the merge, the landing **defers** with the dirty paths. `land` never stashes or resets your work; finish or commit it and retry.
+4. **Atomic ref move** — serialized by a claim row + cross-process flock, applied as a compare-and-swap `update-ref` (a concurrent landing or a moved main loses cleanly), and the resulting merge commit is verified in a throwaway tree before your checkout is fast-forwarded.
+5. **Never pushes** — publishing `main` (which may trigger CI releases) stays a human decision. `land` reports the sha; you push it.
+
+After a successful land the session's worktree is auto-retired when it is safe to do so.
+
+Useful from the CLI while an agent works: `land` with `dry_run` previews the would-change file list and the checkout state without merging anything.
+
+## Garbage collection
+
+`prioricode worktree gc [--foreign]` — and the same pass runs automatically when a project's instance boots — reconciles the managed root (`<data>/worktree/<project>/`) against the ledger:
+
+- **Landed + merged** (branch is an ancestor of main) and clean → tree removed, branch deleted (`git branch -d`, so the ancestor rule is enforced twice).
+- **`discarded`** bindings (you chose to throw the session's work away) → removed and force-cleaned.
+- **Orphans** with no ledger row → removed only when their branch carries zero unique commits; anything with unmerged work is kept and reported.
+- **Anything outside the managed root** — your own hand-made worktrees, other tools' trees — is never touched. `--foreign` lists them so you can clean up deliberately.
+
+## Turning it off
+
+| Knob                                      | Effect                                    |
+| ----------------------------------------- | ----------------------------------------- |
+| `worktree.isolateSessions: false`         | back to shared checkouts for new sessions |
+| `--no-isolate` (tui / run) or `--isolate` | per-invocation override                   |
+| `PRIORICODE_WORKTREE_ISOLATE=0/1`         | tri-state override                        |
+| `PRIORICODE_DISABLE_WORKTREE_ISOLATE=1`   | kill switch; overrides everything         |
+
+Existing sessions keep whatever tree they were created with; the toggles only affect creates.
+
+<Note>
+  Isolation composes with coordination: the roster tells peers your branch exists, `sessions` `query`+`paths` answers
+  cross-worktree ownership questions (the ledger records repository-relative paths for exactly this), and `land`
+  refusals carry owner lists for negotiation. See [Cross-session coordination](../using/coordination).
+</Note>

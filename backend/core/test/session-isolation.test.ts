@@ -246,40 +246,40 @@ describe("SessionIsolation", () => {
     }),
   )
 
-  it.live("setup command flips booting to active", () =>
-    Effect.gen(function* () {
-      const repo = yield* withRepo()
-      const iso = yield* SessionIsolation.Service
-      const sessionID = SessionSchema.ID.create()
-      const marker = path.join(repo, "setup-ran")
-      const result = yield* iso.provision({
-        projectID: Project.ID.global,
-        sessionID,
-        directory: repo,
-        vcs: "git",
-        enabled: true,
-      })
-      yield* seedRows(sessionID)
-      yield* iso.bind({
-        sessionID,
-        projectID: Project.ID.global,
-        plan: result.plan!,
-        setupCommand: `touch ${marker}`,
-      })
-      const row = yield* rowFor(sessionID)
-      expect(row).toBeDefined()
-      const wait: (status: string | undefined) => Effect.Effect<string | undefined, never, Database.Service> =
-        Effect.fnUntraced(function* (
-        status: string | undefined,
-      ) {
-        if (status !== "booting") return status
-        yield* Effect.sleep("25 millis")
-        return yield* wait((yield* rowFor(sessionID))?.status)
-      })
-      const settled = yield* wait(row?.status).pipe(Effect.timeout("10 seconds"))
-      expect(settled).toBe("active")
-      expect(fs.existsSync(marker)).toBe(true)
-    }),
+  it.live(
+    "setup command flips booting to active",
+    () =>
+      Effect.gen(function* () {
+        const repo = yield* withRepo()
+        const iso = yield* SessionIsolation.Service
+        const sessionID = SessionSchema.ID.create()
+        const marker = path.join(repo, "setup-ran")
+        const result = yield* iso.provision({
+          projectID: Project.ID.global,
+          sessionID,
+          directory: repo,
+          vcs: "git",
+          enabled: true,
+        })
+        yield* seedRows(sessionID)
+        yield* iso.bind({
+          sessionID,
+          projectID: Project.ID.global,
+          plan: result.plan!,
+          setupCommand: `touch ${marker}`,
+        })
+        const row = yield* rowFor(sessionID)
+        expect(row).toBeDefined()
+        const wait: (status: string | undefined) => Effect.Effect<string | undefined, never, Database.Service> =
+          Effect.fnUntraced(function* (status: string | undefined) {
+            if (status !== "booting") return status
+            yield* Effect.sleep("25 millis")
+            return yield* wait((yield* rowFor(sessionID))?.status)
+          })
+        const settled = yield* wait(row?.status).pipe(Effect.timeout("10 seconds"))
+        expect(settled).toBe("active")
+        expect(fs.existsSync(marker)).toBe(true)
+      }),
     30_000,
   )
 })

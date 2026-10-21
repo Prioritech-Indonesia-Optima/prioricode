@@ -36,7 +36,8 @@ export const LandTool = Tool.define(
     ) {
       const target = params.session === undefined ? ctx.sessionID : SessionID.make(params.session)
       const info = yield* sessions.get(target).pipe(Effect.catchTag("NotFoundError", () => Effect.succeed(undefined)))
-      if (info === undefined) return result("error", `no session ${target} exists in this project`, { outcome: "error" })
+      if (info === undefined)
+        return result("error", `no session ${target} exists in this project`, { outcome: "error" })
       if (target !== ctx.sessionID && info.parentID !== ctx.sessionID)
         return result("error", "land only accepts your own session or one of your children", { outcome: "error" })
 
@@ -106,13 +107,29 @@ export const LandTool = Tool.define(
         case "no-binding":
           return result(
             "unbound",
-            ["NOT ISOLATED: this session has no branch binding, so there is nothing to land.", ...outcome.next].join("\n"),
+            ["NOT ISOLATED: this session has no branch binding, so there is nothing to land.", ...outcome.next].join(
+              "\n",
+            ),
             { outcome: "unbound" },
           )
         case "claimed":
-          return result("claimed", "A landing for this branch is already in flight (claim held elsewhere). Retry shortly.", {
-            outcome: "claimed",
-          })
+          return result(
+            "claimed",
+            "A landing for this branch is already in flight (claim held elsewhere). Retry shortly.",
+            {
+              outcome: "claimed",
+            },
+          )
+        case "merged-verify-failed":
+          return result(
+            "red-merged",
+            [
+              `ROLLED BACK: the merged result fails verification on main (\`${outcome.command}\` exited ${outcome.exit}); main was reverted${outcome.reverted ? " and the landing can be retried after fixing your branch" : " — CHECK main state manually"}.`,
+              "",
+              outcome.tail,
+            ].join("\n"),
+            { outcome: "red-merged" },
+          )
         case "cas-lost":
           return result("cas-lost", "main moved during the landing. Rebase onto the new main and land again.", {
             outcome: "cas-lost",

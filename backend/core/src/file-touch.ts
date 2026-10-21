@@ -199,7 +199,9 @@ const layer = Layer.effect(
           and(
             eq(FileTouchTable.project_id, input.projectID),
             inArray(FileTouchTable.relative_path, input.paths),
-            ...(input.excludeSessionID === undefined ? [] : [sql`${FileTouchTable.from_session} IS NOT ${input.excludeSessionID}`]),
+            ...(input.excludeSessionID === undefined
+              ? []
+              : [sql`${FileTouchTable.from_session} IS NOT ${input.excludeSessionID}`]),
           ),
         )
         .orderBy(desc(FileTouchTable.time_updated))

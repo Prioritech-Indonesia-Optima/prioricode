@@ -36,7 +36,8 @@
                   "using/context",
                   "using/headless",
                   "using/sharing",
-                  "using/coordination"
+                  "using/coordination",
+                  "using/branches"
                 ]
               },
               {
@@ -117,7 +118,8 @@
                   "using/context",
                   "using/headless",
                   "using/sharing",
-                  "using/coordination"
+                  "using/coordination",
+                  "using/branches"
                 ]
               },
               {

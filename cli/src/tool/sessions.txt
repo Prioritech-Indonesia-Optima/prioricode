@@ -13,8 +13,15 @@ Knowing:
 Attributing changes:
 - The tree holds changes you did not make? Do NOT guess and do NOT silently narrow a commit to "only mine" — run query(paths=[...]) on the dirty paths first.
 - Peer-owned → query the owner about intent and whether it is finished and meant to ship; their honest answer (or their absence past the window) decides. External or NO RECORD → likely the user's editor or shell: ask the user.
-- Never commit or revert a peer's work-in-progress without their OK; never stash/reset/clean the shared tree without broadcasting first — better: work in your own `git worktree` branch and land via merge.
+- Never commit or revert a peer's work-in-progress without their OK; never stash/reset/clean the shared tree without broadcasting first — better: work on your own branch and land with the `land` tool.
 - When you commit files your session wrote, end the message with a `PrioriCode-Session: <your session id>` trailer so git blame resolves those lines back to you. If the repo's CI or the user objects to trailers, omit them.
+
+Work discipline (branch-per-session):
+- An isolated session automatically works on its own branch (`prioricode/<name>` in a managed worktree) — your working directory IS that tree when isolation is on. Commit your work there; never commit directly to the human's main checkout.
+- Finished + green work goes back with the `land` tool: it verifies, previews conflicts before anything moves, and moves the main ref atomically. It NEVER pushes — publishing main stays the user's call.
+- `land` refusing with CONFLICT means nothing moved: run query(paths=[...]) on the conflicting files, negotiate order or strategy with the owning sessions, rebase or adjust, then land again. DEFERRED (primary-dirty) is not your work to fix — tell the user and retry later.
+- Child sessions inherit your tree: only the root isolated session lands; `land` on a child is refused by design. Dry-run first (`dry_run`) when unsure.
+- Sessions on shared (non-isolated) checkouts keep the old discipline: broadcast before repo-wide git operations.
 
 Negotiating:
 - Pass the prior `thread_id` to `query` to continue a negotiation with context; read the thread's earlier rounds before answering.

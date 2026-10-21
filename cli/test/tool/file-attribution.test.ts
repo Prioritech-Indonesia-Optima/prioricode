@@ -141,8 +141,7 @@ describe("FileAttribution", () => {
         expect(result[1]?.status === "peer" && result[1].touch.op).toBe("delete")
       }),
   )
-  it.instance(
-    "finds a sibling worktree's touch by repo-relative path when the fingerprint matches", () =>
+  it.instance("finds a sibling worktree's touch by repo-relative path when the fingerprint matches", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
       const instance = yield* requireInstance
@@ -173,8 +172,7 @@ describe("FileAttribution", () => {
     }),
   )
 
-  it.instance(
-    "does not claim ownership across worktrees when content drifted", () =>
+  it.instance("does not claim ownership across worktrees when content drifted", () =>
     Effect.gen(function* () {
       const test = yield* TestInstance
       const instance = yield* requireInstance

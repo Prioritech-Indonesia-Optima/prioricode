@@ -296,3 +296,20 @@ _Avoid_: claim (a claim is stated intent; a touch is an observed fact — never 
 
 **Attribution Advisory**:
 The model-facing surfaces that consult the **File Touch** ledger: collision notices on edit, the `sessions` `query`+`paths` local ledger read, and the dirty-path notice on repo-wide `git status`/`add`/`commit`/`push`/`stash`. Advisory by contract — attribution never blocks, and a direct user instruction to ship overrides the etiquette it teaches.
+
+## Branch-per-session isolation
+
+**Session Isolation**:
+The default discipline in which every fresh top-level **Session** of a git project gets its own branch (`prioricode/<name>`) backed by a hidden linked worktree under the Managed Root, provisioned synchronously (`worktree add -b` materializes HEAD before the session starts) and recorded in the `session_worktree` ledger. Children inherit the parent's tree — only root sessions are isolated; a directory that is already a linked worktree is adopted (bound, nothing created). Kill switches: `worktree.isolateSessions: false`, `PRIORICODE_WORKTREE_ISOLATE=0`, `PRIORICODE_DISABLE_WORKTREE_ISOLATE`.
+_Avoid_: sandbox, clone (nothing is fetched or copied; it is one repository with several checkouts)
+
+**Binding**:
+The `session_worktree` row tying a Session to its `{directory, branch, base_sha, status}` — the unit of both **Landing** and GC. One per session, decided once (re-entry returns the first decision), FK-cascaded from the session row.
+
+**Landing**:
+The coordinated merge of a session branch onto the project's main branch via the `land` tool: verification green gate (the repo's own verify command, `SessionVerify.runOnce`), a merge-tree conflict preview BEFORE anything moves (refusals carry conflicting paths and their **File Touch** owners for negotiation), a claim-row + flock serialization, a primary-clean gate (dirty human checkout ⇒ DEFER — never stash or reset), and an `update-ref` compare-and-swap as the only ref move. Landing never pushes: publishing main stays a human decision. A successful land auto-retires the merged tree.
+_Avoid_: merge (colloquial — Landing is the gated pipeline, not `git merge`), publish, push
+
+**Managed Root**:
+`<data>/worktree/<projectID>/` — the only location GC deletes from. Trees outside it (a human's hand-rolled worktrees) are reported (`--foreign`) and never touched; deletion itself requires an ancestor check against main (`landed`) or explicit user intent (`discarded`), and a dirty tree is always kept.
+_Avoid_: scratch, temp

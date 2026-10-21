@@ -26,6 +26,8 @@ import path from "path"
 import { fromRow } from "./session/info"
 import { SessionRunner } from "./session/runner/index"
 import { SessionStore } from "./session/store"
+import { Config } from "./config"
+import { SessionIsolation } from "./session/isolation"
 import { SessionExecution } from "./session/execution"
 import { makeGlobalNode } from "./effect/app-node"
 import { LocationServiceMap } from "./location-service-map"
@@ -208,6 +210,7 @@ const layer = Layer.effect(
     })
     const store = yield* SessionStore.Service
     const locations = yield* LocationServiceMap.Service
+    const isolation = yield* SessionIsolation.Service
     const decodeMessage = Schema.decodeUnknownEffect(SessionMessage.Message)
     const isDurableSessionEvent = Schema.is(SessionEvent.Durable)
     const decode = (row: typeof SessionMessageTable.$inferSelect) =>
@@ -234,13 +237,30 @@ const layer = Layer.effect(
           .run()
           .pipe(Effect.orDie)
         const now = Date.now()
+        // Branch-per-session (V2 surface): resolve the location's config default
+        // best-effort — any failure keeps isolation ON with the env/flag
+        // overrides still honored inside provision.
+        const worktree = yield* Config.Service.use((config) =>
+          Effect.map(config.entries(), (entries) => Config.latest(entries, "worktree")),
+        ).pipe(
+          Effect.provide(locations.get(input.location)),
+          Effect.catch(() => Effect.succeed(undefined)),
+        )
+        const isolated = yield* isolation.provision({
+          projectID: project.id,
+          sessionID,
+          directory: input.location.directory,
+          vcs: project.vcs?.type,
+          parentID: input.parentID,
+          enabled: worktree?.isolateSessions ?? true,
+        })
         const info = SessionV1.SessionInfo.make({
           id: sessionID,
           slug: Slug.create(),
           version: InstallationVersion,
           projectID: project.id,
-          directory: input.location.directory,
-          path: path.relative(project.directory, input.location.directory).replaceAll("\\", "/"),
+          directory: isolated.directory,
+          path: path.relative(project.directory, isolated.directory).replaceAll("\\", "/"),
           workspaceID: input.location.workspaceID ? Workspace.ID.make(input.location.workspaceID) : undefined,
           title: input.title ?? `New session - ${new Date(now).toISOString()}`,
           agent: input.agent,
@@ -275,6 +295,13 @@ const layer = Layer.effect(
             }),
           )
         if (projected.type === "existing") return projected.session
+        if (isolated.plan !== undefined)
+          yield* isolation.bind({
+            sessionID,
+            projectID: project.id,
+            plan: isolated.plan,
+            setupCommand: worktree?.setupCommand,
+          })
         // TODO: Restore recorded sessions onto replacement synchronized workspaces in a future API slice.
         return yield* result.get(sessionID).pipe(Effect.orDie)
       }),
@@ -525,6 +552,7 @@ export const node = makeGlobalNode({
     Database.node,
     EventBus.node,
     Project.node,
+    SessionIsolation.node,
     SessionExecution.node,
     SessionStore.node,
     LocationServiceMap.node,

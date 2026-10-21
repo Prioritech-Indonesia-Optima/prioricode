@@ -1993,6 +1993,10 @@ export type Config = {
   watcher?: {
     ignore?: Array<string>
   }
+  worktree?: {
+    isolateSessions?: boolean
+    setupCommand?: string
+  }
   snapshot?: boolean
   plugin?: Array<
     | string

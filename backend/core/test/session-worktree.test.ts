@@ -131,7 +131,11 @@ describe("worktree isolation ledgers", () => {
         })
         .run()
         .pipe(Effect.orDie)
-      yield* db.delete(SessionTable).where(eq(SessionTable.id, SessionSchema.ID.make("ses_isolation_test"))).run().pipe(Effect.orDie)
+      yield* db
+        .delete(SessionTable)
+        .where(eq(SessionTable.id, SessionSchema.ID.make("ses_isolation_test")))
+        .run()
+        .pipe(Effect.orDie)
       const left = yield* db
         .select({ id: SessionWorktreeTable.session_id })
         .from(SessionWorktreeTable)

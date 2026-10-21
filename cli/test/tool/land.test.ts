@@ -81,7 +81,12 @@ const execute = Effect.fn("LandTest.execute")(function* (params: Record<string, 
 describe("tool.land", () => {
   it.instance("lands self and states the never-push contract", () =>
     Effect.gen(function* () {
-      nextResult.value = { landed: true, branch: "prioricode/brave-fox", mergeSha: "abcdef1234567890", checkout: "synced" }
+      nextResult.value = {
+        landed: true,
+        branch: "prioricode/brave-fox",
+        mergeSha: "abcdef1234567890",
+        checkout: "synced",
+      }
       const result = yield* execute({})
       expect(result.title).toBe("land:landed")
       expect(result.output).toContain("LANDED prioricode/brave-fox")
@@ -139,6 +144,24 @@ describe("tool.land", () => {
     }),
   )
 
+  it.instance("renders merged-tree rollback", () =>
+    Effect.gen(function* () {
+      nextResult.value = {
+        landed: false,
+        reason: "merged-verify-failed",
+        command: "sh check.sh",
+        exit: 3,
+        tail: "boom",
+        reverted: true,
+      }
+      const result = yield* execute({})
+      expect(result.title).toBe("land:red-merged")
+      expect(result.output).toContain("ROLLED BACK")
+      expect(result.output).toContain("main was reverted")
+      expect(result.output).toContain("boom")
+    }),
+  )
+
   it.instance("refuses landing someone else's session", () =>
     Effect.gen(function* () {
       const result = yield* execute({ session: strangerID })
@@ -150,7 +173,13 @@ describe("tool.land", () => {
 
   it.instance("can land a child session", () =>
     Effect.gen(function* () {
-      nextResult.value = { landed: true, branch: "prioricode/kind-owl", mergeSha: "beef1234567890ab", checkout: "stale", note: "manual sync" }
+      nextResult.value = {
+        landed: true,
+        branch: "prioricode/kind-owl",
+        mergeSha: "beef1234567890ab",
+        checkout: "stale",
+        note: "manual sync",
+      }
       const result = yield* execute({ session: childID })
       expect(result.title).toBe("land:landed")
       expect(result.output).toContain("WARNING: manual sync")

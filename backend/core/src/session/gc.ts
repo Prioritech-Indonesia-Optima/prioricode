@@ -110,7 +110,10 @@ const layer = Layer.effect(
       // Non-destructive by default: dirty trees make this fail and we keep.
       const removed = yield* git.worktree
         .remove({ repository, directory: AbsolutePath.make(input.directory), force: input.force })
-        .pipe(Effect.as(true), Effect.catch(() => Effect.succeed(false)))
+        .pipe(
+          Effect.as(true),
+          Effect.catch(() => Effect.succeed(false)),
+        )
       if (!removed) return undefined
       yield* raw(String(repository.worktree), ["branch", "-d", input.branch]).pipe(Effect.asVoid)
       return { directory: input.directory, branch: input.branch, kind: input.kind } satisfies Removed
@@ -129,13 +132,13 @@ const layer = Layer.effect(
       readonly foreign?: boolean
     }) {
       const repository = yield* git.repo.discover(AbsolutePath.make(input.directory))
-      if (repository === undefined)
-        return { pruned: false, removed: [], kept: [], foreign: [] } satisfies Report
+      if (repository === undefined) return { pruned: false, removed: [], kept: [], foreign: [] } satisfies Report
       const mainEntries = yield* git.worktree.list(repository)
       const mainDirectory = String(mainEntries[0]?.directory ?? repository.worktree)
       const mainRepository =
-        (yield* git.repo.discover(AbsolutePath.make(mainDirectory)).pipe(Effect.catch(() => Effect.succeed(undefined)))) ??
-        repository
+        (yield* git.repo
+          .discover(AbsolutePath.make(mainDirectory))
+          .pipe(Effect.catch(() => Effect.succeed(undefined)))) ?? repository
 
       yield* git.worktree.prune(mainRepository).pipe(Effect.catch(() => Effect.void))
 
@@ -193,7 +196,12 @@ const layer = Layer.effect(
           continue
         }
         // discarded: explicit user intent — force-clean it.
-        const done = yield* removeWorktree(mainRepository, { directory, branch: row.branch, kind: "discarded", force: true })
+        const done = yield* removeWorktree(mainRepository, {
+          directory,
+          branch: row.branch,
+          kind: "discarded",
+          force: true,
+        })
         if (done !== undefined) removed.push(done)
         else kept.push({ directory, reason: "could not remove discarded worktree" })
       }
@@ -215,9 +223,10 @@ const layer = Layer.effect(
       // Managed directories that are NOT registered worktrees (crashed before
       // registration or after prune): remove them only under the name-to-branch
       // convention with an ancestor check.
-      const managed = yield* fs
-        .readDirectoryEntries(root)
-        .pipe(Effect.map((entries) => entries.map((entry) => entry.name)), Effect.catch(() => Effect.succeed([] as string[])))
+      const managed = yield* fs.readDirectoryEntries(root).pipe(
+        Effect.map((entries) => entries.map((entry) => entry.name)),
+        Effect.catch(() => Effect.succeed([] as string[])),
+      )
       const registered = new Set(entries.map((entry) => String(entry.directory)))
       for (const name of managed) {
         const directory = path.join(root, name)
@@ -234,7 +243,9 @@ const layer = Layer.effect(
           }
           yield* raw(mainDirectory, ["branch", "-d", branch]).pipe(Effect.asVoid)
         }
-        yield* Effect.promise(() => rm(directory, { recursive: true, force: true })).pipe(Effect.catch(() => Effect.void))
+        yield* Effect.promise(() => rm(directory, { recursive: true, force: true })).pipe(
+          Effect.catch(() => Effect.void),
+        )
         removed.push({ directory, branch, kind: "orphan" })
       }
 
@@ -271,7 +282,10 @@ const layer = Layer.effect(
       if (candidates.length > 0) return undefined
       const removed = yield* git.worktree
         .remove({ repository: mainRepository, directory: AbsolutePath.make(directory), force: false })
-        .pipe(Effect.as(true), Effect.catch(() => Effect.succeed(false)))
+        .pipe(
+          Effect.as(true),
+          Effect.catch(() => Effect.succeed(false)),
+        )
       if (!removed) return undefined
       return { directory, branch: "", kind: "orphan" as const } satisfies Removed
     })
@@ -295,11 +309,17 @@ const layer = Layer.effect(
       const entries = yield* git.worktree.list(repository)
       const mainDirectory = String(entries[0]?.directory ?? repository.worktree)
       const mainRepository =
-        (yield* git.repo.discover(AbsolutePath.make(mainDirectory)).pipe(Effect.catch(() => Effect.succeed(undefined)))) ??
-        repository
+        (yield* git.repo
+          .discover(AbsolutePath.make(mainDirectory))
+          .pipe(Effect.catch(() => Effect.succeed(undefined)))) ?? repository
       const merged = yield* uniqueCommits(mainDirectory, row.branch)
       if (merged !== 0) return undefined
-      return yield* removeWorktree(mainRepository, { directory: row.directory, branch: row.branch, kind: "landed", force: false })
+      return yield* removeWorktree(mainRepository, {
+        directory: row.directory,
+        branch: row.branch,
+        kind: "landed",
+        force: false,
+      })
     })
 
     return Service.of({ gc, cleanupSession })

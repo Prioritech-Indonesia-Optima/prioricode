@@ -36,7 +36,7 @@ Guessing whose edit landed in the working tree is how multi-agent work turns int
 - **Commits stay blameable.** The advisory reminds a committing agent to add a `PrioriCode-Session: <id>` trailer, so `git blame` resolves committed lines back to the session that wrote them.
 - **`git status` gets annotated.** When a session runs `git status`, `add`, `commit`, `push`, or `stash` while peers are active, the shell output marks dirty paths that are not its own, with their owners — advisory, never blocking.
 
-Disable the ledger entirely with `PRIORICODE_DISABLE_FILE_TOUCH=1`. The recommended discipline while per-session worktrees become standard: give each agent its own `git worktree` (`git worktree add ../wt-x -b x`), let them merge through git, and let the ledger + `/coordination` keep the humans out of the loop's way.
+Disable the ledger entirely with `PRIORICODE_DISABLE_FILE_TOUCH=1`. The ledger's path fingerprints are repository-relative, so ownership answers work across separate checkouts: with [branch-per-session isolation](../using/branches) — every fresh session on its own branch in a hidden worktree — two agents can touch the same logical file without touching each other, and `land` consults this same ledger when a merge conflicts.
 
 ## Properties the channel keeps
 

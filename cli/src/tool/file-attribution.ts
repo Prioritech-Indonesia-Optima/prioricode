@@ -80,9 +80,7 @@ const layer = Layer.effect(
       const live = yield* liveFingerprint(filepath)
       return rows.find(
         (touch) =>
-          live !== undefined &&
-          touch.fingerprint.mtimeMs === live.mtimeMs &&
-          touch.fingerprint.size === live.size,
+          live !== undefined && touch.fingerprint.mtimeMs === live.mtimeMs && touch.fingerprint.size === live.size,
       )
     })
 

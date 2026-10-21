@@ -71,7 +71,12 @@ const seed = Effect.fnUntraced(function* (sessionID: SessionSchema.ID) {
 })
 
 /** Provision an isolated session tree via the real service, then commit work in it. */
-const isolated = Effect.fnUntraced(function* (repo: string, sessionID: SessionSchema.ID, file: string, content: string) {
+const isolated = Effect.fnUntraced(function* (
+  repo: string,
+  sessionID: SessionSchema.ID,
+  file: string,
+  content: string,
+) {
   const iso = yield* SessionIsolation.Service
   yield* seed(sessionID)
   const result = yield* iso.provision({
@@ -129,7 +134,9 @@ describe("SessionLand", () => {
         const onMain = (yield* Effect.promise(() => $`git show main:feature.txt`.cwd(repo).text())).trim()
         expect(onMain).toBe("shipped")
         expect(fs.existsSync(path.join(repo, "feature.txt"))).toBe(true)
-        const parents = (yield* Effect.promise(() => $`git rev-list --parents -n 1 main`.cwd(repo).text())).trim().split(" ")
+        const parents = (yield* Effect.promise(() => $`git rev-list --parents -n 1 main`.cwd(repo).text()))
+          .trim()
+          .split(" ")
         expect(parents.length).toBe(3) // merge commit with two parents
       }
       const row = yield* rowFor(sessionID)
@@ -139,11 +146,9 @@ describe("SessionLand", () => {
       expect(claims.length).toBe(0)
       // Auto-retire: the landed tree and its merged branch are cleaned up.
       expect(fs.existsSync(plan.directory)).toBe(false)
-      const ref = (
-        yield* Effect.promise(async () =>
-          (await $`git show-ref --verify refs/heads/${plan.branch}`.cwd(repo).quiet().nothrow()),
-        )
-      ).exitCode
+      const ref = (yield* Effect.promise(
+        async () => await $`git show-ref --verify refs/heads/${plan.branch}`.cwd(repo).quiet().nothrow(),
+      )).exitCode
       expect(ref).not.toBe(0)
     }),
   )
@@ -158,6 +163,44 @@ describe("SessionLand", () => {
       const result = yield* land.land({ sessionID, projectID: Project.ID.global, dryRun: true })
       expect(result.landed).toBe(false)
       if (!result.landed && result.reason === "preview") expect(result.files).toContain("preview.txt")
+      const after = (yield* Effect.promise(() => $`git rev-parse main`.cwd(repo).text())).trim()
+      expect(after).toBe(before)
+      const row = yield* rowFor(sessionID)
+      expect(row?.status).toBe("active")
+    }),
+  )
+
+  it.live("rolls back when the merged tree fails verification", () =>
+    Effect.gen(function* () {
+      const repo = yield* main()
+      // verification: red if MERGE_BAD is present in the tree being checked
+      yield* Effect.promise(async () => {
+        await fs.promises.writeFile(
+          path.join(repo, "package.json"),
+          JSON.stringify({ scripts: { test: "sh check.sh" } }),
+        )
+        await fs.promises.writeFile(path.join(repo, "check.sh"), "[ -f MERGE_BAD ] && exit 3\nexit 0\n")
+        await $`git add package.json check.sh`.cwd(repo).quiet()
+        await $`git commit -m pkg`.cwd(repo).quiet()
+      })
+      const sessionID = SessionSchema.ID.create()
+      yield* isolated(repo, sessionID, "good.txt", "ok\n")
+      // main gains MERGE_BAD after the session branched: session tree stays green,
+      // the merged result is red — the landing must roll main back.
+      yield* Effect.promise(async () => {
+        await fs.promises.writeFile(path.join(repo, "MERGE_BAD"), "bad\n")
+        await $`git add MERGE_BAD`.cwd(repo).quiet()
+        await $`git commit -m bad`.cwd(repo).quiet()
+      })
+      const before = (yield* Effect.promise(() => $`git rev-parse main`.cwd(repo).text())).trim()
+      const land = yield* SessionLand.Service
+      const result = yield* land.land({ sessionID, projectID: Project.ID.global })
+      expect(result.landed).toBe(false)
+      if (!result.landed && result.reason === "merged-verify-failed") {
+        expect(result.reverted).toBe(true)
+        // detectCommand picks the runner for the lockfile; plain tmp repo -> npm
+        expect(["sh check.sh", "npm test", "bun run test", "pnpm test", "yarn test"]).toContain(result.command)
+      }
       const after = (yield* Effect.promise(() => $`git rev-parse main`.cwd(repo).text())).trim()
       expect(after).toBe(before)
       const row = yield* rowFor(sessionID)

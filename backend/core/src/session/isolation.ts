@@ -44,7 +44,7 @@ export interface ProvisionInput {
   readonly parentID?: SessionSchema.ID
   /** Per-session override from the create input; wins over config. */
   readonly isolation?: "worktree" | "shared"
-  /** Caller-resolved config default (worktree.isolateSessions). */
+  /** Caller-resolved config default (worktree.isolateSessions, product default ON). */
   readonly enabled: boolean
 }
 
@@ -191,9 +191,15 @@ const layer = Layer.effect(
           { combineOutput: true },
         )
         .pipe(
-          Effect.tap(() => Effect.logInfo("worktree setup finished", { sessionID: input.sessionID, directory: input.plan.directory })),
+          Effect.tap(() =>
+            Effect.logInfo("worktree setup finished", { sessionID: input.sessionID, directory: input.plan.directory }),
+          ),
           Effect.catch((cause) =>
-            Effect.logWarning("worktree setup failed", { sessionID: input.sessionID, directory: input.plan.directory, cause }),
+            Effect.logWarning("worktree setup failed", {
+              sessionID: input.sessionID,
+              directory: input.plan.directory,
+              cause,
+            }),
           ),
           Effect.andThen(setStatus(input.sessionID, "active")),
           Effect.forkIn(scope),
@@ -234,7 +240,8 @@ const layer = Layer.effect(
       // of the repo — bind it so land/GC can see it, create nothing.
       const list = yield* git.worktree.list(repository).pipe(Effect.catch(() => Effect.succeed(undefined)))
       if (list !== undefined && list.length > 0 && String(repository.worktree) !== String(list[0].directory)) {
-        const branch = (yield* git.history.branch(repository).pipe(Effect.catch(() => Effect.succeed(undefined)))) ?? "detached"
+        const branch =
+          (yield* git.history.branch(repository).pipe(Effect.catch(() => Effect.succeed(undefined)))) ?? "detached"
         const head = yield* git.history.head(repository)
         if (head === undefined) return { directory: input.directory }
         return {
@@ -256,7 +263,10 @@ const layer = Layer.effect(
         if (exists) continue
         const created = yield* git.worktree
           .create({ repository, directory: AbsolutePath.make(directory), branch })
-          .pipe(Effect.as(true), Effect.catch(() => Effect.succeed(false)))
+          .pipe(
+            Effect.as(true),
+            Effect.catch(() => Effect.succeed(false)),
+          )
         if (!created) continue
         return { directory, plan: { directory, branch, baseSha, adopted: false } }
       }

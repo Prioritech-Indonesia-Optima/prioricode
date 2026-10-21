@@ -37,7 +37,7 @@ worktree per convention; the machinery half-exists but is not session-scoped.
 
 - New column `session.worktree_mode` (`shared | isolated`, default from config
   `worktree.isolateSessions`, initially **off** = today's behavior).
-- `session.create` / first *write* tool call on a shared-directory session with
+- `session.create` / first _write_ tool call on a shared-directory session with
   isolation on: call the existing Worktree.create (name = session slug), bind
   `session.directory := new worktree`, emit the same synthetic system-reminder the
   TUI warp flow uses. One `sessionID ↔ worktree` binding — the worktree is just
@@ -60,8 +60,8 @@ worktree per convention; the machinery half-exists but is not session-scoped.
 
 ### 3. Conflict → coordination protocol (the "win-win")
 
-Not silent auto-resolution. The feature makes conflicts *self-driving toward
-negotiation* exactly like the manual flow that shipped v0.3.10:
+Not silent auto-resolution. The feature makes conflicts _self-driving toward
+negotiation_ exactly like the manual flow that shipped v0.3.10:
 
 - `land` blocked by a conflict whose other side belongs to an **unlanded peer
   branch** → post the asking session a `request` ("I need to land; our branches
@@ -83,9 +83,9 @@ commit trailer then carries line-level truth into merged history permanently.
 ## Defaults & rollout
 
 1. Land feature-flagged (off). 2. Enable for GUI new-session-in-worktree (already exists)
-   + CLI flag. 3. Flip `isolateSessions` default-on after one release of dogfooding.
-   The shell advisory + "never silently narrow a ship" rule stays — it covers shared
-   trees and the human's editor either way.
+   - CLI flag. 3. Flip `isolateSessions` default-on after one release of dogfooding.
+     The shell advisory + "never silently narrow a ship" rule stays — it covers shared
+     trees and the human's editor either way.
 
 ## Non-goals
 

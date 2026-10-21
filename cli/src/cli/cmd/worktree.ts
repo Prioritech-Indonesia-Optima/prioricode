@@ -33,13 +33,23 @@ const GcCommand = effectCmd({
 
     for (const item of report.removed)
       UI.println(
-        UI.Style.TEXT_SUCCESS_BOLD + "removed" + UI.Style.TEXT_NORMAL + ` ${item.kind.padEnd(9)} ${path.basename(item.directory)}  ${item.branch}`,
+        UI.Style.TEXT_SUCCESS_BOLD +
+          "removed" +
+          UI.Style.TEXT_NORMAL +
+          ` ${item.kind.padEnd(9)} ${path.basename(item.directory)}  ${item.branch}`,
       )
     for (const item of report.kept)
-      UI.println(UI.Style.TEXT_DIM + `kept      ${path.basename(item.directory)}  ${item.reason}` + UI.Style.TEXT_NORMAL)
+      UI.println(
+        UI.Style.TEXT_DIM + `kept      ${path.basename(item.directory)}  ${item.reason}` + UI.Style.TEXT_NORMAL,
+      )
     if (args.foreign)
       for (const item of report.foreign)
-        UI.println(UI.Style.TEXT_WARNING_BOLD + "foreign" + UI.Style.TEXT_NORMAL + ` (untouched) ${item.directory}  ${item.branch}`)
+        UI.println(
+          UI.Style.TEXT_WARNING_BOLD +
+            "foreign" +
+            UI.Style.TEXT_NORMAL +
+            ` (untouched) ${item.directory}  ${item.branch}`,
+        )
     UI.println(
       UI.Style.TEXT_NORMAL +
         `prune ok; removed ${report.removed.length}, kept ${report.kept.length}${args.foreign ? `, foreign ${report.foreign.length}` : ""}`,

@@ -166,51 +166,51 @@ describe("FileTouch", () => {
   )
 })
 
-  it.effect("stores the writer-supplied repo-relative form and answers lookupRelative", () =>
-    Effect.gen(function* () {
-      yield* setup
-      const touches = yield* FileTouch.Service
-      yield* touches.record({
-        projectID: Project.ID.global,
-        path: "/wt-b/sub/a.ts",
-        relativePath: "sub/a.ts",
-        op: "modify",
-        sessionID: "ses_b",
-        fingerprint: touch,
-      })
-      const byRel = yield* touches.lookupRelative({ projectID: Project.ID.global, paths: ["sub/a.ts"] })
-      expect(byRel.map((item) => item.path)).toEqual(["/wt-b/sub/a.ts"])
-      expect(byRel[0]?.relativePath).toBe("sub/a.ts")
+it.effect("stores the writer-supplied repo-relative form and answers lookupRelative", () =>
+  Effect.gen(function* () {
+    yield* setup
+    const touches = yield* FileTouch.Service
+    yield* touches.record({
+      projectID: Project.ID.global,
+      path: "/wt-b/sub/a.ts",
+      relativePath: "sub/a.ts",
+      op: "modify",
+      sessionID: "ses_b",
+      fingerprint: touch,
+    })
+    const byRel = yield* touches.lookupRelative({ projectID: Project.ID.global, paths: ["sub/a.ts"] })
+    expect(byRel.map((item) => item.path)).toEqual(["/wt-b/sub/a.ts"])
+    expect(byRel[0]?.relativePath).toBe("sub/a.ts")
 
-      // Newest-first, capped; a same-relative sibling write from another worktree surfaces.
-      yield* touches.record({
-        projectID: Project.ID.global,
-        path: "/wt-a/sub/a.ts",
-        relativePath: "sub/a.ts",
-        op: "create",
-        sessionID: "ses_a",
-        fingerprint: { mtimeMs: 2_000, size: 4 },
-      })
-      const both = yield* touches.lookupRelative({ projectID: Project.ID.global, paths: ["sub/a.ts"] })
-      expect(both.map((item) => item.path)).toEqual(["/wt-a/sub/a.ts", "/wt-b/sub/a.ts"])
+    // Newest-first, capped; a same-relative sibling write from another worktree surfaces.
+    yield* touches.record({
+      projectID: Project.ID.global,
+      path: "/wt-a/sub/a.ts",
+      relativePath: "sub/a.ts",
+      op: "create",
+      sessionID: "ses_a",
+      fingerprint: { mtimeMs: 2_000, size: 4 },
+    })
+    const both = yield* touches.lookupRelative({ projectID: Project.ID.global, paths: ["sub/a.ts"] })
+    expect(both.map((item) => item.path)).toEqual(["/wt-a/sub/a.ts", "/wt-b/sub/a.ts"])
 
-      const withoutB = yield* touches.lookupRelative({
-        projectID: Project.ID.global,
-        paths: ["sub/a.ts"],
-        excludeSessionID: "ses_a",
-      })
-      expect(withoutB.map((item) => item.sessionID)).toEqual(["ses_b"])
+    const withoutB = yield* touches.lookupRelative({
+      projectID: Project.ID.global,
+      paths: ["sub/a.ts"],
+      excludeSessionID: "ses_a",
+    })
+    expect(withoutB.map((item) => item.sessionID)).toEqual(["ses_b"])
 
-      // NULL-relative rows (foreign paths) never answer a relative query.
-      const foreign = yield* touches.lookupRelative({ projectID: Project.ID.global, paths: ["elsewhere.ts"] })
-      expect(foreign).toEqual([])
-    }),
-  )
+    // NULL-relative rows (foreign paths) never answer a relative query.
+    const foreign = yield* touches.lookupRelative({ projectID: Project.ID.global, paths: ["elsewhere.ts"] })
+    expect(foreign).toEqual([])
+  }),
+)
 
-  it.effect("relativePath helper maps inside/outside roots correctly", () => {
-    expect(FileTouch.relativePath("/repo/a", "/repo/a/x/y.ts")).toBe("x/y.ts")
-    expect(FileTouch.relativePath("/repo/a", "/repo/a")).toBeUndefined()
-    expect(FileTouch.relativePath("/repo/a", "/repo/b/x.ts")).toBeUndefined()
-    expect(FileTouch.relativePath("/repo/a", "/repo/ab/x.ts")).toBeUndefined()
-    return Effect.void
-  })
+it.effect("relativePath helper maps inside/outside roots correctly", () => {
+  expect(FileTouch.relativePath("/repo/a", "/repo/a/x/y.ts")).toBe("x/y.ts")
+  expect(FileTouch.relativePath("/repo/a", "/repo/a")).toBeUndefined()
+  expect(FileTouch.relativePath("/repo/a", "/repo/b/x.ts")).toBeUndefined()
+  expect(FileTouch.relativePath("/repo/a", "/repo/ab/x.ts")).toBeUndefined()
+  return Effect.void
+})

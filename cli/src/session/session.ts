@@ -546,7 +546,7 @@ const layer: Layer.Layer<
         directory: input.directory,
         vcs: ctx.project.vcs,
         parentID: input.parentID,
-        enabled: cfg.worktree?.isolateSessions ?? false,
+        enabled: cfg.worktree?.isolateSessions ?? true,
       })
       const result: Info = {
         id: sessionID,
