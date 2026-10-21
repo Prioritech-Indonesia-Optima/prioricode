@@ -237,8 +237,20 @@ describe("tool.sessions.query paths", () => {
             size: Number(info.size),
           }
         })
-      yield* touches.record({ projectID, path: mine, op: "modify", sessionID: String(selfID), fingerprint: yield* fp(mine) })
-      yield* touches.record({ projectID, path: theirs, op: "create", sessionID: String(activeID), fingerprint: yield* fp(theirs) })
+      yield* touches.record({
+        projectID,
+        path: mine,
+        op: "modify",
+        sessionID: String(selfID),
+        fingerprint: yield* fp(mine),
+      })
+      yield* touches.record({
+        projectID,
+        path: theirs,
+        op: "create",
+        sessionID: String(activeID),
+        fingerprint: yield* fp(theirs),
+      })
 
       const result = yield* execute({ action: "query", paths: [mine, theirs, stranger] })
       expect(result.title).toBe("sessions:query")

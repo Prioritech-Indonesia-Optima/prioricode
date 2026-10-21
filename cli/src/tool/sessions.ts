@@ -156,7 +156,12 @@ export const SessionsTool = Tool.define(
             if (provenance.messageID !== undefined) {
               const excerpt = yield* hunkFor(provenance.messageID, provenance.callID, item.path)
               if (excerpt !== undefined)
-                lines.push(excerpt.split("\n").map((row) => `    | ${row}`).join("\n"))
+                lines.push(
+                  excerpt
+                    .split("\n")
+                    .map((row) => `    | ${row}`)
+                    .join("\n"),
+                )
             }
             continue
           }
@@ -175,7 +180,13 @@ export const SessionsTool = Tool.define(
           )
           if (provenance.messageID !== undefined) {
             const excerpt = yield* hunkFor(provenance.messageID, provenance.callID, item.path)
-            if (excerpt !== undefined) lines.push(excerpt.split("\n").map((row) => `    | ${row}`).join("\n"))
+            if (excerpt !== undefined)
+              lines.push(
+                excerpt
+                  .split("\n")
+                  .map((row) => `    | ${row}`)
+                  .join("\n"),
+              )
           }
         }
         const mine = yield* touches.recent({

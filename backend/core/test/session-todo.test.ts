@@ -210,7 +210,10 @@ describe("SessionTodo", () => {
       const id = (content: string) => stored.find((todo) => todo.content === content)!.id!
       const applied = SessionTodo.apply(stored, {
         action: "status",
-        status: [{ id: id("step one"), status: "completed" }, { id: id("step two"), status: "in_progress" }],
+        status: [
+          { id: id("step one"), status: "completed" },
+          { id: id("step two"), status: "in_progress" },
+        ],
       })
       expect(applied.ok).toBe(true)
       yield* todos.update({ sessionID, todos: applied.todos })

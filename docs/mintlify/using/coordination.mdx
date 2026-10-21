@@ -15,11 +15,11 @@ Every session automatically knows who its siblings are: a read-only roster (id, 
 
 From inside a session, the agent uses the `sessions` tool — and it has exactly three verbs:
 
-| Action     | Kind            | What it does                                                                                                                                                                                          |
-| ---------- | --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `query`    | ask or tell     | A durable note into one peer's inbox, with or without a question in it. Fire-and-forget: a busy peer reads it at its next step boundary, an idle peer wakes within seconds. The answer arrives back in the asker's own context later — nothing blocks. |
-| `respond`  | reply + ACK     | The universal answer primitive, keyed by `request_id`. **Every note a session receives owes exactly one respond** — a real answer or a one-line ack. Exactly one respond per note, enforced at the database level. Corrections ride a new `query`.  |
-| `broadcast`| announce        | Fires a `query` to every live peer at once (sharing one group id) before a big shared-state move — `git stash`, `git reset`, branch switches, pushes to shared branches. It does not wait and there is no approval gate: peers whose work is affected query the broadcaster with an objection, and objections are handled as they land. |
+| Action      | Kind        | What it does                                                                                                                                                                                                                                                                                                                            |
+| ----------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `query`     | ask or tell | A durable note into one peer's inbox, with or without a question in it. Fire-and-forget: a busy peer reads it at its next step boundary, an idle peer wakes within seconds. The answer arrives back in the asker's own context later — nothing blocks.                                                                                  |
+| `respond`   | reply + ACK | The universal answer primitive, keyed by `request_id`. **Every note a session receives owes exactly one respond** — a real answer or a one-line ack. Exactly one respond per note, enforced at the database level. Corrections ride a new `query`.                                                                                      |
+| `broadcast` | announce    | Fires a `query` to every live peer at once (sharing one group id) before a big shared-state move — `git stash`, `git reset`, branch switches, pushes to shared branches. It does not wait and there is no approval gate: peers whose work is affected query the broadcaster with an objection, and objections are handled as they land. |
 
 The tool contract itself — the guidance the agents follow — lives in the product at `cli/src/tool/sessions.txt`. It reads like good office etiquette: don't wake anyone to say hi, don't re-query after a timeout, never respond to a reply.
 
@@ -31,7 +31,7 @@ Guessing whose edit landed in the working tree is how multi-agent work turns int
 
 - **Every tool write is fingerprinted.** `edit`, `write`, and `apply_patch` record one row per file — which session, which operation (create/modify/delete), which model, the timestamp, and pointers to the message and tool call whose stored diff shows exactly what changed. One row per path, last writer wins.
 - **Out-of-band edits are recorded too.** The file watcher stamps changes that arrive through no PrioriCode tool (your editor, a shell command) as `external`, deduped by fingerprint so a session's own recorded write is never misattributed. Absence of any row means: nobody in this system wrote it — ask the user.
-- **Agents can query it.** `sessions` with `query` + `paths` is a local ledger read (no peer involved): for each path the answer is *you*, *a named peer with a hunk excerpt*, *outside PrioriCode tools*, or *no record*. The contract tells agents to run this before touching or shipping foreign paths — never silently narrow a commit to "only mine" and never commit a peer's work-in-progress without asking them.
+- **Agents can query it.** `sessions` with `query` + `paths` is a local ledger read (no peer involved): for each path the answer is _you_, _a named peer with a hunk excerpt_, _outside PrioriCode tools_, or _no record_. The contract tells agents to run this before touching or shipping foreign paths — never silently narrow a commit to "only mine" and never commit a peer's work-in-progress without asking them.
 - **Edits warn on the spot.** When a file changed since an agent last read it, the next edit's result names the last recorded writer and tells it to query that peer before overwriting.
 - **Commits stay blameable.** The advisory reminds a committing agent to add a `PrioriCode-Session: <id>` trailer, so `git blame` resolves committed lines back to the session that wrote them.
 - **`git status` gets annotated.** When a session runs `git status`, `add`, `commit`, `push`, or `stash` while peers are active, the shell output marks dirty paths that are not its own, with their owners — advisory, never blocking.
@@ -48,9 +48,9 @@ Disable the ledger entirely with `PRIORICODE_DISABLE_FILE_TOUCH=1`. The recommen
 - **A watcher does the boring waiting.** A lightweight watcher (2-second cycle) wakes idle peers with unread queries, recovers crashed deliveries, escalates and expires overdue notes, and posts the session-init announces — no polling loops anywhere.
 
 <Note>
-  Rate limits keep things sane: 10 notes/minute per sender-recipient pair (tune `PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE`),
-  5-minute dedupe window for identical repeats while the original is unprocessed, inbox cap of 50, and a 15-minute
-  escalation deadline (`PRIORICODE_COORDINATION_ESCALATION_MS`).
+  Rate limits keep things sane: 10 notes/minute per sender-recipient pair (tune
+  `PRIORICODE_COORDINATION_RATE_LIMIT_PER_MINUTE`), 5-minute dedupe window for identical repeats while the original is
+  unprocessed, inbox cap of 50, and a 15-minute escalation deadline (`PRIORICODE_COORDINATION_ESCALATION_MS`).
 </Note>
 
 ## Using it as a human
@@ -75,7 +75,9 @@ cd your-project && prioricode
 In A: _"Ask your sibling session what it's working on and report back."_ A's agent `query`s B; B's footer lights up; the reply lands in A's context and the agent reports it. Now start a third session C and give it a task — A and B each receive C's announce within seconds, and owe it one short ack.
 
 <Note>
-  Coordination is permission-gated per action — like everything else in [permissions](/using/permissions), the agent asks before it messages. Older saved rules keyed to the removed actions (`send`, `ask`, `wait`, `notify`, `claim`, `release`) no longer match anything; re-grant them for `query`/`respond`/`broadcast` if you had per-action rules.
+  Coordination is permission-gated per action — like everything else in [permissions](/using/permissions), the agent
+  asks before it messages. Older saved rules keyed to the removed actions (`send`, `ask`, `wait`, `notify`, `claim`,
+  `release`) no longer match anything; re-grant them for `query`/`respond`/`broadcast` if you had per-action rules.
 </Note>
 
 ## Related
