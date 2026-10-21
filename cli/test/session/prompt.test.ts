@@ -2733,6 +2733,122 @@ describe("cross-session coordination", () => {
   )
 
   coordinationIt.instance(
+    "a born session announces itself to live peers exactly once and never wakes them",
+    () =>
+      Effect.gen(function* () {
+        const { llm } = yield* useServerConfig(providerCfg)
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const newcomer = yield* sessions.create({ title: "new worker" })
+        yield* user(newcomer.id, "  implement the   login flow with tests  ")
+        // A pre-existing idle peer that must NOT announce itself (no user msg).
+        const peer = yield* sessions.create({ title: "waiting peer" })
+
+        const woken = yield* watcher.sweep()
+        // announce rows are kind `message` (not a wake kind): nobody is woken.
+        expect(woken).toBe(0)
+        expect(yield* llm.calls).toBe(0)
+
+        const received = yield* coordination.inbox({ sessionID: peer.id, kinds: ["message"] })
+        expect(received).toHaveLength(1)
+        expect(received[0].id).toBe(`ann:${newcomer.id}:${peer.id}`)
+        expect(received[0].groupId).toBe(`ann:${newcomer.id}`)
+        expect(received[0].fromSession).toBe(newcomer.id)
+        expect(received[0].body).toContain("new worker")
+        expect(received[0].body).toContain("implement the login flow with tests")
+
+        // A second sweep must not duplicate: the durable group check + the
+        // in-process set both short-circuit the newcomer.
+        yield* watcher.sweep()
+        yield* watcher.sweep()
+        expect(yield* coordination.inbox({ sessionID: peer.id, kinds: ["message"] })).toHaveLength(1)
+
+        // The newcomer announced to the peer; its own inbox stays empty (self excluded).
+        expect(yield* coordination.inbox({ sessionID: newcomer.id, kinds: ["message"] })).toHaveLength(0)
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "a session announces only after a real user message; synthetic wakes are not a birth",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const newcomer = yield* sessions.create({ title: "quiet newcomer" })
+        const peer = yield* sessions.create({ title: "peer" })
+
+        // No user message yet -> nothing announced, and the newcomer is NOT
+        // settled so a later real message can still trigger the announce.
+        yield* watcher.sweep()
+        expect(yield* coordination.inbox({ sessionID: peer.id, kinds: ["message"] })).toHaveLength(0)
+
+        // A synthetic-only "first message" (a wake prompt) must not count as birth.
+        yield* sessions
+          .updateMessage({
+            id: MessageID.ascending(),
+            role: "user",
+            sessionID: newcomer.id,
+            agent: "build",
+            model: ref,
+            time: { created: Date.now() },
+          })
+          .pipe(
+            Effect.flatMap((msg) =>
+              sessions.updatePart({
+                id: PartID.ascending(),
+                messageID: msg.id,
+                sessionID: newcomer.id,
+                type: "text",
+                text: "you have peer notes",
+                synthetic: true,
+              }),
+            ),
+          )
+        yield* watcher.sweep()
+        expect(yield* coordination.inbox({ sessionID: peer.id, kinds: ["message"] })).toHaveLength(0)
+
+        // The real first user message finally announces, exactly once, with the real gist.
+        yield* user(newcomer.id, "REAL_FIRST_TASK")
+        yield* watcher.sweep()
+        const received = yield* coordination.inbox({ sessionID: peer.id, kinds: ["message"] })
+        expect(received).toHaveLength(1)
+        expect(received[0].body).toContain("REAL_FIRST_TASK")
+        expect(received[0].body).not.toContain("you have peer notes")
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
+    "announce skips children and forks",
+    () =>
+      Effect.gen(function* () {
+        const sessions = yield* Session.Service
+        const coordination = yield* Coordination.Service
+        const watcher = yield* CoordinationWatcher.Service
+        const parent = yield* sessions.create({ title: "parent" })
+        yield* user(parent.id, "parent real task")
+        const child = yield* sessions.create({ title: "subagent child", parentID: parent.id })
+        yield* user(child.id, "child should never announce")
+        const fork = yield* sessions.create({ title: "some work (fork #2)" })
+        yield* user(fork.id, "forked history should not re-announce")
+
+        yield* watcher.sweep()
+        // Only the parent (a root, not a fork) announces; it announces to the
+        // peer set but children and forks are not announcers and forks are excluded.
+        const fromChild = yield* coordination.inbox({ sessionID: parent.id, kinds: ["message"], unreadOnly: true })
+        expect(fromChild.map((row) => row.fromSession)).not.toContain(child.id)
+        expect(fromChild.map((row) => row.fromSession)).not.toContain(fork.id)
+        // No `ann:<child>` or `ann:<fork>` group ever materialises.
+        expect(yield* coordination.groupExists(`ann:${child.id}`)).toBe(false)
+        expect(yield* coordination.groupExists(`ann:${fork.id}`)).toBe(false)
+      }),
+    20_000,
+  )
+
+  coordinationIt.instance(
     "query fails for an unknown target id without posting anything",
     () =>
       Effect.gen(function* () {

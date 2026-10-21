@@ -180,6 +180,8 @@ export interface Interface {
   readonly thread: (threadID: string) => Effect.Effect<Info[]>
   readonly responsesTo: (requestID: string) => Effect.Effect<Info[]>
   readonly get: (id: string) => Effect.Effect<Info | undefined>
+  /** True once any row carries this fan-out group id (session-init announce idempotency). */
+  readonly groupExists: (groupID: string) => Effect.Effect<boolean>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/SessionCoordination") {}
@@ -279,11 +281,12 @@ export function formatPresence(
  * Derived request state — not stored, computed from the ledger columns.
  * Order matters: first match wins.
  */
-export type RequestState = "answered" | "expired" | "acked" | "injected" | "pending"
+export type RequestState = "answered" | "expired" | "escalated" | "acked" | "injected" | "pending"
 
 export function requestState(row: Info, hasResponse: boolean): RequestState {
   if (hasResponse) return "answered"
   if (row.timeExpired !== undefined) return "expired"
+  if (row.timeEscalated !== undefined) return "escalated"
   if (row.timeAck !== undefined) return "acked"
   if (row.timeRead !== undefined) return "injected"
   return "pending"
@@ -735,6 +738,17 @@ const layer = Layer.effect(
       return row ? fromRow(row) : undefined
     })
 
+    const groupExists = Effect.fn("Coordination.groupExists")(function* (groupID: string) {
+      const row = yield* db
+        .select({ id: CoordinationTable.id })
+        .from(CoordinationTable)
+        .where(eq(CoordinationTable.group_id, groupID))
+        .limit(1)
+        .get()
+        .pipe(Effect.orDie)
+      return row !== undefined
+    })
+
     return Service.of({
       post,
       postOnce,
@@ -753,6 +767,7 @@ const layer = Layer.effect(
       thread,
       responsesTo,
       get,
+      groupExists,
     })
   }),
 )

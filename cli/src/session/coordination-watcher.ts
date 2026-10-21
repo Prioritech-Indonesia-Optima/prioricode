@@ -1,6 +1,7 @@
 import { LayerNode } from "@prioricode/core/effect/layer-node"
 import { Cause, Duration, Effect, Layer, Schedule, Context } from "effect"
 import { InstanceState } from "@/effect/instance-state"
+import { SessionV1 } from "@prioricode/core/v1/session"
 import { Session } from "./session"
 import { SessionID } from "./schema"
 import { SessionStatus } from "./status"
@@ -16,6 +17,32 @@ const ACK_RECOVERY_GRACE_MS = 15 * 60_000
 // Throttle for wakes triggered ONLY by reply rows, to keep two LLM sessions
 // from ping-ponging turn on turn over answered requests.
 const WAKE_COOLDOWN_MS = 10_000
+// Session-init announce bounds. A root session announces itself once, on the
+// sweep after its first real user message, to every live peer.
+const ANNOUNCE_STALE_MS = 72 * 60 * 60_000
+const ANNOUNCE_PEER_CAP = 25
+const ANNOUNCE_GIST_CHARS = 300
+const ANNOUNCE_SCAN_LIMIT = 20
+// Only sessions BORN in this window announce — the upgrade cohort of pre-existing
+// live sessions stays silent instead of flooding peers with stale "joinings".
+const ANNOUNCE_BIRTH_MS = 24 * 60 * 60_000
+const FORK_TITLE_RE = /\s\(fork #\d+\)$/
+
+/** Collapse the first user message's real text to a bounded one-line gist. */
+function firstUserGist(messages: ReadonlyArray<SessionV1.WithParts>): string | undefined {
+  for (const message of messages) {
+    if (message.info.role !== "user") continue
+    const text = message.parts
+      .filter((part): part is SessionV1.TextPart => part.type === "text" && !part.synthetic && !part.ignored)
+      .map((part) => part.text.trim())
+      .filter((value) => value.length > 0)
+      .join(" ")
+      .replace(/\s+/g, " ")
+    if (!text) continue
+    return text.length > ANNOUNCE_GIST_CHARS ? `${text.slice(0, ANNOUNCE_GIST_CHARS)}…` : text
+  }
+  return undefined
+}
 
 export interface Interface {
   /**
@@ -44,6 +71,9 @@ const layer = Layer.effect(
     // chatty sessions from ping-ponging full model turns at each other. Query
     // wakes (a peer needs an answer) are never throttled.
     const lastWakeAt = new Map<SessionID, number>()
+    // Roots whose announce has already been settled in this process (posted,
+    // skipped as fork/stale/legacy, or covered by the durable group check).
+    const announceSettled = new Set<SessionID>()
     const sweep = Effect.fn("CoordinationWatcher.sweep")(function* () {
       const ctx = yield* InstanceState.context
       const busy = yield* status.list()
@@ -73,6 +103,51 @@ const layer = Layer.effect(
       // Keep locally-busy sessions' heartbeats fresh so a crash (no onIdle) makes
       // their busy row go stale after the grace, rather than reading idle forever.
       yield* presence.touch([...busy.keys()])
+      // Session-init announce: a root born in this sweep's window tells every
+      // live peer it joined — ONE ambient `message` row per (newcomer, peer)
+      // sharing group `ann:<newcomer>`. Idempotent at three levels: an
+      // in-process set (fast path), the durable group check (across restarts),
+      // and the deterministic per-peer primary key (across racing processes —
+      // postOnce never defects the sweep). Announce rows never wake anyone and
+      // never escalate (kind `message` is outside both filters).
+      {
+        const now = Date.now()
+        for (const session of roots) {
+          if (announceSettled.has(session.id)) continue
+          const bornRecently = now - session.time.created <= ANNOUNCE_BIRTH_MS
+          const forked = FORK_TITLE_RE.test(session.title)
+          if (!bornRecently || forked) {
+            announceSettled.add(session.id)
+            continue
+          }
+          const groupID = `ann:${session.id}`
+          if (yield* coordination.groupExists(groupID)) {
+            announceSettled.add(session.id)
+            continue
+          }
+          const history = yield* sessions
+            .messages({ sessionID: session.id, limit: ANNOUNCE_SCAN_LIMIT })
+            .pipe(Effect.catchTag("NotFoundError", () => Effect.succeed([] as SessionV1.WithParts[])))
+          const gist = firstUserGist(history)
+          if (gist === undefined) continue // no real user message yet — retry next sweep
+          announceSettled.add(session.id)
+          const peers = roots
+            .filter((peer) => peer.id !== session.id && now - peer.time.updated <= ANNOUNCE_STALE_MS)
+            .sort((a, b) => b.time.updated - a.time.updated)
+            .slice(0, ANNOUNCE_PEER_CAP)
+          for (const peer of peers) {
+            yield* coordination.postOnce({
+              id: `ann:${session.id}:${peer.id}`,
+              projectID: session.projectID,
+              kind: "message",
+              fromSession: session.id,
+              toSession: peer.id,
+              body: `[announce] session ${session.id} "${session.title}" joined this workspace. First task: "${gist}"`,
+              groupId: groupID,
+            })
+          }
+        }
+      }
       // Escalation + expiry passes: an unanswered request past its deadline is
       // escalated once (a passive `record` tells the asker a human has been
       // surfaced), then expires once more past the grace (terminal — no claim

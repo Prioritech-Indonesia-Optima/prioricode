@@ -127,6 +127,33 @@ describe("Coordination", () => {
         .all()
         .pipe(Effect.orDie)
       expect(rows).toHaveLength(1)
+
+      // groupExists is the durable idempotency signal for fan-outs.
+      expect(yield* coordination.groupExists("grp_none")).toBe(false)
+      expect(yield* coordination.groupExists("ann:a")).toBe(true)
+    }),
+  )
+
+  it.effect("fan-out rows of one announce share their group id", () =>
+    Effect.gen(function* () {
+      yield* setup
+      const coordination = yield* Coordination.Service
+      const groupID = `ann:${a}`
+      for (const peerID of [b, Session.ID.make("ses_coord_c")]) {
+        const once = yield* coordination.postOnce({
+          id: `ann:${a}:${peerID}`,
+          projectID,
+          kind: "message",
+          fromSession: a,
+          toSession: peerID,
+          body: "joined",
+          groupId: groupID,
+        })
+        expect(once.inserted).toBe(true)
+      }
+      const inbox = yield* coordination.inbox({ sessionID: b, kinds: ["message"] })
+      expect(inbox[0]?.groupId).toBe(groupID)
+      expect(yield* coordination.groupExists(groupID)).toBe(true)
     }),
   )
 
@@ -282,9 +309,12 @@ describe("Coordination", () => {
       expect(Coordination.requestState({ ...base }, false)).toBe("pending")
       expect(Coordination.requestState({ ...base, timeRead: 2 }, false)).toBe("injected")
       expect(Coordination.requestState({ ...base, timeRead: 2, timeAck: 3 }, false)).toBe("acked")
+      expect(Coordination.requestState({ ...base, timeRead: 2, timeAck: 3, timeEscalated: 5 }, false)).toBe("escalated")
       expect(Coordination.requestState({ ...base, timeExpired: 4 }, false)).toBe("expired")
       // answered wins over everything else
-      expect(Coordination.requestState({ ...base, timeRead: 2, timeAck: 3, timeExpired: 4 }, true)).toBe("answered")
+      expect(
+        Coordination.requestState({ ...base, timeRead: 2, timeAck: 3, timeEscalated: 5, timeExpired: 4 }, true),
+      ).toBe("answered")
     }),
   )
 
