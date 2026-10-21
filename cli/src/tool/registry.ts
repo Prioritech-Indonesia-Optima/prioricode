@@ -14,6 +14,7 @@ import { TaskTool } from "./task"
 import { SessionsTool } from "./sessions"
 import { Database } from "@prioricode/core/database/database"
 import { FileTouch } from "@prioricode/core/file-touch"
+import { FileAttribution } from "./file-attribution"
 import { TodoWriteTool } from "./todo"
 import { WebFetchTool } from "./webfetch"
 import { WriteTool } from "./write"
@@ -465,6 +466,7 @@ export const node = LayerNode.make({
     Coordination.node,
     FileCollision.node,
     FileTouch.node,
+    FileAttribution.node,
     SessionStatus.node,
     BackgroundJob.node,
     Provider.node,

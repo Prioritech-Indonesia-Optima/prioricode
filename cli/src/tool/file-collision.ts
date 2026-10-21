@@ -5,6 +5,7 @@ import { Context, Effect, Layer, Option } from "effect"
 import * as path from "path"
 import { InstanceState } from "@/effect/instance-state"
 import { SessionID } from "@/session/schema"
+import { FileAttribution } from "./file-attribution"
 
 /**
  * Detects when a file changes on disk between the moment a session last observed
@@ -40,6 +41,7 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
+    const attribution = yield* FileAttribution.Service
 
     const state = yield* InstanceState.make<Map<string, Fingerprint>>(
       Effect.fn("FileCollision.state")(function* () {
@@ -58,22 +60,30 @@ const layer = Layer.effect(
       store.set(key, fingerprintOf(info))
     })
 
-    // `projectID` is kept in the signature so the write/edit/apply_patch call
-    // sites stay stable; attribution of who changed a file comes from the
-    // coordination channel (peers query each other), not from claim rows.
+    // The durable touch ledger names WHO changed the file when a recorded write
+    // (a session tool, or the watcher's external record) still matches the live
+    // state; when nothing matches, the notice falls back to "no record" wording.
     const check = Effect.fn("FileCollision.check")(function* (
       filepath: string,
       sessionID: SessionID,
-      _projectID: Project.ID,
+      projectID: Project.ID,
     ) {
       const store = yield* InstanceState.get(state)
       const prev = store.get(keyFor(sessionID, filepath))
       if (!prev) return undefined
       const info = yield* fs.stat(filepath).pipe(Effect.catch(() => Effect.succeed(undefined)))
-      if (!info || info.type !== "File") return buildNotice("deleted")
-      const next = fingerprintOf(info)
-      if (next.mtimeMs === prev.mtimeMs && next.size === prev.size) return undefined
-      return buildNotice("modified")
+      if (info && info.type === "File") {
+        const next = fingerprintOf(info)
+        if (next.mtimeMs === prev.mtimeMs && next.size === prev.size) return undefined
+      }
+      const kind: "modified" | "deleted" = info && info.type === "File" ? "modified" : "deleted"
+      const [owner] = yield* attribution.classify({
+        projectID,
+        sessionID: String(sessionID),
+        base: path.dirname(path.resolve(filepath)),
+        paths: [filepath],
+      })
+      return buildNotice(kind, owner)
     })
 
     return Service.of({ record, check })
@@ -87,17 +97,34 @@ const fingerprintOf = (info: { mtime: Option.Option<Date>; size: unknown }): Fin
 
 const keyFor = (sessionID: SessionID, filepath: string) => `${sessionID}\u0000${path.resolve(filepath)}`
 
-function buildNotice(kind: "modified" | "deleted"): string {
+function agoLabel(ms: number): string {
+  const minutes = Math.floor(ms / 60_000)
+  if (minutes < 1) return "just now"
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  return `${Math.floor(hours / 24)}d ago`
+}
+
+function buildNotice(kind: "modified" | "deleted", owner: FileAttribution.Attribution | undefined): string {
+  const by =
+    owner === undefined || owner.status === "unrecorded"
+      ? undefined
+      : owner.status === "self"
+        ? undefined
+        : owner.status === "external"
+          ? `last recorded as changed outside PrioriCode tools (an editor or shell command) ${agoLabel(Date.now() - owner.touch.timeUpdated)}`
+          : `last written by session ${owner.touch.sessionID} (${owner.touch.op}, ${agoLabel(Date.now() - owner.touch.timeUpdated)})`
   if (kind === "deleted") {
-    return "This file no longer exists; it was deleted after you last read it — possibly by a peer session or an editor outside PrioriCode. Re-read or recreate it before continuing."
+    return `This file no longer exists; it was deleted after you last read it${by ? ` — ${by}. Re-read or recreate it before continuing; query the writer via the sessions tool before assuming it is safe to restore` : " — possibly by a peer session or an editor outside PrioriCode. Re-read or recreate it before continuing"}`
   }
-  return "This file changed since you last read it — possibly by a peer session or an editor outside PrioriCode. Re-read it before relying on the old content; if a sibling session owns the change, query it via the sessions tool before overwriting."
+  return `This file changed since you last read it${by ? ` — ${by}. Re-read it before relying on the old content; query the writer via the sessions tool before overwriting` : " — possibly by a peer session or an editor outside PrioriCode. Re-read it before relying on the old content; if a sibling session owns the change, query it via the sessions tool before overwriting"}`
 }
 
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [FSUtil.node],
+  deps: [FSUtil.node, FileAttribution.node],
 })
 
 export * as FileCollision from "./file-collision"

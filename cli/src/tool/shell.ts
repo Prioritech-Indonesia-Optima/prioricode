@@ -19,6 +19,7 @@ import * as Truncate from "./truncate"
 import { Plugin } from "@/plugin"
 import { BackgroundJob } from "@/background/job"
 import { Sandbox } from "@/sandbox"
+import { ShellGitAdvisory } from "./shell-git-advisory"
 import type { TaskPromptOps } from "./task"
 import { ChildProcess } from "effect/unstable/process"
 import { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
@@ -349,8 +350,15 @@ export const ShellTool = Tool.define(
     const flags = yield* RuntimeFlags.Service
     const background = yield* BackgroundJob.Service
     const sandbox = yield* Sandbox.Service
+    const gitAdvisory = yield* ShellGitAdvisory.make()
     const scope = yield* Scope.Scope
     const defaultTimeoutMs = flags.bashDefaultTimeoutMs ?? 2 * 60 * 1000
+
+    const runGit = Effect.fnUntraced(function* (dir: string, args: ReadonlyArray<string>) {
+      return yield* spawner
+        .lines(ChildProcess.make("git", [...args], { cwd: dir, stdin: "ignore" }))
+        .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+    })
 
     const cygpath = Effect.fn("ShellTool.cygpath")(function* (shell: string, text: string) {
       const lines = yield* spawner
@@ -439,6 +447,7 @@ export const ShellTool = Tool.define(
         timeout: number
         sandbox: Sandbox.Backend | "off"
         sandboxWarning?: string
+        advisory?: ReadonlyArray<string>
       },
       ctx: Tool.Context,
     ) {
@@ -578,6 +587,7 @@ export const ShellTool = Tool.define(
           `command ran in the ${input.sandbox} sandbox; "Operation not permitted" style failures may be sandbox denials — ask the user to widen bashSandbox.writablePaths or network instead of retrying the same command.`,
         )
       }
+      if (input.advisory !== undefined && input.advisory.length > 0) meta.push(input.advisory.join("\n"))
       const raw = list.map((item) => item.text).join("")
       const end = tail(raw, limits.maxLines, limits.maxBytes)
       if (end.cut) cut = true
@@ -760,6 +770,7 @@ export const ShellTool = Tool.define(
               }
               const timeout = params.timeout ?? defaultTimeoutMs
               const ps = Shell.ps(shell)
+              let gitShapes: ShellGitAdvisory.GitCommandShape[] = []
               yield* Effect.scoped(
                 Effect.gen(function* () {
                   const tree = yield* Effect.acquireRelease(parse(params.command, ps), (tree) =>
@@ -768,6 +779,11 @@ export const ShellTool = Tool.define(
                   const scan = yield* collect(tree.rootNode, cwd, ps, shell, instanceCtx)
                   if (!containsPath(cwd, instanceCtx)) scan.dirs.add(cwd)
                   yield* ask(ctx, scan, params)
+                  if (params.background !== true)
+                    gitShapes = commands(tree.rootNode).map((node) => ({
+                      tokens: parts(node).map((item) => item.text),
+                      text: source(node),
+                    }))
                 }),
               )
 
@@ -794,6 +810,19 @@ export const ShellTool = Tool.define(
                 )
               }
 
+              const advisory =
+                gitShapes.length === 0 || !gitShapes.some((shape) => ShellGitAdvisory.matchGitCommand(shape.tokens))
+                  ? []
+                  : yield* gitAdvisory
+                      .advisory({
+                        instance: instanceCtx,
+                        sessionID: ctx.sessionID,
+                        cwd,
+                        shapes: gitShapes,
+                        runGit,
+                      })
+                      .pipe(Effect.catch(() => Effect.succeed([] as string[])))
+
               return yield* run(
                 {
                   process: wrapped.command,
@@ -802,6 +831,7 @@ export const ShellTool = Tool.define(
                   timeout,
                   sandbox: wrapped.backend,
                   sandboxWarning: wrapped.warning,
+                  advisory,
                 },
                 ctx,
               )

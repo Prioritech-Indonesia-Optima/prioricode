@@ -23,6 +23,12 @@ import { RuntimeFlags } from "@/effect/runtime-flags"
 import { InstanceStore } from "@/project/instance-store"
 import { BackgroundJob } from "@/background/job"
 import { JobsTool } from "../../src/tool/jobs"
+import { FileTouch } from "@prioricode/core/file-touch"
+import { FileAttribution } from "@/tool/file-attribution"
+import { Session } from "@/session/session"
+import { SessionStatus } from "@/session/status"
+import { EventBridge } from "../../src/event-v2-bridge"
+import { SessionProjector } from "@prioricode/core/session/projector"
 import { Sandbox } from "@/sandbox"
 
 const shellLayer = Layer.mergeAll(
@@ -37,6 +43,12 @@ const shellLayer = Layer.mergeAll(
       RuntimeFlags.node,
       BackgroundJob.node,
       Sandbox.node,
+      FileTouch.node,
+      FileAttribution.node,
+      Session.node,
+      SessionStatus.node,
+      EventBridge.node,
+      SessionProjector.node,
     ]),
   ),
   testInstanceStoreLayer,
