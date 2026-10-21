@@ -49,5 +49,6 @@ export const migrations = (
     import("./migration/20261007000221_elite_vision"),
     import("./migration/20261015072417_todo_phase"),
     import("./migration/20261019081307_todo_id"),
+    import("./migration/20261021043128_add_session_file_touch"),
   ])
 ).map((module) => module.default) satisfies DatabaseMigration.Migration[]

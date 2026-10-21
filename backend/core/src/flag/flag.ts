@@ -72,4 +72,7 @@ export const Flag = {
   get PRIORICODE_CLIENT() {
     return process.env["PRIORICODE_CLIENT"] ?? "cli"
   },
+  get PRIORICODE_DISABLE_FILE_TOUCH() {
+    return truthy("PRIORICODE_DISABLE_FILE_TOUCH")
+  },
 }

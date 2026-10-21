@@ -39,6 +39,23 @@ export default {
         );
       `)
       yield* tx.run(`
+        CREATE TABLE \`session_file_touch\` (
+          \`project_id\` text NOT NULL,
+          \`path\` text NOT NULL,
+          \`from_session\` text,
+          \`op\` text NOT NULL,
+          \`mtime_ms\` integer NOT NULL,
+          \`size\` integer NOT NULL,
+          \`message_id\` text,
+          \`call_id\` text,
+          \`model\` text,
+          \`time_created\` integer NOT NULL,
+          \`time_updated\` integer NOT NULL,
+          CONSTRAINT \`session_file_touch_pk\` PRIMARY KEY(\`project_id\`, \`path\`),
+          CONSTRAINT \`fk_session_file_touch_project_id_project_id_fk\` FOREIGN KEY (\`project_id\`) REFERENCES \`project\`(\`id\`) ON DELETE CASCADE
+        );
+      `)
+      yield* tx.run(`
         CREATE TABLE \`session_presence\` (
           \`session_id\` text PRIMARY KEY,
           \`project_id\` text NOT NULL,
@@ -273,6 +290,12 @@ export default {
       yield* tx.run(`CREATE INDEX \`coordination_thread_idx\` ON \`session_coordination\` (\`thread_id\`);`)
       yield* tx.run(
         `CREATE UNIQUE INDEX \`coordination_response_unique\` ON \`session_coordination\` (\`reply_to\`) WHERE "session_coordination"."kind" = 'response' AND "session_coordination"."reply_to" IS NOT NULL;`,
+      )
+      yield* tx.run(
+        `CREATE INDEX \`file_touch_project_session_idx\` ON \`session_file_touch\` (\`project_id\`,\`from_session\`);`,
+      )
+      yield* tx.run(
+        `CREATE INDEX \`file_touch_project_time_idx\` ON \`session_file_touch\` (\`project_id\`,\`time_updated\`);`,
       )
       yield* tx.run(`CREATE UNIQUE INDEX \`event_aggregate_seq_idx\` ON \`event\` (\`aggregate_id\`,\`seq\`);`)
       yield* tx.run(`CREATE INDEX \`event_aggregate_type_seq_idx\` ON \`event\` (\`aggregate_id\`,\`type\`,\`seq\`);`)
