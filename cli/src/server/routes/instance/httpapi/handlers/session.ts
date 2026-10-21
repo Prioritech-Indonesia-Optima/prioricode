@@ -134,12 +134,7 @@ export const sessionHandlers = HttpApiBuilder.group(InstanceHttpApi, "session", 
         ageMs: now - row.timeCreated,
       }))
 
-      const notifies = (yield* coordinationSvc.notifiesFrom(sessionID)).map((row) => ({
-        id: row.id,
-        target: row.toSession ?? "",
-        note: row.body,
-        expires: row.deadline ?? 0,
-      }))
+      const notifies: Array<{ id: string; target: string; note: string; expires: number }> = []
 
       const escalated =
         incomingRows.filter((row) => row.timeEscalated !== undefined && !answered.has(row.id)).length +

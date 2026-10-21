@@ -130,23 +130,6 @@ describe("Coordination", () => {
     }),
   )
 
-  it.effect("surfaces peer claims while excluding the caller's own claims", () =>
-    Effect.gen(function* () {
-      yield* setup
-      const coordination = yield* Coordination.Service
-      yield* coordination.post({ projectID, kind: "claim", fromSession: a, body: "src/shared.ts" })
-      yield* coordination.post({ projectID, kind: "claim", fromSession: b, body: "src/shared.ts" })
-
-      const fromA = yield* coordination.claims({ projectID, exceptSession: a })
-      expect(fromA.map((claim) => claim.fromSession)).toEqual([b])
-      expect((yield* coordination.myClaims(a)).map((claim) => claim.body)).toEqual(["src/shared.ts"])
-
-      yield* coordination.releaseClaims({ sessionID: a, paths: ["src/shared.ts"] })
-      expect(yield* coordination.myClaims(a)).toHaveLength(0)
-      expect(yield* coordination.claims({ projectID, exceptSession: a }).pipe(Effect.map((c) => c.length))).toBe(1)
-    }),
-  )
-
   it.effect("claimUnread delivers each note exactly once and marks it read", () =>
     Effect.gen(function* () {
       yield* setup
@@ -792,55 +775,17 @@ describe("Coordination", () => {
     return Effect.sync(() => {})
   })
 
-  it.effect("deliveredWithin surfaces notes already consumed by a turn (no gaslighting)", () =>
-    Effect.gen(function* () {
-      yield* setup
-      const coordination = yield* Coordination.Service
-      const note = yield* coordination.post({
-        projectID,
-        kind: "message",
-        fromSession: a,
-        toSession: b,
-        body: "you were poked",
-      })
-      // Unread inbox right after a turn boundary claim drains it: the note is gone
-      // from unread, which is exactly what confused the woken peer.
-      yield* coordination.claimUnread(b)
-      expect(yield* coordination.inbox({ sessionID: b, kinds: ["message"], unreadOnly: true })).toHaveLength(0)
-      // deliveredWithin recovers it so discover can tell the truth.
-      const delivered = yield* coordination.deliveredWithin({
-        sessionID: b,
-        kinds: ["message"],
-        withinMs: 60_000,
-      })
-      expect(delivered.map((item) => item.body)).toEqual(["you were poked"])
-      expect(delivered[0]?.id).toBe(note.id)
-      // Still nothing for the sender's own inbox, and nothing outside the window.
-      expect(yield* coordination.deliveredWithin({ sessionID: a, kinds: ["message"], withinMs: 60_000 })).toHaveLength(
-        0,
-      )
-      expect(
-        yield* coordination.deliveredWithin({
-          sessionID: b,
-          kinds: ["message"],
-          withinMs: -1,
-        }),
-      ).toHaveLength(0)
-    }),
-  )
-
   it.effect("formatPresence is a read-only ambient roster and empty for solo sessions", () =>
     Effect.sync(() => {
       const solo = Coordination.formatPresence([])
       expect(solo).toBeUndefined()
       const text = Coordination.formatPresence([
-        { id: b, title: "Fix release pipeline", agent: "build", busy: true, lastActiveMs: 1_000, claims: ["x.ts"] },
-        { id: a, title: "Upgrade failure", busy: false, lastActiveMs: 5 * 60_000, claims: [] },
+        { id: b, title: "Fix release pipeline", agent: "build", busy: true, lastActiveMs: 1_000 },
+        { id: a, title: "Upgrade failure", busy: false, lastActiveMs: 5 * 60_000 },
       ])
       expect(text).toContain("cross-session-presence")
       expect(text).toContain("ambient awareness")
       expect(text).toContain("working now")
-      expect(text).toContain("editing: x.ts")
       expect(text).toContain(b)
       expect(text).toContain(a)
       expect(text).toContain("do NOT message or wake a peer just to say hello")
@@ -876,35 +821,6 @@ describe("Coordination", () => {
       // The request is still unclaimed
       const row = yield* coordination.get(request.id)
       expect(row?.claimedBy).toBeUndefined()
-    }),
-  )
-
-  it.effect("pendingNotifies lists unresolved subscriptions and resolveNotify settles each once", () =>
-    Effect.gen(function* () {
-      yield* setup
-      const coordination = yield* Coordination.Service
-      const notify = yield* coordination.post({
-        projectID,
-        kind: "notify",
-        fromSession: a,
-        toSession: b,
-        body: "waiting for the release",
-        deadline: Date.now() + 60_000,
-      })
-      expect((yield* coordination.pendingNotifies()).map((item) => item.id)).toEqual([notify.id])
-      // The first resolver wins; a second (e.g. another process) is a no-op.
-      expect(yield* coordination.resolveNotify(notify.id)).toBe(true)
-      expect(yield* coordination.resolveNotify(notify.id)).toBe(false)
-      expect(yield* coordination.pendingNotifies()).toHaveLength(0)
-      // resolveNotify only touches notify rows, never a request.
-      const request = yield* coordination.post({
-        projectID,
-        kind: "request",
-        fromSession: a,
-        toSession: b,
-        body: "not a notify",
-      })
-      expect(yield* coordination.resolveNotify(request.id)).toBe(false)
     }),
   )
 

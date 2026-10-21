@@ -41,10 +41,6 @@ const RESPONDER_BACKOFF_BASE_MS = 30_000
 const RESPONDER_BACKOFF_MAX_MS = 5 * 60_000
 const responderBackoffMs = (count: number) =>
   Math.min(RESPONDER_BACKOFF_BASE_MS * 2 ** Math.max(0, count - 1), RESPONDER_BACKOFF_MAX_MS)
-// A notify fires only once the target has been idle at least this long AND has
-// nothing still queued — so a transient idle between a synthetic wake turn and
-// the next real note does not read as "done".
-const NOTIFY_IDLE_DEBOUNCE_MS = 10_000
 
 export interface Interface {
   /**
@@ -90,10 +86,10 @@ const layer = Layer.effect(
       responderFailures.set(id, { failedAt: Date.now(), count: (prev?.count ?? 0) + 1 })
     }
 
-    // Recent visible (non-synthetic) conversation of the parent, its todo
-    // list, and its file claims — everything a responder is allowed to answer
-    // from. The todo list is what keeps the representative's picture aligned
-    // with the main agent's own plan of record.
+    // Recent visible (non-synthetic) conversation of the parent and its todo
+    // list — everything a responder is allowed to answer from. The todo list is
+    // what keeps the representative's picture aligned with the main agent's own
+    // plan of record.
     const responderSnapshot = Effect.fnUntraced(function* (parent: Session.Info) {
       const messages = yield* sessions
         .messages({ sessionID: parent.id, limit: RESPONDER_SNAPSHOT_MESSAGES * 3 })
@@ -109,12 +105,9 @@ const layer = Layer.effect(
         if (!text) continue
         lines.push(`${message.info.role}: ${text.slice(0, 2_000)}`)
       }
-      const claims = (yield* coordination.myClaims(parent.id)).map((claim) => claim.body)
       const todos = (yield* todo.get(parent.id)).slice(0, RESPONDER_SNAPSHOT_TODOS)
       return (
         (lines.length > 0 ? lines.slice(-RESPONDER_SNAPSHOT_MESSAGES).join("\n\n") : "(no visible conversation yet)") +
-        "\n\nCurrent file claims: " +
-        (claims.length > 0 ? claims.join(", ") : "(none)") +
         "\n\nCurrent todo list:\n" +
         (todos.length > 0 ? Todo.snapshot(todos) : "(none)")
       )
@@ -222,44 +215,12 @@ const layer = Layer.effect(
       })
       // Durable, cross-process idle set: a session genuinely busy in ANY process
       // (fresh heartbeat) is excluded, so we never double-run or takeover-steal a
-      // peer another terminal is actively working. `idleSince` also carries the
-      // idle-since timestamp the notify pass debounces on.
+      // peer another terminal is actively working.
       const idleSince = yield* presence.idleSince(roots.map((session) => session.id))
       const durableIdleIDs = [...idleSince.keys()]
       // Keep locally-busy sessions' heartbeats fresh so a crash (no onIdle) makes
       // their busy row go stale after the grace, rather than reading idle forever.
       yield* presence.touch([...busy.keys()])
-      // Notify pass (before wakes, since it never runs a model turn): resolve each
-      // one-shot idle subscription exactly once across processes — firing when the
-      // target has been durably idle past the debounce with nothing queued, or
-      // expiring past its deadline. The resolution posts a real `message` to the
-      // waiter, which the wake pass below then delivers.
-      {
-        const now = Date.now()
-        for (const notify of yield* coordination.pendingNotifies()) {
-          if (!notify.toSession) continue
-          const target = notify.toSession
-          const since = idleSince.get(target)
-          const expired = notify.deadline !== undefined && now > notify.deadline
-          const settled =
-            since !== undefined &&
-            now - since >= NOTIFY_IDLE_DEBOUNCE_MS &&
-            (yield* coordination.inbox({ sessionID: target, kinds: Coordination.WAKE_KINDS, unreadOnly: true }))
-              .length === 0
-          if (!expired && !settled) continue
-          if (!(yield* coordination.resolveNotify(notify.id))) continue
-          const waiter = notify.fromSession
-          yield* coordination.post({
-            projectID: notify.projectID,
-            kind: "message",
-            fromSession: target,
-            toSession: waiter,
-            body: expired
-              ? `Your notify on session ${target} expired: it did not go idle within the deadline.${notify.body ? ` (${notify.body})` : ""}`
-              : `Session ${target} is now idle.${notify.body ? ` Your note: ${notify.body}` : ""}`,
-          })
-        }
-      }
       // Escalation + expiry passes: an unanswered request past its deadline is
       // escalated once (a passive `record` tells the asker a human has been
       // surfaced), then expires once more past the grace (terminal — no claim

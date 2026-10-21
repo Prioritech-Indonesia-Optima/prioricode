@@ -92,19 +92,12 @@ export interface InboxInput {
   readonly unreadOnly?: boolean
 }
 
-export interface DeliveredInput {
-  readonly sessionID: SessionID
-  readonly kinds?: ReadonlyArray<CoordinationKind>
-  readonly withinMs: number
-}
-
 export interface PresencePeer {
   readonly id: SessionID
   readonly title: string
   readonly agent?: string
   readonly busy: boolean
   readonly lastActiveMs: number
-  readonly claims: ReadonlyArray<string>
 }
 
 export interface Interface {
@@ -120,13 +113,6 @@ export interface Interface {
     input: PostInput & { readonly id: string },
   ) => Effect.Effect<{ readonly row: Info; readonly inserted: boolean }>
   readonly inbox: (input: InboxInput) => Effect.Effect<Info[]>
-  /**
-   * Notes already delivered into the session's context (marked read by a turn
-   * boundary claim), within a recency window. Lets a session that was just poked
-   * by a wake turn re-read what it was poked about instead of seeing an empty
-   * unread inbox.
-   */
-  readonly deliveredWithin: (input: DeliveredInput) => Effect.Effect<Info[]>
   readonly markRead: (ids: ReadonlyArray<string>) => Effect.Effect<void>
   /**
    * Atomically mark a session's unread rows as read (injected) and return them.
@@ -194,19 +180,6 @@ export interface Interface {
    */
   readonly unclaimUnacked: (ids: ReadonlyArray<string>) => Effect.Effect<number>
   /**
-   * Unresolved one-shot idle subscriptions (kind='notify', never claimed). The
-   * watcher resolves each into a real `message` to the waiter when the target
-   * goes durably idle, or expires it past its deadline.
-   */
-  readonly pendingNotifies: () => Effect.Effect<Info[]>
-  /** This session's own unresolved idle-subscriptions (what it is waiting on). */
-  readonly notifiesFrom: (sessionID: SessionID) => Effect.Effect<Info[]>
-  /**
-   * Atomically settle a notify row exactly once across processes: stamps it read
-   * only if still unread, returning true for the single winning caller.
-   */
-  readonly resolveNotify: (id: string) => Effect.Effect<boolean>
-  /**
    * Loop protection for peer-authored notes (send/ask). Returns a `blocked`
    * reason (rate-limited or duplicate — do NOT post) or an optional `warning`
    * (recipient inbox is flooding — post anyway, tell the sender). System rows
@@ -230,10 +203,6 @@ export interface Interface {
   readonly thread: (threadID: string) => Effect.Effect<Info[]>
   readonly responsesTo: (requestID: string) => Effect.Effect<Info[]>
   readonly get: (id: string) => Effect.Effect<Info | undefined>
-  readonly claims: (input: { projectID: Project.ID; exceptSession?: SessionID }) => Effect.Effect<Info[]>
-  readonly myClaims: (sessionID: SessionID) => Effect.Effect<Info[]>
-  readonly releaseClaims: (input: { sessionID: SessionID; paths: ReadonlyArray<string> }) => Effect.Effect<void>
-  readonly clearClaims: (sessionID: SessionID) => Effect.Effect<void>
 }
 
 export class Service extends Context.Service<Service, Interface>()("@prioricode/SessionCoordination") {}
@@ -290,9 +259,9 @@ export function formatNotes(items: ReadonlyArray<Info>) {
  * Render an ambient peer-presence block injected into the model context on every
  * turn. This is the "aware of one another without interrupting" channel: it is a
  * read-only snapshot of which sibling sessions exist and whether they are busy,
- * so a session does not need to poll `sessions discover` or be woken to know who
- * it is sharing the project with. Returns undefined when there are no peers so
- * solo sessions pay no token cost.
+ * so a session knows who it is sharing the project with without polling or being
+ * woken. Returns undefined when there are no peers so solo sessions pay no token
+ * cost.
  */
 export function formatPresence(peers: ReadonlyArray<PresencePeer>) {
   if (peers.length === 0) return undefined
@@ -303,13 +272,13 @@ export function formatPresence(peers: ReadonlyArray<PresencePeer>) {
     const hours = Math.floor(minutes / 60)
     return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`
   }
-  const lines = peers.map((peer) => {
-    const claims = peer.claims.length > 0 ? ` — editing: ${peer.claims.join(", ")}` : ""
-    return `- ${peer.id} "${peer.title}" (${peer.agent ?? "build"}) · ${peer.busy ? "working now" : `idle, last active ${ago(peer.lastActiveMs)}`}${claims}`
-  })
+  const lines = peers.map(
+    (peer) =>
+      `- ${peer.id} "${peer.title}" (${peer.agent ?? "build"}) · ${peer.busy ? "working now" : `idle, last active ${ago(peer.lastActiveMs)}`}`,
+  )
   return [
     "<cross-session-presence>",
-    "You are running alongside the sibling PrioriCode sessions below — the same user, same machine, same project. This block is ambient awareness only: do NOT message or wake a peer just to say hello, and do not poll `sessions discover` to check on them. Read the peer file lists as a live warning: coordinate before editing a file a peer already claims. When a peer genuinely needs something from you, a coordination note will be delivered into your context automatically.",
+    "You are running alongside the sibling PrioriCode sessions below — the same user, same machine, same project. This block is ambient awareness only: do NOT message or wake a peer just to say hello or check on them. When a peer genuinely needs something from you, a coordination note will be delivered into your context automatically.",
     ...lines,
     "</cross-session-presence>",
   ].join("\n")
@@ -533,7 +502,7 @@ const layer = Layer.effect(
         .pipe(Effect.orDie)
       if (dupAge.length > 0)
         return {
-          blocked: `Already sent: an identical ${input.kind} to ${input.toSession} is still queued and unprocessed (from ${Math.max(1, Math.round((now - dupAge[0].timeCreated) / 1000))}s ago). Not sending a duplicate — check discover for its receipt instead.`,
+          blocked: `Already sent: an identical ${input.kind} to ${input.toSession} is still queued and unprocessed (from ${Math.max(1, Math.round((now - dupAge[0].timeCreated) / 1000))}s ago). Not sending a duplicate — delivery is tracked in your outgoing coordination ledger; do not re-send.`,
         }
 
       // 3. Inbox flood warning (lossless — the note is still delivered).
@@ -561,22 +530,6 @@ const layer = Layer.effect(
         .all()
         .pipe(Effect.orDie)
       return rows.map(fromRow)
-    })
-
-    const deliveredWithin = Effect.fn("Coordination.deliveredWithin")(function* (input: DeliveredInput) {
-      const conditions = [
-        eq(CoordinationTable.to_session, input.sessionID),
-        inArray(CoordinationTable.kind, [...(input.kinds ?? CLAIM_KINDS)]),
-        gte(CoordinationTable.time_read, Date.now() - input.withinMs),
-      ]
-      const rows = yield* db
-        .select()
-        .from(CoordinationTable)
-        .where(and(...conditions))
-        .orderBy(asc(CoordinationTable.time_read))
-        .all()
-        .pipe(Effect.orDie)
-      return rows.map(fromRow).filter((item) => item.timeRead !== undefined)
     })
 
     const markRead = Effect.fn("Coordination.markRead")(function* (ids: ReadonlyArray<string>) {
@@ -797,47 +750,6 @@ const layer = Layer.effect(
       return rows.length
     })
 
-    const pendingNotifies = Effect.fn("Coordination.pendingNotifies")(function* () {
-      const rows = yield* db
-        .select()
-        .from(CoordinationTable)
-        .where(and(eq(CoordinationTable.kind, "notify"), isNull(CoordinationTable.time_read)))
-        .orderBy(asc(CoordinationTable.time_created))
-        .all()
-        .pipe(Effect.orDie)
-      return rows.map(fromRow)
-    })
-
-    const notifiesFrom = Effect.fn("Coordination.notifiesFrom")(function* (sessionID: SessionID) {
-      const rows = yield* db
-        .select()
-        .from(CoordinationTable)
-        .where(
-          and(
-            eq(CoordinationTable.kind, "notify"),
-            eq(CoordinationTable.from_session, sessionID),
-            isNull(CoordinationTable.time_read),
-          ),
-        )
-        .orderBy(asc(CoordinationTable.time_created))
-        .all()
-        .pipe(Effect.orDie)
-      return rows.map(fromRow)
-    })
-
-    const resolveNotify = Effect.fn("Coordination.resolveNotify")(function* (id: string) {
-      const rows = yield* db
-        .update(CoordinationTable)
-        .set({ time_read: Date.now(), time_updated: Date.now() })
-        .where(
-          and(eq(CoordinationTable.id, id), eq(CoordinationTable.kind, "notify"), isNull(CoordinationTable.time_read)),
-        )
-        .returning({ id: CoordinationTable.id })
-        .all()
-        .pipe(Effect.orDie)
-      return rows.length > 0
-    })
-
     const noResponseSql = sql`not exists (select 1 from "session_coordination" "r" where "r"."reply_to" = "session_coordination"."id" and "r"."kind" = 'response')`
     const dueFrom = (grace: number) =>
       sql`COALESCE(${CoordinationTable.deadline}, ${CoordinationTable.time_created} + ${grace})`
@@ -955,63 +867,10 @@ const layer = Layer.effect(
       return row ? fromRow(row) : undefined
     })
 
-    const claims = Effect.fn("Coordination.claims")(function* (input: {
-      projectID: Project.ID
-      exceptSession?: SessionID
-    }) {
-      const rows = yield* db
-        .select()
-        .from(CoordinationTable)
-        .where(and(eq(CoordinationTable.kind, "claim"), eq(CoordinationTable.project_id, input.projectID)))
-        .orderBy(desc(CoordinationTable.time_created))
-        .all()
-        .pipe(Effect.orDie)
-      const all = rows.map(fromRow)
-      return input.exceptSession ? all.filter((row) => row.fromSession !== input.exceptSession) : all
-    })
-
-    const myClaims = Effect.fn("Coordination.myClaims")(function* (sessionID: SessionID) {
-      const rows = yield* db
-        .select()
-        .from(CoordinationTable)
-        .where(and(eq(CoordinationTable.kind, "claim"), eq(CoordinationTable.from_session, sessionID)))
-        .orderBy(desc(CoordinationTable.time_created))
-        .all()
-        .pipe(Effect.orDie)
-      return rows.map(fromRow)
-    })
-
-    const releaseClaims = Effect.fn("Coordination.releaseClaims")(function* (input: {
-      sessionID: SessionID
-      paths: ReadonlyArray<string>
-    }) {
-      if (input.paths.length === 0) return
-      yield* db
-        .delete(CoordinationTable)
-        .where(
-          and(
-            eq(CoordinationTable.kind, "claim"),
-            eq(CoordinationTable.from_session, input.sessionID),
-            inArray(CoordinationTable.body, [...input.paths]),
-          ),
-        )
-        .run()
-        .pipe(Effect.orDie)
-    })
-
-    const clearClaims = Effect.fn("Coordination.clearClaims")(function* (sessionID: SessionID) {
-      yield* db
-        .delete(CoordinationTable)
-        .where(and(eq(CoordinationTable.kind, "claim"), eq(CoordinationTable.from_session, sessionID)))
-        .run()
-        .pipe(Effect.orDie)
-    })
-
     return Service.of({
       post,
       postOnce,
       inbox,
-      deliveredWithin,
       markRead,
       claimUnread,
       claimUnanswered,
@@ -1019,9 +878,6 @@ const layer = Layer.effect(
       markAck,
       unclaimStaleUnacked,
       unclaimUnacked,
-      pendingNotifies,
-      notifiesFrom,
-      resolveNotify,
       guardNote,
       escalateDue,
       expireDue,
@@ -1030,10 +886,6 @@ const layer = Layer.effect(
       thread,
       responsesTo,
       get,
-      claims,
-      myClaims,
-      releaseClaims,
-      clearClaims,
     })
   }),
 )

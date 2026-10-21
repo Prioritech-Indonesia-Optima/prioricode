@@ -4,7 +4,6 @@ import { FSUtil } from "@prioricode/core/fs-util"
 import { Context, Effect, Layer, Option } from "effect"
 import * as path from "path"
 import { InstanceState } from "@/effect/instance-state"
-import { Coordination } from "@/session/coordination"
 import { SessionID } from "@/session/schema"
 
 /**
@@ -14,8 +13,7 @@ import { SessionID } from "@/session/schema"
  *
  * This is deliberately passive: no ambient prompt, no polling. A session working
  * alone never pays for it — `check` returns undefined until it has a recorded
- * fingerprint to compare against, and the peer-claim lookup only runs when a
- * change is actually detected.
+ * fingerprint to compare against.
  *
  * The fingerprint is mtime + size (a single stat, no content read). It is keyed
  * per session so two sessions in the same directory track independent "last
@@ -42,7 +40,6 @@ const layer = Layer.effect(
   Service,
   Effect.gen(function* () {
     const fs = yield* FSUtil.Service
-    const coordination = yield* Coordination.Service
 
     const state = yield* InstanceState.make<Map<string, Fingerprint>>(
       Effect.fn("FileCollision.state")(function* () {
@@ -61,41 +58,22 @@ const layer = Layer.effect(
       store.set(key, fingerprintOf(info))
     })
 
+    // `projectID` is kept in the signature so the write/edit/apply_patch call
+    // sites stay stable; attribution of who changed a file comes from the
+    // coordination channel (peers query each other), not from claim rows.
     const check = Effect.fn("FileCollision.check")(function* (
       filepath: string,
       sessionID: SessionID,
-      projectID: Project.ID,
+      _projectID: Project.ID,
     ) {
       const store = yield* InstanceState.get(state)
       const prev = store.get(keyFor(sessionID, filepath))
       if (!prev) return undefined
       const info = yield* fs.stat(filepath).pipe(Effect.catch(() => Effect.succeed(undefined)))
-      if (!info || info.type !== "File") {
-        return buildNotice("deleted", yield* claimers(projectID, sessionID, filepath))
-      }
+      if (!info || info.type !== "File") return buildNotice("deleted")
       const next = fingerprintOf(info)
       if (next.mtimeMs === prev.mtimeMs && next.size === prev.size) return undefined
-      return buildNotice("modified", yield* claimers(projectID, sessionID, filepath))
-    })
-
-    const claimers = Effect.fn("FileCollision.claimers")(function* (
-      projectID: Project.ID,
-      sessionID: SessionID,
-      filepath: string,
-    ) {
-      const ctx = yield* InstanceState.context
-      const claims = yield* coordination.claims({ projectID, exceptSession: sessionID })
-      const rel = path.relative(ctx.worktree, filepath)
-      const seen = new Set<SessionID>()
-      const out: SessionID[] = []
-      for (const claim of claims) {
-        if (!claimMatches(claim.body, filepath, rel)) continue
-        if (!seen.has(claim.fromSession)) {
-          seen.add(claim.fromSession)
-          out.push(claim.fromSession)
-        }
-      }
-      return out
+      return buildNotice("modified")
     })
 
     return Service.of({ record, check })
@@ -109,24 +87,17 @@ const fingerprintOf = (info: { mtime: Option.Option<Date>; size: unknown }): Fin
 
 const keyFor = (sessionID: SessionID, filepath: string) => `${sessionID}\u0000${path.resolve(filepath)}`
 
-function claimMatches(body: string, filepath: string, rel: string): boolean {
-  if (body === filepath || body === rel) return true
-  if (!path.isAbsolute(body) && path.resolve(path.dirname(filepath), body) === filepath) return true
-  return false
-}
-
-function buildNotice(kind: "modified" | "deleted", claimers: SessionID[]): string {
-  const who = claimers.length > 0 ? ` Another PrioriCode session (${claimers.join(", ")}) has this file claimed.` : ""
+function buildNotice(kind: "modified" | "deleted"): string {
   if (kind === "deleted") {
-    return `This file no longer exists; it was deleted after you last read it.${who} Re-read or recreate it before continuing.`
+    return "This file no longer exists; it was deleted after you last read it — possibly by a peer session or an editor outside PrioriCode. Re-read or recreate it before continuing."
   }
-  return `This file changed since you last read it.${who} Re-read it before relying on the old content.`
+  return "This file changed since you last read it — possibly by a peer session or an editor outside PrioriCode. Re-read it before relying on the old content; if a sibling session owns the change, query it via the sessions tool before overwriting."
 }
 
 export const node = LayerNode.make({
   service: Service,
   layer,
-  deps: [FSUtil.node, Coordination.node],
+  deps: [FSUtil.node],
 })
 
 export * as FileCollision from "./file-collision"

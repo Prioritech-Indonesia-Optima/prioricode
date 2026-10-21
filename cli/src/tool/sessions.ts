@@ -7,41 +7,25 @@ import { SessionStatus } from "@/session/status"
 import { SessionID } from "../session/schema"
 
 export const Parameters = Schema.Struct({
-  action: Schema.Literals([
-    "discover",
-    "claim",
-    "release",
-    "send",
-    "ask",
-    "respond",
-    "wait",
-    "notify",
-    "broadcast",
-  ]).annotate({
+  action: Schema.Literals(["send", "ask", "respond", "broadcast"]).annotate({
     description: "Coordination action to perform against sibling sessions in this project",
   }),
   target: Schema.optional(Schema.String).annotate({
-    description: "Target session ID for send/ask/notify",
+    description: "Target session id for send/ask (from your injected <cross-session-presence> roster)",
   }),
   message: Schema.optional(Schema.String).annotate({
-    description: "Coordination text for send/ask, or the answer for respond",
+    description: "Coordination text for send/ask/broadcast, or the answer for respond",
   }),
   request_id: Schema.optional(Schema.String).annotate({
-    description: "ID of a pending request to answer with respond, or to re-wait on with wait",
+    description: "ID of a pending request to answer with respond",
   }),
   thread_id: Schema.optional(Schema.String).annotate({
     description:
       "For ask: the thread_id of a prior request to continue that negotiation with context instead of starting a new thread.",
   }),
-  paths: Schema.optional(Schema.Array(Schema.String)).annotate({
-    description: "File paths to claim or release (claim/release)",
-  }),
-  note: Schema.optional(Schema.String).annotate({
-    description: "For notify: a short reminder of what you are waiting on, echoed back in the idle notice.",
-  }),
   timeout: Schema.optional(Schema.Number).annotate({
     description:
-      "For ask/wait: maximum seconds to block for a response (default 60, max 300). For notify: seconds until the subscription expires (default 12h). For broadcast: seconds to wait for peer answers (default 30, max 120).",
+      "For ask: maximum seconds to block for a response (default 60, max 300). For broadcast: seconds to wait for peer answers (default 30, max 120).",
   }),
 })
 
@@ -49,7 +33,6 @@ type Metadata = {
   action: string
   target?: string
   requestID?: string
-  collisions?: string[]
 }
 
 const DEFAULT_TIMEOUT_SECONDS = 60
@@ -57,9 +40,6 @@ const MAX_TIMEOUT_SECONDS = 300
 const BROADCAST_DEFAULT_SECONDS = 30
 const BROADCAST_MAX_SECONDS = 120
 const STALE_AFTER_MS = 1000 * 60 * 60 * 72
-const RECENT_DELIVERED_MS = 1000 * 60 * 30
-// Default lifetime of a notify subscription when no timeout is given.
-const NOTIFY_DEFAULT_MS = 1000 * 60 * 60 * 12
 
 const agoLabel = (ms: number) => {
   const minutes = Math.floor(ms / 60_000)
@@ -97,114 +77,6 @@ export const SessionsTool = Tool.define(
         metadata: { action: params.action, target: params.target },
       })
 
-      const discover = Effect.fn("SessionsTool.discover")(function* (self: Session.Info) {
-        const [siblings, statusMap, otherClaims, unread, delivered, sent] = yield* Effect.all(
-          [
-            sessions.list({ limit: 100, roots: true }),
-            status.list(),
-            coordination.claims({ projectID: self.projectID, exceptSession: self.id }),
-            coordination.inbox({ sessionID: self.id, kinds: Coordination.CLAIM_KINDS, unreadOnly: true }),
-            coordination.deliveredWithin({
-              sessionID: self.id,
-              kinds: Coordination.CLAIM_KINDS,
-              withinMs: RECENT_DELIVERED_MS,
-            }),
-            coordination.sentBy({ sessionID: self.id, withinMs: RECENT_DELIVERED_MS }),
-          ],
-          { concurrency: "unbounded" },
-        )
-        const claimsBySession = new Map<string, string[]>()
-        for (const claim of otherClaims) {
-          const list = claimsBySession.get(claim.fromSession) ?? []
-          list.push(claim.body)
-          claimsBySession.set(claim.fromSession, list)
-        }
-        // Receipt ledger: status of what this session recently SENT — the
-        // sender-side truth about whether peers saw/answered the traffic.
-        const answeredByRequest = new Map<string, Coordination.Info>()
-        if (sent.length > 0) {
-          const responses = yield* coordination.responsesFor(sent.map((item) => item.id))
-          for (const response of responses) if (response.replyTo) answeredByRequest.set(response.replyTo, response)
-        }
-        const clip = (value: string, max = 80) => (value.length > max ? value.slice(0, max) + "…" : value)
-        const peers = siblings.filter((session) => session.id !== self.id && !session.time.archived)
-        const now = Date.now()
-        const lines = [
-          `Project ${self.projectID}. ${peers.length} sibling session(s), most recently active first. ` +
-            "Coordinate only with recently active sessions; STALE ones are likely abandoned and should not be woken unless the user explicitly names one.",
-          `Presence is ambient: a read-only roster of your peers is injected into your context every turn, so you do not need to call discover just to know who is here. Use discover to re-read details (claims, note bodies) or to act on a peer.`,
-          unread.length > 0
-            ? `You have ${unread.length} UNREAD coordination item(s) waiting to be delivered next turn:\n  ` +
-              unread
-                .map(
-                  (item) =>
-                    `[${item.kind}${item.kind === "request" ? ` id=${item.id}` : ""}] from ${item.fromSession}: ${item.body}`,
-                )
-                .join("\n  ")
-            : `No unread coordination items.`,
-          delivered.length > 0
-            ? `\nAlready delivered into your context within the last ${Math.round(RECENT_DELIVERED_MS / 60_000)}m ` +
-              `(read them above in your system context; do NOT re-run discover expecting them to be "unread" — delivery consumes them):\n  ` +
-              delivered
-                .map(
-                  (item) =>
-                    `[delivered ${item.kind}${item.kind === "request" ? ` id=${item.id}` : ""}] from ${item.fromSession}: ${item.body}`,
-                )
-                .join("\n  ")
-            : "",
-          sent.length > 0
-            ? `\nNotes you sent in the last ${Math.round(RECENT_DELIVERED_MS / 60_000)}m — these are your delivery receipts:\n  ` +
-              sent
-                .map((item) => {
-                  const answer = answeredByRequest.get(item.id)
-                  const status = answer
-                    ? `ANSWERED: "${clip(answer.body)}"`
-                    : item.timeAck !== undefined
-                      ? "received and processed by the peer"
-                      : item.timeRead !== undefined
-                        ? `seen by the peer ${agoLabel(now - (item.timeRead ?? 0))}, no reply yet`
-                        : "queued — the peer has not seen it yet"
-                  return `[${item.kind}${item.kind === "request" ? ` id=${item.id}` : ""} to ${item.toSession}] ${status}`
-                })
-                .join("\n  ")
-            : "",
-        ]
-        for (const peer of peers) {
-          const busy = statusMap.get(peer.id)?.type === "busy"
-          const claims = claimsBySession.get(peer.id) ?? []
-          const stale = now - peer.time.updated > STALE_AFTER_MS
-          lines.push(
-            `- ${peer.id} "${peer.title}" agent=${peer.agent ?? "default"} ${busy ? "BUSY" : "idle"} ` +
-              `last active ${agoLabel(now - peer.time.updated)}${stale ? " STALE" : ""}` +
-              (claims.length > 0 ? ` claims: ${claims.join(", ")}` : ""),
-          )
-        }
-        if (peers.length === 0) lines.push("No other sessions are working on this project.")
-        return result("discover", lines.join("\n"), { collisions: [...claimsBySession.keys()] })
-      })
-
-      const claim = Effect.fn("SessionsTool.claim")(function* (self: Session.Info, paths: ReadonlyArray<string>) {
-        if (paths.length === 0) return result("claim", "No paths provided.")
-        const [mine, others] = yield* Effect.all([
-          coordination.myClaims(self.id),
-          coordination.claims({ projectID: self.projectID, exceptSession: self.id }),
-        ])
-        const owned = new Set(mine.map((item) => item.body))
-        const collisions = others.filter((item) => paths.includes(item.body))
-        yield* Effect.forEach(
-          paths.filter((path) => !owned.has(path)),
-          (path) => coordination.post({ projectID: self.projectID, kind: "claim", fromSession: self.id, body: path }),
-          { discard: true },
-        )
-        const collisionText =
-          collisions.length > 0
-            ? ` WARNING: ${collisions.map((c) => `${c.body} (also claimed by ${c.fromSession})`).join(", ")}`
-            : ""
-        return result("claim", `Claimed ${paths.length} path(s).${collisionText}`, {
-          collisions: collisions.map((c) => c.body),
-        })
-      })
-
       const resolveTarget = Effect.fn("SessionsTool.resolveTarget")(function* (target: string) {
         const found = yield* sessions
           .get(SessionID.make(target))
@@ -212,12 +84,12 @@ export const SessionsTool = Tool.define(
         if (!found)
           return {
             ok: false as const,
-            error: `No session "${target}" exists in this project. Run discover first — never guess or invent session ids.`,
+            error: `No session "${target}" exists in this project. Pick the target from your injected <cross-session-presence> roster — never guess or invent session ids.`,
           }
         if (found.time.archived)
           return {
             ok: false as const,
-            error: `Session ${target} ("${found.title}") is archived and will never wake. Message a recently active session from discover instead.`,
+            error: `Session ${target} ("${found.title}") is archived and will never wake. Message a recently active session from your roster instead.`,
           }
         const idleFor = Date.now() - found.time.updated
         return { ok: true as const, session: found, stale: idleFor > STALE_AFTER_MS, idleFor }
@@ -255,34 +127,9 @@ export const SessionsTool = Tool.define(
           "send",
           `Message queued in ${target} ("${resolved.session.title}")'s inbox. ` +
             "An idle target wakes within seconds to read it; a busy target reads it at its next step boundary. " +
-            "Receipt: discover lists this note as seen/processed once the peer's context has consumed it." +
+            "Delivery is tracked in your outgoing ledger (the coordination view) — never re-send expecting an 'unread' check." +
             (guard.warning ?? "") +
             (resolved.stale ? staleWarning(target, resolved.idleFor) : ""),
-          { target },
-        )
-      })
-
-      const notify = Effect.fn("SessionsTool.notify")(function* (
-        self: Session.Info,
-        params: Schema.Schema.Type<typeof Parameters>,
-      ) {
-        const target = params.target
-        if (!target) return failure("notify requires a target session id")
-        const resolved = yield* resolveTarget(target)
-        if (!resolved.ok) return failure(resolved.error)
-        const lifetime = params.timeout !== undefined ? params.timeout * 1000 : NOTIFY_DEFAULT_MS
-        yield* coordination.post({
-          projectID: self.projectID,
-          kind: "notify",
-          fromSession: self.id,
-          toSession: SessionID.make(target),
-          body: params.note ?? "",
-          deadline: Date.now() + lifetime,
-        })
-        return result(
-          "notify",
-          `You'll be notified when ${target} ("${resolved.session.title}") next goes idle (or this subscription expires in ${Math.round(lifetime / 1000)}s). ` +
-            "Continue working — the notice arrives in your inbox and wakes you if idle; do not block on it.",
           { target },
         )
       })
@@ -422,58 +269,6 @@ export const SessionsTool = Tool.define(
         )
       })
 
-      const wait = Effect.fn("SessionsTool.wait")(function* (
-        self: Session.Info,
-        params: Schema.Schema.Type<typeof Parameters>,
-      ) {
-        const requestID = params.request_id
-        if (!requestID) return failure("wait requires request_id")
-        const request = yield* coordination.get(requestID)
-        if (!request || request.kind !== "request") return failure(`No pending request with id ${requestID}`)
-        if (request.fromSession !== self.id)
-          return failure(`Request ${requestID} was not sent by this session; cannot re-wait on it.`)
-        // Already answered — return the existing response.
-        const existing = yield* coordination.responsesTo(requestID)
-        if (existing.length > 0) {
-          yield* coordination.markRead([existing[0].id])
-          yield* coordination.markAck([existing[0].id])
-          return result("wait", `Response from ${request.toSession} (request ${requestID}): ${existing[0].body}`, {
-            target: request.toSession,
-            requestID,
-          })
-        }
-        const seconds = Math.min(params.timeout ?? DEFAULT_TIMEOUT_SECONDS, MAX_TIMEOUT_SECONDS)
-        const receipt = {
-          seenAt: undefined as number | undefined,
-          ackedAt: undefined as number | undefined,
-          claimedBy: undefined as string | undefined,
-        }
-        const response = yield* pollResponse(coordination, requestID, Date.now() + seconds * 1000, receipt)
-        if (!response) {
-          const beingAnswered = receipt.claimedBy?.startsWith(Coordination.RESPONDER_LEASE_PREFIX)
-          return result(
-            "wait",
-            `Request ${requestID} got no reply within ${seconds}s — ` +
-              (beingAnswered
-                ? "a reply is being generated by the peer's coordination responder; it will be delivered to your context when ready. "
-                : receipt.ackedAt
-                  ? `the peer received and processed it ${agoLabel(Date.now() - receipt.ackedAt)} but chose not to answer. `
-                  : receipt.seenAt
-                    ? `the peer received it at the edge of its context but has not finished the step that saw it. `
-                    : `the peer never saw it (likely deep in one long tool call, or abandoned). `) +
-              "Do not re-ask in a loop: it stays queued, the answer (or a responder's reply) will be delivered to your context when it lands.",
-            { target: request.toSession, requestID },
-          )
-        }
-        yield* coordination.markRead([response.id])
-        yield* coordination.markAck([response.id])
-        return result(
-          "wait",
-          `Response from ${request.toSession} (request ${requestID}${receipt.seenAt ? `, received after ${Math.max(1, Math.round((receipt.seenAt - request.timeCreated) / 1000))}s` : ""}): ${response.body}`,
-          { target: request.toSession, requestID },
-        )
-      })
-
       const broadcast = Effect.fn("SessionsTool.broadcast")(function* (
         self: Session.Info,
         params: Schema.Schema.Type<typeof Parameters>,
@@ -565,23 +360,12 @@ export const SessionsTool = Tool.define(
       })
 
       switch (params.action) {
-        case "discover":
-          return yield* discover(self)
-        case "claim":
-          return yield* claim(self, params.paths ?? [])
-        case "release":
-          yield* coordination.releaseClaims({ sessionID: self.id, paths: params.paths ?? [] })
-          return result("release", `Released ${params.paths?.length ?? 0} claim(s).`)
         case "send":
           return yield* send(self, params)
-        case "notify":
-          return yield* notify(self, params)
         case "ask":
           return yield* ask(self, params)
         case "respond":
           return yield* respond(self, params)
-        case "wait":
-          return yield* wait(self, params)
         case "broadcast":
           return yield* broadcast(self, params)
       }
