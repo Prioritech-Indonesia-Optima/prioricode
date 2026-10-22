@@ -127,10 +127,14 @@ describe("SessionGc", () => {
 
         // orphan registered tree WITHOUT unique commits: removable
         const orphan = yield* addTree(directory, path.join(root, "delta"), "prioricode/delta")
-      yield* Effect.promise(() => fs.promises.mkdir(path.dirname(managedStamp(projectID, "delta")), { recursive: true }))
-      yield* Effect.promise(() => fs.promises.writeFile(managedStamp(projectID, "delta"), "prioricode session worktree\n"))
-      // UNSTAMPED tree in the managed root (v1 Worktree service / human): kept, always
-      const unowned = yield* addTree(directory, path.join(root, "elf"), "prioricode/elf")
+        yield* Effect.promise(() =>
+          fs.promises.mkdir(path.dirname(managedStamp(projectID, "delta")), { recursive: true }),
+        )
+        yield* Effect.promise(() =>
+          fs.promises.writeFile(managedStamp(projectID, "delta"), "prioricode session worktree\n"),
+        )
+        // UNSTAMPED tree in the managed root (v1 Worktree service / human): kept, always
+        const unowned = yield* addTree(directory, path.join(root, "elf"), "prioricode/elf")
         // foreign tree outside the managed root: reported only, never touched
         const foreign = yield* addTree(directory, `${directory}-foreign`, "feature/handmade")
 
@@ -161,7 +165,9 @@ describe("SessionGc", () => {
       const root = managedRoot(projectID)
       const risky = yield* addTree(directory, path.join(root, "echo"), "prioricode/echo", "keepme.txt")
       yield* Effect.promise(() => fs.promises.mkdir(path.dirname(managedStamp(projectID, "echo")), { recursive: true }))
-      yield* Effect.promise(() => fs.promises.writeFile(managedStamp(projectID, "echo"), "prioricode session worktree\n"))
+      yield* Effect.promise(() =>
+        fs.promises.writeFile(managedStamp(projectID, "echo"), "prioricode session worktree\n"),
+      )
       const gc = yield* SessionGc.Service
       const report = yield* gc.gc({ projectID, directory })
       expect(fs.existsSync(risky)).toBe(true)

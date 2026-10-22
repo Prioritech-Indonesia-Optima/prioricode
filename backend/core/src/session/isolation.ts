@@ -126,9 +126,9 @@ const layer = Layer.effect(
     const scope = yield* Scope.Scope
 
     const markManaged = (projectID: Project.ID, name: string) =>
-      fs.writeWithDirs(managedStamp(projectID, name), new TextEncoder().encode("prioricode session worktree\n")).pipe(
-        Effect.catch(() => Effect.void),
-      )
+      fs
+        .writeWithDirs(managedStamp(projectID, name), new TextEncoder().encode("prioricode session worktree\n"))
+        .pipe(Effect.catch(() => Effect.void))
 
     const binding = Effect.fn("SessionIsolation.binding")(function* (sessionID: SessionSchema.ID) {
       const row = yield* db
