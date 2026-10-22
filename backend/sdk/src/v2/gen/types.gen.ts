@@ -1996,6 +1996,7 @@ export type Config = {
   worktree?: {
     isolateSessions?: boolean
     setupCommand?: string
+    verify?: string
   }
   snapshot?: boolean
   plugin?: Array<
