@@ -12,7 +12,7 @@ import { Git } from "../git"
 import { AppProcess } from "../process"
 import { Project } from "../project"
 import { AbsolutePath } from "../schema"
-import { managedRoot } from "./isolation"
+import { managedRoot, managedStamp } from "./isolation"
 import { SessionSchema } from "./schema"
 import { SessionWorktreeTable } from "./worktree.sql"
 
@@ -165,7 +165,15 @@ const layer = Layer.effect(
         }
         const row = bound.get(directory)
         if (row === undefined) {
-          // Orphan: no ledger row (session deleted or lost provisioning race).
+          // Unbound tree: deletable ONLY with the isolation provenance stamp
+          // (session deleted out from under its row, or a lost provisioning
+          // race). Anything else living in this directory — a v1 Worktree
+          // service tree, a human habit — is kept and reported untouched.
+          const stamped = yield* fs.existsSafe(managedStamp(input.projectID, path.basename(directory)))
+          if (!stamped) {
+            kept.push({ directory, reason: "unbound and not isolation-owned" })
+            continue
+          }
           const candidates = yield* branchForWorktree(mainDirectory, directory)
           const cleaned = yield* removeOrphan(mainRepository, mainDirectory, directory, candidates)
           if (cleaned !== undefined) removed.push(cleaned)
@@ -229,8 +237,13 @@ const layer = Layer.effect(
       )
       const registered = new Set(entries.map((entry) => String(entry.directory)))
       for (const name of managed) {
+        if (name.startsWith(".")) continue
         const directory = path.join(root, name)
         if (registered.has(directory)) continue
+        if (!(yield* fs.existsSafe(managedStamp(input.projectID, name)))) {
+          kept.push({ directory, reason: "unregistered and not isolation-owned" })
+          continue
+        }
         const isDir = yield* fs.isDir(directory)
         if (!isDir) continue
         const branch = `prioricode/${name}`

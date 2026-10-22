@@ -95,6 +95,17 @@ export class Service extends Context.Service<Service, Interface>()("@prioricode/
  * root the GC may ever delete from. */
 export const managedRoot = (projectID: Project.ID) => path.join(Global.Path.data, "worktree", String(projectID))
 
+/**
+ * Sidecar provenance: `<managedRoot>/.managed/<name>` marks a tree as created
+ * by SESSION ISOLATION specifically. The v1 Worktree service (GUI workspace
+ * flow) shares the managed root with entirely different lifecycle owners, and
+ * human trees may appear anywhere — GC may delete an unbound directory only
+ * with this stamp, never merely by location. Written at creation time so a
+ * provisioning race that never reached `bind` is still collectible.
+ */
+export const managedStamp = (projectID: Project.ID, name: string) =>
+  path.join(Global.Path.data, "worktree", String(projectID), ".managed", name)
+
 const toBinding = (row: typeof SessionWorktreeTable.$inferSelect): Binding => ({
   sessionID: row.session_id,
   projectID: row.project_id,
@@ -113,6 +124,11 @@ const layer = Layer.effect(
     const fs = yield* FSUtil.Service
     const proc = yield* AppProcess.Service
     const scope = yield* Scope.Scope
+
+    const markManaged = (projectID: Project.ID, name: string) =>
+      fs.writeWithDirs(managedStamp(projectID, name), new TextEncoder().encode("prioricode session worktree\n")).pipe(
+        Effect.catch(() => Effect.void),
+      )
 
     const binding = Effect.fn("SessionIsolation.binding")(function* (sessionID: SessionSchema.ID) {
       const row = yield* db
@@ -268,6 +284,7 @@ const layer = Layer.effect(
             Effect.catch(() => Effect.succeed(false)),
           )
         if (!created) continue
+        yield* markManaged(input.projectID, name)
         return { directory, plan: { directory, branch, baseSha, adopted: false } }
       }
       return { directory: input.directory, failed: true as const }

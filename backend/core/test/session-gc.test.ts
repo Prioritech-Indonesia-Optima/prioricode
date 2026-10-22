@@ -12,7 +12,7 @@ import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
 import { SessionGc } from "@prioricode/core/session/gc"
-import { managedRoot } from "@prioricode/core/session/isolation"
+import { managedRoot, managedStamp } from "@prioricode/core/session/isolation"
 import { SessionSchema } from "@prioricode/core/session/schema"
 import { SessionTable } from "@prioricode/core/session/sql"
 import { SessionWorktreeTable, type SessionWorktreeStatus } from "@prioricode/core/session/worktree.sql"
@@ -127,7 +127,10 @@ describe("SessionGc", () => {
 
         // orphan registered tree WITHOUT unique commits: removable
         const orphan = yield* addTree(directory, path.join(root, "delta"), "prioricode/delta")
-
+      yield* Effect.promise(() => fs.promises.mkdir(path.dirname(managedStamp(projectID, "delta")), { recursive: true }))
+      yield* Effect.promise(() => fs.promises.writeFile(managedStamp(projectID, "delta"), "prioricode session worktree\n"))
+      // UNSTAMPED tree in the managed root (v1 Worktree service / human): kept, always
+      const unowned = yield* addTree(directory, path.join(root, "elf"), "prioricode/elf")
         // foreign tree outside the managed root: reported only, never touched
         const foreign = yield* addTree(directory, `${directory}-foreign`, "feature/handmade")
 
@@ -157,11 +160,27 @@ describe("SessionGc", () => {
       const directory = yield* repo
       const root = managedRoot(projectID)
       const risky = yield* addTree(directory, path.join(root, "echo"), "prioricode/echo", "keepme.txt")
+      yield* Effect.promise(() => fs.promises.mkdir(path.dirname(managedStamp(projectID, "echo")), { recursive: true }))
+      yield* Effect.promise(() => fs.promises.writeFile(managedStamp(projectID, "echo"), "prioricode session worktree\n"))
       const gc = yield* SessionGc.Service
       const report = yield* gc.gc({ projectID, directory })
       expect(fs.existsSync(risky)).toBe(true)
       expect(report.kept.some((item) => item.directory === risky)).toBe(true)
       expect(report.removed.map((item) => item.branch)).not.toContain("prioricode/echo")
+    }),
+  )
+
+  it.live("never removes unprovenanced trees even when fully merged (v1-service guard)", () =>
+    Effect.gen(function* () {
+      const directory = yield* repo
+      const root = managedRoot(projectID)
+      const foreignOwnedTree = yield* addTree(directory, path.join(root, "guest"), "prioricode/guest")
+      const gc = yield* SessionGc.Service
+      const report = yield* gc.gc({ projectID, directory })
+      expect(fs.existsSync(foreignOwnedTree)).toBe(true)
+      // The shared per-file data home lets earlier tests' kept dirs age into this
+      // pass; the guard is specifically that THIS unprovenanced tree never moves.
+      expect(report.removed.some((item) => item.branch === "prioricode/guest")).toBe(false)
     }),
   )
 

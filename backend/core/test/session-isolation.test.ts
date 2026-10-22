@@ -10,7 +10,7 @@ import { Global } from "@prioricode/core/global"
 import { Project } from "@prioricode/core/project"
 import { ProjectTable } from "@prioricode/core/project/sql"
 import { AbsolutePath } from "@prioricode/core/schema"
-import { SessionIsolation } from "@prioricode/core/session/isolation"
+import { SessionIsolation, managedStamp } from "@prioricode/core/session/isolation"
 import { SessionSchema } from "@prioricode/core/session/schema"
 import { SessionTable } from "@prioricode/core/session/sql"
 import { SessionWorktreeTable } from "@prioricode/core/session/worktree.sql"
@@ -147,6 +147,7 @@ describe("SessionIsolation", () => {
       expect(fs.existsSync(path.join(result.directory, "README.md"))).toBe(true)
       const branch = (yield* Effect.promise(() => $`git branch --show-current`.cwd(result.directory).text())).trim()
       expect(branch).toBe(plan?.branch ?? "")
+      expect(fs.existsSync(managedStamp(Project.ID.global, path.basename(result.directory)))).toBe(true)
 
       yield* seedRows(sessionID)
       yield* iso.bind({ sessionID, projectID: Project.ID.global, plan: plan! })
