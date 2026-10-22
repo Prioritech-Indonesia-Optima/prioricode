@@ -4,8 +4,11 @@ Branch-per-session discipline: an isolated session works on `prioricode/<name>` 
 managed worktree, and `land` is the ONLY coordinated way to bring that work back. It runs a
 full safety pipeline and always returns a structured result:
 
-1. Green gate — the repository's verification command (auto-detected, or `command` override)
-   must pass on your tree. If it fails, fix your branch and land again.
+1. Green gate — a verification command must pass on your tree: `command` override > config
+   `worktree.verify` > auto-detected test script. If it fails, fix your branch and land
+   again. When no command can be resolved at all, land REFUSES rather than treating an
+   unverifiable tree as green — pass `command` or set `worktree.verify`.
+   The dirty-primary-checkout gate runs BEFORE verification, so a doomed land is cheap.
 2. Conflict preview — a merge-tree dry check runs BEFORE anything moves. On conflict you get
    the conflicting paths plus the sessions that last touched them (from the file-touch
    ledger); nothing was changed. Negotiate via the `sessions` tool, rebase or coordinate who

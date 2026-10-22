@@ -13,6 +13,14 @@
     },
   },
   "mcp": {},
+  "worktree": {
+    // branch-per-session is on by default; fresh session trees need deps so the
+    // verify gate and package suites can actually run inside them.
+    "setupCommand": "bun install",
+    // the root `bun test` intentionally fails (per-package suites); land's merged-tree
+    // gate uses the cheap all-packages typecheck here — release runs the suites.
+    "verify": "bun run typecheck",
+  },
   "tools": {
     "github-triage": false,
     "github-pr-search": false,

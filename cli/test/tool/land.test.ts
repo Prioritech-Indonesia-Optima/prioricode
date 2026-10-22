@@ -7,6 +7,7 @@ import { Session } from "@/session/session"
 import { SessionID, MessageID } from "@/session/schema"
 import { LandTool } from "@/tool/land"
 import { NotFoundError } from "@/storage/storage"
+import { Config } from "@/config/config"
 import { Agent } from "@/agent/agent"
 import { Truncate } from "@/tool/truncate"
 import { testEffect } from "../lib/effect"
@@ -55,6 +56,7 @@ const it = testEffect(
     LayerNode.group([
       LayerNode.make({ service: Session.Service, layer: sessionLayer, deps: [] }),
       LayerNode.make({ service: SessionLand.Service, layer: landLayer, deps: [] }),
+      Config.node,
       Truncate.node,
       Agent.node,
     ]),
@@ -159,6 +161,16 @@ describe("tool.land", () => {
       expect(result.output).toContain("ROLLED BACK")
       expect(result.output).toContain("main was reverted")
       expect(result.output).toContain("boom")
+    }),
+  )
+
+  it.instance("renders the no-verify refusal", () =>
+    Effect.gen(function* () {
+      nextResult.value = { landed: false, reason: "no-verify-command", next: ["pass command=..."] }
+      const result = yield* execute({})
+      expect(result.title).toBe("land:unverified")
+      expect(result.output).toContain("NO VERIFICATION COMMAND")
+      expect(result.output).toContain("pass command=...")
     }),
   )
 

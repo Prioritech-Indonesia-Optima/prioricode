@@ -40,6 +40,7 @@ export type Refusal =
   | { readonly reason: "bad-status"; readonly status: string }
   | { readonly reason: "repo-missing" }
   | { readonly reason: "verify-failed"; readonly command: string; readonly exit: number; readonly tail: string }
+  | { readonly reason: "no-verify-command"; readonly next: ReadonlyArray<string> }
   | { readonly reason: "conflict"; readonly paths: ReadonlyArray<string>; readonly owners: ReadonlyArray<Owner> }
   | { readonly reason: "primary-dirty"; readonly paths: ReadonlyArray<string> }
   | { readonly reason: "claimed" }
@@ -236,6 +237,10 @@ const layer = Layer.effect(
           })
         }
 
+        // The primary-clean gate (computed before the preview branch) runs
+        // BEFORE the potentially long verification so a doomed land is cheap.
+        if (dirty.length > 0) return refuse({ reason: "primary-dirty", paths: dirty })
+
         // Green gate on the session's own tree before anything touches main.
         const check = yield* SessionVerify.runOnce({
           fs,
@@ -245,6 +250,17 @@ const layer = Layer.effect(
         })
         if (!check.ok)
           return refuse({ reason: "verify-failed", command: check.command ?? "", exit: check.exit, tail: check.tail })
+        // A tree we cannot verify is NOT silently green: refuse (risk register —
+        // "no test command = explicit refuse"). Explicit input.command or a
+        // worktree.verify config resolved by the caller keeps land usable.
+        if (check.command === undefined)
+          return refuse({
+            reason: "no-verify-command",
+            next: [
+              "pass command=... on this call, set worktree.verify in the project config, or add a test script",
+              "do not guess a verification — an unverified merge onto main is the failure mode this gate exists to prevent",
+            ],
+          })
 
         // The checkout gate is re-read immediately before the move: it was
         // possibly dirtied while verification ran.

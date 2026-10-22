@@ -125,7 +125,7 @@ describe("SessionLand", () => {
       const sessionID = SessionSchema.ID.create()
       const plan = yield* isolated(repo, sessionID, "feature.txt", "shipped\n")
       const land = yield* SessionLand.Service
-      const result = yield* land.land({ sessionID, projectID: Project.ID.global })
+      const result = yield* land.land({ sessionID, projectID: Project.ID.global, command: "exit 0" })
       expect(result.landed).toBe(true)
       if (result.landed) {
         expect(result.checkout).toBe("synced")
@@ -150,6 +150,23 @@ describe("SessionLand", () => {
         async () => await $`git show-ref --verify refs/heads/${plan.branch}`.cwd(repo).quiet().nothrow(),
       )).exitCode
       expect(ref).not.toBe(0)
+    }),
+  )
+
+  it.live("refuses to land what it cannot verify", () =>
+    Effect.gen(function* () {
+      const repo = yield* main()
+      const sessionID = SessionSchema.ID.create()
+      yield* isolated(repo, sessionID, "blind.txt", "x\n")
+      const before = (yield* Effect.promise(() => $`git rev-parse main`.cwd(repo).text())).trim()
+      const land = yield* SessionLand.Service
+      const result = yield* land.land({ sessionID, projectID: Project.ID.global })
+      expect(result.landed).toBe(false)
+      if (!result.landed && result.reason === "no-verify-command") expect(result.next.length > 0).toBe(true)
+      const after = (yield* Effect.promise(() => $`git rev-parse main`.cwd(repo).text())).trim()
+      expect(after).toBe(before)
+      const row = yield* rowFor(sessionID)
+      expect(row?.status).toBe("active")
     }),
   )
 

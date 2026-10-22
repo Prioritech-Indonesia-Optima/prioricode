@@ -97,6 +97,8 @@ Options:
   -u, --username     basic auth username (defaults to PRIORICODE_SERVER_USERNAME or 'prioricode')
                                                                                             [string]
       --dir          directory to run in, path on remote server if attaching                [string]
+      --isolate      force branch-per-session isolation on (--no-isolate shares this checkout)
+                     regardless of config                                                  [boolean]
       --port         port for the local server (defaults to random port if no value provided)
                                                                                             [number]
       --variant      model variant (provider-specific reasoning effort, e.g., high, max, minimal)

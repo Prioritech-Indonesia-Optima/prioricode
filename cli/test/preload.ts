@@ -86,6 +86,12 @@ delete process.env["OTEL_RESOURCE_ATTRIBUTES"]
 // Use in-memory sqlite
 process.env["PRIORICODE_DB"] = ":memory:"
 
+// Unit tests assert non-isolated session semantics (directory identity, worktree
+// lifecycles). Branch-per-session default-on is proven by the dedicated
+// backend/core suites (session-isolation/-land/-gc over real git) and the live
+// two-session demo, not by replaying every session test twice.
+process.env["PRIORICODE_WORKTREE_ISOLATE"] = "0"
+
 // Now safe to import from src/
 const { initProjectors } = await import("../src/server/projectors")
 

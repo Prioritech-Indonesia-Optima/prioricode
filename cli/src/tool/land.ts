@@ -1,6 +1,7 @@
 import { Effect, Schema } from "effect"
 import * as Tool from "./tool"
 import DESCRIPTION from "./land.txt"
+import { Config } from "@/config/config"
 import { SessionLand } from "@prioricode/core/session/land"
 import { Session } from "@/session/session"
 import { SessionID } from "../session/schema"
@@ -29,6 +30,7 @@ export const LandTool = Tool.define(
   Effect.gen(function* () {
     const sessions = yield* Session.Service
     const land = yield* SessionLand.Service
+    const config = yield* Config.Service
 
     const run = Effect.fn("LandTool.execute")(function* (
       params: Schema.Schema.Type<typeof Parameters>,
@@ -48,10 +50,12 @@ export const LandTool = Tool.define(
         metadata: { outcome: "request" },
       })
 
+      const cfg = yield* config.get()
+      const command = params.command ?? cfg.worktree?.verify
       const outcome = yield* land.land({
         sessionID: target,
         projectID: info.projectID,
-        ...(params.command === undefined ? {} : { command: params.command }),
+        ...(command === undefined ? {} : { command }),
         ...(params.dry_run === undefined ? {} : { dryRun: params.dry_run }),
       })
 
@@ -111,6 +115,12 @@ export const LandTool = Tool.define(
               "\n",
             ),
             { outcome: "unbound" },
+          )
+        case "no-verify-command":
+          return result(
+            "unverified",
+            ["NO VERIFICATION COMMAND: land refuses to merge what it cannot prove green.", ...outcome.next].join("\n"),
+            { outcome: "unverified" },
           )
         case "claimed":
           return result(

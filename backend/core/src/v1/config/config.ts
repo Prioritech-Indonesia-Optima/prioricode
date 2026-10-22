@@ -71,6 +71,7 @@ export const Info = Schema.Struct({
     Schema.Struct({
       isolateSessions: Schema.optional(Schema.Boolean),
       setupCommand: Schema.optional(Schema.String),
+      verify: Schema.optional(Schema.String),
     }),
   ).annotate({
     description:

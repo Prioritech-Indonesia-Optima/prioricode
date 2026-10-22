@@ -14,6 +14,10 @@ export class Info extends Schema.Class<Info>("ConfigV2.Worktree")({
     description:
       "Give every new root session its own branch + managed worktree so concurrent sessions never share a checkout (default: true). Children inherit their parent's worktree regardless",
   }),
+  verify: Schema.String.pipe(Schema.optional).annotate({
+    description:
+      "Verification command for the land gate when no explicit command is given (e.g. 'bun run typecheck' in repos whose root test intentionally fails)",
+  }),
   setupCommand: Schema.String.pipe(Schema.optional).annotate({
     description:
       "Shell command run once in a freshly provisioned session worktree before it is used, e.g. 'bun install' (default: none)",
