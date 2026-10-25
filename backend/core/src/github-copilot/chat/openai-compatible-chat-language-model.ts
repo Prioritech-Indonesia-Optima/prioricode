@@ -545,25 +545,27 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
                     })
                   }
 
-                  if (toolCallDelta.function?.name == null) {
-                    throw new InvalidResponseDataError({
-                      data: toolCallDelta,
-                      message: `Expected 'function.name' to be a string.`,
-                    })
-                  }
+                  // Internal check: tolerate a malformed/copilot tool_call delta whose
+                  // `function.name` is momentarily missing (a transient/corrupt chunk).
+                  // Coerce defensively instead of hard-failing the whole stream — see the
+                  // "max retries / agents may die" resilience guidance.
+                  const toolName =
+                    typeof toolCallDelta.function?.name === "string"
+                      ? toolCallDelta.function.name
+                      : `tool_${index}`
 
                   controller.enqueue({
                     type: "tool-input-start",
                     id: toolCallDelta.id,
-                    toolName: toolCallDelta.function.name,
+                    toolName,
                   })
 
                   toolCalls[index] = {
                     id: toolCallDelta.id,
                     type: "function",
                     function: {
-                      name: toolCallDelta.function.name,
-                      arguments: toolCallDelta.function.arguments ?? "",
+                       name: toolName,
+                       arguments: toolCallDelta.function.arguments ?? "",
                     },
                     hasFinished: false,
                   }

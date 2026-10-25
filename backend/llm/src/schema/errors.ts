@@ -119,6 +119,38 @@ export class ProviderInternalReason extends Schema.Class<ProviderInternalReason>
   }
 }
 
+/**
+ * Transport-layer failures classified as transient and therefore safe to retry.
+ * Genuine dead-agent conditions — connection timeouts, resets, refused / unreachable
+ * hosts, and DNS failures — are retried through the existing backoff so a short-lived
+ * blip does not permanently kill an inference turn. Permanent transport problems (bad
+ * credentials, malformed requests) keep `retryable === false`.
+ */
+const RETRYABLE_TRANSPORT_KINDS: ReadonlySet<string> = new Set(["timeout", "transporterror"])
+
+const RETRYABLE_TRANSPORT_MARKERS: ReadonlyArray<string> = [
+  "connection reset",
+  "connection refused",
+  "timed out",
+  "getaddrinfo",
+  "address not found",
+  "name resolution",
+  "network unreachable",
+  "socket closed unexpectedly",
+  "econnreset",
+  "econnrefused",
+  "etimedout",
+  "enotfound",
+  "eai_again",
+]
+
+const isTransientTransportError = (message: string, kind?: string | undefined): boolean => {
+  const normalizedKind = (kind ?? "").toLowerCase()
+  if (RETRYABLE_TRANSPORT_KINDS.has(normalizedKind)) return true
+  const normalizedMessage = message.toLowerCase()
+  return RETRYABLE_TRANSPORT_MARKERS.some((marker) => normalizedMessage.includes(marker))
+}
+
 export class TransportReason extends Schema.Class<TransportReason>("LLM.Error.Transport")({
   _tag: Schema.tag("Transport"),
   message: Schema.String,
@@ -127,7 +159,7 @@ export class TransportReason extends Schema.Class<TransportReason>("LLM.Error.Tr
   http: Schema.optional(HttpContext),
 }) {
   get retryable() {
-    return false
+    return isTransientTransportError(this.message, this.kind)
   }
 }
 
