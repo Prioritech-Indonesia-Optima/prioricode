@@ -550,9 +550,7 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
                   // Coerce defensively instead of hard-failing the whole stream — see the
                   // "max retries / agents may die" resilience guidance.
                   const toolName =
-                    typeof toolCallDelta.function?.name === "string"
-                      ? toolCallDelta.function.name
-                      : `tool_${index}`
+                    typeof toolCallDelta.function?.name === "string" ? toolCallDelta.function.name : `tool_${index}`
 
                   controller.enqueue({
                     type: "tool-input-start",
@@ -564,8 +562,8 @@ export class OpenAICompatibleChatLanguageModel implements LanguageModelV3 {
                     id: toolCallDelta.id,
                     type: "function",
                     function: {
-                       name: toolName,
-                       arguments: toolCallDelta.function.arguments ?? "",
+                      name: toolName,
+                      arguments: toolCallDelta.function.arguments ?? "",
                     },
                     hasFinished: false,
                   }

@@ -3,8 +3,7 @@ import { describe, expect, it } from "bun:test"
 import { TransportReason } from "../../src/schema/errors"
 
 describe("TransportReason.retryable", () => {
-  const retryableOf = (message: string, kind?: string) =>
-    TransportReason.make({ message, kind }).retryable
+  const retryableOf = (message: string, kind?: string) => TransportReason.make({ message, kind }).retryable
 
   it("is retryable for explicit timeouts", () => {
     expect(retryableOf("Request timed out", "Timeout")).toBe(true)
